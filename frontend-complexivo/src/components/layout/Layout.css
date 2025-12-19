@@ -1,0 +1,31 @@
+.app-shell {
+  min-height: 100vh;
+  background: var(--bg-main);
+}
+
+/* Contenedor principal */
+.app-main {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  transition: margin-left var(--transition-base);
+}
+
+/* En pantallas grandes, cuando el sidebar está abierto, empuja el contenido */
+@media (min-width: 768px) {
+  .app-main.with-sidebar {
+    margin-left: 260px;
+  }
+}
+
+.app-content {
+  flex: 1;
+  overflow: auto;
+  padding: 18px 16px;
+}
+
+@media (min-width: 768px) {
+  .app-content {
+    padding: 22px 28px;
+  }
+}

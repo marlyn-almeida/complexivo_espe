@@ -1,0 +1,8 @@
+.docentes-name {
+  font-weight: 800;
+}
+.docentes-sub {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}

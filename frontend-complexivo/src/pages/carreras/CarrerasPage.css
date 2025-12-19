@@ -1,0 +1,282 @@
+/* ===== Carreras Page (pro) ===== */
+
+.carreras-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.carreras-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.carreras-title h1 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 900;
+  color: var(--text-main);
+  letter-spacing: 0.2px;
+}
+
+.carreras-title p {
+  margin: 6px 0 0;
+  font-size: 0.92rem;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+.carreras-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.carreras-search {
+  width: min(420px, 70vw);
+}
+
+/* Card tabla */
+.carreras-card {
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border, rgba(0,0,0,0.08));
+  border-radius: 14px;
+  box-shadow: var(--shadow-sm, 0 6px 22px rgba(0,0,0,0.06));
+  overflow: hidden;
+}
+
+.carreras-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border, rgba(0,0,0,0.08));
+  background: rgba(0,0,0,0.02);
+  flex-wrap: wrap;
+}
+
+.carreras-meta {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.meta-chip {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  background: rgba(0,0,0,0.04);
+  border: 1px solid rgba(0,0,0,0.06);
+}
+
+.carreras-hint {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+/* Tabla */
+.carreras-table-scroll {
+  overflow: auto;
+}
+
+.carreras-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 920px;
+}
+
+.carreras-table th,
+.carreras-table td {
+  padding: 12px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border, rgba(0,0,0,0.08));
+  vertical-align: middle;
+}
+
+.carreras-table th {
+  font-weight: 800;
+  font-size: 0.92rem;
+  background: rgba(0,0,0,0.03);
+  color: var(--text, #111);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.carreras-table tr:hover td {
+  background: rgba(0,0,0,0.02);
+}
+
+.carreras-td-strong {
+  font-weight: 900;
+  color: var(--text-main);
+}
+
+.carreras-td-muted {
+  color: var(--text-muted);
+}
+
+.carreras-td-center {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 18px 12px;
+}
+
+.carreras-actions-col {
+  width: 220px;
+}
+
+/* Badge estado */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  border: 1px solid rgba(0,0,0,0.10);
+}
+
+.badge.active {
+  background: rgba(20, 140, 60, 0.12);
+}
+
+.badge.inactive {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+/* Acciones por fila */
+.row-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.table-btn {
+  border: 1px solid rgba(0,0,0,0.12);
+  background: rgba(255,255,255,0.92);
+  padding: 7px 10px;
+  border-radius: 10px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.05s ease, background 0.15s ease, border 0.15s ease;
+}
+
+.table-btn:hover {
+  background: rgba(0,0,0,0.03);
+}
+
+.table-btn:active {
+  transform: scale(0.98);
+}
+
+.table-btn.success {
+  border-color: rgba(20, 140, 60, 0.25);
+  background: rgba(20, 140, 60, 0.10);
+}
+
+.table-btn.danger {
+  border-color: rgba(180, 40, 40, 0.25);
+  background: rgba(180, 40, 40, 0.10);
+}
+
+/* Modal reutiliza estilos de Períodos si ya los tienes, pero por si no: */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 1000;
+}
+
+.modal {
+  width: min(640px, 96vw);
+  background: var(--card-bg, #fff);
+  border: 1px solid rgba(0,0,0,0.12);
+  border-radius: 16px;
+  box-shadow: 0 16px 46px rgba(0,0,0,0.25);
+  overflow: hidden;
+}
+
+.modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(0,0,0,0.10);
+  background: rgba(0,0,0,0.02);
+}
+
+.modal-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: var(--text-main);
+}
+
+.modal-subtitle {
+  margin: 6px 0 0 0;
+  color: var(--text-muted);
+  font-size: 0.92rem;
+}
+
+.icon-btn {
+  border: 1px solid rgba(0,0,0,0.12);
+  background: rgba(255,255,255,0.9);
+  border-radius: 10px;
+  padding: 8px 10px;
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.modal-body {
+  padding: 14px 16px 16px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.form-label {
+  display: block;
+  margin: 0 0 6px 0;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  font-weight: 800;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0,0,0,0.08);
+}
+
+@media (max-width: 720px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .carreras-search {
+    width: 100%;
+  }
+}

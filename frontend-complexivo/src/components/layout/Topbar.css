@@ -1,0 +1,91 @@
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 12px 16px;
+  background: var(--bg-white);
+  border-bottom: 1px solid var(--espe-green-soft);
+  box-shadow: var(--shadow-soft);
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* botón hamburguesa */
+.topbar-burger {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  border: 1px solid var(--border-soft);
+  background: transparent;
+  cursor: pointer;
+
+  display: grid;
+  place-items: center;
+
+  transition: background var(--transition-fast);
+}
+
+.topbar-burger:hover {
+  background: var(--bg-soft);
+}
+
+.topbar-burger span {
+  display: block;
+  width: 16px;
+  height: 2px;
+  background: var(--text-main);
+  margin: 2px 0;
+}
+
+.topbar-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--espe-green);
+}
+
+.topbar-subtitle {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.topbar-user {
+  text-align: right;
+}
+
+.topbar-user-name {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.topbar-user-desc {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-top: 1px;
+}
+
+.topbar-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: var(--espe-green);
+  color: white;
+
+  display: grid;
+  place-items: center;
+
+  font-weight: 800;
+  font-size: 0.75rem;
+}
