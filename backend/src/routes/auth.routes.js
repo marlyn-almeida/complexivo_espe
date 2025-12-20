@@ -128,14 +128,11 @@ router.patch(
     );
 
     return res.json({
-  mustChangePassword: false,
-  accessToken,
-  roles,
-  activeRole,
-  redirectTo: redirectByRole(activeRoleId),
-  __version: "LOGIN_WITH_ROLES_V2"
-});
-
+      accessToken,
+      roles,
+      activeRole,
+      redirectTo: redirectByRole(activeRoleId)
+    });
   }
 );
 
