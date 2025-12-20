@@ -6,6 +6,21 @@ const validate = require("../middlewares/validate.middleware");
 
 const docenteRepo = require("../repositories/docente.repo");
 
+function pickActiveRoleId(roles) {
+  const ids = roles.map(r => r.id_rol);
+  if (ids.includes(1)) return 1; // SUPER_ADMIN
+  if (ids.includes(2)) return 2; // ADMIN
+  if (ids.includes(3)) return 3; // DOCENTE
+  return null;
+}
+
+function redirectByRole(activeRoleId) {
+  if (activeRoleId === 1) return "/superadmin/dashboard";
+  if (activeRoleId === 2) return "/admin/dashboard";
+  if (activeRoleId === 3) return "/docente/dashboard";
+  return "/login";
+}
+
 // POST /api/auth/login
 router.post(
   "/login",
@@ -15,19 +30,17 @@ router.post(
   async (req, res) => {
     const { username, password } = req.body;
 
-    // Buscar docente por username
     const user = await docenteRepo.findAuthByUsername(username);
     if (!user || user.estado !== 1) {
       return res.status(401).json({ message: "Credenciales incorrectas" });
     }
 
-    // Validar la contraseña con bcrypt
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       return res.status(401).json({ message: "Credenciales incorrectas" });
     }
 
-    // Si debe cambiar la contraseña
+    // debe cambiar contraseña
     if (user.debe_cambiar_password === 1) {
       const tempToken = jwt.sign(
         { id: user.id_docente, purpose: "CHANGE_PASSWORD" },
@@ -41,14 +54,33 @@ router.post(
       });
     }
 
-    // Si ya no debe cambiar contraseña, se emite el token normal
+    // ===== NUEVO: leer roles =====
+    const roles = await docenteRepo.getRolesByDocenteId(user.id_docente);
+    const activeRoleId = pickActiveRoleId(roles);
+
+    if (!activeRoleId) {
+      return res.status(403).json({ message: "El usuario no tiene roles activos" });
+    }
+
+    const activeRole = roles.find(r => r.id_rol === activeRoleId);
+
     const accessToken = jwt.sign(
-      { id: user.id_docente },
+      {
+        id: user.id_docente,
+        roles: roles.map(r => r.id_rol),
+        activeRole: activeRoleId
+      },
       process.env.JWT_SECRET,
       { expiresIn: "8h" }
     );
 
-    return res.json({ mustChangePassword: false, accessToken });
+    return res.json({
+      mustChangePassword: false,
+      accessToken,
+      roles,
+      activeRole,
+      redirectTo: redirectByRole(activeRoleId) // opcional (te facilita el frontend)
+    });
   }
 );
 
@@ -61,7 +93,6 @@ router.patch(
   async (req, res) => {
     const { tempToken, newPassword } = req.body;
 
-    // Verificar que el token temporal sea válido
     let decoded;
     try {
       decoded = jwt.verify(tempToken, process.env.TEMP_JWT_SECRET);
@@ -73,20 +104,35 @@ router.patch(
       return res.status(401).json({ message: "Token temporal no válido para este propósito" });
     }
 
-    // Hashear la nueva contraseña
     const passwordHash = await bcrypt.hash(newPassword, 10);
-    
-    // Actualizar la contraseña y marcar que ya no debe cambiarla
     await docenteRepo.updatePasswordAndClearFlag(decoded.id, passwordHash);
 
-    // Emitir el JWT normal después de cambiar la contraseña
+    // ===== NUEVO: emitir token completo con roles =====
+    const roles = await docenteRepo.getRolesByDocenteId(decoded.id);
+    const activeRoleId = pickActiveRoleId(roles);
+
+    if (!activeRoleId) {
+      return res.status(403).json({ message: "El usuario no tiene roles activos" });
+    }
+
+    const activeRole = roles.find(r => r.id_rol === activeRoleId);
+
     const accessToken = jwt.sign(
-      { id: decoded.id },
+      {
+        id: decoded.id,
+        roles: roles.map(r => r.id_rol),
+        activeRole: activeRoleId
+      },
       process.env.JWT_SECRET,
       { expiresIn: "8h" }
     );
 
-    return res.json({ accessToken });
+    return res.json({
+      accessToken,
+      roles,
+      activeRole,
+      redirectTo: redirectByRole(activeRoleId)
+    });
   }
 );
 

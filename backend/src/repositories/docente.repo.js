@@ -106,6 +106,24 @@ async function findAuthByUsername(nombre_usuario) {
   return rows[0] || null;
 }
 
+/**
+ * NUEVO: roles activos del docente
+ * Devuelve: [{ id_rol: number, nombre_rol: string }, ...]
+ */
+async function getRolesByDocenteId(id_docente) {
+  const [rows] = await pool.query(
+    `SELECT r.id_rol, r.nombre_rol
+     FROM rol_docente rd
+     JOIN rol r ON r.id_rol = rd.id_rol
+     WHERE rd.id_docente = ?
+       AND rd.estado = 1
+       AND r.estado = 1
+     ORDER BY r.id_rol`,
+    [id_docente]
+  );
+  return rows;
+}
+
 async function create(data) {
   const {
     id_institucional_docente,
@@ -187,6 +205,7 @@ module.exports = {
   findAll, findById,
   findByCedula, findByUsername, findByInstitucional,
   findAuthByUsername,
+  getRolesByDocenteId, // <-- NUEVO
   create, update, setEstado,
   updatePasswordAndClearFlag
 };

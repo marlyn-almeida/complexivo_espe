@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { rolesService } from "../../services/roles.service";
+import { roleService } from "../../services/roles.service";
+
 import type { Role } from "../../types/role";
 
 type FormState = {
