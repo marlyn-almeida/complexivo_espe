@@ -6,11 +6,14 @@ export type DocenteCreateDTO = {
   cedula: string;
   nombres_docente: string;
   apellidos_docente: string;
-  correo_docente: string;
-  telefono_docente: string;
-  nombre_usuario: string;
+
+  correo_docente?: string;      // ✅ opcional
+  telefono_docente?: string;    // ✅ opcional
+  nombre_usuario?: string;      // ✅ opcional (si lo generas)
+
   debe_cambiar_password?: 0 | 1;
 };
+
 
 export type DocenteUpdateDTO = Partial<DocenteCreateDTO>;
 

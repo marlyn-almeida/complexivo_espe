@@ -23,9 +23,9 @@ const periodoLabel = (p: PeriodoAcademico) => {
   const fi = (p as any).fecha_inicio ?? "";
   const ff = (p as any).fecha_fin ?? "";
 
-  // Muestra algo útil aunque venga vacío
   const base = [codigo, desc].filter(Boolean).join(" · ");
-  const rango = fi && ff ? ` (${String(fi).slice(0, 10)} → ${String(ff).slice(0, 10)})` : "";
+  const rango =
+    fi && ff ? ` (${String(fi).slice(0, 10)} → ${String(ff).slice(0, 10)})` : "";
   return (base || `Período #${(p as any).id_periodo}`) + rango;
 };
 
@@ -49,10 +49,7 @@ export default function CarreraPeriodoPage() {
   const periodoName = useMemo(() => {
     const map = new Map<number, string>();
     periodos.forEach((p) => {
-      // En tu backend real: codigo_periodo / descripcion_periodo (NO nombre_periodo)
-      const label = (p as any).codigo_periodo
-        ? String((p as any).codigo_periodo)
-        : periodoLabel(p);
+      const label = (p as any).codigo_periodo ? String((p as any).codigo_periodo) : periodoLabel(p);
       map.set((p as any).id_periodo, label);
     });
     return map;
@@ -132,7 +129,7 @@ export default function CarreraPeriodoPage() {
 
       await fetchAll();
       closeModal();
-    } catch (e) {
+    } catch {
       alert("No se pudo guardar Carrera–Período. Revisa consola/servidor.");
     } finally {
       setLoading(false);
@@ -146,9 +143,12 @@ export default function CarreraPeriodoPage() {
 
     if (!confirm(`¿Seguro que deseas ${action} "${cn} – ${pn}"?`)) return;
 
+    // ✅ FIX: tu service pide (id, currentEstado)
+    const currentEstado: 0 | 1 = isActive(x.estado) ? 1 : 0;
+
     setLoading(true);
     try {
-      await carreraPeriodoService.toggleEstado(x.id_carrera_periodo);
+      await carreraPeriodoService.toggleEstado(x.id_carrera_periodo, currentEstado);
       await fetchAll();
     } finally {
       setLoading(false);
@@ -261,9 +261,7 @@ export default function CarreraPeriodoPage() {
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-head">
               <div>
-                <h2 className="modal-title">
-                  {editing ? "Editar asignación" : "Nueva asignación"}
-                </h2>
+                <h2 className="modal-title">{editing ? "Editar asignación" : "Nueva asignación"}</h2>
                 <p className="modal-subtitle">Selecciona una carrera y un período.</p>
               </div>
               <button className="icon-btn" onClick={closeModal} aria-label="Cerrar">

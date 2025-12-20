@@ -1,48 +1,51 @@
-import { useEffect, useMemo, useState } from "react";
-import { docentesService, type DocenteCreateDTO, type DocenteUpdateDTO } from "../../services/docentes.service";
-import type { Docente } from "../../types/docente";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import "./DocentesPage.css";
 
-const emptyForm: DocenteCreateDTO = {
-  id_institucional_docente: "",
-  cedula: "",
-  nombres_docente: "",
-  apellidos_docente: "",
-  correo_docente: "",
-  telefono_docente: "",
-  nombre_usuario: "",
-  debe_cambiar_password: 1,
+import type { Docente } from "../../types/docente";
+import { docentesService, type DocenteCreateDTO, type DocenteUpdateDTO } from "../../services/docentes.service";
+
+type Estado01 = 0 | 1;
+
+type DocenteForm = {
+  id_institucional_docente: string;
+  cedula: string;
+  nombres_docente: string;
+  apellidos_docente: string;
+  correo_docente: string;
+  telefono_docente: string;
+  nombre_usuario: string;
 };
+
+const to01 = (estado: boolean | number | Estado01): Estado01 => {
+  if (typeof estado === "boolean") return estado ? 1 : 0;
+  return Number(estado) === 1 ? 1 : 0;
+};
+
+const isActive = (estado: boolean | number | Estado01) => to01(estado) === 1;
 
 export default function DocentesPage() {
   const [items, setItems] = useState<Docente[]>([]);
   const [loading, setLoading] = useState(false);
-
   const [q, setQ] = useState("");
+
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Docente | null>(null);
-  const [form, setForm] = useState<DocenteCreateDTO>(emptyForm);
 
-  const filtered = useMemo(() => {
-    const t = q.trim().toLowerCase();
-    if (!t) return items;
-    return items.filter((d) => {
-      const full = `${d.nombres_docente} ${d.apellidos_docente}`.toLowerCase();
-      return (
-        full.includes(t) ||
-        d.cedula?.toLowerCase().includes(t) ||
-        d.id_institucional_docente?.toLowerCase().includes(t) ||
-        d.correo_docente?.toLowerCase().includes(t) ||
-        d.nombre_usuario?.toLowerCase().includes(t)
-      );
-    });
-  }, [items, q]);
+  const [form, setForm] = useState<DocenteForm>({
+    id_institucional_docente: "",
+    cedula: "",
+    nombres_docente: "",
+    apellidos_docente: "",
+    correo_docente: "",
+    telefono_docente: "",
+    nombre_usuario: "",
+  });
 
   const load = async () => {
     setLoading(true);
     try {
       const data = await docentesService.list();
-      setItems(data);
+      setItems(data ?? []);
     } finally {
       setLoading(false);
     }
@@ -52,124 +55,222 @@ export default function DocentesPage() {
     load();
   }, []);
 
+  const filtered = useMemo(() => {
+    const query = q.trim().toLowerCase();
+    if (!query) return items;
+
+    return items.filter((d) => {
+      const inst = (d.id_institucional_docente ?? "").toLowerCase();
+      const ced = (d.cedula ?? "").toLowerCase();
+      const nom = (d.nombres_docente ?? "").toLowerCase();
+      const ape = (d.apellidos_docente ?? "").toLowerCase();
+      const cor = (d.correo_docente ?? "").toLowerCase();
+      const tel = (d.telefono_docente ?? "").toLowerCase();
+      const user = (d.nombre_usuario ?? "").toLowerCase();
+
+      return (
+        inst.includes(query) ||
+        ced.includes(query) ||
+        nom.includes(query) ||
+        ape.includes(query) ||
+        cor.includes(query) ||
+        tel.includes(query) ||
+        user.includes(query)
+      );
+    });
+  }, [items, q]);
+
+  const totalActivos = filtered.filter((d) => isActive(d.estado)).length;
+  const totalInactivos = filtered.length - totalActivos;
+
   const openCreate = () => {
     setEditing(null);
-    setForm(emptyForm);
+    setForm({
+      id_institucional_docente: "",
+      cedula: "",
+      nombres_docente: "",
+      apellidos_docente: "",
+      correo_docente: "",
+      telefono_docente: "",
+      nombre_usuario: "",
+    });
     setOpen(true);
   };
 
   const openEdit = (d: Docente) => {
     setEditing(d);
     setForm({
-      id_institucional_docente: d.id_institucional_docente,
-      cedula: d.cedula,
-      nombres_docente: d.nombres_docente,
-      apellidos_docente: d.apellidos_docente,
-      correo_docente: d.correo_docente,
-      telefono_docente: d.telefono_docente,
-      nombre_usuario: d.nombre_usuario,
-      debe_cambiar_password: d.debe_cambiar_password,
+      id_institucional_docente: d.id_institucional_docente ?? "",
+      cedula: d.cedula ?? "",
+      nombres_docente: d.nombres_docente ?? "",
+      apellidos_docente: d.apellidos_docente ?? "",
+      correo_docente: d.correo_docente ?? "",
+      telefono_docente: d.telefono_docente ?? "",
+      nombre_usuario: d.nombre_usuario ?? "",
     });
     setOpen(true);
   };
 
-  const closeModal = () => setOpen(false);
-
-  const onChange = (k: keyof DocenteCreateDTO, v: any) =>
-    setForm((p) => ({ ...p, [k]: v }));
-
-  const submit = async () => {
-    if (!form.id_institucional_docente || !form.cedula || !form.nombres_docente || !form.apellidos_docente) {
-      alert("Completa: ID institucional, cédula, nombres y apellidos.");
-      return;
-    }
-
-    if (!editing) {
-      await docentesService.create(form);
-    } else {
-      const payload: DocenteUpdateDTO = { ...form };
-      await docentesService.update(editing.id_docente, payload);
-    }
-
+  const closeModal = () => {
     setOpen(false);
-    await load();
+    setEditing(null);
+  };
+
+  const validate = (): string | null => {
+    if (!form.id_institucional_docente.trim()) return "Ingresa el ID institucional.";
+    if (!form.cedula.trim()) return "Ingresa la cédula.";
+    if (!form.nombres_docente.trim()) return "Ingresa los nombres.";
+    if (!form.apellidos_docente.trim()) return "Ingresa los apellidos.";
+    // nombre_usuario puede ser opcional si tú lo generas en backend, si lo quieres obligatorio descomenta:
+    // if (!form.nombre_usuario.trim()) return "Ingresa el nombre de usuario.";
+    return null;
+  };
+
+  const onSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    const err = validate();
+    if (err) return alert(err);
+
+    setLoading(true);
+    try {
+      if (editing) {
+        const payload: DocenteUpdateDTO = {
+          id_institucional_docente: form.id_institucional_docente.trim(),
+          cedula: form.cedula.trim(),
+          nombres_docente: form.nombres_docente.trim(),
+          apellidos_docente: form.apellidos_docente.trim(),
+          ...(form.correo_docente.trim() ? { correo_docente: form.correo_docente.trim() } : {}),
+          ...(form.telefono_docente.trim() ? { telefono_docente: form.telefono_docente.trim() } : {}),
+          ...(form.nombre_usuario.trim() ? { nombre_usuario: form.nombre_usuario.trim() } : {}),
+        };
+
+        await docentesService.update(editing.id_docente, payload);
+      } else {
+        // ✅ AQUÍ VA EL PAYLOAD
+        const payload: DocenteCreateDTO = {
+          id_institucional_docente: form.id_institucional_docente.trim(),
+          cedula: form.cedula.trim(),
+          nombres_docente: form.nombres_docente.trim(),
+          apellidos_docente: form.apellidos_docente.trim(),
+          ...(form.correo_docente.trim() ? { correo_docente: form.correo_docente.trim() } : {}),
+          ...(form.telefono_docente.trim() ? { telefono_docente: form.telefono_docente.trim() } : {}),
+          ...(form.nombre_usuario.trim() ? { nombre_usuario: form.nombre_usuario.trim() } : {}),
+          debe_cambiar_password: 1,
+        };
+
+        await docentesService.create(payload);
+      }
+
+      await load();
+      closeModal();
+    } catch (e: any) {
+      alert(e?.response?.data?.message ?? e?.message ?? "No se pudo guardar el docente.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const toggleEstado = async (d: Docente) => {
-    await docentesService.toggleEstado(d.id_docente, d.estado);
-    await load();
+    const nombre = `${d.nombres_docente ?? ""} ${d.apellidos_docente ?? ""}`.trim();
+    const action = isActive(d.estado) ? "desactivar" : "activar";
+    if (!confirm(`¿Seguro que deseas ${action} a "${nombre}"?`)) return;
+
+    const currentEstado: Estado01 = to01(d.estado);
+
+    setLoading(true);
+    try {
+      await docentesService.toggleEstado(d.id_docente, currentEstado);
+      await load();
+    } catch (e: any) {
+      alert(e?.response?.data?.message ?? e?.message ?? "Error al cambiar estado.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="page-wrap">
-      <div className="page-header">
-        <div>
-          <h2 className="page-title">Docentes</h2>
-          <p className="page-subtitle">Gestión y habilitación de docentes del sistema.</p>
+    <div className="docentes-wrap">
+      <div className="docentes-header">
+        <div className="docentes-title">
+          <h1>Docentes</h1>
+          <p>Registro de docentes y control de estado.</p>
         </div>
 
-        <div className="page-actions">
+        <div className="docentes-actions">
           <input
-            className="input-base search-input"
-            placeholder="Buscar por nombre, cédula, correo…"
+            className="input-base docentes-search"
+            placeholder="Buscar por ID, cédula, nombres, apellidos, usuario…"
             value={q}
             onChange={(e) => setQ(e.target.value)}
           />
           <button className="btn-primary" onClick={openCreate}>
-            + Nuevo docente
+            + Nuevo
           </button>
         </div>
       </div>
 
-      <div className="table-card">
-        <div className="table-scroll">
-          <table className="table">
+      <div className="docentes-card">
+        <div className="docentes-card-head">
+          <div className="docentes-meta">
+            <span className="meta-chip">Total: <b>{filtered.length}</b></span>
+            <span className="meta-chip">Activos: <b>{totalActivos}</b></span>
+            <span className="meta-chip">Inactivos: <b>{totalInactivos}</b></span>
+          </div>
+          <span className="docentes-hint">Tip: desactiva en vez de eliminar.</span>
+        </div>
+
+        <div className="docentes-table-scroll">
+          <table className="docentes-table">
             <thead>
               <tr>
-                <th>Docente</th>
-                <th>ID Institucional</th>
+                <th>ID inst.</th>
                 <th>Cédula</th>
-                <th>Usuario</th>
+                <th>Nombres</th>
+                <th>Apellidos</th>
                 <th>Correo</th>
+                <th>Teléfono</th>
+                <th>Usuario</th>
                 <th>Estado</th>
-                <th style={{ width: 200 }}>Acciones</th>
+                <th className="docentes-actions-col">Acciones</th>
               </tr>
             </thead>
 
             <tbody>
               {loading ? (
-                <tr><td colSpan={7}>Cargando…</td></tr>
+                <tr><td colSpan={9} className="td-center">Cargando…</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={7}>Sin datos</td></tr>
+                <tr><td colSpan={9} className="td-center">Sin datos</td></tr>
               ) : (
-                filtered.map((d) => (
-                  <tr key={d.id_docente}>
-                    <td>
-                      <div className="docentes-name">{d.nombres_docente} {d.apellidos_docente}</div>
-                      <div className="docentes-sub">{d.telefono_docente}</div>
-                    </td>
-                    <td>{d.id_institucional_docente}</td>
-                    <td>{d.cedula}</td>
-                    <td>{d.nombre_usuario}</td>
-                    <td>{d.correo_docente}</td>
-                    <td>
-                      <span className={`badge ${d.estado === 1 ? "active" : "inactive"}`}>
-                        {d.estado === 1 ? "Activo" : "Inactivo"}
-                      </span>
-                    </td>
-                    <td>
-                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                        <button className="table-btn" onClick={() => openEdit(d)}>Editar</button>
-                        <button
-                          className={`table-btn ${d.estado === 1 ? "danger" : "success"}`}
-                          onClick={() => toggleEstado(d)}
-                        >
-                          {d.estado === 1 ? "Desactivar" : "Activar"}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                filtered.map((d) => {
+                  const activo = isActive(d.estado);
+                  return (
+                    <tr key={d.id_docente}>
+                      <td className="td-strong">{d.id_institucional_docente}</td>
+                      <td className="td-muted">{d.cedula}</td>
+                      <td className="td-muted">{d.nombres_docente}</td>
+                      <td className="td-muted">{d.apellidos_docente}</td>
+                      <td className="td-muted">{d.correo_docente ?? "—"}</td>
+                      <td className="td-muted">{d.telefono_docente ?? "—"}</td>
+                      <td className="td-muted">{d.nombre_usuario ?? "—"}</td>
+                      <td>
+                        <span className={`badge ${activo ? "active" : "inactive"}`}>
+                          {activo ? "ACTIVO" : "INACTIVO"}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="row-actions">
+                          <button className="table-btn" onClick={() => openEdit(d)}>Editar</button>
+                          <button
+                            className={`table-btn ${activo ? "danger" : "success"}`}
+                            onClick={() => toggleEstado(d)}
+                          >
+                            {activo ? "Desactivar" : "Activar"}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -179,73 +280,73 @@ export default function DocentesPage() {
       {open && (
         <div className="modal-backdrop" onClick={closeModal}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h3 className="modal-title">{editing ? "Editar docente" : "Nuevo docente"}</h3>
-            <p className="modal-subtitle">Completa los datos del docente.</p>
+            <div className="modal-head">
+              <div>
+                <h2 className="modal-title">{editing ? "Editar docente" : "Nuevo docente"}</h2>
+                <p className="modal-subtitle">Completa los datos obligatorios.</p>
+              </div>
+              <button className="icon-btn" type="button" onClick={closeModal} aria-label="Cerrar">✕</button>
+            </div>
 
-            <div className="modal-form">
-              <div className="modal-grid">
+            <form className="modal-body" onSubmit={onSubmit}>
+              <div className="form-grid">
                 <div>
                   <label className="form-label">ID institucional</label>
                   <input className="input-base" value={form.id_institucional_docente}
-                    onChange={(e) => onChange("id_institucional_docente", e.target.value)} />
+                    onChange={(e) => setForm((p) => ({ ...p, id_institucional_docente: e.target.value }))}
+                  />
                 </div>
 
                 <div>
                   <label className="form-label">Cédula</label>
                   <input className="input-base" value={form.cedula}
-                    onChange={(e) => onChange("cedula", e.target.value)} />
+                    onChange={(e) => setForm((p) => ({ ...p, cedula: e.target.value }))}
+                  />
                 </div>
 
                 <div>
                   <label className="form-label">Nombres</label>
                   <input className="input-base" value={form.nombres_docente}
-                    onChange={(e) => onChange("nombres_docente", e.target.value)} />
+                    onChange={(e) => setForm((p) => ({ ...p, nombres_docente: e.target.value }))}
+                  />
                 </div>
 
                 <div>
                   <label className="form-label">Apellidos</label>
                   <input className="input-base" value={form.apellidos_docente}
-                    onChange={(e) => onChange("apellidos_docente", e.target.value)} />
+                    onChange={(e) => setForm((p) => ({ ...p, apellidos_docente: e.target.value }))}
+                  />
                 </div>
 
                 <div>
-                  <label className="form-label">Correo</label>
+                  <label className="form-label">Correo (opcional)</label>
                   <input className="input-base" value={form.correo_docente}
-                    onChange={(e) => onChange("correo_docente", e.target.value)} />
+                    onChange={(e) => setForm((p) => ({ ...p, correo_docente: e.target.value }))}
+                  />
                 </div>
 
                 <div>
-                  <label className="form-label">Teléfono</label>
+                  <label className="form-label">Teléfono (opcional)</label>
                   <input className="input-base" value={form.telefono_docente}
-                    onChange={(e) => onChange("telefono_docente", e.target.value)} />
+                    onChange={(e) => setForm((p) => ({ ...p, telefono_docente: e.target.value }))}
+                  />
                 </div>
 
                 <div>
-                  <label className="form-label">Usuario</label>
+                  <label className="form-label">Usuario (opcional)</label>
                   <input className="input-base" value={form.nombre_usuario}
-                    onChange={(e) => onChange("nombre_usuario", e.target.value)} />
-                </div>
-
-                <div>
-                  <label className="form-label">Debe cambiar contraseña</label>
-                  <select
-                    className="input-base"
-                    value={form.debe_cambiar_password ?? 1}
-                    onChange={(e) => onChange("debe_cambiar_password", Number(e.target.value) as 0 | 1)}
-                  >
-                    <option value={1}>Sí</option>
-                    <option value={0}>No</option>
-                  </select>
+                    onChange={(e) => setForm((p) => ({ ...p, nombre_usuario: e.target.value }))}
+                  />
                 </div>
               </div>
 
               <div className="modal-footer">
-                <button className="btn-secondary" onClick={closeModal}>Cancelar</button>
-                <button className="btn-primary" onClick={submit}>
-                  {editing ? "Guardar cambios" : "Crear docente"}
+                <button type="button" className="btn-secondary" onClick={closeModal}>Cancelar</button>
+                <button type="submit" className="btn-primary" disabled={loading}>
+                  {editing ? "Guardar cambios" : "Crear"}
                 </button>
               </div>
-            </div>
+            </form>
           </div>
         </div>
       )}
