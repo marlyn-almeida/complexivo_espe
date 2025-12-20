@@ -201,3 +201,60 @@
 .sidebar-btn.danger:hover {
   background: rgba(239, 68, 68, 0.32);
 }
+
+/* Mejor separación entre secciones */
+.sidebar-section + .sidebar-section {
+  margin-top: 8px;
+}
+
+/* El botón close no tenía estilo en tu CSS */
+.sidebar-close {
+  margin-left: auto;
+  border: none;
+  background: transparent;
+  color: rgba(255,255,255,0.9);
+  cursor: pointer;
+  font-size: 18px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  transition: background var(--transition-fast);
+}
+
+.sidebar-close:hover {
+  background: rgba(255,255,255,0.12);
+}
+/* ===== Fix: Sidebar con scroll pro ===== */
+
+/* el body sigue ocupando la altura disponible */
+.sidebar-body {
+  height: calc(100vh - 72px);
+  display: flex;
+  flex-direction: column;
+  padding: 12px 14px;
+  overflow: hidden; /* importante: el scroll solo en el nav */
+}
+
+/* el nav ocupa el espacio y scrollea */
+.sidebar-nav {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 6px; /* espacio para el scrollbar */
+}
+
+/* scrollbar más discreto */
+.sidebar-nav::-webkit-scrollbar {
+  width: 8px;
+}
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+}
+.sidebar-nav::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+/* el footer siempre abajo */
+.sidebar-profile {
+  margin-top: 12px;
+  flex-shrink: 0;
+}

@@ -1,292 +1,365 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import "./CarrerasPage.css";
 
+import { carrerasService, type CarreraCreateDTO, type CarreraUpdateDTO } from "../../services/carreras.service";
 import type { Carrera, Estado01 } from "../../types/carrera";
-import { carrerasService } from "../../services/carreras.service";
 
-type CarreraForm = {
-  nombre_carrera: string;
-  sede: string;
-  modalidad: string;
-};
+type ToastType = "success" | "error" | "info";
 
-const isActive = (estado: Estado01 | boolean) =>
-  typeof estado === "boolean" ? estado : estado === 1;
+function toEstado01(v: Estado01 | boolean): Estado01 {
+  if (typeof v === "boolean") return v ? 1 : 0;
+  return v;
+}
 
-const to01 = (estado: Estado01 | boolean): Estado01 =>
-  typeof estado === "boolean" ? (estado ? 1 : 0) : estado;
+function badgeEstadoLabel(estado: Estado01) {
+  return estado === 1 ? "ACTIVA" : "INACTIVA";
+}
+
+function badgeEstadoClass(estado: Estado01) {
+  return estado === 1 ? "badge badge-success" : "badge badge-danger";
+}
 
 export default function CarrerasPage() {
-  const [items, setItems] = useState<Carrera[]>([]);
+  const [rows, setRows] = useState<Carrera[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // filtros
   const [q, setQ] = useState("");
+  const [estadoFilter, setEstadoFilter] = useState<"ALL" | "ACTIVE" | "INACTIVE">("ALL");
 
-  const [open, setOpen] = useState(false);
+  // modal create/edit
+  const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Carrera | null>(null);
-  const [form, setForm] = useState<CarreraForm>({
-    nombre_carrera: "",
-    sede: "",
-    modalidad: "",
-  });
 
-  const load = async () => {
+  const [nombre, setNombre] = useState("");
+  const [sede, setSede] = useState("");
+  const [modalidad, setModalidad] = useState("");
+
+  // confirm modal
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmTitle, setConfirmTitle] = useState("Confirmar");
+  const [confirmText, setConfirmText] = useState("");
+  const [confirmAction, setConfirmAction] = useState<null | (() => Promise<void>)>(null);
+
+  // toast
+  const [toastOpen, setToastOpen] = useState(false);
+  const [toastMsg, setToastMsg] = useState("");
+  const [toastType, setToastType] = useState<ToastType>("info");
+
+  const showToast = (msg: string, type: ToastType = "info") => {
+    setToastMsg(msg);
+    setToastType(type);
+    setToastOpen(true);
+    window.clearTimeout((showToast as any)._t);
+    (showToast as any)._t = window.setTimeout(() => setToastOpen(false), 2400);
+  };
+
+  const fetchAll = async () => {
     setLoading(true);
     try {
       const data = await carrerasService.list();
-      setItems(data ?? []);
+      setRows(data ?? []);
+    } catch (e: any) {
+      showToast(e?.response?.data?.message || "No se pudo cargar carreras", "error");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    load();
+    fetchAll();
   }, []);
 
   const filtered = useMemo(() => {
-    const query = q.trim().toLowerCase();
-    if (!query) return items;
+    const text = q.trim().toLowerCase();
 
-    return items.filter((c) => {
-      const a = (c.nombre_carrera ?? "").toLowerCase();
-      const b = (c.sede ?? "").toLowerCase();
-      const d = (c.modalidad ?? "").toLowerCase();
-      return a.includes(query) || b.includes(query) || d.includes(query);
+    return rows.filter((c) => {
+      const est: Estado01 = toEstado01((c as any).estado ?? 1);
+
+      if (estadoFilter === "ACTIVE" && est !== 1) return false;
+      if (estadoFilter === "INACTIVE" && est !== 0) return false;
+
+      if (!text) return true;
+
+      const nombreCarrera = String((c as any).nombre_carrera ?? "").toLowerCase();
+      const sedeCarrera = String((c as any).sede ?? "").toLowerCase();
+      const modCarrera = String((c as any).modalidad ?? "").toLowerCase();
+
+      return (
+        nombreCarrera.includes(text) ||
+        sedeCarrera.includes(text) ||
+        modCarrera.includes(text)
+      );
     });
-  }, [items, q]);
+  }, [rows, q, estadoFilter]);
+
+  const totals = useMemo(() => {
+    let active = 0;
+    let inactive = 0;
+    for (const c of rows) {
+      const est: Estado01 = toEstado01((c as any).estado ?? 1);
+      if (est === 1) active++;
+      else inactive++;
+    }
+    return { total: rows.length, active, inactive };
+  }, [rows]);
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ nombre_carrera: "", sede: "", modalidad: "" });
-    setOpen(true);
+    setNombre("");
+    setSede("");
+    setModalidad("");
+    setModalOpen(true);
   };
 
   const openEdit = (c: Carrera) => {
     setEditing(c);
-    setForm({
-      nombre_carrera: c.nombre_carrera ?? "",
-      sede: c.sede ?? "",
-      modalidad: c.modalidad ?? "",
-    });
-    setOpen(true);
+    setNombre(String((c as any).nombre_carrera ?? ""));
+    setSede(String((c as any).sede ?? ""));
+    setModalidad(String((c as any).modalidad ?? ""));
+    setModalOpen(true);
   };
 
-  const closeModal = () => {
-    setOpen(false);
-    setEditing(null);
-  };
-
-  const validate = (): string | null => {
-    if (!form.nombre_carrera.trim()) return "Ingresa el nombre de la carrera.";
-    if (!form.sede.trim()) return "Ingresa la sede.";
-    if (!form.modalidad.trim()) return "Ingresa la modalidad.";
-    return null;
-  };
+  const closeModal = () => setModalOpen(false);
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    const err = validate();
-    if (err) return alert(err);
+    if (!nombre.trim()) return showToast("El nombre de la carrera es obligatorio.", "error");
+    if (!sede.trim()) return showToast("La sede es obligatoria.", "error");
+    if (!modalidad.trim()) return showToast("La modalidad es obligatoria.", "error");
 
     setLoading(true);
     try {
       if (editing) {
-        await carrerasService.update(editing.id_carrera, {
-          nombre_carrera: form.nombre_carrera.trim(),
-          sede: form.sede.trim(),
-          modalidad: form.modalidad.trim(),
-        });
+        const payload: CarreraUpdateDTO = {
+          nombre_carrera: nombre.trim(),
+          sede: sede.trim(),
+          modalidad: modalidad.trim(),
+        };
+        await carrerasService.update((editing as any).id_carrera, payload);
+        showToast("Carrera actualizada correctamente.", "success");
       } else {
-        await carrerasService.create({
-          nombre_carrera: form.nombre_carrera.trim(),
-          sede: form.sede.trim(),
-          modalidad: form.modalidad.trim(),
-        });
+        const payload: CarreraCreateDTO = {
+          nombre_carrera: nombre.trim(),
+          sede: sede.trim(),
+          modalidad: modalidad.trim(),
+        };
+        await carrerasService.create(payload);
+        showToast("Carrera creada correctamente.", "success");
       }
 
-      await load();
       closeModal();
+      await fetchAll();
     } catch (e: any) {
-      alert(e?.response?.data?.message ?? e?.message ?? "No se pudo guardar la carrera.");
+      showToast(e?.response?.data?.message || "No se pudo guardar la carrera", "error");
     } finally {
       setLoading(false);
     }
   };
 
-  const toggleEstado = async (c: Carrera) => {
-    const action = isActive(c.estado) ? "desactivar" : "activar";
-    if (!confirm(`¿Seguro que deseas ${action} la carrera "${c.nombre_carrera}"?`)) return;
+  const askToggleEstado = (c: Carrera) => {
+    const id = (c as any).id_carrera as number;
+    const current: Estado01 = toEstado01((c as any).estado ?? 1);
+    const willEnable = current === 0;
 
-    const currentEstado: Estado01 = to01(c.estado);
+    setConfirmTitle(willEnable ? "Activar carrera" : "Desactivar carrera");
+    setConfirmText(
+      willEnable
+        ? "¿Deseas activar esta carrera? Volverá a estar disponible en el sistema."
+        : "¿Deseas desactivar esta carrera? No estará disponible para asignaciones nuevas."
+    );
 
-    setLoading(true);
-    try {
-      await carrerasService.toggleEstado(c.id_carrera, currentEstado);
-      await load();
-    } catch (e: any) {
-      alert(e?.response?.data?.message ?? e?.message ?? "Error al cambiar estado.");
-    } finally {
-      setLoading(false);
-    }
+    setConfirmAction(() => async () => {
+      setLoading(true);
+      try {
+        await carrerasService.toggleEstado(id, current);
+        showToast(willEnable ? "Carrera activada." : "Carrera desactivada.", "success");
+        await fetchAll();
+      } catch (e: any) {
+        showToast(e?.response?.data?.message || "No se pudo cambiar el estado", "error");
+      } finally {
+        setLoading(false);
+        setConfirmOpen(false);
+      }
+    });
+
+    setConfirmOpen(true);
   };
-
-  const totalActivos = filtered.filter((c) => isActive(c.estado)).length;
-  const totalInactivos = filtered.length - totalActivos;
 
   return (
-    <div className="carreras-wrap">
-      <div className="carreras-header">
-        <div className="carreras-title">
-          <h1>Carreras</h1>
-          <p>Administra las carreras, sede, modalidad y su estado.</p>
+    <div className="page">
+      {/* Header */}
+      <div className="card">
+        <div className="headerRow">
+          <div>
+            <h2 className="title">Carreras</h2>
+            <p className="subtitle">Gestión global de carreras (Súper Administrador).</p>
+          </div>
+
+          <button className="btnPrimary" onClick={openCreate}>
+            + Nueva carrera
+          </button>
         </div>
 
-        <div className="carreras-actions">
+        {/* métricas */}
+        <div className="chipsRow">
+          <div className="chip">Total: <b>{totals.total}</b></div>
+          <div className="chip">Activas: <b>{totals.active}</b></div>
+          <div className="chip">Inactivas: <b>{totals.inactive}</b></div>
+        </div>
+
+        {/* filtros */}
+        <div className="filtersRow">
           <input
-            className="input-base carreras-search"
-            placeholder="Buscar por nombre, sede o modalidad…"
+            className="input"
+            placeholder="Buscar por nombre, sede o modalidad..."
             value={q}
             onChange={(e) => setQ(e.target.value)}
           />
-          <button className="btn-primary" onClick={openCreate}>
-            + Nueva
+
+          <select
+            className="select"
+            value={estadoFilter}
+            onChange={(e) => setEstadoFilter(e.target.value as any)}
+          >
+            <option value="ALL">Todas</option>
+            <option value="ACTIVE">Activas</option>
+            <option value="INACTIVE">Inactivas</option>
+          </select>
+
+          <button className="btnGhost" onClick={fetchAll}>
+            Recargar
           </button>
         </div>
       </div>
 
-      <div className="carreras-card">
-        <div className="carreras-card-head">
-          <div className="carreras-meta">
-            <span className="meta-chip">
-              Total: <b>{filtered.length}</b>
-            </span>
-            <span className="meta-chip">
-              Activos: <b>{totalActivos}</b>
-            </span>
-            <span className="meta-chip">
-              Inactivos: <b>{totalInactivos}</b>
-            </span>
-          </div>
-          <span className="carreras-hint">Tip: desactiva en lugar de eliminar.</span>
-        </div>
-
-        <div className="carreras-table-scroll">
-          <table className="carreras-table">
-            <thead>
-              <tr>
-                <th>Nombre</th>
-                <th>Sede</th>
-                <th>Modalidad</th>
-                <th>Estado</th>
-                <th className="carreras-actions-col">Acciones</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {loading ? (
+      {/* Tabla */}
+      <div className="card">
+        {loading ? (
+          <div className="muted">Cargando...</div>
+        ) : (
+          <div className="tableWrap">
+            <table className="table">
+              <thead>
                 <tr>
-                  <td colSpan={5} className="td-center">
-                    Cargando…
-                  </td>
+                  <th>ID</th>
+                  <th>Carrera</th>
+                  <th>Sede</th>
+                  <th>Modalidad</th>
+                  <th>Estado</th>
+                  <th style={{ width: 220 }}>Acciones</th>
                 </tr>
-              ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="td-center">
-                    Sin datos
-                  </td>
-                </tr>
-              ) : (
-                filtered.map((c) => {
-                  const activo = isActive(c.estado);
+              </thead>
+
+              <tbody>
+                {filtered.map((c) => {
+                  const id = (c as any).id_carrera as number;
+                  const est: Estado01 = toEstado01((c as any).estado ?? 1);
+
                   return (
-                    <tr key={c.id_carrera}>
-                      <td className="td-strong">{c.nombre_carrera}</td>
-                      <td className="td-muted">{c.sede}</td>
-                      <td className="td-muted">{c.modalidad}</td>
+                    <tr key={id}>
+                      <td className="tdStrong">{id}</td>
+                      <td>{String((c as any).nombre_carrera ?? "")}</td>
+                      <td>{String((c as any).sede ?? "")}</td>
+                      <td>{String((c as any).modalidad ?? "")}</td>
                       <td>
-                        <span className={`badge ${activo ? "active" : "inactive"}`}>
-                          {activo ? "ACTIVO" : "INACTIVO"}
-                        </span>
+                        <span className={badgeEstadoClass(est)}>{badgeEstadoLabel(est)}</span>
                       </td>
                       <td>
-                        <div className="row-actions">
-                          <button className="table-btn" onClick={() => openEdit(c)}>
+                        <div className="actions">
+                          <button className="btnGhost" onClick={() => openEdit(c)}>
                             Editar
                           </button>
                           <button
-                            className={`table-btn ${activo ? "danger" : "success"}`}
-                            onClick={() => toggleEstado(c)}
+                            className={est === 1 ? "btnDanger" : "btnSuccess"}
+                            onClick={() => askToggleEstado(c)}
                           >
-                            {activo ? "Desactivar" : "Activar"}
+                            {est === 1 ? "Desactivar" : "Activar"}
                           </button>
                         </div>
                       </td>
                     </tr>
                   );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                })}
+
+                {!filtered.length && (
+                  <tr>
+                    <td colSpan={6} className="muted" style={{ padding: 14 }}>
+                      No hay carreras para mostrar.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
-      {open && (
-        <div className="modal-backdrop" onClick={closeModal}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-head">
-              <div>
-                <h2 className="modal-title">{editing ? "Editar carrera" : "Nueva carrera"}</h2>
-                <p className="modal-subtitle">Completa los datos obligatorios.</p>
-              </div>
-
-              <button className="icon-btn" type="button" onClick={closeModal} aria-label="Cerrar">
-                ✕
-              </button>
+      {/* Modal Create/Edit */}
+      {modalOpen && (
+        <div className="modalOverlay" onMouseDown={closeModal}>
+          <div className="modal" onMouseDown={(e) => e.stopPropagation()}>
+            <div className="modalHeader">
+              <div className="modalTitle">{editing ? "Editar carrera" : "Nueva carrera"}</div>
+              <button className="modalClose" onClick={closeModal}>✕</button>
             </div>
 
-            <form className="modal-body" onSubmit={onSubmit}>
-              <div className="form-grid">
-                <div>
-                  <label className="form-label">Nombre</label>
-                  <input
-                    className="input-base"
-                    value={form.nombre_carrera}
-                    onChange={(e) => setForm((p) => ({ ...p, nombre_carrera: e.target.value }))}
-                    placeholder="Ej. Tecnologías de la Información"
-                  />
-                </div>
+            <form onSubmit={onSubmit} className="modalBody">
+              <label className="label">Nombre de carrera</label>
+              <input className="input" value={nombre} onChange={(e) => setNombre(e.target.value)} />
 
-                <div>
-                  <label className="form-label">Sede</label>
-                  <input
-                    className="input-base"
-                    value={form.sede}
-                    onChange={(e) => setForm((p) => ({ ...p, sede: e.target.value }))}
-                    placeholder="Ej. Sangolquí"
-                  />
-                </div>
+              <label className="label">Sede</label>
+              <input className="input" value={sede} onChange={(e) => setSede(e.target.value)} />
 
-                <div>
-                  <label className="form-label">Modalidad</label>
-                  <input
-                    className="input-base"
-                    value={form.modalidad}
-                    onChange={(e) => setForm((p) => ({ ...p, modalidad: e.target.value }))}
-                    placeholder="Ej. En línea"
-                  />
-                </div>
-              </div>
+              <label className="label">Modalidad</label>
+              <input className="input" value={modalidad} onChange={(e) => setModalidad(e.target.value)} />
 
-              <div className="modal-footer">
-                <button type="button" className="btn-secondary" onClick={closeModal}>
+              <div className="modalFooter">
+                <button type="button" className="btnGhost" onClick={closeModal}>
                   Cancelar
                 </button>
-                <button type="submit" className="btn-primary" disabled={loading}>
-                  {editing ? "Guardar cambios" : "Crear"}
+                <button type="submit" className="btnPrimary" disabled={loading}>
+                  {loading ? "Guardando..." : "Guardar"}
                 </button>
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* Confirm Modal */}
+      {confirmOpen && (
+        <div className="modalOverlay" onMouseDown={() => setConfirmOpen(false)}>
+          <div className="modal confirm" onMouseDown={(e) => e.stopPropagation()}>
+            <div className="modalHeader">
+              <div className="modalTitle">{confirmTitle}</div>
+              <button className="modalClose" onClick={() => setConfirmOpen(false)}>✕</button>
+            </div>
+
+            <div className="modalBody">
+              <p className="confirmText">{confirmText}</p>
+
+              <div className="modalFooter">
+                <button className="btnGhost" onClick={() => setConfirmOpen(false)}>
+                  Cancelar
+                </button>
+                <button
+                  className="btnPrimary"
+                  onClick={() => confirmAction?.()}
+                  disabled={loading}
+                >
+                  Confirmar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast */}
+      {toastOpen && (
+        <div className={`toast toast-${toastType}`}>
+          {toastMsg}
         </div>
       )}
     </div>
