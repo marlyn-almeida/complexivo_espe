@@ -13,6 +13,9 @@ app.use("/api/auth", require("./routes/auth.routes"));
 app.use("/api/roles", require("./routes/rol.routes"));
 app.use("/api/docentes", require("./routes/docente.routes"));
 app.use("/api/carreras", require("./routes/carrera.routes"));
+const departamentosRoutes = require("./routes/departamento.routes");
+app.use("/api/departamentos", departamentosRoutes);
+
 app.use("/api/periodos", require("./routes/periodo.routes"));
 app.use("/api/carreras-periodos", require("./routes/carrera_periodo.routes"));
 app.use("/api/estudiantes", require("./routes/estudiante.routes"));

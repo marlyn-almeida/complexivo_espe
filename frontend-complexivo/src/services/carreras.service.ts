@@ -3,8 +3,11 @@ import type { Carrera, Estado01 } from "../types/carrera";
 
 export type CarreraCreateDTO = {
   nombre_carrera: string;
-  sede: string;
-  modalidad: string;
+  codigo_carrera: string;
+  descripcion_carrera?: string | null;
+  id_departamento: number;
+  sede: string;       // lo vamos a exigir desde UI
+  modalidad: string;  // "En línea" | "Presencial"
 };
 
 export type CarreraUpdateDTO = Partial<CarreraCreateDTO>;
@@ -25,7 +28,6 @@ export const carrerasService = {
     return res.data;
   },
 
-  // ✅ Toggle REAL (igual a periodosService)
   toggleEstado: async (id: number, currentEstado: Estado01) => {
     const nuevo: Estado01 = currentEstado === 1 ? 0 : 1;
     const res = await axiosClient.patch(`/carreras/${id}/estado`, { estado: nuevo });
