@@ -6,8 +6,9 @@ const validate = require("../middlewares/validate.middleware");
 
 const docenteRepo = require("../repositories/docente.repo");
 
+// ===== Helpers =====
 function pickActiveRoleId(roles) {
-  const ids = roles.map(r => r.id_rol);
+  const ids = roles.map((r) => r.id_rol);
   if (ids.includes(1)) return 1; // SUPER_ADMIN
   if (ids.includes(2)) return 2; // ADMIN
   if (ids.includes(3)) return 3; // DOCENTE
@@ -28,59 +29,83 @@ router.post(
   body("password").isString().notEmpty(),
   validate,
   async (req, res) => {
-    const { username, password } = req.body;
+    try {
+      const { username, password } = req.body;
 
-    const user = await docenteRepo.findAuthByUsername(username);
-    if (!user || user.estado !== 1) {
-      return res.status(401).json({ message: "Credenciales incorrectas" });
-    }
+      // Buscar docente por username
+      const user = await docenteRepo.findAuthByUsername(username);
+      if (!user || user.estado !== 1) {
+        return res.status(401).json({ message: "Credenciales incorrectas" });
+      }
 
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      return res.status(401).json({ message: "Credenciales incorrectas" });
-    }
+      // Validar la contraseña
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+      if (!isPasswordValid) {
+        return res.status(401).json({ message: "Credenciales incorrectas" });
+      }
 
-    // debe cambiar contraseña
-    if (user.debe_cambiar_password === 1) {
-      const tempToken = jwt.sign(
-        { id: user.id_docente, purpose: "CHANGE_PASSWORD" },
-        process.env.TEMP_JWT_SECRET,
-        { expiresIn: "10m" }
+      // Si debe cambiar la contraseña => token temporal
+      if (user.debe_cambiar_password === 1) {
+        const tempToken = jwt.sign(
+          { id: user.id_docente, purpose: "CHANGE_PASSWORD" },
+          process.env.TEMP_JWT_SECRET,
+          { expiresIn: "10m" }
+        );
+
+        return res.json({
+          mustChangePassword: true,
+          tempToken,
+          __version: "LOGIN_WITH_ROLES_V2" // sello para verificar deploy
+        });
+      }
+
+      // ===== Roles =====
+      if (typeof docenteRepo.getRolesByDocenteId !== "function") {
+        return res.status(500).json({
+          message: "getRolesByDocenteId no está implementado/exportado en docente.repo.js",
+          __version: "LOGIN_WITH_ROLES_V2"
+        });
+      }
+
+      const roles = await docenteRepo.getRolesByDocenteId(user.id_docente); // [{id_rol,nombre_rol}, ...]
+      const activeRoleId = pickActiveRoleId(roles);
+
+      if (!activeRoleId) {
+        return res.status(403).json({
+          message: "El usuario no tiene roles activos",
+          __version: "LOGIN_WITH_ROLES_V2"
+        });
+      }
+
+      const activeRole = roles.find((r) => r.id_rol === activeRoleId) || null;
+
+      // JWT normal con roles
+      const accessToken = jwt.sign(
+        {
+          id: user.id_docente,
+          roles: roles.map((r) => r.id_rol),
+          activeRole: activeRoleId
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: "8h" }
       );
 
       return res.json({
-        mustChangePassword: true,
-        tempToken
+        mustChangePassword: false,
+        accessToken,
+        roles,
+        activeRole,
+        redirectTo: redirectByRole(activeRoleId),
+        __version: "LOGIN_WITH_ROLES_V2" // sello para verificar deploy
+      });
+    } catch (err) {
+      console.error("AUTH LOGIN ERROR:", err);
+      return res.status(500).json({
+        message: "Error interno en login",
+        detail: err?.message || String(err),
+        __version: "LOGIN_WITH_ROLES_V2"
       });
     }
-
-    // ===== NUEVO: leer roles =====
-    const roles = await docenteRepo.getRolesByDocenteId(user.id_docente);
-    const activeRoleId = pickActiveRoleId(roles);
-
-    if (!activeRoleId) {
-      return res.status(403).json({ message: "El usuario no tiene roles activos" });
-    }
-
-    const activeRole = roles.find(r => r.id_rol === activeRoleId);
-
-    const accessToken = jwt.sign(
-      {
-        id: user.id_docente,
-        roles: roles.map(r => r.id_rol),
-        activeRole: activeRoleId
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: "8h" }
-    );
-
-    return res.json({
-      mustChangePassword: false,
-      accessToken,
-      roles,
-      activeRole,
-      redirectTo: redirectByRole(activeRoleId) // opcional (te facilita el frontend)
-    });
   }
 );
 
@@ -91,48 +116,76 @@ router.patch(
   body("newPassword").isString().isLength({ min: 6 }),
   validate,
   async (req, res) => {
-    const { tempToken, newPassword } = req.body;
-
-    let decoded;
     try {
-      decoded = jwt.verify(tempToken, process.env.TEMP_JWT_SECRET);
-    } catch {
-      return res.status(401).json({ message: "Token temporal inválido o expirado" });
+      const { tempToken, newPassword } = req.body;
+
+      // Verificar token temporal
+      let decoded;
+      try {
+        decoded = jwt.verify(tempToken, process.env.TEMP_JWT_SECRET);
+      } catch {
+        return res.status(401).json({
+          message: "Token temporal inválido o expirado",
+          __version: "LOGIN_WITH_ROLES_V2"
+        });
+      }
+
+      if (decoded.purpose !== "CHANGE_PASSWORD") {
+        return res.status(401).json({
+          message: "Token temporal no válido para este propósito",
+          __version: "LOGIN_WITH_ROLES_V2"
+        });
+      }
+
+      // Hashear nueva contraseña + limpiar flag
+      const passwordHash = await bcrypt.hash(newPassword, 10);
+      await docenteRepo.updatePasswordAndClearFlag(decoded.id, passwordHash);
+
+      // ===== Roles para emitir accessToken completo =====
+      if (typeof docenteRepo.getRolesByDocenteId !== "function") {
+        return res.status(500).json({
+          message: "getRolesByDocenteId no está implementado/exportado en docente.repo.js",
+          __version: "LOGIN_WITH_ROLES_V2"
+        });
+      }
+
+      const roles = await docenteRepo.getRolesByDocenteId(decoded.id);
+      const activeRoleId = pickActiveRoleId(roles);
+
+      if (!activeRoleId) {
+        return res.status(403).json({
+          message: "El usuario no tiene roles activos",
+          __version: "LOGIN_WITH_ROLES_V2"
+        });
+      }
+
+      const activeRole = roles.find((r) => r.id_rol === activeRoleId) || null;
+
+      const accessToken = jwt.sign(
+        {
+          id: decoded.id,
+          roles: roles.map((r) => r.id_rol),
+          activeRole: activeRoleId
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: "8h" }
+      );
+
+      return res.json({
+        accessToken,
+        roles,
+        activeRole,
+        redirectTo: redirectByRole(activeRoleId),
+        __version: "LOGIN_WITH_ROLES_V2"
+      });
+    } catch (err) {
+      console.error("AUTH CHANGE-PASSWORD ERROR:", err);
+      return res.status(500).json({
+        message: "Error interno en change-password",
+        detail: err?.message || String(err),
+        __version: "LOGIN_WITH_ROLES_V2"
+      });
     }
-
-    if (decoded.purpose !== "CHANGE_PASSWORD") {
-      return res.status(401).json({ message: "Token temporal no válido para este propósito" });
-    }
-
-    const passwordHash = await bcrypt.hash(newPassword, 10);
-    await docenteRepo.updatePasswordAndClearFlag(decoded.id, passwordHash);
-
-    // ===== NUEVO: emitir token completo con roles =====
-    const roles = await docenteRepo.getRolesByDocenteId(decoded.id);
-    const activeRoleId = pickActiveRoleId(roles);
-
-    if (!activeRoleId) {
-      return res.status(403).json({ message: "El usuario no tiene roles activos" });
-    }
-
-    const activeRole = roles.find(r => r.id_rol === activeRoleId);
-
-    const accessToken = jwt.sign(
-      {
-        id: decoded.id,
-        roles: roles.map(r => r.id_rol),
-        activeRole: activeRoleId
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: "8h" }
-    );
-
-    return res.json({
-      accessToken,
-      roles,
-      activeRole,
-      redirectTo: redirectByRole(activeRoleId)
-    });
   }
 );
 
