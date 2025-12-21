@@ -1,59 +1,73 @@
 const router = require("express").Router();
 const { body, param, query } = require("express-validator");
 const validate = require("../middlewares/validate.middleware");
-const ctrl = require("../controllers/carrera.controller");
+const repo = require("../repositories/carrera.repo");
 
-// 🔐 cuando metas auth: auth + authorize(["SUPER_ADMIN","ADMIN"])
-
+// LISTAR
 router.get(
   "/",
-  query("includeInactive").optional().isBoolean().toBoolean(),
-  query("q").optional().isString(),
-  query("departamentoId").optional().isInt({ min: 1 }).toInt(),
-  query("page").optional().isInt({ min: 1 }).toInt(),
-  query("limit").optional().isInt({ min: 1, max: 100 }).toInt(),
+  query("page").optional().isInt({ min: 1 }),
+  query("limit").optional().isInt({ min: 1, max: 100 }),
   validate,
-  ctrl.list
+  async (req, res) => {
+    const data = await repo.findAll(req.query);
+    res.json(data);
+  }
 );
 
-router.get(
-  "/:id",
-  param("id").isInt({ min: 1 }).toInt(),
-  validate,
-  ctrl.get
-);
-
+// CREAR
 router.post(
   "/",
-  body("nombre_carrera").isString().trim().notEmpty(),
-  body("codigo_carrera").isString().trim().notEmpty(),
-  body("descripcion_carrera").optional().isString().trim(),
-  body("id_departamento").isInt({ min: 1 }).toInt(),
-  body("sede").optional().isString().trim(),
-  body("modalidad").optional().isString().trim(),
+  body("nombre_carrera").isString().notEmpty().isLength({ max: 120 }),
+  body("codigo_carrera").isString().notEmpty().isLength({ max: 30 }),
+  body("id_departamento").isInt(),
+  body("modalidad").optional().isIn(["En línea", "Presencial"]),
+  body("sede").optional().isString(),
   validate,
-  ctrl.create
+  async (req, res) => {
+    const { nombre_carrera, codigo_carrera, id_departamento } = req.body;
+
+    if (await repo.findByNombre(nombre_carrera)) {
+      return res.status(400).json({ message: "La carrera ya existe" });
+    }
+
+    if (await repo.findByCodigo(codigo_carrera)) {
+      return res.status(400).json({ message: "El código ya existe" });
+    }
+
+    if (!(await repo.departamentoExists(id_departamento))) {
+      return res.status(400).json({ message: "Departamento inválido" });
+    }
+
+    const carrera = await repo.create(req.body);
+    res.status(201).json(carrera);
+  }
 );
 
+// EDITAR
 router.put(
   "/:id",
-  param("id").isInt({ min: 1 }).toInt(),
-  body("nombre_carrera").isString().trim().notEmpty(),
-  body("codigo_carrera").isString().trim().notEmpty(),
-  body("descripcion_carrera").optional().isString().trim(),
-  body("id_departamento").isInt({ min: 1 }).toInt(),
-  body("sede").optional().isString().trim(),
-  body("modalidad").optional().isString().trim(),
+  param("id").isInt(),
+  body("nombre_carrera").isString().notEmpty(),
+  body("codigo_carrera").isString().notEmpty(),
+  body("id_departamento").isInt(),
   validate,
-  ctrl.update
+  async (req, res) => {
+    const carrera = await repo.update(req.params.id, req.body);
+    res.json(carrera);
+  }
 );
 
+// CAMBIAR ESTADO
 router.patch(
   "/:id/estado",
-  param("id").isInt({ min: 1 }).toInt(),
-  body("estado").isBoolean().toBoolean(),
+  param("id").isInt(),
+  body("estado").isIn([0, 1]),
   validate,
-  ctrl.changeEstado
+  async (req, res) => {
+    const carrera = await repo.setEstado(req.params.id, req.body.estado);
+    res.json(carrera);
+  }
 );
 
 module.exports = router;
