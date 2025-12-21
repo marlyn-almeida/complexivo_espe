@@ -174,51 +174,60 @@ export default function CarrerasPage() {
         </div>
 
         {/* FILTROS */}
-        <div className="filtersRow">
-          <div className="input">
-            <Search size={16} />
-            <input
-              placeholder="Buscar carrera..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
+       {/* FILTROS */}
+<div className="filtersRow">
 
-          <select
-            className="select"
-            value={filtroDepartamento}
-            onChange={(e) => setFiltroDepartamento(e.target.value)}
-          >
-            <option value="">Departamento</option>
-            {departamentos.map((d) => (
-              <option key={d.id_departamento} value={d.id_departamento}>
-                {d.nombre_departamento}
-              </option>
-            ))}
-          </select>
+  {/* BUSCADOR */}
+  <div className="searchInline">
+    <Search size={18} />
+    <input
+      type="text"
+      placeholder="Buscar carrera..."
+      value={search}
+      onChange={(e) => setSearch(e.target.value)}
+    />
+  </div>
 
-          <select
-            className="select"
-            value={filtroModalidad}
-            onChange={(e) => setFiltroModalidad(e.target.value)}
-          >
-            <option value="">Modalidad</option>
-            {MODALIDADES.map((m) => (
-              <option key={m}>{m}</option>
-            ))}
-          </select>
+  {/* DEPARTAMENTO */}
+  <select
+    className="select"
+    value={filtroDepartamento}
+    onChange={(e) => setFiltroDepartamento(e.target.value)}
+  >
+    <option value="">Departamento</option>
+    {departamentos.map((d) => (
+      <option key={d.id_departamento} value={d.id_departamento}>
+        {d.nombre_departamento}
+      </option>
+    ))}
+  </select>
 
-          <select
-            className="select"
-            value={filtroSede}
-            onChange={(e) => setFiltroSede(e.target.value)}
-          >
-            <option value="">Sede</option>
-            {SEDES.map((s) => (
-              <option key={s}>{s}</option>
-            ))}
-          </select>
-        </div>
+  {/* MODALIDAD */}
+  <select
+    className="select"
+    value={filtroModalidad}
+    onChange={(e) => setFiltroModalidad(e.target.value)}
+  >
+    <option value="">Modalidad</option>
+    {MODALIDADES.map((m) => (
+      <option key={m}>{m}</option>
+    ))}
+  </select>
+
+  {/* SEDE */}
+  <select
+    className="select"
+    value={filtroSede}
+    onChange={(e) => setFiltroSede(e.target.value)}
+  >
+    <option value="">Sede</option>
+    {SEDES.map((s) => (
+      <option key={s}>{s}</option>
+    ))}
+  </select>
+
+</div>
+
       </div>
 
       {/* TABLA */}
@@ -253,53 +262,53 @@ export default function CarrerasPage() {
                     {c.estado ? "Activo" : "Inactivo"}
                   </span>
                 </td>
-                <td className="actions">
-                  <button
-                    className="btnGhost"
-                    onClick={() => {
-                      setViewCarrera(c);
-                      setShowViewModal(true);
-                    }}
-                  >
-                    <Eye size={16} />
-                  </button>
+<td className="actions">
+  {/* VER */}
+  <button
+    className="btnIcon btnView"
+    title="Ver carrera"
+    onClick={() => {
+      setViewCarrera(c);
+      setShowViewModal(true);
+    }}
+  >
+    <Eye size={16} />
+  </button>
 
-                  <button
-                    className="btnGhost"
-                    onClick={() => {
-                      setEditingCarrera(c);
-                      setForm({
-                        nombre_carrera: c.nombre_carrera,
-                        codigo_carrera: c.codigo_carrera,
-                        descripcion_carrera: c.descripcion_carrera || "",
-                        id_departamento: String(c.id_departamento),
-                        modalidad: c.modalidad || "",
-                        sede: c.sede || "",
-                      });
-                      setErrors({});
-                      setShowFormModal(true);
-                    }}
-                  >
-                    <Pencil size={16} />
-                  </button>
+  {/* EDITAR */}
+  <button
+    className="btnIcon btnEdit"
+    title="Editar carrera"
+    onClick={() => {
+      setEditingCarrera(c);
+      setForm({
+        nombre_carrera: c.nombre_carrera,
+        codigo_carrera: c.codigo_carrera,
+        descripcion_carrera: c.descripcion_carrera || "",
+        id_departamento: String(c.id_departamento),
+        modalidad: c.modalidad || "",
+        sede: c.sede || "",
+      });
+      setErrors({});
+      setShowFormModal(true);
+    }}
+  >
+    <Pencil size={16} />
+  </button>
 
-                  <button
-                    className="btnGhost"
-                    onClick={async () => {
-                      await carrerasService.toggleEstado(
-                        c.id_carrera,
-                        c.estado
-                      );
-                      loadAll();
-                    }}
-                  >
-                    {c.estado ? (
-                      <ToggleRight size={18} />
-                    ) : (
-                      <ToggleLeft size={18} />
-                    )}
-                  </button>
-                </td>
+  {/* ACTIVAR / DESACTIVAR */}
+  <button
+    className={`btnIcon ${c.estado ? "btnDeactivate" : "btnActivate"}`}
+    title={c.estado ? "Desactivar carrera" : "Activar carrera"}
+    onClick={async () => {
+      await carrerasService.toggleEstado(c.id_carrera, c.estado);
+      loadAll();
+    }}
+  >
+    {c.estado ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
+  </button>
+</td>
+
               </tr>
             ))}
           </tbody>
@@ -307,7 +316,7 @@ export default function CarrerasPage() {
       </div>
             {/* PAGINACIÓN */}
       <div className="card">
-        <div className="actions">
+        <div className="pagination">
           <button
             className="btnGhost"
             disabled={page === 1}
@@ -516,28 +525,58 @@ export default function CarrerasPage() {
               </button>
             </div>
 
-            <div className="modalBody">
-              <div>
-                <strong>Nombre:</strong> {viewCarrera.nombre_carrera}
-              </div>
-              <div>
-                <strong>Código:</strong> {viewCarrera.codigo_carrera}
-              </div>
-              <div>
-                <strong>Departamento:</strong>{" "}
-                {getDepartamentoNombre(viewCarrera.id_departamento)}
-              </div>
-              <div>
-                <strong>Modalidad:</strong> {viewCarrera.modalidad}
-              </div>
-              <div>
-                <strong>Sede:</strong> {viewCarrera.sede}
-              </div>
-              <div>
-                <strong>Descripción:</strong>{" "}
-                {viewCarrera.descripcion_carrera || "-"}
-              </div>
-            </div>
+            <div className="modalBody viewSimple">
+
+  <div className="viewField">
+    <span className="viewLabel">Nombre de la carrera</span>
+    <span className="viewValue">{viewCarrera.nombre_carrera}</span>
+  </div>
+
+  <div className="viewField">
+    <span className="viewLabel">Código</span>
+    <span className="viewValue tdCode">{viewCarrera.codigo_carrera}</span>
+  </div>
+
+  <div className="viewField">
+    <span className="viewLabel">Departamento</span>
+    <span className="viewValue">
+      {getDepartamentoNombre(viewCarrera.id_departamento)}
+    </span>
+  </div>
+
+  <div className="viewFieldRow">
+    <div className="viewField">
+      <span className="viewLabel">Modalidad</span>
+      <span className="viewValue">{viewCarrera.modalidad || "-"}</span>
+    </div>
+
+    <div className="viewField">
+      <span className="viewLabel">Sede</span>
+      <span className="viewValue">{viewCarrera.sede || "-"}</span>
+    </div>
+  </div>
+
+  <div className="viewField">
+    <span className="viewLabel">Estado</span>
+    <span
+      className={`badge ${
+        viewCarrera.estado ? "badge-success" : "badge-danger"
+      }`}
+    >
+      {viewCarrera.estado ? "ACTIVA" : "INACTIVA"}
+    </span>
+  </div>
+
+  <div className="viewField">
+    <span className="viewLabel">Descripción</span>
+    <p className="viewDescription">
+      {viewCarrera.descripcion_carrera || "No se registró descripción."}
+    </p>
+  </div>
+
+</div>
+
+
           </div>
         </div>
       )}

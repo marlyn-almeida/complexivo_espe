@@ -196,3 +196,161 @@
   border-color: rgba(15, 118, 110, 0.35);
   box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.10);
 }
+
+/* =========================
+   BOTONES DE ACCIONES
+========================= */
+.btnIcon {
+  border: none;
+  border-radius: 10px;
+  padding: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btnView {
+  background: rgba(59, 130, 246, 0.15);
+  color: #1d4ed8;
+}
+
+.btnEdit {
+  background: rgba(245, 158, 11, 0.18);
+  color: #92400e;
+}
+
+.btnActivate {
+  background: rgba(34, 197, 94, 0.18);
+  color: #065f46;
+}
+
+.btnDeactivate {
+  background: rgba(239, 68, 68, 0.18);
+  color: #7f1d1d;
+}
+
+.btnIcon:hover {
+  transform: scale(1.05);
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+}
+.viewGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.viewGrid .full {
+  grid-column: span 2;
+}
+/* =========================
+   MODAL VER - SIMPLE CLEAN
+========================= */
+.viewSimple {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.viewField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.viewFieldRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.viewLabel {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--text-muted);
+}
+
+.viewValue {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.viewDescription {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--text-main);
+}
+ .searchInline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  background: #ffffff;
+  border: 1px solid #dcdcdc;
+  border-radius: 8px;
+
+  padding: 6px 10px;
+  width: 280px;
+}
+
+.searchIcon {
+  display: flex;
+  align-items: center;
+  color: #666;
+}
+
+.searchInput {
+  border: none;
+  outline: none;
+  width: 100%;
+
+  font-size: 14px;
+  background: transparent;
+  color: #333;
+}
+
+.searchInput::placeholder {
+  color: #999;
+}
+
+
+.filtersRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.searchInline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.searchInline input {
+  border: none;
+  outline: none;
+  font-size: 14px;
+  width: 180px;
+}
+
+.select {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  font-size: 14px;
+}
