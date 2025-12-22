@@ -35,4 +35,27 @@ router.patch("/:id/estado",
   validate, ctrl.changeEstado
 );
 
+// LISTAR
+router.get(
+  "/",
+  query("page").optional().isInt({ min: 1 }),
+  query("limit").optional().isInt({ min: 1, max: 100 }),
+
+  // ✅ NUEVO: includeInactive=1 para traer activas+inactivas
+  query("includeInactive").optional().isIn(["0", "1"]),
+
+  validate,
+  async (req, res) => {
+    // ✅ Normaliza includeInactive a boolean para el repo
+    const includeInactive = String(req.query.includeInactive || "0") === "1";
+
+    const data = await repo.findAll({
+      ...req.query,
+      includeInactive,
+    });
+
+    res.json(data);
+  }
+);
+
 module.exports = router;

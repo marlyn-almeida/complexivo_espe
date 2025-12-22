@@ -74,20 +74,24 @@ export default function CarrerasPage() {
   // ===========================
   useEffect(() => {
     loadAll();
-  }, []);
+  }, [mostrarInactivas]);
 
-  async function loadAll() {
-    try {
-      setLoading(true);
-      const [car, dep] = await Promise.all([carrerasService.list(), departamentosService.list()]);
-      setCarreras(car);
-      setDepartamentos(dep);
-    } catch {
-      showToast("Error al cargar datos", "error");
-    } finally {
-      setLoading(false);
-    }
+async function loadAll() {
+  try {
+    setLoading(true);
+    const [car, dep] = await Promise.all([
+      carrerasService.list(mostrarInactivas), // ✅ aquí
+      departamentosService.list(),
+    ]);
+    setCarreras(car);
+    setDepartamentos(dep);
+  } catch (e) {
+    showToast("Error al cargar datos", "error");
+  } finally {
+    setLoading(false);
   }
+}
+
 
   // ===========================
   // HELPERS
