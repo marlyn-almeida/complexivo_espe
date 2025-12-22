@@ -1,6 +1,5 @@
-import { useNavigate } from "react-router-dom";
 import RoleSwitcher from "../auth/RoleSwitcher";
-import { clearSession, getActiveRole } from "../../utils/auth";
+import { getActiveRole } from "../../utils/auth";
 import "./Topbar.css";
 
 function roleLabel(role: number | null) {
@@ -34,13 +33,7 @@ export default function Topbar({
 }: {
   onToggleSidebar: () => void;
 }) {
-  const navigate = useNavigate();
   const activeRole = getActiveRole();
-
-  const handleLogout = () => {
-    clearSession();
-    navigate("/login", { replace: true });
-  };
 
   return (
     <header className="topbar">
@@ -69,13 +62,10 @@ export default function Topbar({
 
         <div className="topbar-user">
           <div className="topbar-user-name">Perfil actual</div>
-          <div className="topbar-user-desc">
-            {roleLabel(activeRole)}
-          </div>
+          <div className="topbar-user-desc">{roleLabel(activeRole)}</div>
         </div>
 
         <div className="topbar-avatar">{roleAvatar(activeRole)}</div>
-
       </div>
     </header>
   );

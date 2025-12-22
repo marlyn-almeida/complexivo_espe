@@ -16,12 +16,15 @@ export default function RolesPage() {
 
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Role | null>(null);
-  const [form, setForm] = useState<FormState>({ nombre_rol: "", descripcion_rol: "" });
+  const [form, setForm] = useState<FormState>({
+    nombre_rol: "",
+    descripcion_rol: "",
+  });
 
   const fetchRoles = async () => {
     setLoading(true);
     try {
-      const data = await rolesService.list();
+      const data = await roleService.list(); // ✅ era rolesService
       setRoles(data);
     } finally {
       setLoading(false);
@@ -80,14 +83,13 @@ export default function RolesPage() {
     setLoading(true);
     try {
       if (editing) {
-        await rolesService.update(editing.id_rol, payload);
+        await roleService.update(editing.id_rol, payload); // ✅ era rolesService
       } else {
-        await rolesService.create(payload);
+        await roleService.create(payload); // ✅ era rolesService
       }
       await fetchRoles();
       closeModal();
     } catch (err: any) {
-      // si tu backend manda message, se verá en consola por interceptor
       alert("No se pudo guardar el rol. Revisa consola/servidor.");
     } finally {
       setLoading(false);
@@ -99,9 +101,12 @@ export default function RolesPage() {
     const ok = confirm(`¿Seguro que deseas ${action} el rol "${r.nombre_rol}"?`);
     if (!ok) return;
 
+    const nuevoEstado: 0 | 1 = isActive(r) ? 0 : 1;
+
     setLoading(true);
     try {
-      await rolesService.toggleEstado(r.id_rol);
+      // ✅ tu service real es setEstado(id, estado)
+      await roleService.setEstado(r.id_rol, nuevoEstado);
       await fetchRoles();
     } finally {
       setLoading(false);
@@ -165,9 +170,7 @@ export default function RolesPage() {
               {!loading &&
                 filtered.map((r) => (
                   <tr key={r.id_rol} className="border-t">
-                    <td className="px-4 py-3 font-medium text-espeDark">
-                      {r.nombre_rol}
-                    </td>
+                    <td className="px-4 py-3 font-medium text-espeDark">{r.nombre_rol}</td>
                     <td className="px-4 py-3 text-slate-600">
                       {r.descripcion_rol || <span className="text-slate-400">—</span>}
                     </td>
@@ -212,18 +215,13 @@ export default function RolesPage() {
       {/* Modal */}
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/40"
-            onClick={closeModal}
-          />
+          <div className="absolute inset-0 bg-black/40" onClick={closeModal} />
           <div className="relative w-full max-w-lg rounded-lg bg-white p-5 shadow-espeSoft">
             <div className="mb-3">
               <h2 className="text-base font-semibold text-espeDark">
                 {editing ? "Editar rol" : "Nuevo rol"}
               </h2>
-              <p className="text-xs text-slate-500">
-                Completa la información y guarda.
-              </p>
+              <p className="text-xs text-slate-500">Completa la información y guarda.</p>
             </div>
 
             <form onSubmit={onSubmit} className="space-y-3">
@@ -231,7 +229,9 @@ export default function RolesPage() {
                 <label className="block text-xs text-slate-700 mb-1">Nombre</label>
                 <input
                   value={form.nombre_rol}
-                  onChange={(e) => setForm((p) => ({ ...p, nombre_rol: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, nombre_rol: e.target.value }))
+                  }
                   className="w-full rounded-full border border-espeGray bg-white px-3 py-2 text-sm outline-none focus:border-espeGreen focus:ring-1 focus:ring-espeGreen"
                   placeholder="Ej: SUPER_ADMIN"
                 />
@@ -241,7 +241,9 @@ export default function RolesPage() {
                 <label className="block text-xs text-slate-700 mb-1">Descripción</label>
                 <input
                   value={form.descripcion_rol}
-                  onChange={(e) => setForm((p) => ({ ...p, descripcion_rol: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, descripcion_rol: e.target.value }))
+                  }
                   className="w-full rounded-full border border-espeGray bg-white px-3 py-2 text-sm outline-none focus:border-espeGreen focus:ring-1 focus:ring-espeGreen"
                   placeholder="Descripción opcional"
                 />
