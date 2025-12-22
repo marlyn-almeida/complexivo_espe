@@ -13,6 +13,9 @@ import {
   Search,
 } from "lucide-react";
 
+import CarreraFormModal from "./CarreraFormModal";
+import CarreraViewModal from "./CarreraViewModal";
+
 import "./CarrerasPage.css";
 
 const MODALIDADES = ["EN LÍNEA", "PRESENCIAL"];
@@ -40,12 +43,11 @@ export default function CarrerasPage() {
   const [filtroDepartamento, setFiltroDepartamento] = useState("");
   const [filtroModalidad, setFiltroModalidad] = useState("");
   const [filtroSede, setFiltroSede] = useState("");
+  const [mostrarInactivas, setMostrarInactivas] = useState(false);
+
   const totalCarreras = carreras.length;
-const activas = carreras.filter(c => c.estado === 1).length;
-const inactivas = carreras.filter(c => c.estado === 0).length;
-
-const [mostrarInactivas, setMostrarInactivas] = useState(false);
-
+  const activas = carreras.filter((c) => c.estado === 1).length;
+  const inactivas = carreras.filter((c) => c.estado === 0).length;
 
   // ===========================
   // PAGINACIÓN
@@ -73,9 +75,7 @@ const [mostrarInactivas, setMostrarInactivas] = useState(false);
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [toast, setToast] = useState<{ msg: string; type: string } | null>(
-    null
-  );
+  const [toast, setToast] = useState<{ msg: string; type: string } | null>(null);
 
   // ===========================
   // CARGA INICIAL
@@ -93,7 +93,7 @@ const [mostrarInactivas, setMostrarInactivas] = useState(false);
       ]);
       setCarreras(car);
       setDepartamentos(dep);
-    } catch (e) {
+    } catch {
       showToast("Error al cargar datos", "error");
     } finally {
       setLoading(false);
@@ -105,6 +105,9 @@ const [mostrarInactivas, setMostrarInactivas] = useState(false);
   // ===========================
   const filtered = useMemo(() => {
     return carreras
+      .filter((c) =>
+        mostrarInactivas ? true : c.estado === 1
+      )
       .filter((c) =>
         c.nombre_carrera.toLowerCase().includes(search.toLowerCase())
       )
@@ -120,7 +123,14 @@ const [mostrarInactivas, setMostrarInactivas] = useState(false);
       .sort((a, b) =>
         a.nombre_carrera.localeCompare(b.nombre_carrera, "es")
       );
-  }, [carreras, search, filtroDepartamento, filtroModalidad, filtroSede]);
+  }, [
+    carreras,
+    search,
+    filtroDepartamento,
+    filtroModalidad,
+    filtroSede,
+    mostrarInactivas,
+  ]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
 
@@ -179,102 +189,86 @@ const [mostrarInactivas, setMostrarInactivas] = useState(false);
           </button>
         </div>
 
-        {/* RESUMEN + ACCIONES */}
-<div className="summaryRow">
-  <div className="summaryBoxes">
-    <div className="summaryBox">
-      <span className="label">Total</span>
-      <span className="value">{totalCarreras}</span>
-    </div>
+        {/* RESUMEN */}
+        <div className="summaryRow">
+          <div className="summaryBoxes">
+            <div className="summaryBox">
+              <span className="label">Total</span>
+              <span className="value">{totalCarreras}</span>
+            </div>
+            <div className="summaryBox active">
+              <span className="label">Activas</span>
+              <span className="value">{activas}</span>
+            </div>
+            <div className="summaryBox inactive">
+              <span className="label">Inactivas</span>
+              <span className="value">{inactivas}</span>
+            </div>
+          </div>
 
-    <div className="summaryBox active">
-      <span className="label">Activas</span>
-      <span className="value">{activas}</span>
-    </div>
+          <div className="summaryActions">
+            <label className="toggle">
+              <input
+                type="checkbox"
+                checked={mostrarInactivas}
+                onChange={(e) => setMostrarInactivas(e.target.checked)}
+              />
+              <span className="slider"></span>
+              <span className="toggleText">Mostrar inactivas</span>
+            </label>
 
-    <div className="summaryBox inactive">
-      <span className="label">Inactivas</span>
-      <span className="value">{inactivas}</span>
-    </div>
-  </div>
+            <button className="btnSecondary" onClick={loadAll}>
+              ⟳ Actualizar
+            </button>
+          </div>
+        </div>
 
-  <div className="summaryActions">
-    <label className="toggle">
-      <input
-        type="checkbox"
-        checked={mostrarInactivas}
-        onChange={(e) => setMostrarInactivas(e.target.checked)}
-      />
-      <span className="slider"></span>
-      <span className="toggleText">Mostrar inactivas</span>
-    </label>
+        {/* FILTROS */}
+        <div className="filtersRow">
+          <div className="searchInline">
+            <Search size={18} />
+            <input
+              placeholder="Buscar carrera..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
 
-    <button
-  className="btnSecondary"
-  onClick={() => loadAll()}
-  title="Actualizar"
->
-  ⟳ Actualizar
-</button>
+          <select
+            className="select"
+            value={filtroDepartamento}
+            onChange={(e) => setFiltroDepartamento(e.target.value)}
+          >
+            <option value="">Departamento</option>
+            {departamentos.map((d) => (
+              <option key={d.id_departamento} value={d.id_departamento}>
+                {d.nombre_departamento}
+              </option>
+            ))}
+          </select>
 
-  </div>
-</div>
+          <select
+            className="select"
+            value={filtroModalidad}
+            onChange={(e) => setFiltroModalidad(e.target.value)}
+          >
+            <option value="">Modalidad</option>
+            {MODALIDADES.map((m) => (
+              <option key={m}>{m}</option>
+            ))}
+          </select>
 
-
-       {/* FILTROS */}
-<div className="filtersRow">
-
-  {/* BUSCADOR */}
-  <div className="searchInline">
-    <Search size={18} />
-    <input
-      type="text"
-      placeholder="Buscar carrera..."
-      value={search}
-      onChange={(e) => setSearch(e.target.value)}
-    />
-  </div>
-
-  {/* DEPARTAMENTO */}
-  <select
-    className="select"
-    value={filtroDepartamento}
-    onChange={(e) => setFiltroDepartamento(e.target.value)}
-  >
-    <option value="">Departamento</option>
-    {departamentos.map((d) => (
-      <option key={d.id_departamento} value={d.id_departamento}>
-        {d.nombre_departamento}
-      </option>
-    ))}
-  </select>
-
-  {/* MODALIDAD */}
-  <select
-    className="select"
-    value={filtroModalidad}
-    onChange={(e) => setFiltroModalidad(e.target.value)}
-  >
-    <option value="">Modalidad</option>
-    {MODALIDADES.map((m) => (
-      <option key={m}>{m}</option>
-    ))}
-  </select>
-
-  {/* SEDE */}
-  <select
-    className="select"
-    value={filtroSede}
-    onChange={(e) => setFiltroSede(e.target.value)}
-  >
-    <option value="">Sede</option>
-    {SEDES.map((s) => (
-      <option key={s}>{s}</option>
-    ))}
-  </select>
-
-</div>
-
+          <select
+            className="select"
+            value={filtroSede}
+            onChange={(e) => setFiltroSede(e.target.value)}
+          >
+            <option value="">Sede</option>
+            {SEDES.map((s) => (
+              <option key={s}>{s}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* TABLA */}
@@ -309,59 +303,61 @@ const [mostrarInactivas, setMostrarInactivas] = useState(false);
                     {c.estado ? "Activo" : "Inactivo"}
                   </span>
                 </td>
-<td className="actions">
-  {/* VER */}
-  <button
-    className="btnIcon btnView"
-    title="Ver carrera"
-    onClick={() => {
-      setViewCarrera(c);
-      setShowViewModal(true);
-    }}
-  >
-    <Eye size={16} />
-  </button>
+                <td className="actions">
+                  <button
+                    className="btnIcon btnView"
+                    onClick={() => {
+                      setViewCarrera(c);
+                      setShowViewModal(true);
+                    }}
+                  >
+                    <Eye size={16} />
+                  </button>
 
-  {/* EDITAR */}
-  <button
-    className="btnIcon btnEdit"
-    title="Editar carrera"
-    onClick={() => {
-      setEditingCarrera(c);
-      setForm({
-        nombre_carrera: c.nombre_carrera,
-        codigo_carrera: c.codigo_carrera,
-        descripcion_carrera: c.descripcion_carrera || "",
-        id_departamento: String(c.id_departamento),
-        modalidad: c.modalidad || "",
-        sede: c.sede || "",
-      });
-      setErrors({});
-      setShowFormModal(true);
-    }}
-  >
-    <Pencil size={16} />
-  </button>
+                  <button
+                    className="btnIcon btnEdit"
+                    onClick={() => {
+                      setEditingCarrera(c);
+                      setForm({
+                        nombre_carrera: c.nombre_carrera,
+                        codigo_carrera: c.codigo_carrera,
+                        descripcion_carrera: c.descripcion_carrera || "",
+                        id_departamento: String(c.id_departamento),
+                        modalidad: c.modalidad || "",
+                        sede: c.sede || "",
+                      });
+                      setShowFormModal(true);
+                    }}
+                  >
+                    <Pencil size={16} />
+                  </button>
 
-  {/* ACTIVAR / DESACTIVAR */}
-  <button
-    className={`btnIcon ${c.estado ? "btnDeactivate" : "btnActivate"}`}
-    title={c.estado ? "Desactivar carrera" : "Activar carrera"}
-    onClick={async () => {
-      await carrerasService.toggleEstado(c.id_carrera, c.estado);
-      loadAll();
-    }}
-  >
-    {c.estado ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
-  </button>
-</td>
-
+                  <button
+                    className={`btnIcon ${
+                      c.estado ? "btnDeactivate" : "btnActivate"
+                    }`}
+                    onClick={async () => {
+                      await carrerasService.toggleEstado(
+                        c.id_carrera,
+                        c.estado
+                      );
+                      loadAll();
+                    }}
+                  >
+                    {c.estado ? (
+                      <ToggleRight size={18} />
+                    ) : (
+                      <ToggleLeft size={18} />
+                    )}
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-            {/* PAGINACIÓN */}
+
+      {/* PAGINACIÓN */}
       <div className="card">
         <div className="pagination">
           <button
@@ -386,255 +382,58 @@ const [mostrarInactivas, setMostrarInactivas] = useState(false);
         </div>
       </div>
 
-      {/* MODAL CREAR / EDITAR */}
-      {showFormModal && (
-        <div className="modalOverlay">
-          <div className="modal">
-            <div className="modalHeader">
-              <div className="modalTitle">
-                {editingCarrera ? "Editar carrera" : "Nueva carrera"}
-              </div>
-              <button
-                className="modalClose"
-                onClick={() => setShowFormModal(false)}
-              >
-                ✕
-              </button>
-            </div>
+      {/* MODALES */}
+      <CarreraFormModal
+        open={showFormModal}
+        editingCarrera={editingCarrera}
+        departamentos={departamentos}
+        form={form}
+        setForm={setForm}
+        errors={errors}
+        setErrors={setErrors}
+        onClose={() => setShowFormModal(false)}
+        onSave={async () => {
+          const newErrors: Record<string, string> = {};
 
-            <div className="modalBody">
-              {/* NOMBRE */}
-              <label className="label">Nombre de la carrera *</label>
-              <input
-                className={`input ${errors.nombre_carrera ? "input-error" : ""}`}
-                value={form.nombre_carrera}
-                onChange={(e) =>
-                  setForm({ ...form, nombre_carrera: e.target.value })
-                }
-              />
-              {errors.nombre_carrera && (
-                <div className="field-error">{errors.nombre_carrera}</div>
-              )}
+          if (!form.nombre_carrera.trim())
+            newErrors.nombre_carrera = "Campo obligatorio";
+          if (!form.codigo_carrera.trim())
+            newErrors.codigo_carrera = "Campo obligatorio";
+          if (!form.id_departamento)
+            newErrors.id_departamento = "Seleccione un departamento";
+          if (!form.modalidad)
+            newErrors.modalidad = "Seleccione modalidad";
+          if (!form.sede)
+            newErrors.sede = "Seleccione sede";
 
-              {/* CÓDIGO */}
-              <label className="label">Código *</label>
-              <input
-                className={`input ${errors.codigo_carrera ? "input-error" : ""}`}
-                value={form.codigo_carrera}
-                onChange={(e) =>
-                  setForm({ ...form, codigo_carrera: e.target.value })
-                }
-              />
-              {errors.codigo_carrera && (
-                <div className="field-error">{errors.codigo_carrera}</div>
-              )}
+          setErrors(newErrors);
+          if (Object.keys(newErrors).length > 0) return;
 
-              {/* DEPARTAMENTO */}
-              <label className="label">Departamento *</label>
-              <select
-                className={`select ${
-                  errors.id_departamento ? "input-error" : ""
-                }`}
-                value={form.id_departamento}
-                onChange={(e) =>
-                  setForm({ ...form, id_departamento: e.target.value })
-                }
-              >
-                <option value="">Seleccione</option>
-                {departamentos.map((d) => (
-                  <option
-                    key={d.id_departamento}
-                    value={d.id_departamento}
-                  >
-                    {d.nombre_departamento}
-                  </option>
-                ))}
-              </select>
-              {errors.id_departamento && (
-                <div className="field-error">{errors.id_departamento}</div>
-              )}
+          if (editingCarrera) {
+            await carrerasService.update(editingCarrera.id_carrera, {
+              ...form,
+              id_departamento: Number(form.id_departamento),
+            });
+          } else {
+            await carrerasService.create({
+              ...form,
+              id_departamento: Number(form.id_departamento),
+            });
+          }
 
-              {/* MODALIDAD */}
-              <label className="label">Modalidad *</label>
-              <select
-                className={`select ${errors.modalidad ? "input-error" : ""}`}
-                value={form.modalidad}
-                onChange={(e) =>
-                  setForm({ ...form, modalidad: e.target.value })
-                }
-              >
-                <option value="">Seleccione</option>
-                {MODALIDADES.map((m) => (
-                  <option key={m}>{m}</option>
-                ))}
-              </select>
-              {errors.modalidad && (
-                <div className="field-error">{errors.modalidad}</div>
-              )}
+          setShowFormModal(false);
+          loadAll();
+        }}
+      />
 
-              {/* SEDE */}
-              <label className="label">Sede *</label>
-              <select
-                className={`select ${errors.sede ? "input-error" : ""}`}
-                value={form.sede}
-                onChange={(e) => setForm({ ...form, sede: e.target.value })}
-              >
-                <option value="">Seleccione</option>
-                {SEDES.map((s) => (
-                  <option key={s}>{s}</option>
-                ))}
-              </select>
-              {errors.sede && (
-                <div className="field-error">{errors.sede}</div>
-              )}
+      <CarreraViewModal
+        open={showViewModal}
+        carrera={viewCarrera}
+        getDepartamentoNombre={getDepartamentoNombre}
+        onClose={() => setShowViewModal(false)}
+      />
 
-              {/* DESCRIPCIÓN */}
-              <label className="label">Descripción</label>
-              <textarea
-                className="textarea"
-                value={form.descripcion_carrera}
-                onChange={(e) =>
-                  setForm({ ...form, descripcion_carrera: e.target.value })
-                }
-              />
-            </div>
-
-            <div className="modalFooter">
-              <button
-                className="btnGhost"
-                onClick={() => setShowFormModal(false)}
-              >
-                Cancelar
-              </button>
-
-              <button
-                className="btnPrimary"
-                onClick={async () => {
-                  const newErrors: Record<string, string> = {};
-
-                  if (!form.nombre_carrera.trim())
-                    newErrors.nombre_carrera = "Campo obligatorio";
-                  if (!form.codigo_carrera.trim())
-                    newErrors.codigo_carrera = "Campo obligatorio";
-                  if (!form.id_departamento)
-                    newErrors.id_departamento = "Seleccione un departamento";
-                  if (!form.modalidad)
-                    newErrors.modalidad = "Seleccione una modalidad";
-                  if (!form.sede)
-                    newErrors.sede = "Seleccione una sede";
-
-                  setErrors(newErrors);
-                  if (Object.keys(newErrors).length > 0) return;
-
-                  try {
-                    if (editingCarrera) {
-                      await carrerasService.update(
-                        editingCarrera.id_carrera,
-                        {
-                          ...form,
-                          id_departamento: Number(form.id_departamento),
-                        }
-                      );
-                      showToast("Carrera actualizada", "success");
-                    } else {
-                      await carrerasService.create({
-                        ...form,
-                        id_departamento: Number(form.id_departamento),
-                      });
-                      showToast("Carrera creada", "success");
-                    }
-
-                    setShowFormModal(false);
-                    loadAll();
-                  } catch {
-                    showToast("Error al guardar carrera", "error");
-                  }
-                }}
-              >
-                Guardar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL VER */}
-      {showViewModal && viewCarrera && (
-        <div className="modalOverlay">
-          <div className="modal">
-            <div className="modalHeader">
-              <div className="modalTitle">Detalle de carrera</div>
-              <button
-                className="modalClose"
-                onClick={() => setShowViewModal(false)}
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="modalBody viewSimple">
-
-  <div className="viewField">
-    <span className="viewLabel">Nombre de la carrera</span>
-    <span className="viewValue">{viewCarrera.nombre_carrera}</span>
-  </div>
-
-  <div className="viewField">
-    <span className="viewLabel">Código</span>
-    <span className="viewValue tdCode">{viewCarrera.codigo_carrera}</span>
-  </div>
-
-  <div className="viewField">
-    <span className="viewLabel">Departamento</span>
-    <span className="viewValue">
-      {getDepartamentoNombre(viewCarrera.id_departamento)}
-    </span>
-  </div>
-
-  <div className="viewFieldRow">
-    <div className="viewField">
-      <span className="viewLabel">Modalidad</span>
-      <span className="viewValue">{viewCarrera.modalidad || "-"}</span>
-    </div>
-
-    <div className="viewField">
-      <span className="viewLabel">Sede</span>
-      <span className="viewValue">{viewCarrera.sede || "-"}</span>
-    </div>
-  </div>
-
-  <div className="viewField">
-    <span className="viewLabel">Estado</span>
-    <span
-      className={`badge ${
-        viewCarrera.estado ? "badge-success" : "badge-danger"
-      }`}
-    >
-      {viewCarrera.estado ? "ACTIVA" : "INACTIVA"}
-    </span>
-  </div>
-
-  <div className="viewField">
-    <span className="viewLabel">Descripción</span>
-    <p className="viewDescription">
-      {viewCarrera.descripcion_carrera || "No se registró descripción."}
-    </p>
-  </div>
-
-</div>
-
-
-          </div>
-        </div>
-      )}
-
-      {/* TOAST */}
-      {toast && (
-        <div className={`toast toast-${toast.type}`}>
-          {toast.msg}
-        </div>
-      )}
+      {toast && <div className={`toast toast-${toast.type}`}>{toast.msg}</div>}
     </div>
   );
 }
-
