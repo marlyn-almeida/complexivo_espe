@@ -3,6 +3,28 @@ const { body, param, query } = require("express-validator");
 const validate = require("../middlewares/validate.middleware");
 const repo = require("../repositories/carrera.repo");
 
+// Helpers normalización
+function normalizeModalidad(value) {
+  if (value === undefined || value === null) return value;
+  const v = String(value).trim().toUpperCase();
+
+  // Soporta UI "EN LÍNEA" / "EN LINEA"
+  if (v === "EN LÍNEA" || v === "EN LINEA") return "EN LINEA";
+
+  // Soporta mayúsculas
+  if (v === "PRESENCIAL") return "PRESENCIAL";
+
+  // Soporta backend anterior
+  if (v === "EN LÍNEA") return "EN LINEA";
+
+  return v;
+}
+
+function normalizeSede(value) {
+  if (value === undefined || value === null) return value;
+  return String(value).trim();
+}
+
 // LISTAR
 router.get(
   "/",
@@ -18,11 +40,37 @@ router.get(
 // CREAR
 router.post(
   "/",
-  body("nombre_carrera").isString().notEmpty().isLength({ max: 120 }),
-  body("codigo_carrera").isString().notEmpty().isLength({ max: 30 }),
-  body("id_departamento").isInt(),
-  body("modalidad").optional().isIn(["En línea", "Presencial"]),
-  body("sede").optional().isString(),
+  body("nombre_carrera")
+    .isString().withMessage("Nombre inválido")
+    .notEmpty().withMessage("Nombre obligatorio")
+    .isLength({ max: 120 }).withMessage("Máximo 120 caracteres"),
+
+  body("codigo_carrera")
+    .isString().withMessage("Código inválido")
+    .notEmpty().withMessage("Código obligatorio")
+    .isLength({ max: 30 }).withMessage("Máximo 30 caracteres"),
+
+  body("id_departamento")
+    .isInt().withMessage("Departamento inválido"),
+
+  // ✅ AQUÍ EL FIX
+  body("modalidad")
+    .optional()
+    .customSanitizer(normalizeModalidad)
+    .isIn(["EN LINEA", "PRESENCIAL"])
+    .withMessage("Modalidad inválida (use EN LÍNEA o PRESENCIAL)"),
+
+  body("sede")
+    .optional()
+    .customSanitizer(normalizeSede)
+    .isString().withMessage("Sede inválida")
+    .isLength({ max: 80 }).withMessage("Máximo 80 caracteres"),
+
+  body("descripcion_carrera")
+    .optional()
+    .isString().withMessage("Descripción inválida")
+    .isLength({ max: 200 }).withMessage("Máximo 200 caracteres"),
+
   validate,
   async (req, res) => {
     const { nombre_carrera, codigo_carrera, id_departamento } = req.body;
@@ -47,10 +95,35 @@ router.post(
 // EDITAR
 router.put(
   "/:id",
-  param("id").isInt(),
-  body("nombre_carrera").isString().notEmpty(),
-  body("codigo_carrera").isString().notEmpty(),
-  body("id_departamento").isInt(),
+  param("id").isInt().withMessage("ID inválido"),
+
+  body("nombre_carrera")
+    .isString().notEmpty().isLength({ max: 120 }),
+
+  body("codigo_carrera")
+    .isString().notEmpty().isLength({ max: 30 }),
+
+  body("id_departamento")
+    .isInt(),
+
+  // ✅ agrega validación también aquí
+  body("modalidad")
+    .optional()
+    .customSanitizer(normalizeModalidad)
+    .isIn(["EN LINEA", "PRESENCIAL"])
+    .withMessage("Modalidad inválida"),
+
+  body("sede")
+    .optional()
+    .customSanitizer(normalizeSede)
+    .isString()
+    .isLength({ max: 80 }),
+
+  body("descripcion_carrera")
+    .optional()
+    .isString()
+    .isLength({ max: 200 }),
+
   validate,
   async (req, res) => {
     const carrera = await repo.update(req.params.id, req.body);

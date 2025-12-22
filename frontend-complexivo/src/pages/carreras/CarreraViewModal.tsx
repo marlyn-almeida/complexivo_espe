@@ -1,83 +1,82 @@
 import type { Carrera } from "../../types/carrera";
 
-interface Props {
+export default function CarreraViewModal(props: {
   open: boolean;
   carrera: Carrera | null;
-  getDepartamentoNombre: (id: number) => string;
   onClose: () => void;
-}
+  getDepartamentoNombre: (id: number) => string;
+}) {
+  const { open, carrera, onClose, getDepartamentoNombre } = props;
 
-export default function CarreraViewModal({
-  open,
-  carrera,
-  getDepartamentoNombre,
-  onClose,
-}: Props) {
   if (!open || !carrera) return null;
 
   return (
     <div className="modalOverlay">
-      <div className="modal modalViewClean">
+      <div className="modal modalPro">
         <div className="modalHeader">
-          <div className="modalTitle">Detalle de la carrera</div>
-          <button className="modalClose" onClick={onClose}>
+          <div className="modalTitle">Detalle de carrera</div>
+          <button className="modalClose" onClick={onClose} aria-label="Cerrar">
             ✕
           </button>
         </div>
 
-        <div className="modalBody viewGrid">
-          <div className="viewCard">
-            <span className="viewLabel">Carrera</span>
-            <span className="viewValue strong">
-              {carrera.nombre_carrera}
-            </span>
-          </div>
+        <div className="modalBody">
+          <div className="viewGrid">
+            <div className="viewCard">
+              <div className="viewLabel">Nombre</div>
+              <div className="viewValue">{carrera.nombre_carrera}</div>
+            </div>
 
-          <div className="viewCard">
-            <span className="viewLabel">Código</span>
-            <span className="viewValue code">
-              {carrera.codigo_carrera}
-            </span>
-          </div>
+            <div className="viewCard">
+              <div className="viewLabel">Código</div>
+              <div className="viewValue tdCode">{carrera.codigo_carrera}</div>
+            </div>
 
-          <div className="viewCard">
-            <span className="viewLabel">Departamento</span>
-            <span className="viewValue">
-              {getDepartamentoNombre(carrera.id_departamento)}
-            </span>
-          </div>
+            <div className="viewCard">
+              <div className="viewLabel">Departamento</div>
+              <div className="viewValue">
+                {getDepartamentoNombre(carrera.id_departamento)}
+              </div>
+            </div>
 
-          <div className="viewCard">
-            <span className="viewLabel">Modalidad</span>
-            <span className="viewValue">
-              {carrera.modalidad || "-"}
-            </span>
-          </div>
+            <div className="viewCard">
+              <div className="viewLabel">Estado</div>
+              <div className="viewValue">
+                <span
+                  className={`badge ${
+                    carrera.estado ? "badge-success" : "badge-danger"
+                  }`}
+                >
+                  {carrera.estado ? "ACTIVA" : "INACTIVA"}
+                </span>
+              </div>
+            </div>
 
-          <div className="viewCard">
-            <span className="viewLabel">Sede</span>
-            <span className="viewValue">
-              {carrera.sede || "-"}
-            </span>
-          </div>
+            <div className="viewCard">
+              <div className="viewLabel">Modalidad</div>
+              <div className="viewValue">{carrera.modalidad || "-"}</div>
+            </div>
 
-          <div className="viewCard">
-            <span className="viewLabel">Estado</span>
-            <span
-              className={`badge ${
-                carrera.estado ? "badge-success" : "badge-danger"
-              }`}
-            >
-              {carrera.estado ? "ACTIVA" : "INACTIVA"}
-            </span>
-          </div>
+            <div className="viewCard">
+              <div className="viewLabel">Sede</div>
+              <div className="viewValue">{carrera.sede || "-"}</div>
+            </div>
 
-          <div className="viewCard full">
-            <span className="viewLabel">Descripción</span>
-            <p className="viewDescription">
-              {carrera.descripcion_carrera || "No se registró descripción."}
-            </p>
+            <div className="viewCard viewCardFull">
+              <div className="viewLabel">Descripción</div>
+              <div className="viewValue">
+                <div className="viewDescription">
+                  {carrera.descripcion_carrera || "No se registró descripción."}
+                </div>
+              </div>
+            </div>
           </div>
+        </div>
+
+        <div className="modalFooter">
+          <button className="btnPrimary" onClick={onClose}>
+            Cerrar
+          </button>
         </div>
       </div>
     </div>
