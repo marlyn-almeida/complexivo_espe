@@ -40,6 +40,12 @@ export default function CarrerasPage() {
   const [filtroDepartamento, setFiltroDepartamento] = useState("");
   const [filtroModalidad, setFiltroModalidad] = useState("");
   const [filtroSede, setFiltroSede] = useState("");
+  const totalCarreras = carreras.length;
+const activas = carreras.filter(c => c.estado === 1).length;
+const inactivas = carreras.filter(c => c.estado === 0).length;
+
+const [mostrarInactivas, setMostrarInactivas] = useState(false);
+
 
   // ===========================
   // PAGINACIÓN
@@ -173,7 +179,48 @@ export default function CarrerasPage() {
           </button>
         </div>
 
-        {/* FILTROS */}
+        {/* RESUMEN + ACCIONES */}
+<div className="summaryRow">
+  <div className="summaryBoxes">
+    <div className="summaryBox">
+      <span className="label">Total</span>
+      <span className="value">{totalCarreras}</span>
+    </div>
+
+    <div className="summaryBox active">
+      <span className="label">Activas</span>
+      <span className="value">{activas}</span>
+    </div>
+
+    <div className="summaryBox inactive">
+      <span className="label">Inactivas</span>
+      <span className="value">{inactivas}</span>
+    </div>
+  </div>
+
+  <div className="summaryActions">
+    <label className="toggle">
+      <input
+        type="checkbox"
+        checked={mostrarInactivas}
+        onChange={(e) => setMostrarInactivas(e.target.checked)}
+      />
+      <span className="slider"></span>
+      <span className="toggleText">Mostrar inactivas</span>
+    </label>
+
+    <button
+  className="btnSecondary"
+  onClick={() => loadAll()}
+  title="Actualizar"
+>
+  ⟳ Actualizar
+</button>
+
+  </div>
+</div>
+
+
        {/* FILTROS */}
 <div className="filtersRow">
 
