@@ -1,14 +1,5 @@
 const pool = require("../config/db");
 
-// ---- Helpers de integridad ----
-async function carreraExists(carreraId) {
-  const [r] = await pool.query(
-    `SELECT id_carrera FROM carrera WHERE id_carrera=? LIMIT 1`,
-    [carreraId]
-  );
-  return !!r.length;
-}
-
 async function periodoExists(periodoId) {
   const [r] = await pool.query(
     `SELECT id_periodo FROM periodo_academico WHERE id_periodo=? LIMIT 1`,
@@ -17,282 +8,226 @@ async function periodoExists(periodoId) {
   return !!r.length;
 }
 
-// ---- Repo principal ----
-async function exists(carreraId, periodoId, excludeId = null) {
-  const where = ["id_carrera=? AND id_periodo=?"];
-  const params = [carreraId, periodoId];
-
-  if (excludeId != null) {
-    where.push("id_carrera_periodo<>?");
-    params.push(excludeId);
-  }
-
-  const [r] = await pool.query(
-    `SELECT id_carrera_periodo FROM carrera_periodo WHERE ${where.join(" AND ")} LIMIT 1`,
-    params
+async function carrerasExistAll(carreraIds = []) {
+  if (!carreraIds.length) return { ok: false, missing: carreraIds };
+  const ids = [...new Set(carreraIds.map((x) => Number(x)).filter((x) => Number.isInteger(x) && x > 0))];
+  const [rows] = await pool.query(
+    `SELECT id_carrera FROM carrera WHERE id_carrera IN (${ids.map(() => "?").join(",")})`,
+    ids
   );
-  return r[0] || null;
+  const set = new Set(rows.map((r) => r.id_carrera));
+  const missing = ids.filter((id) => !set.has(id));
+  return { ok: missing.length === 0, missing };
 }
 
-async function list({
-  carreraId = null,
-  periodoId = null,
-  includeInactive = false,
-  q = "",
-} = {}) {
+/**
+ * ✅ Tabla principal: lista períodos + conteos de carreras asignadas
+ * - incluye periodos aunque no tengan asignaciones (LEFT JOIN)
+ */
+async function resumen({ q = "", includeInactive = false } = {}) {
   const where = [];
-  const p = [];
+  const params = [];
 
-  if (!includeInactive) where.push("cp.estado=1");
-
-  if (carreraId) {
-    where.push("cp.id_carrera=?");
-    p.push(+carreraId);
-  }
-
-  if (periodoId) {
-    where.push("cp.id_periodo=?");
-    p.push(+periodoId);
-  }
-
-  const query = String(q || "").trim();
-  if (query) {
+  const term = String(q || "").trim().toLowerCase();
+  if (term) {
     where.push(
-      `(LOWER(c.nombre_carrera) LIKE ? OR LOWER(c.codigo_carrera) LIKE ? OR LOWER(pa.codigo_periodo) LIKE ?)`
+      `(LOWER(pa.codigo_periodo) LIKE ? OR LOWER(COALESCE(pa.descripcion_periodo,'')) LIKE ?)`
     );
-    const like = `%${query.toLowerCase()}%`;
-    p.push(like, like, like);
+    const like = `%${term}%`;
+    params.push(like, like);
   }
+
+  // Si includeInactive=false, solo contamos asignaciones activas
+  // pero igual listamos el periodo (con 0 si no hay)
+  const cpJoin = includeInactive
+    ? `LEFT JOIN carrera_periodo cp ON cp.id_periodo = pa.id_periodo`
+    : `LEFT JOIN carrera_periodo cp ON cp.id_periodo = pa.id_periodo AND cp.estado = 1`;
 
   const ws = where.length ? `WHERE ${where.join(" AND ")}` : "";
 
-  const [r] = await pool.query(
-    `SELECT
-        cp.id_carrera_periodo,
-        cp.id_carrera,
-        cp.id_periodo,
-        cp.estado,
-        cp.created_at,
-        cp.updated_at,
-        c.nombre_carrera,
-        c.codigo_carrera,
-        c.sede,
-        c.modalidad,
-        pa.codigo_periodo,
-        pa.descripcion_periodo,
-        pa.fecha_inicio,
-        pa.fecha_fin
-     FROM carrera_periodo cp
-     JOIN carrera c ON c.id_carrera=cp.id_carrera
-     JOIN periodo_academico pa ON pa.id_periodo=cp.id_periodo
-     ${ws}
-     ORDER BY cp.created_at DESC`,
-    p
+  const [rows] = await pool.query(
+    `
+    SELECT
+      pa.id_periodo,
+      pa.codigo_periodo,
+      pa.descripcion_periodo,
+      pa.fecha_inicio,
+      pa.fecha_fin,
+      COUNT(cp.id_carrera_periodo) AS total_asignadas
+    FROM periodo_academico pa
+    ${cpJoin}
+    ${ws}
+    GROUP BY pa.id_periodo
+    ORDER BY pa.fecha_inicio DESC
+    `,
+    params
   );
 
-  return r;
+  return rows;
 }
 
-async function findById(id) {
-  const [r] = await pool.query(
-    `SELECT
-        cp.id_carrera_periodo,
-        cp.id_carrera,
-        cp.id_periodo,
-        cp.estado,
-        cp.created_at,
-        cp.updated_at,
-        c.nombre_carrera,
-        c.codigo_carrera,
-        c.sede,
-        c.modalidad,
-        pa.codigo_periodo,
-        pa.descripcion_periodo,
-        pa.fecha_inicio,
-        pa.fecha_fin
-     FROM carrera_periodo cp
-     JOIN carrera c ON c.id_carrera=cp.id_carrera
-     JOIN periodo_academico pa ON pa.id_periodo=cp.id_periodo
-     WHERE cp.id_carrera_periodo=? LIMIT 1`,
-    [id]
-  );
-  return r[0] || null;
-}
+/**
+ * Lista de carreras asignadas a un periodo (para Ver / Editar)
+ * includeInactive=true -> trae activas e inactivas
+ * q filtra por carrera
+ */
+async function listByPeriodo({ periodoId, includeInactive = true, q = "" }) {
+  const where = ["cp.id_periodo=?"];
+  const params = [Number(periodoId)];
 
-async function create(carreraId, periodoId) {
-  const okC = await carreraExists(carreraId);
-  if (!okC) {
-    const e = new Error("carrera no existe");
-    e.status = 422;
-    throw e;
+  if (!includeInactive) where.push("cp.estado=1");
+
+  const term = String(q || "").trim().toLowerCase();
+  if (term) {
+    where.push(
+      `(LOWER(c.nombre_carrera) LIKE ? OR LOWER(c.codigo_carrera) LIKE ? OR LOWER(COALESCE(c.sede,'')) LIKE ? OR LOWER(COALESCE(c.modalidad,'')) LIKE ?)`
+    );
+    const like = `%${term}%`;
+    params.push(like, like, like, like);
   }
 
-  const okP = await periodoExists(periodoId);
-  if (!okP) {
+  const [rows] = await pool.query(
+    `
+    SELECT
+      cp.id_carrera_periodo,
+      cp.id_carrera,
+      cp.id_periodo,
+      cp.estado,
+      cp.created_at,
+      cp.updated_at,
+      c.nombre_carrera,
+      c.codigo_carrera,
+      c.sede,
+      c.modalidad,
+      pa.codigo_periodo,
+      pa.descripcion_periodo,
+      pa.fecha_inicio,
+      pa.fecha_fin
+    FROM carrera_periodo cp
+    JOIN carrera c ON c.id_carrera = cp.id_carrera
+    JOIN periodo_academico pa ON pa.id_periodo = cp.id_periodo
+    WHERE ${where.join(" AND ")}
+    ORDER BY c.nombre_carrera ASC
+    `,
+    params
+  );
+
+  return rows;
+}
+
+/**
+ * ✅ ASIGNAR (no quita nada): activa las seleccionadas + inserta las nuevas
+ * - Si ya existían inactivas, las activa
+ * - Si no existían, las inserta
+ */
+async function bulkAssign({ periodoId, carreraIds }) {
+  const pid = Number(periodoId);
+  if (!(await periodoExists(pid))) {
     const e = new Error("periodo_academico no existe");
     e.status = 422;
     throw e;
   }
 
-  const dup = await exists(carreraId, periodoId);
-  if (dup) {
-    const e = new Error("La relación carrera_periodo ya existe");
-    e.status = 409;
-    throw e;
-  }
-
-  const [res] = await pool.query(
-    `INSERT INTO carrera_periodo (id_carrera,id_periodo,estado)
-     VALUES (?,?,1)`,
-    [carreraId, periodoId]
-  );
-
-  return findById(res.insertId);
-}
-
-async function update(id, carreraId, periodoId) {
-  const current = await findById(id);
-  if (!current) {
-    const e = new Error("carrera_periodo no existe");
-    e.status = 404;
-    throw e;
-  }
-
-  const okC = await carreraExists(carreraId);
-  if (!okC) {
-    const e = new Error("carrera no existe");
-    e.status = 422;
-    throw e;
-  }
-
-  const okP = await periodoExists(periodoId);
-  if (!okP) {
-    const e = new Error("periodo_academico no existe");
-    e.status = 422;
-    throw e;
-  }
-
-  const dup = await exists(carreraId, periodoId, id);
-  if (dup) {
-    const e = new Error("La relación carrera_periodo ya existe");
-    e.status = 409;
-    throw e;
-  }
-
-  await pool.query(
-    `UPDATE carrera_periodo
-     SET id_carrera=?, id_periodo=?
-     WHERE id_carrera_periodo=?`,
-    [carreraId, periodoId, id]
-  );
-
-  return findById(id);
-}
-
-function normalizeEstadoTo01(estado) {
-  if (typeof estado === "boolean") return estado ? 1 : 0;
-  if (typeof estado === "number") return estado ? 1 : 0;
-  const s = String(estado).trim().toLowerCase();
-  if (s === "true") return 1;
-  if (s === "false") return 0;
-  const n = Number(s);
-  return n ? 1 : 0;
-}
-
-async function setEstado(id, estado) {
-  const current = await findById(id);
-  if (!current) {
-    const e = new Error("carrera_periodo no existe");
-    e.status = 404;
-    throw e;
-  }
-
-  const v = normalizeEstadoTo01(estado);
-
-  await pool.query(
-    `UPDATE carrera_periodo SET estado=? WHERE id_carrera_periodo=?`,
-    [v, id]
-  );
-
-  return findById(id);
-}
-
-// ✅ BULK: asignar muchas carreras a un mismo periodo
-async function bulkCreateByPeriodo(periodoId, carreraIds = []) {
-  const okP = await periodoExists(periodoId);
-  if (!okP) {
-    const e = new Error("periodo_academico no existe");
-    e.status = 422;
-    throw e;
-  }
-
-  const ids = [...new Set(carreraIds.map((x) => Number(x)).filter((x) => Number.isInteger(x) && x > 0))];
-  if (ids.length === 0) {
+  const ids = [...new Set((carreraIds || []).map((x) => Number(x)).filter((x) => Number.isInteger(x) && x > 0))];
+  if (!ids.length) {
     const e = new Error("carreraIds vacío o inválido");
     e.status = 422;
     throw e;
   }
 
-  // validar carreras existentes
-  const [rows] = await pool.query(
-    `SELECT id_carrera FROM carrera WHERE id_carrera IN (${ids.map(() => "?").join(",")})`,
-    ids
-  );
-  const existentes = new Set(rows.map((r) => r.id_carrera));
-  const invalidas = ids.filter((id) => !existentes.has(id));
-  if (invalidas.length) {
-    const e = new Error(`Carreras no existen: ${invalidas.join(", ")}`);
+  const chk = await carrerasExistAll(ids);
+  if (!chk.ok) {
+    const e = new Error(`Carreras no existen: ${chk.missing.join(", ")}`);
     e.status = 422;
     throw e;
   }
 
-  // crear evitando duplicados: INSERT IGNORE funciona si tienes UNIQUE(id_carrera,id_periodo)
-  const values = ids.map(() => "(?,?,1)").join(",");
-  const params = ids.flatMap((cid) => [cid, periodoId]);
+  await pool.query("START TRANSACTION");
+  try {
+    // 1) activa las que ya existían (aunque estén inactivas)
+    await pool.query(
+      `UPDATE carrera_periodo SET estado=1 WHERE id_periodo=? AND id_carrera IN (${ids.map(() => "?").join(",")})`,
+      [pid, ...ids]
+    );
 
-  const [res] = await pool.query(
-    `INSERT IGNORE INTO carrera_periodo (id_carrera, id_periodo, estado) VALUES ${values}`,
-    params
-  );
+    // 2) inserta las que no existían
+    const values = ids.map(() => "(?,?,1)").join(",");
+    const params = ids.flatMap((cid) => [cid, pid]);
 
-  // devolver lista final del periodo
-  const createdCount = res.affectedRows || 0;
+    await pool.query(
+      `INSERT IGNORE INTO carrera_periodo (id_carrera, id_periodo, estado) VALUES ${values}`,
+      params
+    );
 
-  const [finalList] = await pool.query(
-    `SELECT
-        cp.id_carrera_periodo,
-        cp.id_carrera,
-        cp.id_periodo,
-        cp.estado,
-        cp.created_at,
-        cp.updated_at,
-        c.nombre_carrera,
-        c.codigo_carrera,
-        c.sede,
-        c.modalidad,
-        pa.codigo_periodo,
-        pa.descripcion_periodo,
-        pa.fecha_inicio,
-        pa.fecha_fin
-     FROM carrera_periodo cp
-     JOIN carrera c ON c.id_carrera=cp.id_carrera
-     JOIN periodo_academico pa ON pa.id_periodo=cp.id_periodo
-     WHERE cp.id_periodo=?
-     ORDER BY c.nombre_carrera ASC`,
-    [periodoId]
-  );
+    await pool.query("COMMIT");
+  } catch (err) {
+    await pool.query("ROLLBACK");
+    throw err;
+  }
 
-  return { createdCount, items: finalList };
+  const items = await listByPeriodo({ periodoId: pid, includeInactive: true });
+  return { updated: true, items };
+}
+
+/**
+ * ✅ EDITAR (sync): deja EXACTAMENTE las seleccionadas activas y el resto inactivas
+ * (no borra, solo cambia estado)
+ */
+async function syncPeriodo({ periodoId, carreraIds }) {
+  const pid = Number(periodoId);
+  if (!(await periodoExists(pid))) {
+    const e = new Error("periodo_academico no existe");
+    e.status = 422;
+    throw e;
+  }
+
+  const ids = [...new Set((carreraIds || []).map((x) => Number(x)).filter((x) => Number.isInteger(x) && x > 0))];
+
+  // si mandas [], significa “dejar todas inactivas”
+  if (ids.length) {
+    const chk = await carrerasExistAll(ids);
+    if (!chk.ok) {
+      const e = new Error(`Carreras no existen: ${chk.missing.join(", ")}`);
+      e.status = 422;
+      throw e;
+    }
+  }
+
+  await pool.query("START TRANSACTION");
+  try {
+    // 1) inactiva todas las relaciones del periodo
+    await pool.query(`UPDATE carrera_periodo SET estado=0 WHERE id_periodo=?`, [pid]);
+
+    if (ids.length) {
+      // 2) activa las seleccionadas si existen
+      await pool.query(
+        `UPDATE carrera_periodo SET estado=1 WHERE id_periodo=? AND id_carrera IN (${ids.map(() => "?").join(",")})`,
+        [pid, ...ids]
+      );
+
+      // 3) inserta las que no existían y deben quedar activas
+      const values = ids.map(() => "(?,?,1)").join(",");
+      const params = ids.flatMap((cid) => [cid, pid]);
+
+      await pool.query(
+        `INSERT IGNORE INTO carrera_periodo (id_carrera, id_periodo, estado) VALUES ${values}`,
+        params
+      );
+    }
+
+    await pool.query("COMMIT");
+  } catch (err) {
+    await pool.query("ROLLBACK");
+    throw err;
+  }
+
+  const items = await listByPeriodo({ periodoId: pid, includeInactive: true });
+  return { synced: true, items };
 }
 
 module.exports = {
-  carreraExists,
-  periodoExists,
-  exists,
-  list,
-  findById,
-  create,
-  update,
-  setEstado,
-  bulkCreateByPeriodo,
+  resumen,
+  listByPeriodo,
+  bulkAssign,
+  syncPeriodo,
 };

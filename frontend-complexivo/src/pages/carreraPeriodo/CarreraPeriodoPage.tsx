@@ -1,338 +1,328 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import "./CarreraPeriodoPage.css";
 
-import type { CarreraPeriodo } from "../../types/carreraPeriodo";
 import type { Carrera } from "../../types/carrera";
-import type { PeriodoAcademico } from "../../types/periodoAcademico";
-
-import { carreraPeriodoService } from "../../services/carreraPeriodo.service";
+import type { CarreraPeriodo, PeriodoResumen } from "../../types/carreraPeriodo";
 import { carrerasService } from "../../services/carreras.service";
-import { periodosService } from "../../services/periodos.service";
+import { carreraPeriodoService } from "../../services/carreraPeriodo.service";
 
-type FormState = {
-  id_carrera: string;
-  id_periodo: string;
-};
-
-const isActive = (estado: boolean | number) =>
-  typeof estado === "boolean" ? estado : estado === 1;
+const PAGE_SIZE = 10;
 
 const toYMD = (v: any) => (v ? String(v).slice(0, 10) : "");
+const isActive = (estado: boolean | number) => (typeof estado === "boolean" ? estado : estado === 1);
 
-const periodoLabel = (p: any) => {
+function periodoLabel(p: any) {
   const codigo = p.codigo_periodo ?? "";
   const desc = p.descripcion_periodo ?? "";
   const fi = toYMD(p.fecha_inicio);
   const ff = toYMD(p.fecha_fin);
-
   const base = [codigo, desc].filter(Boolean).join(" · ");
   const rango = fi && ff ? ` (${fi} → ${ff})` : "";
   return (base || `Período #${p.id_periodo}`) + rango;
-};
+}
 
 export default function CarreraPeriodoPage() {
-  const [items, setItems] = useState<CarreraPeriodo[]>([]);
-  const [carreras, setCarreras] = useState<Carrera[]>([]);
-  const [periodos, setPeriodos] = useState<PeriodoAcademico[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // filtros estilo Carreras
-  const [q, setQ] = useState("");
-  const [filterCarreraId, setFilterCarreraId] = useState<string>("");
-  const [filterPeriodoId, setFilterPeriodoId] = useState<string>("");
-  const [includeInactive, setIncludeInactive] = useState(false);
+  // base
+  const [carreras, setCarreras] = useState<Carrera[]>([]);
 
-  // paginación
-  const PAGE_SIZE = 10;
+  // tabla principal (periodos)
+  const [periodos, setPeriodos] = useState<PeriodoResumen[]>([]);
+  const [qPeriodos, setQPeriodos] = useState("");
+  const [includeInactiveCount, setIncludeInactiveCount] = useState(false);
+
+  // paginación tabla principal
   const [page, setPage] = useState(1);
+  const pageCount = useMemo(() => Math.max(1, Math.ceil(periodos.length / PAGE_SIZE)), [periodos.length]);
+  const pagedPeriodos = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return periodos.slice(start, start + PAGE_SIZE);
+  }, [periodos, page]);
 
-  // modales
-  const [openForm, setOpenForm] = useState(false);
-  const [openView, setOpenView] = useState(false);
+  // modal state
+  const [modalMode, setModalMode] = useState<null | "assign" | "edit" | "view">(null);
+  const [selectedPeriodo, setSelectedPeriodo] = useState<PeriodoResumen | null>(null);
 
-  const [editing, setEditing] = useState<CarreraPeriodo | null>(null);
-  const [viewing, setViewing] = useState<CarreraPeriodo | null>(null);
+  // datos del periodo (carreras asignadas)
+  const [periodoItems, setPeriodoItems] = useState<CarreraPeriodo[]>([]);
+  const [periodoSearch, setPeriodoSearch] = useState("");
+  const [periodoIncludeInactive, setPeriodoIncludeInactive] = useState(true);
 
-  const [form, setForm] = useState<FormState>({ id_carrera: "", id_periodo: "" });
+  // selección en modal (bloques)
+  const [selectSearch, setSelectSearch] = useState("");
+  const [selectedCarreraIds, setSelectedCarreraIds] = useState<Set<number>>(new Set());
 
-  const carreraName = useMemo(() => {
-    const map = new Map<number, string>();
-    carreras.forEach((c) => map.set(c.id_carrera, c.nombre_carrera));
-    return map;
+  const carrerasSorted = useMemo(() => {
+    const arr = [...carreras];
+    arr.sort((a: any, b: any) => String(a.nombre_carrera).localeCompare(String(b.nombre_carrera)));
+    return arr;
   }, [carreras]);
 
-  const periodoName = useMemo(() => {
-    const map = new Map<number, string>();
-    (periodos as any[]).forEach((p) => map.set(p.id_periodo, periodoLabel(p)));
-    return map;
-  }, [periodos]);
+  const carrerasFiltradas = useMemo(() => {
+    const term = selectSearch.trim().toLowerCase();
+    if (!term) return carrerasSorted;
+    return carrerasSorted.filter((c: any) => {
+      const n = String(c.nombre_carrera || "").toLowerCase();
+      const code = String(c.codigo_carrera || "").toLowerCase();
+      const sede = String(c.sede || "").toLowerCase();
+      const mod = String(c.modalidad || "").toLowerCase();
+      return n.includes(term) || code.includes(term) || sede.includes(term) || mod.includes(term);
+    });
+  }, [selectSearch, carrerasSorted]);
 
-  const fetchAll = async () => {
+  const carreraAsignadaMap = useMemo(() => {
+    const m = new Map<number, CarreraPeriodo>();
+    periodoItems.forEach((x) => m.set(x.id_carrera, x));
+    return m;
+  }, [periodoItems]);
+
+  const fetchBase = async () => {
     setLoading(true);
     try {
-      const [cs, ps] = await Promise.all([
-        carrerasService.list(),
-        periodosService.list(),
-      ]);
+      const cs = await carrerasService.list();
       setCarreras(cs ?? []);
-      setPeriodos(ps ?? []);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchList = async () => {
+  const fetchResumen = async () => {
     setLoading(true);
     try {
-      const cp = await carreraPeriodoService.list({
-        includeInactive,
-        carreraId: filterCarreraId ? Number(filterCarreraId) : null,
-        periodoId: filterPeriodoId ? Number(filterPeriodoId) : null,
-        q,
+      const data = await carreraPeriodoService.resumen({
+        includeInactive: includeInactiveCount,
+        q: qPeriodos,
       });
-      setItems(cp ?? []);
+      setPeriodos(data ?? []);
+      setPage(1);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchPeriodoItems = async (periodoId: number) => {
+    setLoading(true);
+    try {
+      const data = await carreraPeriodoService.listByPeriodo(periodoId, {
+        includeInactive: periodoIncludeInactive,
+        q: periodoSearch,
+      });
+      setPeriodoItems(data ?? []);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchAll();
+    fetchBase();
+    fetchResumen();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    // al cambiar filtros, vuelve a página 1
-    setPage(1);
-    fetchList();
+    fetchResumen();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [includeInactive, filterCarreraId, filterPeriodoId, q]);
+  }, [qPeriodos, includeInactiveCount]);
 
-  const total = items.length;
-  const totalActivos = items.filter((x) => isActive(x.estado)).length;
-  const totalInactivos = total - totalActivos;
+  // refetch dentro de modal cuando cambian filtros
+  useEffect(() => {
+    if (!selectedPeriodo) return;
+    if (modalMode === "view" || modalMode === "edit") {
+      fetchPeriodoItems(selectedPeriodo.id_periodo);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [periodoSearch, periodoIncludeInactive]);
 
-  const paged = useMemo(() => {
-    const start = (page - 1) * PAGE_SIZE;
-    return items.slice(start, start + PAGE_SIZE);
-  }, [items, page]);
+  const openModal = async (mode: "assign" | "edit" | "view", p: PeriodoResumen) => {
+    setSelectedPeriodo(p);
+    setModalMode(mode);
 
-  const pageCount = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+    setPeriodoSearch("");
+    setPeriodoIncludeInactive(true);
+    setSelectSearch("");
 
-  const openCreate = () => {
-    setEditing(null);
-    setForm({ id_carrera: "", id_periodo: "" });
-    setOpenForm(true);
+    if (mode === "assign") {
+      // asignar: NO preselecciona, pero sí necesitamos saber qué ya está asignado para bloquear “ya asignada”
+      const items = await carreraPeriodoService.listByPeriodo(p.id_periodo, { includeInactive: true });
+      setPeriodoItems(items ?? []);
+      setSelectedCarreraIds(new Set()); // vacío
+    }
+
+    if (mode === "view") {
+      const items = await carreraPeriodoService.listByPeriodo(p.id_periodo, { includeInactive: true });
+      setPeriodoItems(items ?? []);
+      setSelectedCarreraIds(new Set());
+    }
+
+    if (mode === "edit") {
+      // editar: preselecciona las activas actuales (para poder deseleccionar)
+      const items = await carreraPeriodoService.listByPeriodo(p.id_periodo, { includeInactive: true });
+      setPeriodoItems(items ?? []);
+
+      const activeIds = new Set<number>();
+      (items ?? []).forEach((x) => {
+        if (isActive(x.estado)) activeIds.add(x.id_carrera);
+      });
+      setSelectedCarreraIds(activeIds);
+    }
   };
 
-  const openEdit = (x: CarreraPeriodo) => {
-    setEditing(x);
-    setForm({ id_carrera: String(x.id_carrera), id_periodo: String(x.id_periodo) });
-    setOpenForm(true);
+  const closeModal = () => {
+    setModalMode(null);
+    setSelectedPeriodo(null);
+    setPeriodoItems([]);
+    setSelectedCarreraIds(new Set());
+    setSelectSearch("");
   };
 
-  const closeForm = () => {
-    setOpenForm(false);
-    setEditing(null);
+  const toggleSelect = (id: number) => {
+    setSelectedCarreraIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   };
 
-  const openDetails = (x: CarreraPeriodo) => {
-    setViewing(x);
-    setOpenView(true);
+  const selectAllVisible = () => {
+    setSelectedCarreraIds((prev) => {
+      const next = new Set(prev);
+      carrerasFiltradas.forEach((c: any) => next.add(Number(c.id_carrera)));
+      return next;
+    });
   };
 
-  const closeView = () => {
-    setOpenView(false);
-    setViewing(null);
-  };
+  const clearSelection = () => setSelectedCarreraIds(new Set());
 
-  const validate = () => {
-    if (!form.id_carrera) return "Selecciona una carrera.";
-    if (!form.id_periodo) return "Selecciona un período.";
-    return null;
-  };
-
-  const onSubmit = async (e: FormEvent) => {
+  const onSubmitAssign = async (e: FormEvent) => {
     e.preventDefault();
-    const err = validate();
-    if (err) return alert(err);
+    if (!selectedPeriodo) return;
+
+    const ids = Array.from(selectedCarreraIds);
+    if (!ids.length) return alert("Selecciona al menos una carrera.");
 
     setLoading(true);
     try {
-      const payload = {
-        id_carrera: Number(form.id_carrera),
-        id_periodo: Number(form.id_periodo),
-      };
+      await carreraPeriodoService.bulkAssign({
+        id_periodo: selectedPeriodo.id_periodo,
+        carreraIds: ids,
+      });
 
-      if (editing) {
-        await carreraPeriodoService.update(editing.id_carrera_periodo, payload);
-      } else {
-        await carreraPeriodoService.create(payload);
-      }
-
-      await fetchList();
-      closeForm();
-    } catch (e) {
-      alert("No se pudo guardar Carrera–Período. Revisa backend/console.");
+      await fetchResumen();
+      const items = await carreraPeriodoService.listByPeriodo(selectedPeriodo.id_periodo, { includeInactive: true });
+      setPeriodoItems(items ?? []);
+      closeModal();
+    } catch {
+      alert("No se pudo asignar carreras. Revisa backend/consola.");
     } finally {
       setLoading(false);
     }
   };
 
-  const toggleEstado = async (x: CarreraPeriodo) => {
-    const cn = (x as any).nombre_carrera ?? carreraName.get(x.id_carrera) ?? "Carrera";
-    const pn =
-      (x as any).codigo_periodo
-        ? `${(x as any).codigo_periodo} (${toYMD((x as any).fecha_inicio)} → ${toYMD((x as any).fecha_fin)})`
-        : periodoName.get(x.id_periodo) ?? "Período";
+  const onSubmitEdit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!selectedPeriodo) return;
 
-    const action = isActive(x.estado) ? "desactivar" : "activar";
-    if (!confirm(`¿Seguro que deseas ${action} "${cn} – ${pn}"?`)) return;
-
-    const currentEstado: 0 | 1 = isActive(x.estado) ? 1 : 0;
+    const ids = Array.from(selectedCarreraIds); // puede ser vacío (deja todo inactivo)
 
     setLoading(true);
     try {
-      await carreraPeriodoService.toggleEstado(x.id_carrera_periodo, currentEstado);
-      await fetchList();
+      await carreraPeriodoService.sync({
+        id_periodo: selectedPeriodo.id_periodo,
+        carreraIds: ids,
+      });
+
+      await fetchResumen();
+      const items = await carreraPeriodoService.listByPeriodo(selectedPeriodo.id_periodo, { includeInactive: true });
+      setPeriodoItems(items ?? []);
+      closeModal();
+    } catch {
+      alert("No se pudo editar (sync). Revisa backend/consola.");
     } finally {
       setLoading(false);
     }
   };
+
+  const modalTitle =
+    modalMode === "assign" ? "Asignar carreras" : modalMode === "edit" ? "Editar carreras del período" : "Ver carreras asignadas";
 
   return (
-    <div className="cp-wrap">
-      {/* PANEL SUPERIOR (estilo Carreras) */}
-      <div className="cp-panel">
-        <div className="cp-panel-top">
+    <div className="cp3-page">
+      <div className="cp3-panel">
+        <div className="cp3-panel-top">
           <div>
-            <h1 className="cp-title">Carrera – Período</h1>
-            <p className="cp-subtitle">Asignación oficial de carreras para un período académico.</p>
-          </div>
-
-          <button onClick={openCreate} className="btn-primary">
-            + Nuevo
-          </button>
-        </div>
-
-        <div className="cp-stats">
-          <div className="stat-chip">
-            <span>Total</span>
-            <b>{total}</b>
-          </div>
-          <div className="stat-chip ok">
-            <span>Activos</span>
-            <b>{totalActivos}</b>
-          </div>
-          <div className="stat-chip bad">
-            <span>Inactivos</span>
-            <b>{totalInactivos}</b>
+            <h1 className="cp3-title">Carrera – Período</h1>
+            <p className="cp3-subtitle">
+              La tabla principal muestra períodos. En acciones puedes asignar, ver o editar carreras por período.
+            </p>
           </div>
         </div>
 
-        <div className="cp-filters">
+        <div className="cp3-filters">
           <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Buscar por carrera o período…"
             className="input-base"
+            value={qPeriodos}
+            onChange={(e) => setQPeriodos(e.target.value)}
+            placeholder="Buscar por código o descripción del período…"
           />
-
-          <select
-            value={filterCarreraId}
-            onChange={(e) => setFilterCarreraId(e.target.value)}
-            className="input-base"
-          >
-            <option value="">Todas las carreras</option>
-            {carreras.map((c) => (
-              <option key={c.id_carrera} value={c.id_carrera}>
-                {c.nombre_carrera} ({c.modalidad} · {c.sede})
-              </option>
-            ))}
-          </select>
-
-          <select
-            value={filterPeriodoId}
-            onChange={(e) => setFilterPeriodoId(e.target.value)}
-            className="input-base"
-          >
-            <option value="">Todos los períodos</option>
-            {(periodos as any[]).map((p) => (
-              <option key={p.id_periodo} value={p.id_periodo}>
-                {periodoLabel(p)}
-              </option>
-            ))}
-          </select>
 
           <label className="switch">
             <input
               type="checkbox"
-              checked={includeInactive}
-              onChange={(e) => setIncludeInactive(e.target.checked)}
+              checked={includeInactiveCount}
+              onChange={(e) => setIncludeInactiveCount(e.target.checked)}
             />
             <span className="slider" />
-            <span className="switch-text">Mostrar inactivas</span>
+            <span className="switch-text">Contar inactivas</span>
           </label>
         </div>
       </div>
 
-      {/* TABLA */}
-      <div className="cp-card">
-        <div className="cp-table-scroll">
-          <table className="cp-table">
+      <div className="cp3-card">
+        <div className="cp3-table-scroll">
+          <table className="cp3-table">
             <thead>
               <tr>
-                <th>Carrera</th>
                 <th>Período</th>
-                <th>Estado</th>
-                <th className="cp-actions-col">Acciones</th>
+                <th>Rango</th>
+                <th># Carreras</th>
+                <th className="cp3-actions-col">Acciones</th>
               </tr>
             </thead>
 
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={4} className="cp-td-center">
-                    Cargando…
-                  </td>
+                  <td colSpan={4} className="td-center">Cargando…</td>
                 </tr>
-              ) : paged.length === 0 ? (
+              ) : pagedPeriodos.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="cp-td-center">
-                    Sin datos
-                  </td>
+                  <td colSpan={4} className="td-center">Sin períodos</td>
                 </tr>
               ) : (
-                paged.map((x) => {
-                  const cn = (x as any).nombre_carrera ?? carreraName.get(x.id_carrera) ?? "—";
-                  const pn =
-                    (x as any).codigo_periodo
-                      ? `${(x as any).codigo_periodo} (${toYMD((x as any).fecha_inicio)} → ${toYMD((x as any).fecha_fin)})`
-                      : periodoName.get(x.id_periodo) ?? "—";
-
-                  const activo = isActive(x.estado);
-
+                pagedPeriodos.map((p) => {
+                  const rango = `${toYMD(p.fecha_inicio)} → ${toYMD(p.fecha_fin)}`;
                   return (
-                    <tr key={x.id_carrera_periodo}>
-                      <td className="cp-td-strong">{cn}</td>
-                      <td className="cp-td-muted">{pn}</td>
+                    <tr key={p.id_periodo}>
+                      <td className="td-strong">
+                        {(p.codigo_periodo || "—")}
+                        <div className="td-mini">{p.descripcion_periodo || ""}</div>
+                      </td>
+                      <td className="td-muted">{rango}</td>
                       <td>
-                        <span className={`badge ${activo ? "active" : "inactive"}`}>
-                          {activo ? "ACTIVO" : "INACTIVO"}
-                        </span>
+                        <span className="count-pill">{Number(p.total_asignadas || 0)}</span>
                       </td>
                       <td>
                         <div className="row-actions">
-                          <button onClick={() => openDetails(x)} className="icon-action view">
+                          <button className="btn-action assign" onClick={() => openModal("assign", p)}>
+                            Asignar
+                          </button>
+                          <button className="btn-action view" onClick={() => openModal("view", p)}>
                             Ver
                           </button>
-                          <button onClick={() => openEdit(x)} className="icon-action edit">
+                          <button className="btn-action edit" onClick={() => openModal("edit", p)}>
                             Editar
-                          </button>
-                          <button
-                            onClick={() => toggleEstado(x)}
-                            className={`icon-action ${activo ? "off" : "on"}`}
-                          >
-                            {activo ? "Desactivar" : "Activar"}
                           </button>
                         </div>
                       </td>
@@ -344,149 +334,127 @@ export default function CarreraPeriodoPage() {
           </table>
         </div>
 
-        {/* PAGINACIÓN (centrada) */}
-        <div className="cp-pagination">
-          <button
-            className="btn-page"
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page <= 1}
-          >
+        <div className="cp3-pagination">
+          <button className="btn-page" onClick={() => setPage((x) => Math.max(1, x - 1))} disabled={page <= 1}>
             ◀
           </button>
-
           <span className="page-info">
             Página <b>{page}</b> de <b>{pageCount}</b>
           </span>
-
-          <button
-            className="btn-page"
-            onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
-            disabled={page >= pageCount}
-          >
+          <button className="btn-page" onClick={() => setPage((x) => Math.min(pageCount, x + 1))} disabled={page >= pageCount}>
             ▶
           </button>
         </div>
       </div>
 
-      {/* MODAL FORM */}
-      {openForm && (
-        <div className="modal-backdrop" onClick={closeForm}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
+      {/* MODAL */}
+      {modalMode && selectedPeriodo && (
+        <div className="modal-backdrop" onClick={closeModal}>
+          <div className="modal modal-lg" onClick={(e) => e.stopPropagation()}>
             <div className="modal-head">
               <div>
-                <h2 className="modal-title">{editing ? "Editar asignación" : "Nueva asignación"}</h2>
-                <p className="modal-subtitle">Selecciona una carrera y un período.</p>
+                <h2 className="modal-title">{modalTitle}</h2>
+                <p className="modal-subtitle">{periodoLabel(selectedPeriodo)}</p>
               </div>
-              <button className="icon-btn" onClick={closeForm} aria-label="Cerrar">
-                ✕
-              </button>
+              <button className="icon-btn" onClick={closeModal}>✕</button>
             </div>
 
-            <form onSubmit={onSubmit} className="modal-body">
-              <div className="form-grid">
-                <div>
-                  <label className="form-label">Carrera</label>
-                  <select
-                    value={form.id_carrera}
-                    onChange={(e) => setForm((p) => ({ ...p, id_carrera: e.target.value }))}
+            {/* VIEW */}
+            {modalMode === "view" && (
+              <div className="modal-body">
+                {loading ? (
+                  <div className="td-center">Cargando…</div>
+                ) : periodoItems.length === 0 ? (
+                  <div className="td-center">No hay carreras asignadas.</div>
+                ) : (
+                  <div className="view-list">
+                    {periodoItems.map((x) => {
+                      const activo = isActive(x.estado);
+                      const meta = [x.codigo_carrera, x.modalidad, x.sede].filter(Boolean).join(" · ");
+                      return (
+                        <div className="view-item" key={x.id_carrera_periodo}>
+                          <div>
+                            <div className="view-name">{x.nombre_carrera}</div>
+                            <div className="view-meta">{meta || "—"}</div>
+                          </div>
+                          <span className={`badge ${activo ? "active" : "inactive"}`}>
+                            {activo ? "ACTIVO" : "INACTIVO"}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <div className="modal-footer">
+                  <button className="btn-secondary" onClick={closeModal}>Cerrar</button>
+                </div>
+              </div>
+            )}
+
+            {/* ASSIGN / EDIT (grid) */}
+            {(modalMode === "assign" || modalMode === "edit") && (
+              <form onSubmit={modalMode === "assign" ? onSubmitAssign : onSubmitEdit} className="modal-body">
+                <div className="assign-tools">
+                  <input
                     className="input-base"
-                  >
-                    <option value="">Seleccione…</option>
-                    {carreras.map((c) => (
-                      <option key={c.id_carrera} value={c.id_carrera}>
-                        {c.nombre_carrera} ({c.modalidad} · {c.sede})
-                      </option>
-                    ))}
-                  </select>
+                    value={selectSearch}
+                    onChange={(e) => setSelectSearch(e.target.value)}
+                    placeholder="Buscar carrera (nombre, código, sede, modalidad)…"
+                  />
+                  <button type="button" className="btn-secondary" onClick={selectAllVisible}>
+                    Seleccionar visibles
+                  </button>
+                  <button type="button" className="btn-secondary" onClick={clearSelection}>
+                    Limpiar
+                  </button>
+
+                  <div className="assign-count">
+                    Seleccionadas: <b>{selectedCarreraIds.size}</b>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="form-label">Período</label>
-                  <select
-                    value={form.id_periodo}
-                    onChange={(e) => setForm((p) => ({ ...p, id_periodo: e.target.value }))}
-                    className="input-base"
-                  >
-                    <option value="">Seleccione…</option>
-                    {(periodos as any[]).map((p) => (
-                      <option key={p.id_periodo} value={p.id_periodo}>
-                        {periodoLabel(p)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
+                <div className="assign-grid">
+                  {carrerasFiltradas.map((c: any) => {
+                    const id = Number(c.id_carrera);
+                    const checked = selectedCarreraIds.has(id);
 
-              <div className="modal-footer">
-                <button type="button" onClick={closeForm} className="btn-secondary">
-                  Cancelar
-                </button>
-                <button type="submit" className="btn-primary" disabled={loading}>
-                  {editing ? "Guardar cambios" : "Crear"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+                    // En "assign" bloqueamos las ya asignadas (para que no se confunda)
+                    const yaExiste = carreraAsignadaMap.has(id);
+                    const disabledAssign = modalMode === "assign" && yaExiste;
 
-      {/* MODAL VER */}
-      {openView && viewing && (
-        <div className="modal-backdrop" onClick={closeView}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-head">
-              <div>
-                <h2 className="modal-title">Detalle de asignación</h2>
-                <p className="modal-subtitle">Información de Carrera–Período.</p>
-              </div>
-              <button className="icon-btn" onClick={closeView} aria-label="Cerrar">
-                ✕
-              </button>
-            </div>
+                    const meta = [c.codigo_carrera, c.modalidad, c.sede].filter(Boolean).join(" · ");
 
-            <div className="modal-body">
-              <div className="view-grid">
-                <div className="view-row">
-                  <span className="view-label">Carrera</span>
-                  <span className="view-value">
-                    {(viewing as any).nombre_carrera ?? carreraName.get(viewing.id_carrera) ?? "—"}
-                  </span>
+                    return (
+                      <label key={id} className={`assign-item ${disabledAssign ? "disabled" : ""}`}>
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          disabled={disabledAssign}
+                          onChange={() => toggleSelect(id)}
+                        />
+                        <div className="assign-text">
+                          <div className="assign-name">
+                            {c.nombre_carrera}
+                            {disabledAssign ? <span className="tag">Ya asignada</span> : null}
+                          </div>
+                          <div className="assign-meta">{meta || "—"}</div>
+                        </div>
+                      </label>
+                    );
+                  })}
                 </div>
 
-                <div className="view-row">
-                  <span className="view-label">Período</span>
-                  <span className="view-value">
-                    {(viewing as any).codigo_periodo
-                      ? `${(viewing as any).codigo_periodo} (${toYMD((viewing as any).fecha_inicio)} → ${toYMD(
-                          (viewing as any).fecha_fin
-                        )})`
-                      : periodoName.get(viewing.id_periodo) ?? "—"}
-                  </span>
+                <div className="modal-footer">
+                  <button type="button" className="btn-secondary" onClick={closeModal}>
+                    Cancelar
+                  </button>
+                  <button type="submit" className="btn-primary" disabled={loading}>
+                    {modalMode === "assign" ? `Asignar (${selectedCarreraIds.size})` : `Guardar cambios (${selectedCarreraIds.size})`}
+                  </button>
                 </div>
-
-                <div className="view-row">
-                  <span className="view-label">Estado</span>
-                  <span className="view-value">
-                    {isActive(viewing.estado) ? "ACTIVO" : "INACTIVO"}
-                  </span>
-                </div>
-              </div>
-
-              <div className="modal-footer">
-                <button onClick={closeView} className="btn-secondary">
-                  Cerrar
-                </button>
-                <button
-                  onClick={() => {
-                    closeView();
-                    openEdit(viewing);
-                  }}
-                  className="btn-primary"
-                >
-                  Editar
-                </button>
-              </div>
-            </div>
+              </form>
+            )}
           </div>
         </div>
       )}
