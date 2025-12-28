@@ -10,23 +10,24 @@ import { carrerasService } from "../../services/carreras.service";
 import { periodosService } from "../../services/periodos.service";
 
 type FormState = {
-  id_carrera: string; // string por <select>
+  id_carrera: string;
   id_periodo: string;
 };
 
 const isActive = (estado: boolean | number) =>
   typeof estado === "boolean" ? estado : estado === 1;
 
-const periodoLabel = (p: PeriodoAcademico) => {
-  const codigo = (p as any).codigo_periodo ?? "";
-  const desc = (p as any).descripcion_periodo ?? "";
-  const fi = (p as any).fecha_inicio ?? "";
-  const ff = (p as any).fecha_fin ?? "";
+const toYMD = (v: any) => (v ? String(v).slice(0, 10) : "");
+
+const periodoLabel = (p: any) => {
+  const codigo = p.codigo_periodo ?? "";
+  const desc = p.descripcion_periodo ?? "";
+  const fi = toYMD(p.fecha_inicio);
+  const ff = toYMD(p.fecha_fin);
 
   const base = [codigo, desc].filter(Boolean).join(" · ");
-  const rango =
-    fi && ff ? ` (${String(fi).slice(0, 10)} → ${String(ff).slice(0, 10)})` : "";
-  return (base || `Período #${(p as any).id_periodo}`) + rango;
+  const rango = fi && ff ? ` (${fi} → ${ff})` : "";
+  return (base || `Período #${p.id_periodo}`) + rango;
 };
 
 export default function CarreraPeriodoPage() {
@@ -34,10 +35,24 @@ export default function CarreraPeriodoPage() {
   const [carreras, setCarreras] = useState<Carrera[]>([]);
   const [periodos, setPeriodos] = useState<PeriodoAcademico[]>([]);
   const [loading, setLoading] = useState(false);
-  const [q, setQ] = useState("");
 
-  const [open, setOpen] = useState(false);
+  // filtros estilo Carreras
+  const [q, setQ] = useState("");
+  const [filterCarreraId, setFilterCarreraId] = useState<string>("");
+  const [filterPeriodoId, setFilterPeriodoId] = useState<string>("");
+  const [includeInactive, setIncludeInactive] = useState(false);
+
+  // paginación
+  const PAGE_SIZE = 10;
+  const [page, setPage] = useState(1);
+
+  // modales
+  const [openForm, setOpenForm] = useState(false);
+  const [openView, setOpenView] = useState(false);
+
   const [editing, setEditing] = useState<CarreraPeriodo | null>(null);
+  const [viewing, setViewing] = useState<CarreraPeriodo | null>(null);
+
   const [form, setForm] = useState<FormState>({ id_carrera: "", id_periodo: "" });
 
   const carreraName = useMemo(() => {
@@ -48,24 +63,34 @@ export default function CarreraPeriodoPage() {
 
   const periodoName = useMemo(() => {
     const map = new Map<number, string>();
-    periodos.forEach((p) => {
-      const label = (p as any).codigo_periodo ? String((p as any).codigo_periodo) : periodoLabel(p);
-      map.set((p as any).id_periodo, label);
-    });
+    (periodos as any[]).forEach((p) => map.set(p.id_periodo, periodoLabel(p)));
     return map;
   }, [periodos]);
 
   const fetchAll = async () => {
     setLoading(true);
     try {
-      const [cp, cs, ps] = await Promise.all([
-        carreraPeriodoService.list(),
+      const [cs, ps] = await Promise.all([
         carrerasService.list(),
         periodosService.list(),
       ]);
-      setItems(cp ?? []);
       setCarreras(cs ?? []);
       setPeriodos(ps ?? []);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchList = async () => {
+    setLoading(true);
+    try {
+      const cp = await carreraPeriodoService.list({
+        includeInactive,
+        carreraId: filterCarreraId ? Number(filterCarreraId) : null,
+        periodoId: filterPeriodoId ? Number(filterPeriodoId) : null,
+        q,
+      });
+      setItems(cp ?? []);
     } finally {
       setLoading(false);
     }
@@ -75,32 +100,49 @@ export default function CarreraPeriodoPage() {
     fetchAll();
   }, []);
 
-  const filtered = useMemo(() => {
-    const query = q.trim().toLowerCase();
-    if (!query) return items;
+  useEffect(() => {
+    // al cambiar filtros, vuelve a página 1
+    setPage(1);
+    fetchList();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [includeInactive, filterCarreraId, filterPeriodoId, q]);
 
-    return items.filter((x) => {
-      const cn = (x.carrera_nombre ?? carreraName.get(x.id_carrera) ?? "").toLowerCase();
-      const pn = (x.periodo_nombre ?? periodoName.get(x.id_periodo) ?? "").toLowerCase();
-      return cn.includes(query) || pn.includes(query);
-    });
-  }, [items, q, carreraName, periodoName]);
+  const total = items.length;
+  const totalActivos = items.filter((x) => isActive(x.estado)).length;
+  const totalInactivos = total - totalActivos;
+
+  const paged = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return items.slice(start, start + PAGE_SIZE);
+  }, [items, page]);
+
+  const pageCount = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
 
   const openCreate = () => {
     setEditing(null);
     setForm({ id_carrera: "", id_periodo: "" });
-    setOpen(true);
+    setOpenForm(true);
   };
 
   const openEdit = (x: CarreraPeriodo) => {
     setEditing(x);
     setForm({ id_carrera: String(x.id_carrera), id_periodo: String(x.id_periodo) });
-    setOpen(true);
+    setOpenForm(true);
   };
 
-  const closeModal = () => {
-    setOpen(false);
+  const closeForm = () => {
+    setOpenForm(false);
     setEditing(null);
+  };
+
+  const openDetails = (x: CarreraPeriodo) => {
+    setViewing(x);
+    setOpenView(true);
+  };
+
+  const closeView = () => {
+    setOpenView(false);
+    setViewing(null);
   };
 
   const validate = () => {
@@ -127,74 +169,114 @@ export default function CarreraPeriodoPage() {
         await carreraPeriodoService.create(payload);
       }
 
-      await fetchAll();
-      closeModal();
-    } catch {
-      alert("No se pudo guardar Carrera–Período. Revisa consola/servidor.");
+      await fetchList();
+      closeForm();
+    } catch (e) {
+      alert("No se pudo guardar Carrera–Período. Revisa backend/console.");
     } finally {
       setLoading(false);
     }
   };
 
   const toggleEstado = async (x: CarreraPeriodo) => {
-    const cn = x.carrera_nombre ?? carreraName.get(x.id_carrera) ?? "Carrera";
-    const pn = x.periodo_nombre ?? periodoName.get(x.id_periodo) ?? "Período";
-    const action = isActive(x.estado) ? "desactivar" : "activar";
+    const cn = (x as any).nombre_carrera ?? carreraName.get(x.id_carrera) ?? "Carrera";
+    const pn =
+      (x as any).codigo_periodo
+        ? `${(x as any).codigo_periodo} (${toYMD((x as any).fecha_inicio)} → ${toYMD((x as any).fecha_fin)})`
+        : periodoName.get(x.id_periodo) ?? "Período";
 
+    const action = isActive(x.estado) ? "desactivar" : "activar";
     if (!confirm(`¿Seguro que deseas ${action} "${cn} – ${pn}"?`)) return;
 
-    // ✅ FIX: tu service pide (id, currentEstado)
     const currentEstado: 0 | 1 = isActive(x.estado) ? 1 : 0;
 
     setLoading(true);
     try {
       await carreraPeriodoService.toggleEstado(x.id_carrera_periodo, currentEstado);
-      await fetchAll();
+      await fetchList();
     } finally {
       setLoading(false);
     }
   };
 
-  const totalActivos = filtered.filter((x) => isActive(x.estado)).length;
-  const totalInactivos = filtered.length - totalActivos;
-
   return (
     <div className="cp-wrap">
-      <div className="cp-header">
-        <div className="cp-title">
-          <h1>Carrera – Período</h1>
-          <p>Asignación oficial de carreras para un período académico.</p>
-        </div>
+      {/* PANEL SUPERIOR (estilo Carreras) */}
+      <div className="cp-panel">
+        <div className="cp-panel-top">
+          <div>
+            <h1 className="cp-title">Carrera – Período</h1>
+            <p className="cp-subtitle">Asignación oficial de carreras para un período académico.</p>
+          </div>
 
-        <div className="cp-actions">
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Buscar por carrera o período…"
-            className="input-base cp-search"
-          />
           <button onClick={openCreate} className="btn-primary">
             + Nuevo
           </button>
         </div>
-      </div>
 
-      <div className="cp-card">
-        <div className="cp-card-head">
-          <div className="cp-meta">
-            <span className="meta-chip">
-              Total: <b>{filtered.length}</b>
-            </span>
-            <span className="meta-chip">
-              Activos: <b>{totalActivos}</b>
-            </span>
-            <span className="meta-chip">
-              Inactivos: <b>{totalInactivos}</b>
-            </span>
+        <div className="cp-stats">
+          <div className="stat-chip">
+            <span>Total</span>
+            <b>{total}</b>
           </div>
-          <span className="cp-hint">Tip: desactiva una asignación en vez de eliminar.</span>
+          <div className="stat-chip ok">
+            <span>Activos</span>
+            <b>{totalActivos}</b>
+          </div>
+          <div className="stat-chip bad">
+            <span>Inactivos</span>
+            <b>{totalInactivos}</b>
+          </div>
         </div>
 
+        <div className="cp-filters">
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Buscar por carrera o período…"
+            className="input-base"
+          />
+
+          <select
+            value={filterCarreraId}
+            onChange={(e) => setFilterCarreraId(e.target.value)}
+            className="input-base"
+          >
+            <option value="">Todas las carreras</option>
+            {carreras.map((c) => (
+              <option key={c.id_carrera} value={c.id_carrera}>
+                {c.nombre_carrera} ({c.modalidad} · {c.sede})
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={filterPeriodoId}
+            onChange={(e) => setFilterPeriodoId(e.target.value)}
+            className="input-base"
+          >
+            <option value="">Todos los períodos</option>
+            {(periodos as any[]).map((p) => (
+              <option key={p.id_periodo} value={p.id_periodo}>
+                {periodoLabel(p)}
+              </option>
+            ))}
+          </select>
+
+          <label className="switch">
+            <input
+              type="checkbox"
+              checked={includeInactive}
+              onChange={(e) => setIncludeInactive(e.target.checked)}
+            />
+            <span className="slider" />
+            <span className="switch-text">Mostrar inactivas</span>
+          </label>
+        </div>
+      </div>
+
+      {/* TABLA */}
+      <div className="cp-card">
         <div className="cp-table-scroll">
           <table className="cp-table">
             <thead>
@@ -213,16 +295,20 @@ export default function CarreraPeriodoPage() {
                     Cargando…
                   </td>
                 </tr>
-              ) : filtered.length === 0 ? (
+              ) : paged.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="cp-td-center">
                     Sin datos
                   </td>
                 </tr>
               ) : (
-                filtered.map((x) => {
-                  const cn = x.carrera_nombre ?? carreraName.get(x.id_carrera) ?? "—";
-                  const pn = x.periodo_nombre ?? periodoName.get(x.id_periodo) ?? "—";
+                paged.map((x) => {
+                  const cn = (x as any).nombre_carrera ?? carreraName.get(x.id_carrera) ?? "—";
+                  const pn =
+                    (x as any).codigo_periodo
+                      ? `${(x as any).codigo_periodo} (${toYMD((x as any).fecha_inicio)} → ${toYMD((x as any).fecha_fin)})`
+                      : periodoName.get(x.id_periodo) ?? "—";
+
                   const activo = isActive(x.estado);
 
                   return (
@@ -236,12 +322,15 @@ export default function CarreraPeriodoPage() {
                       </td>
                       <td>
                         <div className="row-actions">
-                          <button onClick={() => openEdit(x)} className="table-btn">
+                          <button onClick={() => openDetails(x)} className="icon-action view">
+                            Ver
+                          </button>
+                          <button onClick={() => openEdit(x)} className="icon-action edit">
                             Editar
                           </button>
                           <button
                             onClick={() => toggleEstado(x)}
-                            className={`table-btn ${activo ? "danger" : "success"}`}
+                            className={`icon-action ${activo ? "off" : "on"}`}
                           >
                             {activo ? "Desactivar" : "Activar"}
                           </button>
@@ -254,17 +343,41 @@ export default function CarreraPeriodoPage() {
             </tbody>
           </table>
         </div>
+
+        {/* PAGINACIÓN (centrada) */}
+        <div className="cp-pagination">
+          <button
+            className="btn-page"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page <= 1}
+          >
+            ◀
+          </button>
+
+          <span className="page-info">
+            Página <b>{page}</b> de <b>{pageCount}</b>
+          </span>
+
+          <button
+            className="btn-page"
+            onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+            disabled={page >= pageCount}
+          >
+            ▶
+          </button>
+        </div>
       </div>
 
-      {open && (
-        <div className="modal-backdrop" onClick={closeModal}>
+      {/* MODAL FORM */}
+      {openForm && (
+        <div className="modal-backdrop" onClick={closeForm}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-head">
               <div>
                 <h2 className="modal-title">{editing ? "Editar asignación" : "Nueva asignación"}</h2>
                 <p className="modal-subtitle">Selecciona una carrera y un período.</p>
               </div>
-              <button className="icon-btn" onClick={closeModal} aria-label="Cerrar">
+              <button className="icon-btn" onClick={closeForm} aria-label="Cerrar">
                 ✕
               </button>
             </div>
@@ -295,7 +408,7 @@ export default function CarreraPeriodoPage() {
                     className="input-base"
                   >
                     <option value="">Seleccione…</option>
-                    {periodos.map((p: any) => (
+                    {(periodos as any[]).map((p) => (
                       <option key={p.id_periodo} value={p.id_periodo}>
                         {periodoLabel(p)}
                       </option>
@@ -305,7 +418,7 @@ export default function CarreraPeriodoPage() {
               </div>
 
               <div className="modal-footer">
-                <button type="button" onClick={closeModal} className="btn-secondary">
+                <button type="button" onClick={closeForm} className="btn-secondary">
                   Cancelar
                 </button>
                 <button type="submit" className="btn-primary" disabled={loading}>
@@ -313,6 +426,67 @@ export default function CarreraPeriodoPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL VER */}
+      {openView && viewing && (
+        <div className="modal-backdrop" onClick={closeView}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-head">
+              <div>
+                <h2 className="modal-title">Detalle de asignación</h2>
+                <p className="modal-subtitle">Información de Carrera–Período.</p>
+              </div>
+              <button className="icon-btn" onClick={closeView} aria-label="Cerrar">
+                ✕
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <div className="view-grid">
+                <div className="view-row">
+                  <span className="view-label">Carrera</span>
+                  <span className="view-value">
+                    {(viewing as any).nombre_carrera ?? carreraName.get(viewing.id_carrera) ?? "—"}
+                  </span>
+                </div>
+
+                <div className="view-row">
+                  <span className="view-label">Período</span>
+                  <span className="view-value">
+                    {(viewing as any).codigo_periodo
+                      ? `${(viewing as any).codigo_periodo} (${toYMD((viewing as any).fecha_inicio)} → ${toYMD(
+                          (viewing as any).fecha_fin
+                        )})`
+                      : periodoName.get(viewing.id_periodo) ?? "—"}
+                  </span>
+                </div>
+
+                <div className="view-row">
+                  <span className="view-label">Estado</span>
+                  <span className="view-value">
+                    {isActive(viewing.estado) ? "ACTIVO" : "INACTIVO"}
+                  </span>
+                </div>
+              </div>
+
+              <div className="modal-footer">
+                <button onClick={closeView} className="btn-secondary">
+                  Cerrar
+                </button>
+                <button
+                  onClick={() => {
+                    closeView();
+                    openEdit(viewing);
+                  }}
+                  className="btn-primary"
+                >
+                  Editar
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

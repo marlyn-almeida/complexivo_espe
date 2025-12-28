@@ -23,17 +23,21 @@ const toBool = (estado: PeriodoAcademico["estado"]): boolean => {
   return estado === 1;
 };
 
-/** ✅ Convierte cualquier fecha (ISO o YYYY-MM-DD) a YYYY-MM-DD para input type="date" */
-const toDateInput = (v: string | null | undefined): string => {
+/** Convierte cualquier fecha (Date | ISO | YYYY-MM-DD) a YYYY-MM-DD */
+const toDateInput = (v: any): string => {
   if (!v) return "";
-  // si ya viene YYYY-MM-DD
+
+  // Si ya viene YYYY-MM-DD
   if (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
-  // si viene ISO (2025-01-14T00:00:00.000Z) -> 2025-01-14
+
+  // Si viene ISO string
   if (typeof v === "string" && v.length >= 10) return v.slice(0, 10);
 
+  // Si viene como Date (mysql2 puede devolver Date dependiendo config)
   try {
-    const d = new Date(v as any);
+    const d = v instanceof Date ? v : new Date(v);
     if (Number.isNaN(d.getTime())) return "";
+    // OJO: usamos componentes locales para evitar offsets raros en UI
     const yyyy = d.getFullYear();
     const mm = String(d.getMonth() + 1).padStart(2, "0");
     const dd = String(d.getDate()).padStart(2, "0");
@@ -43,14 +47,11 @@ const toDateInput = (v: string | null | undefined): string => {
   }
 };
 
-const fmtDate = (isoOrDate: string) => {
-  if (!isoOrDate) return "-";
-  try {
-    const d = new Date(isoOrDate);
-    return d.toLocaleDateString();
-  } catch {
-    return isoOrDate;
-  }
+const fmtDate = (v: any) => {
+  const s = toDateInput(v);
+  if (!s) return "-";
+  const [y, m, d] = s.split("-");
+  return `${d}/${m}/${y}`;
 };
 
 const normalizeCodigo = (input: string) => {
@@ -92,7 +93,16 @@ export default function PeriodosPage() {
         includeInactive,
         q: q.trim() ? q.trim() : undefined,
       });
-      setItems(data ?? []);
+
+      // ✅ CLAVE: normalizamos fechas al cargar para evitar “fechas raras”
+      const normalized = (data ?? []).map((p: any) => ({
+        ...p,
+        fecha_inicio: toDateInput(p.fecha_inicio),
+        fecha_fin: toDateInput(p.fecha_fin),
+        estado: typeof p.estado === "boolean" ? p.estado : Number(p.estado) === 1 ? 1 : 0,
+      })) as PeriodoAcademico[];
+
+      setItems(normalized);
     } finally {
       setLoading(false);
     }
@@ -111,8 +121,8 @@ export default function PeriodosPage() {
       .filter((p) => (includeInactive ? true : toBool(p.estado)))
       .filter((p) => {
         if (!t) return true;
-        const code = (p.codigo_periodo ?? "").toLowerCase();
-        const desc = (p.descripcion_periodo ?? "").toLowerCase();
+        const code = String(p.codigo_periodo ?? "").toLowerCase();
+        const desc = String(p.descripcion_periodo ?? "").toLowerCase();
         return code.includes(t) || desc.includes(t);
       })
       .filter((p) => {
@@ -125,7 +135,9 @@ export default function PeriodosPage() {
         const fin = toDateInput(p.fecha_fin);
         return fin ? fin <= hasta : true;
       })
-      .sort((a, b) => (toDateInput(b.fecha_inicio) ?? "").localeCompare(toDateInput(a.fecha_inicio) ?? ""));
+      .sort((a, b) =>
+        (toDateInput(b.fecha_inicio) ?? "").localeCompare(toDateInput(a.fecha_inicio) ?? "")
+      );
   }, [items, q, includeInactive, desde, hasta]);
 
   useEffect(() => {
@@ -139,10 +151,11 @@ export default function PeriodosPage() {
     return filtered.slice(start, start + PAGE_SIZE);
   }, [filtered, page]);
 
+  // ✅ Stats basadas en items ya normalizados
   const stats = useMemo(() => {
-    const total = items.length;
-    const activos = items.filter((p) => toBool(p.estado)).length;
-    const inactivos = items.filter((p) => !toBool(p.estado)).length;
+    const total = items?.length ?? 0;
+    const activos = (items ?? []).filter((p) => toBool(p.estado)).length;
+    const inactivos = total - activos;
     return { total, activos, inactivos };
   }, [items]);
 
@@ -159,7 +172,6 @@ export default function PeriodosPage() {
     setForm({
       codigo_periodo: p.codigo_periodo ?? "",
       descripcion_periodo: p.descripcion_periodo ?? "",
-      // ✅ importantísimo para que el input date NO se "reseteé"
       fecha_inicio: toDateInput(p.fecha_inicio),
       fecha_fin: toDateInput(p.fecha_fin),
     });
@@ -208,7 +220,6 @@ export default function PeriodosPage() {
       const payload: PeriodoCreateDTO = {
         codigo_periodo: normalizeCodigo(form.codigo_periodo),
         descripcion_periodo: form.descripcion_periodo.trim(),
-        // ✅ mandamos SIEMPRE YYYY-MM-DD (backend feliz)
         fecha_inicio: toDateInput(form.fecha_inicio),
         fecha_fin: toDateInput(form.fecha_fin),
       };
@@ -238,11 +249,12 @@ export default function PeriodosPage() {
 
   return (
     <div className="periodos-wrap">
+      {/* ✅ Panel superior tipo Carreras */}
       <div className="periodos-panel">
         <div className="panel-top">
           <div>
-            <h2 className="panel-title">Períodos</h2>
-            <p className="panel-subtitle">Gestión de períodos académicos.</p>
+            <h2 className="panel-title">Períodos académicos</h2>
+            <p className="panel-subtitle">Gestión de períodos (código, fechas y estado).</p>
           </div>
 
           <button className="btn-primary periodos-primary" onClick={openCreate}>
@@ -290,7 +302,7 @@ export default function PeriodosPage() {
             <Search size={16} />
             <input
               className="input-base"
-              placeholder="Buscar período…"
+              placeholder="Buscar por código o descripción…"
               value={q}
               onChange={(e) => setQ(e.target.value)}
             />
@@ -331,6 +343,7 @@ export default function PeriodosPage() {
         </div>
       </div>
 
+      {/* Tabla */}
       <div className="table-card">
         <div className="table-scroll">
           <table className="table">
@@ -339,7 +352,6 @@ export default function PeriodosPage() {
                 <th>Código</th>
                 <th>Descripción</th>
                 <th>Inicio</th>
-                {/* ✅ AQUÍ ES FIN (NO “Aleta”) */}
                 <th>Fin</th>
                 <th>Estado</th>
                 <th className="th-actions">Acciones</th>
@@ -378,12 +390,19 @@ export default function PeriodosPage() {
 
                       <td>
                         <div className="row-actions">
-                          {/* ✅ colores por acción */}
-                          <button className="icon-table-btn icon-view" title="Ver" onClick={() => openDetails(p)}>
+                          <button
+                            className="icon-table-btn icon-view"
+                            title="Ver"
+                            onClick={() => openDetails(p)}
+                          >
                             <Eye size={16} />
                           </button>
 
-                          <button className="icon-table-btn icon-edit" title="Editar" onClick={() => openEdit(p)}>
+                          <button
+                            className="icon-table-btn icon-edit"
+                            title="Editar"
+                            onClick={() => openEdit(p)}
+                          >
                             <Pencil size={16} />
                           </button>
 
@@ -404,8 +423,13 @@ export default function PeriodosPage() {
           </table>
         </div>
 
+        {/* ✅ Paginación centrada */}
         <div className="pagination-bar">
-          <button className="btn-secondary" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>
+          <button
+            className="btn-secondary"
+            disabled={page === 1}
+            onClick={() => setPage((p) => p - 1)}
+          >
             ← Anterior
           </button>
 

@@ -14,6 +14,7 @@
   padding: 16px 16px 14px;
 }
 
+/* Top */
 .panel-top {
   display: flex;
   justify-content: space-between;
@@ -34,7 +35,7 @@
   font-size: 0.95rem;
 }
 
-/* Fila stats + acciones derecha */
+/* Stats + acciones derecha */
 .panel-mid {
   display: flex;
   align-items: center;
@@ -44,7 +45,7 @@
   flex-wrap: wrap;
 }
 
-/* Stats cards (como Carreras) */
+/* Stats cards */
 .stats-row {
   display: flex;
   gap: 14px;
@@ -71,6 +72,7 @@
   font-weight: 900;
 }
 
+/* ✅ colores métricas */
 .stat-card-success {
   background: rgba(16, 185, 129, 0.08);
   border-color: rgba(16, 185, 129, 0.25);
@@ -89,7 +91,7 @@
   flex-wrap: wrap;
 }
 
-/* Filtros: buscador + fechas */
+/* Filtros */
 .filters-row {
   display: flex;
   align-items: center;
@@ -122,7 +124,7 @@
   font-size: 0.92rem;
 }
 
-/* Inputs base (si tu app ya tiene, esto no molesta) */
+/* Inputs base */
 .input-base {
   height: 40px;
   padding: 0 12px;
@@ -137,7 +139,7 @@
   box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.12);
 }
 
-/* Botón verde estilo Carreras */
+/* Botón verde */
 .periodos-primary {
   background: #0f7a55;
   border: 1px solid rgba(15, 122, 85, 0.65);
@@ -149,7 +151,7 @@
   filter: brightness(0.98);
 }
 
-/* Botón secundario (gris suave) */
+/* Botón secundario */
 .btn-secondary {
   height: 40px;
   padding: 0 14px;
@@ -322,6 +324,7 @@
   border-radius: 12px;
   border: 1px solid rgba(0,0,0,0.12);
   background: #fff;
+  color: #334155;
   cursor: pointer;
   transition: transform 0.05s ease, background 0.15s ease;
 }
@@ -334,22 +337,38 @@
   transform: scale(0.98);
 }
 
-.icon-table-btn.success {
+/* ✅ Colores por acción (como Carreras) */
+.icon-view {
+  border-color: rgba(59, 130, 246, 0.25);
+  background: rgba(59, 130, 246, 0.10);
+  color: #2563eb;
+}
+
+.icon-edit {
+  border-color: rgba(59, 130, 246, 0.25);
+  background: rgba(59, 130, 246, 0.10);
+  color: #2563eb;
+}
+
+.icon-success {
   border-color: rgba(16, 185, 129, 0.25);
   background: rgba(16, 185, 129, 0.10);
+  color: #0f7a55;
 }
 
-.icon-table-btn.danger {
+.icon-danger {
   border-color: rgba(244, 63, 94, 0.25);
   background: rgba(244, 63, 94, 0.10);
+  color: #b91c1c;
 }
 
-/* Paginación */
+/* ✅ Paginación centrada */
 .pagination-bar {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 12px;
+  width: 100%;
   padding: 12px 14px;
   border-top: 1px solid rgba(0,0,0,0.08);
   background: rgba(0,0,0,0.01);
@@ -488,24 +507,4 @@
   .modal-grid {
     grid-template-columns: 1fr;
   }
-}
-/* ===== Colores por acción (como Carreras) ===== */
-.icon-view {
-  border-color: rgba(0,0,0,0.12);
-  background: #fff;
-}
-
-.icon-edit {
-  border-color: rgba(59, 130, 246, 0.25);
-  background: rgba(59, 130, 246, 0.10);
-}
-
-.icon-success {
-  border-color: rgba(16, 185, 129, 0.25);
-  background: rgba(16, 185, 129, 0.10);
-}
-
-.icon-danger {
-  border-color: rgba(244, 63, 94, 0.25);
-  background: rgba(244, 63, 94, 0.10);
 }
