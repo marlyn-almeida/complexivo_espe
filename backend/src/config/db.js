@@ -12,6 +12,9 @@ const pool = mysql.createPool({
   connectionLimit: 10,
   queueLimit: 0,
 
+  // ✅ Evita que mysql2 convierta DATE/DATETIME a objetos Date con timezone
+  dateStrings: true,
+
   ssl: process.env.DB_SSL === "true"
     ? { rejectUnauthorized: false }
     : undefined,
