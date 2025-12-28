@@ -5,7 +5,11 @@ import {
   type PeriodoUpdateDTO,
 } from "../../services/periodos.service";
 import type { PeriodoAcademico } from "../../types/periodoAcademico";
+
+import { Eye, Pencil, ToggleLeft, ToggleRight, Plus, Search } from "lucide-react";
 import "./PeriodosPage.css";
+
+const PAGE_SIZE = 10;
 
 const empty: PeriodoCreateDTO = {
   codigo_periodo: "",
@@ -19,22 +23,59 @@ const toBool = (estado: PeriodoAcademico["estado"]): boolean => {
   return estado === 1;
 };
 
-const fmt = (iso: string) => {
+/** ✅ Convierte cualquier fecha (ISO o YYYY-MM-DD) a YYYY-MM-DD para input type="date" */
+const toDateInput = (v: string | null | undefined): string => {
+  if (!v) return "";
+  // si ya viene YYYY-MM-DD
+  if (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+  // si viene ISO (2025-01-14T00:00:00.000Z) -> 2025-01-14
+  if (typeof v === "string" && v.length >= 10) return v.slice(0, 10);
+
   try {
-    if (!iso) return "-";
-    return new Date(iso).toLocaleDateString();
+    const d = new Date(v as any);
+    if (Number.isNaN(d.getTime())) return "";
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
   } catch {
-    return iso;
+    return "";
   }
+};
+
+const fmtDate = (isoOrDate: string) => {
+  if (!isoOrDate) return "-";
+  try {
+    const d = new Date(isoOrDate);
+    return d.toLocaleDateString();
+  } catch {
+    return isoOrDate;
+  }
+};
+
+const normalizeCodigo = (input: string) => {
+  let s = input.trim();
+  s = s.replace(/\s+/g, "_");
+  s = s.replace(/[^a-zA-Z0-9_]/g, "");
+  return s.toUpperCase();
 };
 
 export default function PeriodosPage() {
   const [items, setItems] = useState<PeriodoAcademico[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // filtros
   const [q, setQ] = useState("");
   const [includeInactive, setIncludeInactive] = useState(false);
 
+  // filtro fechas (cliente)
+  const [desde, setDesde] = useState(""); // fecha_inicio >= desde
+  const [hasta, setHasta] = useState(""); // fecha_fin <= hasta
+
+  // paginación
+  const [page, setPage] = useState(1);
+
+  // modales
   const [openForm, setOpenForm] = useState(false);
   const [openView, setOpenView] = useState(false);
 
@@ -42,27 +83,16 @@ export default function PeriodosPage() {
   const [viewing, setViewing] = useState<PeriodoAcademico | null>(null);
 
   const [form, setForm] = useState<PeriodoCreateDTO>(empty);
-
-  const filtered = useMemo(() => {
-    const t = q.trim().toLowerCase();
-    if (!t) return items;
-
-    return items.filter((p) => {
-      const code = (p.codigo_periodo ?? "").toLowerCase();
-      const desc = (p.descripcion_periodo ?? "").toLowerCase();
-      return code.includes(t) || desc.includes(t);
-    });
-  }, [items, q]);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const load = async () => {
     setLoading(true);
     try {
-      // ✅ Aprovecha query del backend (no solo filtrar en memoria)
       const data = await periodosService.list({
         includeInactive,
         q: q.trim() ? q.trim() : undefined,
       });
-      setItems(data);
+      setItems(data ?? []);
     } finally {
       setLoading(false);
     }
@@ -73,15 +103,54 @@ export default function PeriodosPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [includeInactive]);
 
-  // si quieres que busque “en vivo”, descomenta:
-  // useEffect(() => {
-  //   const t = setTimeout(() => load(), 350);
-  //   return () => clearTimeout(t);
-  // }, [q]);
+  // ===== filtros aplicados
+  const filtered = useMemo(() => {
+    const t = q.trim().toLowerCase();
 
+    return (items ?? [])
+      .filter((p) => (includeInactive ? true : toBool(p.estado)))
+      .filter((p) => {
+        if (!t) return true;
+        const code = (p.codigo_periodo ?? "").toLowerCase();
+        const desc = (p.descripcion_periodo ?? "").toLowerCase();
+        return code.includes(t) || desc.includes(t);
+      })
+      .filter((p) => {
+        if (!desde) return true;
+        const ini = toDateInput(p.fecha_inicio);
+        return ini ? ini >= desde : true;
+      })
+      .filter((p) => {
+        if (!hasta) return true;
+        const fin = toDateInput(p.fecha_fin);
+        return fin ? fin <= hasta : true;
+      })
+      .sort((a, b) => (toDateInput(b.fecha_inicio) ?? "").localeCompare(toDateInput(a.fecha_inicio) ?? ""));
+  }, [items, q, includeInactive, desde, hasta]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [q, includeInactive, desde, hasta]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+
+  const pageItems = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return filtered.slice(start, start + PAGE_SIZE);
+  }, [filtered, page]);
+
+  const stats = useMemo(() => {
+    const total = items.length;
+    const activos = items.filter((p) => toBool(p.estado)).length;
+    const inactivos = items.filter((p) => !toBool(p.estado)).length;
+    return { total, activos, inactivos };
+  }, [items]);
+
+  // ===== modales
   const openCreate = () => {
     setEditing(null);
     setForm(empty);
+    setErrors({});
     setOpenForm(true);
   };
 
@@ -90,9 +159,11 @@ export default function PeriodosPage() {
     setForm({
       codigo_periodo: p.codigo_periodo ?? "",
       descripcion_periodo: p.descripcion_periodo ?? "",
-      fecha_inicio: p.fecha_inicio?.slice(0, 10) ?? "",
-      fecha_fin: p.fecha_fin?.slice(0, 10) ?? "",
+      // ✅ importantísimo para que el input date NO se "reseteé"
+      fecha_inicio: toDateInput(p.fecha_inicio),
+      fecha_fin: toDateInput(p.fecha_fin),
     });
+    setErrors({});
     setOpenForm(true);
   };
 
@@ -107,23 +178,52 @@ export default function PeriodosPage() {
   const onChange = (k: keyof PeriodoCreateDTO, v: string) =>
     setForm((prev) => ({ ...prev, [k]: v }));
 
+  // ===== validación
+  const validate = (): Record<string, string> => {
+    const e: Record<string, string> = {};
+
+    const code = form.codigo_periodo?.trim();
+    if (!code) e.codigo_periodo = "El código es obligatorio.";
+
+    const desc = form.descripcion_periodo?.trim();
+    if (!desc) e.descripcion_periodo = "La descripción es obligatoria.";
+
+    const ini = toDateInput(form.fecha_inicio);
+    const fin = toDateInput(form.fecha_fin);
+
+    if (!ini) e.fecha_inicio = "La fecha inicio es obligatoria.";
+    if (!fin) e.fecha_fin = "La fecha fin es obligatoria.";
+
+    if (ini && fin && fin < ini) e.fecha_fin = "La fecha fin no puede ser menor que la fecha inicio.";
+
+    return e;
+  };
+
   const submit = async () => {
-    if (!form.codigo_periodo || !form.descripcion_periodo || !form.fecha_inicio || !form.fecha_fin) {
-      alert("Completa todos los campos del período.");
-      return;
-    }
+    const e = validate();
+    setErrors(e);
+    if (Object.keys(e).length) return;
 
     try {
+      const payload: PeriodoCreateDTO = {
+        codigo_periodo: normalizeCodigo(form.codigo_periodo),
+        descripcion_periodo: form.descripcion_periodo.trim(),
+        // ✅ mandamos SIEMPRE YYYY-MM-DD (backend feliz)
+        fecha_inicio: toDateInput(form.fecha_inicio),
+        fecha_fin: toDateInput(form.fecha_fin),
+      };
+
       if (!editing) {
-        await periodosService.create(form);
+        await periodosService.create(payload);
       } else {
-        const payload: PeriodoUpdateDTO = { ...form };
-        await periodosService.update(editing.id_periodo, payload);
+        const up: PeriodoUpdateDTO = { ...payload };
+        await periodosService.update(editing.id_periodo, up);
       }
+
       setOpenForm(false);
       await load();
-    } catch (e: any) {
-      alert(e?.response?.data?.message ?? e?.message ?? "Error al guardar el período.");
+    } catch (err: any) {
+      alert(err?.response?.data?.message ?? err?.message ?? "Error al guardar el período.");
     }
   };
 
@@ -137,22 +237,38 @@ export default function PeriodosPage() {
   };
 
   return (
-    <div className="page-wrap">
-      <div className="page-header">
-        <div className="page-title-block">
-          <h2 className="page-title">Períodos</h2>
-          <p className="page-subtitle">Convocatorias y períodos académicos.</p>
+    <div className="periodos-wrap">
+      <div className="periodos-panel">
+        <div className="panel-top">
+          <div>
+            <h2 className="panel-title">Períodos</h2>
+            <p className="panel-subtitle">Gestión de períodos académicos.</p>
+          </div>
+
+          <button className="btn-primary periodos-primary" onClick={openCreate}>
+            <Plus size={16} /> Nuevo período
+          </button>
         </div>
 
-        <div className="page-actions">
-          <div className="filters">
-            <input
-              className="input-base search-input"
-              placeholder="Buscar por código o descripción…"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-            />
+        <div className="panel-mid">
+          <div className="stats-row">
+            <div className="stat-card">
+              <div className="stat-label">Total</div>
+              <div className="stat-value">{stats.total}</div>
+            </div>
 
+            <div className="stat-card stat-card-success">
+              <div className="stat-label">Activos</div>
+              <div className="stat-value">{stats.activos}</div>
+            </div>
+
+            <div className="stat-card stat-card-danger">
+              <div className="stat-label">Inactivos</div>
+              <div className="stat-value">{stats.inactivos}</div>
+            </div>
+          </div>
+
+          <div className="panel-actions">
             <label className="switch">
               <input
                 type="checkbox"
@@ -166,35 +282,56 @@ export default function PeriodosPage() {
             <button className="btn-secondary" onClick={load} disabled={loading}>
               {loading ? "Actualizando…" : "Actualizar"}
             </button>
-
-            <button className="btn-primary" onClick={openCreate}>
-              + Nuevo período
-            </button>
           </div>
+        </div>
+
+        <div className="filters-row">
+          <div className="search-box">
+            <Search size={16} />
+            <input
+              className="input-base"
+              placeholder="Buscar período…"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
+          </div>
+
+          <div className="date-box">
+            <span className="date-label">Desde</span>
+            <input
+              type="date"
+              className="input-base"
+              value={desde}
+              onChange={(e) => setDesde(e.target.value)}
+            />
+          </div>
+
+          <div className="date-box">
+            <span className="date-label">Hasta</span>
+            <input
+              type="date"
+              className="input-base"
+              value={hasta}
+              onChange={(e) => setHasta(e.target.value)}
+            />
+          </div>
+
+          <button
+            className="btn-secondary"
+            onClick={() => {
+              setDesde("");
+              setHasta("");
+              setQ("");
+            }}
+            disabled={!q && !desde && !hasta}
+            title="Limpiar filtros"
+          >
+            Limpiar
+          </button>
         </div>
       </div>
 
       <div className="table-card">
-        <div className="table-meta">
-          <div className="meta-left">
-            <span className="meta-chip">
-              Total: <b>{filtered.length}</b>
-            </span>
-            <span className="meta-chip">
-              Activos:{" "}
-              <b>{filtered.filter((p) => toBool(p.estado)).length}</b>
-            </span>
-            <span className="meta-chip">
-              Inactivos:{" "}
-              <b>{filtered.filter((p) => !toBool(p.estado)).length}</b>
-            </span>
-          </div>
-
-          <div className="meta-right">
-            <span className="hint">Tip: usa “Cerrar” para desactivar, no se elimina.</span>
-          </div>
-        </div>
-
         <div className="table-scroll">
           <table className="table">
             <thead>
@@ -202,6 +339,7 @@ export default function PeriodosPage() {
                 <th>Código</th>
                 <th>Descripción</th>
                 <th>Inicio</th>
+                {/* ✅ AQUÍ ES FIN (NO “Aleta”) */}
                 <th>Fin</th>
                 <th>Estado</th>
                 <th className="th-actions">Acciones</th>
@@ -211,21 +349,27 @@ export default function PeriodosPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="td-center">Cargando…</td>
+                  <td colSpan={6} className="td-center">
+                    Cargando…
+                  </td>
                 </tr>
-              ) : filtered.length === 0 ? (
+              ) : pageItems.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="td-center">Sin datos</td>
+                  <td colSpan={6} className="td-center">
+                    Sin datos
+                  </td>
                 </tr>
               ) : (
-                filtered.map((p) => {
+                pageItems.map((p) => {
                   const activo = toBool(p.estado);
+
                   return (
                     <tr key={p.id_periodo}>
                       <td className="td-strong">{p.codigo_periodo}</td>
                       <td className="td-muted">{p.descripcion_periodo}</td>
-                      <td className="periodos-date">{fmt(p.fecha_inicio)}</td>
-                      <td className="periodos-date">{fmt(p.fecha_fin)}</td>
+                      <td className="periodos-date">{fmtDate(p.fecha_inicio)}</td>
+                      <td className="periodos-date">{fmtDate(p.fecha_fin)}</td>
+
                       <td>
                         <span className={`badge ${activo ? "active" : "inactive"}`}>
                           {activo ? "Activo" : "Inactivo"}
@@ -234,17 +378,21 @@ export default function PeriodosPage() {
 
                       <td>
                         <div className="row-actions">
-                          <button className="table-btn" onClick={() => openDetails(p)}>
-                            Ver
+                          {/* ✅ colores por acción */}
+                          <button className="icon-table-btn icon-view" title="Ver" onClick={() => openDetails(p)}>
+                            <Eye size={16} />
                           </button>
-                          <button className="table-btn" onClick={() => openEdit(p)}>
-                            Editar
+
+                          <button className="icon-table-btn icon-edit" title="Editar" onClick={() => openEdit(p)}>
+                            <Pencil size={16} />
                           </button>
+
                           <button
-                            className={`table-btn ${activo ? "danger" : "success"}`}
+                            className={`icon-table-btn ${activo ? "icon-danger" : "icon-success"}`}
+                            title={activo ? "Desactivar" : "Activar"}
                             onClick={() => toggleEstado(p)}
                           >
-                            {activo ? "Cerrar" : "Activar"}
+                            {activo ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
                           </button>
                         </div>
                       </td>
@@ -254,6 +402,24 @@ export default function PeriodosPage() {
               )}
             </tbody>
           </table>
+        </div>
+
+        <div className="pagination-bar">
+          <button className="btn-secondary" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>
+            ← Anterior
+          </button>
+
+          <span className="pagination-text">
+            Página <b>{page}</b> de <b>{totalPages}</b>
+          </span>
+
+          <button
+            className="btn-secondary"
+            disabled={page === totalPages}
+            onClick={() => setPage((p) => p + 1)}
+          >
+            Siguiente →
+          </button>
         </div>
       </div>
 
@@ -266,49 +432,56 @@ export default function PeriodosPage() {
                 <h3 className="modal-title">{editing ? "Editar período" : "Nuevo período"}</h3>
                 <p className="modal-subtitle">Configura datos del período académico.</p>
               </div>
-              <button className="icon-btn" onClick={closeForm} aria-label="Cerrar">✕</button>
+              <button className="icon-btn" onClick={closeForm} aria-label="Cerrar">
+                ✕
+              </button>
             </div>
 
             <div className="modal-form">
               <div className="modal-grid">
                 <div>
-                  <label className="form-label">Código</label>
+                  <label className="form-label">Código *</label>
                   <input
-                    className="input-base"
+                    className={`input-base ${errors.codigo_periodo ? "input-error" : ""}`}
                     value={form.codigo_periodo}
                     onChange={(e) => onChange("codigo_periodo", e.target.value)}
+                    onBlur={(e) => onChange("codigo_periodo", normalizeCodigo(e.target.value))}
                     placeholder="Ej: 2025-A"
                   />
+                  {errors.codigo_periodo && <div className="field-error">{errors.codigo_periodo}</div>}
                 </div>
 
                 <div>
-                  <label className="form-label">Descripción</label>
+                  <label className="form-label">Descripción *</label>
                   <input
-                    className="input-base"
+                    className={`input-base ${errors.descripcion_periodo ? "input-error" : ""}`}
                     value={form.descripcion_periodo}
                     onChange={(e) => onChange("descripcion_periodo", e.target.value)}
                     placeholder="Ej: Periodo ordinario 2025-A"
                   />
+                  {errors.descripcion_periodo && <div className="field-error">{errors.descripcion_periodo}</div>}
                 </div>
 
                 <div>
-                  <label className="form-label">Fecha inicio</label>
+                  <label className="form-label">Fecha inicio *</label>
                   <input
                     type="date"
-                    className="input-base"
-                    value={form.fecha_inicio}
+                    className={`input-base ${errors.fecha_inicio ? "input-error" : ""}`}
+                    value={toDateInput(form.fecha_inicio)}
                     onChange={(e) => onChange("fecha_inicio", e.target.value)}
                   />
+                  {errors.fecha_inicio && <div className="field-error">{errors.fecha_inicio}</div>}
                 </div>
 
                 <div>
-                  <label className="form-label">Fecha fin</label>
+                  <label className="form-label">Fecha fin *</label>
                   <input
                     type="date"
-                    className="input-base"
-                    value={form.fecha_fin}
+                    className={`input-base ${errors.fecha_fin ? "input-error" : ""}`}
+                    value={toDateInput(form.fecha_fin)}
                     onChange={(e) => onChange("fecha_fin", e.target.value)}
                   />
+                  {errors.fecha_fin && <div className="field-error">{errors.fecha_fin}</div>}
                 </div>
               </div>
 
@@ -316,7 +489,7 @@ export default function PeriodosPage() {
                 <button className="btn-secondary" onClick={closeForm}>
                   Cancelar
                 </button>
-                <button className="btn-primary" onClick={submit}>
+                <button className="btn-primary periodos-primary" onClick={submit}>
                   {editing ? "Guardar cambios" : "Crear período"}
                 </button>
               </div>
@@ -334,7 +507,9 @@ export default function PeriodosPage() {
                 <h3 className="modal-title">Detalle del período</h3>
                 <p className="modal-subtitle">Información registrada en el sistema.</p>
               </div>
-              <button className="icon-btn" onClick={closeView} aria-label="Cerrar">✕</button>
+              <button className="icon-btn" onClick={closeView} aria-label="Cerrar">
+                ✕
+              </button>
             </div>
 
             <div className="detail-grid">
@@ -350,12 +525,12 @@ export default function PeriodosPage() {
 
               <div className="detail-item">
                 <span className="detail-label">Inicio</span>
-                <span className="detail-value">{fmt(viewing.fecha_inicio)}</span>
+                <span className="detail-value">{fmtDate(viewing.fecha_inicio)}</span>
               </div>
 
               <div className="detail-item">
                 <span className="detail-label">Fin</span>
-                <span className="detail-value">{fmt(viewing.fecha_fin)}</span>
+                <span className="detail-value">{fmtDate(viewing.fecha_fin)}</span>
               </div>
 
               <div className="detail-item">
@@ -369,8 +544,16 @@ export default function PeriodosPage() {
             </div>
 
             <div className="modal-footer">
-              <button className="btn-secondary" onClick={closeView}>Cerrar</button>
-              <button className="btn-primary" onClick={() => { closeView(); openEdit(viewing); }}>
+              <button className="btn-secondary" onClick={closeView}>
+                Cerrar
+              </button>
+              <button
+                className="btn-primary periodos-primary"
+                onClick={() => {
+                  closeView();
+                  openEdit(viewing);
+                }}
+              >
                 Editar
               </button>
             </div>
