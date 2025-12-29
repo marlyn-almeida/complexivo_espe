@@ -1,424 +1,294 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import "./RubricasDisenoPage.css";
+import axiosClient from "../../api/axiosClient";
+import "./RubricaCrearDisenarPage.css";
 
-import { catalogosService, type CatalogoItem } from "../../services/catalogos.service";
-import { rubricaService, type Rubrica, type TipoRubrica } from "../../services/rubrica.service";
-import { rubricaComponenteService, type RubricaComponente } from "../../services/rubricaComponente.service";
-import { rubricaCriterioNivelService, type RubricaCriterioNivel } from "../../services/rubricaCriterioNivel.service";
+type Rubrica = {
+  id_rubrica: number;
+  id_periodo: number;
+  tipo_rubrica: "ORAL" | "ESCRITA";
+  ponderacion_global: string | number;
+  nombre_rubrica: string;
+  descripcion_rubrica?: string | null;
+  estado: number;
+};
 
-const isActive = (estado: any) => (typeof estado === "boolean" ? estado : Number(estado) === 1);
+type ComponenteCatalogo = {
+  id_componente: number;
+  nombre_componente: string;
+  descripcion_componente?: string | null;
+  estado: number;
+};
 
-function defaultRubricaName(tipo: TipoRubrica) {
-  return tipo === "ESCRITA" ? "Rúbrica Evaluación Escrita" : "Rúbrica Evaluación Oral";
-}
+type RubricaComponente = {
+  id_rubrica_componente: number;
+  id_rubrica: number;
+  id_componente: number;
+  ponderacion_porcentaje: string | number;
+  orden_componente: number;
+  estado: number;
 
-export default function RubricasDisenoPage() {
-  const nav = useNavigate();
-  const { idCarreraPeriodo } = useParams();
-  const cpId = Number(idCarreraPeriodo);
+  // si tu backend hace join, pueden venir:
+  nombre_componente?: string;
+};
+
+const n = (v: any) => (v === null || v === undefined ? "" : String(v));
+const num = (v: any) => Number(String(v ?? "").replace(",", "."));
+
+export default function RubricaCrearDisenarPage() {
+  const { idRubrica } = useParams();
+  const navigate = useNavigate();
+  const rid = Number(idRubrica);
 
   const [loading, setLoading] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
-
-  const [tab, setTab] = useState<TipoRubrica>("ESCRITA");
-  const [rubricas, setRubricas] = useState<Rubrica[]>([]);
-  const rubricaActiva = useMemo(() => rubricas.find(r => r.tipo_rubrica === tab) || null, [rubricas, tab]);
-
-  const [catComponentes, setCatComponentes] = useState<CatalogoItem[]>([]);
-  const [catCriterios, setCatCriterios] = useState<CatalogoItem[]>([]);
-  const [catNiveles, setCatNiveles] = useState<CatalogoItem[]>([]);
-
+  const [rubrica, setRubrica] = useState<Rubrica | null>(null);
   const [componentes, setComponentes] = useState<RubricaComponente[]>([]);
+  const [catalogo, setCatalogo] = useState<ComponenteCatalogo[]>([]);
 
-  // criterios por componente (catálogo)
-  const [openComponenteCatalogoId, setOpenComponenteCatalogoId] = useState<number | null>(null);
-  const [criteriosNiveles, setCriteriosNiveles] = useState<RubricaCriterioNivel[]>([]);
+  // form add
+  const [idComponente, setIdComponente] = useState<number>(0);
+  const [ponderacion, setPonderacion] = useState<string>("0");
+  const [orden, setOrden] = useState<string>("1");
 
-  // form add componente a rubrica
-  const [nuevoCompId, setNuevoCompId] = useState<number>(0);
-  const [nuevoCompOrden, setNuevoCompOrden] = useState<number>(1);
-  const [nuevoCompPond, setNuevoCompPond] = useState<number>(0);
+  const totalPonderacion = useMemo(() => {
+    return componentes
+      .filter((c) => c.estado === 1)
+      .reduce((acc, c) => acc + num(c.ponderacion_porcentaje), 0);
+  }, [componentes]);
 
-  // form add criterio-nivel
-  const [nuevoCriterioId, setNuevoCriterioId] = useState<number>(0);
-  const [nuevoNivelId, setNuevoNivelId] = useState<number>(0);
-  const [nuevoDesc, setNuevoDesc] = useState<string>("");
-
-  // 1) cargar catálogos
   useEffect(() => {
-    (async () => {
-      try { setCatComponentes(await catalogosService.componentes({ includeInactive: true })); } catch {}
-      try { setCatCriterios(await catalogosService.criterios({ includeInactive: true })); } catch {}
-      try { setCatNiveles(await catalogosService.niveles({ includeInactive: true })); } catch {}
-    })();
-  }, []);
+    if (!rid) return;
+    loadAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rid]);
 
-  // 2) asegurar 2 rúbricas
-  const ensureRubricas = async () => {
+  const loadAll = async () => {
     setLoading(true);
-    setMsg(null);
     try {
-      const list = await rubricaService.list({ carreraPeriodoId: cpId, includeInactive: true });
-      const arr = Array.isArray(list) ? list : [];
+      const [r1, r2, r3] = await Promise.all([
+        axiosClient.get(`/rubricas/${rid}`),
+        axiosClient.get("/rubricas-componentes", { params: { rubricaId: rid, includeInactive: true } }),
+        axiosClient.get("/componentes", { params: { includeInactive: true } }),
+      ]);
 
-      const escrita = arr.find(r => r.tipo_rubrica === "ESCRITA");
-      const oral = arr.find(r => r.tipo_rubrica === "ORAL");
-
-      const created: Rubrica[] = [];
-
-      if (!escrita) {
-        created.push(await rubricaService.create({
-          id_carrera_periodo: cpId,
-          tipo_rubrica: "ESCRITA",
-          ponderacion_global: 50,
-          nombre_rubrica: defaultRubricaName("ESCRITA"),
-          descripcion_rubrica: "Diseño de rúbrica ESCRITA (50%)",
-        }));
-      }
-      if (!oral) {
-        created.push(await rubricaService.create({
-          id_carrera_periodo: cpId,
-          tipo_rubrica: "ORAL",
-          ponderacion_global: 50,
-          nombre_rubrica: defaultRubricaName("ORAL"),
-          descripcion_rubrica: "Diseño de rúbrica ORAL (50%)",
-        }));
-      }
-
-      const finalList = created.length
-        ? await rubricaService.list({ carreraPeriodoId: cpId, includeInactive: true })
-        : arr;
-
-      setRubricas(Array.isArray(finalList) ? finalList : []);
-    } catch (e: any) {
-      setMsg(e?.response?.data?.message || "Error asegurando rúbricas ESCRITA/ORAL.");
+      setRubrica(r1.data);
+      setComponentes(r2.data ?? []);
+      setCatalogo(r3.data ?? []);
+    } catch (e) {
+      console.error(e);
+      alert("No se pudo cargar la rúbrica");
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    if (!cpId || Number.isNaN(cpId)) {
-      setMsg("ID carrera_periodo inválido.");
-      return;
-    }
-    ensureRubricas();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cpId]);
-
-  // 3) cargar componentes de la rúbrica activa
-  const loadComponentes = async (rubricaId: number) => {
-    setLoading(true);
-    setMsg(null);
-    try {
-      const comps = await rubricaComponenteService.list({ rubricaId, includeInactive: true });
-      const list = (Array.isArray(comps) ? comps : [])
-        .slice()
-        .sort((a, b) => Number(a.orden_componente) - Number(b.orden_componente));
-
-      setComponentes(list);
-
-      setNuevoCompOrden(list.length ? Math.max(...list.map(x => Number(x.orden_componente))) + 1 : 1);
-      setOpenComponenteCatalogoId(null);
-      setCriteriosNiveles([]);
-    } catch (e: any) {
-      setMsg(e?.response?.data?.message || "Error cargando componentes.");
-      setComponentes([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (rubricaActiva?.id_rubrica) loadComponentes(rubricaActiva.id_rubrica);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rubricaActiva?.id_rubrica]);
-
-  const nombreComp = (id: number) => catComponentes.find(x => x.id === id)?.nombre || `Componente #${id}`;
-  const nombreCrit = (id: number) => catCriterios.find(x => x.id === id)?.nombre || `Criterio #${id}`;
-  const nombreNivel = (id: number) => catNiveles.find(x => x.id === id)?.nombre || `Nivel #${id}`;
-
-  // agregar componente a rúbrica
   const addComponente = async () => {
-    if (!rubricaActiva) return;
+    if (!idComponente) return alert("Selecciona un componente");
+    if (!ponderacion || isNaN(num(ponderacion))) return alert("Ponderación inválida");
+    if (!orden || isNaN(Number(orden))) return alert("Orden inválido");
 
-    if (!nuevoCompId || nuevoCompId < 1) return setMsg("Selecciona un componente válido.");
-    setLoading(true);
-    setMsg(null);
     try {
-      await rubricaComponenteService.create({
-        id_rubrica: rubricaActiva.id_rubrica,
-        id_componente: Number(nuevoCompId),
-        ponderacion_porcentaje: Number(nuevoCompPond),
-        orden_componente: Number(nuevoCompOrden),
+      await axiosClient.post("/rubricas-componentes", {
+        id_rubrica: rid,
+        id_componente: idComponente,
+        ponderacion_porcentaje: num(ponderacion),
+        orden_componente: Number(orden),
       });
-      await loadComponentes(rubricaActiva.id_rubrica);
-      setNuevoCompId(0);
-      setNuevoCompPond(0);
-    } catch (e: any) {
-      setMsg(e?.response?.data?.message || "Error agregando componente.");
-    } finally {
-      setLoading(false);
+      await reloadComponentes();
+      setIdComponente(0);
+      setPonderacion("0");
+      setOrden("1");
+    } catch (e) {
+      console.error(e);
+      alert("No se pudo agregar el componente (¿duplicado?)");
     }
   };
 
-  const toggleComponente = async (row: RubricaComponente) => {
-    setLoading(true);
-    setMsg(null);
-    try {
-      await rubricaComponenteService.changeEstado(row.id_rubrica_componente, !isActive(row.estado));
-      if (rubricaActiva) await loadComponentes(rubricaActiva.id_rubrica);
-    } catch (e: any) {
-      setMsg(e?.response?.data?.message || "Error cambiando estado del componente.");
-    } finally {
-      setLoading(false);
-    }
+  const reloadComponentes = async () => {
+    const r = await axiosClient.get("/rubricas-componentes", {
+      params: { rubricaId: rid, includeInactive: true },
+    });
+    setComponentes(r.data ?? []);
   };
 
-  // ✅ Cargar criterios/niveles por ID DE CATÁLOGO componente
-  const openCriterios = async (componenteCatalogoId: number) => {
-    setLoading(true);
-    setMsg(null);
+  const toggleEstado = async (row: RubricaComponente) => {
     try {
-      const rows = await rubricaCriterioNivelService.list({
-        componenteId: componenteCatalogoId, // ✅ catálogo
-        includeInactive: true,
+      await axiosClient.patch(`/rubricas-componentes/${row.id_rubrica_componente}/estado`, {
+        estado: row.estado !== 1,
       });
-      setOpenComponenteCatalogoId(componenteCatalogoId);
-      setCriteriosNiveles(Array.isArray(rows) ? rows : []);
-    } catch (e: any) {
-      setMsg(e?.response?.data?.message || "Error cargando criterios y niveles.");
-    } finally {
-      setLoading(false);
+      await reloadComponentes();
+    } catch (e) {
+      console.error(e);
+      alert("No se pudo cambiar estado");
     }
   };
 
-  const addCriterioNivel = async () => {
-    if (!openComponenteCatalogoId) return;
-
-    if (!nuevoCriterioId || !nuevoNivelId) return setMsg("Selecciona criterio y nivel.");
-    if (!nuevoDesc.trim()) return setMsg("La descripción es obligatoria.");
-
-    setLoading(true);
-    setMsg(null);
+  const saveRow = async (row: RubricaComponente) => {
     try {
-      await rubricaCriterioNivelService.create({
-        id_componente: openComponenteCatalogoId, // ✅ catálogo
-        id_criterio: Number(nuevoCriterioId),
-        id_nivel: Number(nuevoNivelId),
-        descripcion: nuevoDesc.trim(),
+      await axiosClient.put(`/rubricas-componentes/${row.id_rubrica_componente}`, {
+        ponderacion_porcentaje: num(row.ponderacion_porcentaje),
+        orden_componente: Number(row.orden_componente),
       });
-      await openCriterios(openComponenteCatalogoId);
-      setNuevoDesc("");
-    } catch (e: any) {
-      setMsg(e?.response?.data?.message || "Error creando criterio/nivel.");
-    } finally {
-      setLoading(false);
+      await reloadComponentes();
+    } catch (e) {
+      console.error(e);
+      alert("No se pudo guardar cambios");
     }
   };
 
-  const toggleCriterioNivel = async (row: RubricaCriterioNivel) => {
-    setLoading(true);
-    setMsg(null);
-    try {
-      await rubricaCriterioNivelService.changeEstado(row.id_rubrica_criterio_nivel, !isActive(row.estado));
-      await openCriterios(row.id_componente); // ✅ catálogo
-    } catch (e: any) {
-      setMsg(e?.response?.data?.message || "Error cambiando estado criterio/nivel.");
-    } finally {
-      setLoading(false);
-    }
+  const setRowField = (id: number, field: keyof RubricaComponente, value: any) => {
+    setComponentes((prev) =>
+      prev.map((r) => (r.id_rubrica_componente === id ? { ...r, [field]: value } : r))
+    );
+  };
+
+  const nombreComponente = (row: RubricaComponente) => {
+    if (row.nombre_componente) return row.nombre_componente;
+    const c = catalogo.find((x) => x.id_componente === row.id_componente);
+    return c?.nombre_componente ?? `Componente #${row.id_componente}`;
   };
 
   return (
-    <div className="cp3-page">
-      <div className="cp3-panel">
-        <div className="cp3-panel-top">
-          <div>
-            <h1 className="cp3-title">Diseño de Rúbricas</h1>
-            <p className="cp3-subtitle">Carrera–Período: <b>#{cpId}</b> · ESCRITA/ORAL</p>
-          </div>
-
-          <div className="row-actions">
-            <button className="btn-action view" onClick={() => nav(`/rubricas/ver/${cpId}`)}>Ver</button>
-            <button className="btn-action" onClick={() => nav("/rubricas")}>Volver</button>
-          </div>
+    <div className="rd-page">
+      <div className="rd-panel">
+        <div>
+          <h1 className="rd-title">Diseño de Rúbrica</h1>
+          <p className="rd-subtitle">
+            {rubrica ? (
+              <>
+                <b>{rubrica.tipo_rubrica}</b> — {rubrica.nombre_rubrica} (Período #{rubrica.id_periodo})
+              </>
+            ) : (
+              "Cargando..."
+            )}
+          </p>
         </div>
 
-        {msg && <div className="cp3-error">{msg}</div>}
-
-        <div className="rub-tabs">
-          <button className={`rub-tab ${tab === "ESCRITA" ? "on" : ""}`} onClick={() => setTab("ESCRITA")}>ESCRITA</button>
-          <button className={`rub-tab ${tab === "ORAL" ? "on" : ""}`} onClick={() => setTab("ORAL")}>ORAL</button>
-        </div>
+        <button className="rd-btn back" onClick={() => navigate("/rubricas")}>
+          Volver
+        </button>
       </div>
 
-      <div className="cp3-card">
-        <div className="rub-header">
-          <div>
-            <div className="rub-h-title">{rubricaActiva?.nombre_rubrica || "—"}</div>
-            <div className="td-mini">{rubricaActiva?.descripcion_rubrica || ""}</div>
-          </div>
-          <div className="rub-h-right">
-            <span className="badge active">Ponderación global: {rubricaActiva?.ponderacion_global ?? 50}%</span>
-            {loading && <span className="td-mini">Cargando…</span>}
+      <div className="rd-card">
+        <div className="rd-card-head">
+          <div className="rd-head-left">
+            <h2>Componentes</h2>
+            <span className={`pill ${totalPonderacion === 100 ? "ok" : ""}`}>
+              Total activo: {totalPonderacion.toFixed(2)}%
+            </span>
           </div>
         </div>
 
-        {/* Agregar componente */}
-        <div className="rub-add">
-          <div className="rub-add-row">
-            <div className="rub-field">
-              <label>Componente</label>
-              <select className="input-base" value={nuevoCompId} onChange={(e) => setNuevoCompId(Number(e.target.value))}>
-                <option value={0}>Selecciona…</option>
-                {catComponentes.map((c) => (
-                  <option key={c.id} value={c.id}>{c.nombre}</option>
+        {/* FORM AGREGAR */}
+        <div className="rd-form">
+          <div className="field">
+            <label>Componente</label>
+            <select value={idComponente} onChange={(e) => setIdComponente(Number(e.target.value))}>
+              <option value={0}>— Selecciona —</option>
+              {catalogo
+                .filter((c) => c.estado === 1)
+                .map((c) => (
+                  <option key={c.id_componente} value={c.id_componente}>
+                    {c.nombre_componente}
+                  </option>
                 ))}
-              </select>
-            </div>
-
-            <div className="rub-field">
-              <label>Ponderación (%)</label>
-              <input className="input-base" type="number" step="0.01" value={nuevoCompPond} onChange={(e) => setNuevoCompPond(Number(e.target.value))} />
-            </div>
-
-            <div className="rub-field">
-              <label>Orden</label>
-              <input className="input-base" type="number" value={nuevoCompOrden} onChange={(e) => setNuevoCompOrden(Number(e.target.value))} />
-            </div>
-
-            <button className="btn-action assign" onClick={addComponente} disabled={loading || !rubricaActiva}>
-              + Agregar
-            </button>
+            </select>
           </div>
+
+          <div className="field">
+            <label>Ponderación (%)</label>
+            <input value={ponderacion} onChange={(e) => setPonderacion(e.target.value)} />
+          </div>
+
+          <div className="field">
+            <label>Orden</label>
+            <input value={orden} onChange={(e) => setOrden(e.target.value)} />
+          </div>
+
+          <button className="rd-btn primary" onClick={addComponente} disabled={loading}>
+            Agregar
+          </button>
         </div>
 
-        {/* Tabla componentes */}
-        <div className="cp3-table-scroll">
-          <table className="cp3-table">
+        {/* TABLA */}
+        <div className="rd-table-scroll">
+          <table className="rd-table">
             <thead>
               <tr>
                 <th>Orden</th>
                 <th>Componente</th>
                 <th>Ponderación</th>
                 <th>Estado</th>
-                <th className="cp3-actions-col">Acciones</th>
+                <th className="actions-col">Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {componentes.length === 0 ? (
-                <tr><td colSpan={5} className="td-center">No hay componentes todavía.</td></tr>
+              {loading ? (
+                <tr>
+                  <td colSpan={5} className="td-center">Cargando…</td>
+                </tr>
+              ) : componentes.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="td-center">Aún no hay componentes</td>
+                </tr>
               ) : (
-                componentes.map((row) => {
-                  const activo = isActive(row.estado);
-                  return (
-                    <tr key={row.id_rubrica_componente}>
-                      <td className="td-strong">{row.orden_componente}</td>
-                      <td className="td-strong">{row.nombre_componente || nombreComp(row.id_componente)}</td>
-                      <td>{Number(row.ponderacion_porcentaje).toFixed(2)}%</td>
-                      <td><span className={`badge ${activo ? "active" : "inactive"}`}>{activo ? "ACTIVO" : "INACTIVO"}</span></td>
-                      <td>
-                        <div className="row-actions">
-                          {/* ✅ AQUÍ lo importante: abrir por id_componente catálogo */}
-                          <button className="btn-action view" onClick={() => openCriterios(row.id_componente)}>
-                            Criterios/Niveles
-                          </button>
-                          <button className="btn-action" onClick={() => toggleComponente(row)}>
-                            {activo ? "Desactivar" : "Activar"}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
+                componentes.map((row) => (
+                  <tr key={row.id_rubrica_componente}>
+                    <td>
+                      <input
+                        className="mini"
+                        value={n(row.orden_componente)}
+                        onChange={(e) => setRowField(row.id_rubrica_componente, "orden_componente", e.target.value)}
+                      />
+                    </td>
+                    <td className="td-strong">{nombreComponente(row)}</td>
+                    <td>
+                      <input
+                        className="mini"
+                        value={n(row.ponderacion_porcentaje)}
+                        onChange={(e) => setRowField(row.id_rubrica_componente, "ponderacion_porcentaje", e.target.value)}
+                      />
+                    </td>
+                    <td>
+                      {row.estado === 1 ? (
+                        <span className="badge ok">Activo</span>
+                      ) : (
+                        <span className="badge off">Inactivo</span>
+                      )}
+                    </td>
+                    <td>
+                      <div className="row-actions">
+                        <button className="rd-btn tiny" onClick={() => saveRow(row)}>
+                          Guardar
+                        </button>
+                        <button
+                          className={`rd-btn tiny ${row.estado === 1 ? "danger" : "ghost"}`}
+                          onClick={() => toggleEstado(row)}
+                        >
+                          {row.estado === 1 ? "Desactivar" : "Activar"}
+                        </button>
+
+                        {/* siguiente: criterios/niveles por componente */}
+                        <button
+                          className="rd-btn tiny ghost"
+                          onClick={() => navigate(`/rubricas/componentes/${row.id_rubrica_componente}`)}
+                        >
+                          Criterios
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>
         </div>
 
-        {/* Panel criterios/niveles */}
-        {openComponenteCatalogoId && (
-          <div className="rub-criteria">
-            <div className="rub-criteria-top">
-              <div className="rub-h-title">Criterios y niveles · {nombreComp(openComponenteCatalogoId)}</div>
-              <button className="btn-action" onClick={() => { setOpenComponenteCatalogoId(null); setCriteriosNiveles([]); }}>
-                Cerrar
-              </button>
-            </div>
-
-            <div className="rub-add-row">
-              <div className="rub-field">
-                <label>Criterio</label>
-                <select className="input-base" value={nuevoCriterioId} onChange={(e) => setNuevoCriterioId(Number(e.target.value))}>
-                  <option value={0}>Selecciona…</option>
-                  {catCriterios.map((c) => (
-                    <option key={c.id} value={c.id}>{c.nombre}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="rub-field">
-                <label>Nivel</label>
-                <select className="input-base" value={nuevoNivelId} onChange={(e) => setNuevoNivelId(Number(e.target.value))}>
-                  <option value={0}>Selecciona…</option>
-                  {catNiveles.map((n) => (
-                    <option key={n.id} value={n.id}>{n.nombre}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="rub-field grow">
-                <label>Descripción</label>
-                <input className="input-base" value={nuevoDesc} onChange={(e) => setNuevoDesc(e.target.value)} placeholder="Descripción..." />
-              </div>
-
-              <button className="btn-action assign" onClick={addCriterioNivel} disabled={loading}>
-                + Agregar
-              </button>
-            </div>
-
-            <div className="cp3-table-scroll">
-              <table className="cp3-table">
-                <thead>
-                  <tr>
-                    <th>Criterio</th>
-                    <th>Nivel</th>
-                    <th>Descripción</th>
-                    <th>Estado</th>
-                    <th className="cp3-actions-col">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {criteriosNiveles.length === 0 ? (
-                    <tr><td colSpan={5} className="td-center">No hay criterios/niveles.</td></tr>
-                  ) : (
-                    criteriosNiveles.map((row) => {
-                      const activo = isActive(row.estado);
-                      return (
-                        <tr key={row.id_rubrica_criterio_nivel}>
-                          <td className="td-strong">{row.nombre_criterio || nombreCrit(row.id_criterio)}</td>
-                          <td className="td-strong">{row.nombre_nivel || nombreNivel(row.id_nivel)}</td>
-                          <td>{row.descripcion}</td>
-                          <td><span className={`badge ${activo ? "active" : "inactive"}`}>{activo ? "ACTIVO" : "INACTIVO"}</span></td>
-                          <td>
-                            <div className="row-actions">
-                              <button className="btn-action" onClick={() => toggleCriterioNivel(row)}>
-                                {activo ? "Desactivar" : "Activar"}
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-
+        <div className="rd-footer">
+          <div className="hint">
+            Recomendación: el total activo debería sumar 100%.
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

@@ -3,9 +3,11 @@ const { body, param, query } = require("express-validator");
 const validate = require("../middlewares/validate.middleware");
 const ctrl = require("../controllers/rubrica.controller");
 
+// listar (por periodoId opcional)
 router.get("/",
   query("includeInactive").optional().isBoolean().toBoolean(),
-  query("carreraPeriodoId").optional().isInt({ min: 1 }).toInt(),
+  query("periodoId").optional().isInt({ min: 1 }).toInt(),
+  query("tipo_rubrica").optional().isIn(["ESCRITA", "ORAL"]),
   validate,
   ctrl.list
 );
@@ -17,7 +19,7 @@ router.get("/:id",
 );
 
 router.post("/",
-  body("id_carrera_periodo").isInt({ min: 1 }).toInt(),
+  body("id_periodo").isInt({ min: 1 }).toInt(),
   body("tipo_rubrica").isIn(["ESCRITA", "ORAL"]),
   body("ponderacion_global").optional().isDecimal(),
   body("nombre_rubrica").isString().trim().notEmpty(),
@@ -26,9 +28,18 @@ router.post("/",
   ctrl.create
 );
 
+// ✅ crea si no existe y devuelve (clave para botones ORAL/ESCRITA en /rubricas)
+router.post("/ensure",
+  body("id_periodo").isInt({ min: 1 }).toInt(),
+  body("tipo_rubrica").isIn(["ESCRITA", "ORAL"]),
+  body("nombre_base").optional().isString().trim(),
+  validate,
+  ctrl.ensure
+);
+
 router.put("/:id",
   param("id").isInt({ min: 1 }).toInt(),
-  body("id_carrera_periodo").isInt({ min: 1 }).toInt(),
+  body("id_periodo").isInt({ min: 1 }).toInt(),
   body("tipo_rubrica").isIn(["ESCRITA", "ORAL"]),
   body("ponderacion_global").optional().isDecimal(),
   body("nombre_rubrica").isString().trim().notEmpty(),

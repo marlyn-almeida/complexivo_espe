@@ -11,10 +11,11 @@ import CarrerasPage from "../pages/carreras/CarrerasPage";
 import DocentesPage from "../pages/docentes/DocentesPage";
 import EstudiantesPage from "../pages/estudiantes/EstudiantesPage";
 import CarreraPeriodoPage from "../pages/carreraPeriodo/CarreraPeriodoPage";
-import RubricasPeriodoPage from "../pages/rubrica/RubricasPeriodoPage";
 
-// ✅ Página para diseñar rúbrica por carrera_periodo
-// (tu archivo real es RubricaCrearDisenarPage.tsx)
+import RubricasPeriodoPage from "../pages/rubrica/RubricasPeriodoPage";
+import RubricasVerPage from "../pages/rubrica/RubricasVerPage";
+
+// ✅ Diseño de rúbrica por id_rubrica (ORAL o ESCRITA)
 import RubricaDisenoPage from "../pages/rubrica/RubricaCrearDisenarPage";
 
 import ProtectedRoute from "../components/auth/ProtectedRoute";
@@ -105,7 +106,7 @@ export default function AppRoutes() {
             }
           />
 
-          {/* ✅ LISTA PRINCIPAL DE RÚBRICAS */}
+          {/* ✅ RÚBRICAS (NUEVO FLUJO) */}
           <Route
             path="/rubricas"
             element={
@@ -115,22 +116,22 @@ export default function AppRoutes() {
             }
           />
 
-          {/* ✅ DISEÑAR RÚBRICA PARA UN carrera_periodo */}
+          {/* ✅ Ver las 2 rúbricas del período (ORAL + ESCRITA) */}
           <Route
-            path="/rubricas/diseno/:idCarreraPeriodo"
+            path="/rubricas/ver/:idPeriodo"
             element={
               <ProtectedRoute allowRoles={[1]}>
-                <RubricaDisenoPage />
+                <RubricasVerPage />
               </ProtectedRoute>
             }
           />
 
-          {/* ✅ VER RÚBRICA (por ahora placeholder para que NO se rompa la navegación) */}
+          {/* ✅ Diseñar rúbrica por id_rubrica */}
           <Route
-            path="/rubricas/ver/:idCarreraPeriodo"
+            path="/rubricas/diseno/:idRubrica"
             element={
               <ProtectedRoute allowRoles={[1]}>
-                <Placeholder title="Ver rúbrica (pendiente)" />
+                <RubricaDisenoPage />
               </ProtectedRoute>
             }
           />
@@ -183,9 +184,8 @@ export default function AppRoutes() {
           />
 
           {/* =========================
-              ADMIN (2) - por carrera
+              ADMIN (2)
              ========================= */}
-
           <Route
             path="/estudiantes"
             element={

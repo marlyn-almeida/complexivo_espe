@@ -1,162 +1,138 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import axiosClient from "../../api/axiosClient";
 import "./RubricasVerPage.css";
 
-import { catalogosService, type CatalogoItem } from "../../services/catalogos.service";
-import { rubricaService, type Rubrica, type TipoRubrica } from "../../services/rubrica.service";
-import { rubricaComponenteService, type RubricaComponente } from "../../services/rubricaComponente.service";
-import { rubricaCriterioNivelService, type RubricaCriterioNivel } from "../../services/rubricaCriterioNivel.service";
-
-const isActive = (estado: any) => (typeof estado === "boolean" ? estado : Number(estado) === 1);
+type Rubrica = {
+  id_rubrica: number;
+  id_periodo: number;
+  tipo_rubrica: "ORAL" | "ESCRITA";
+  ponderacion_global: string | number;
+  nombre_rubrica: string;
+  descripcion_rubrica?: string | null;
+  estado: number;
+};
 
 export default function RubricasVerPage() {
-  const nav = useNavigate();
-  const { idCarreraPeriodo } = useParams();
-  const cpId = Number(idCarreraPeriodo);
+  const { idPeriodo } = useParams();
+  const navigate = useNavigate();
 
   const [loading, setLoading] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
-  const [tab, setTab] = useState<TipoRubrica>("ESCRITA");
-
   const [rubricas, setRubricas] = useState<Rubrica[]>([]);
-  const rubricaActiva = useMemo(() => rubricas.find(r => r.tipo_rubrica === tab) || null, [rubricas, tab]);
-
-  const [catComponentes, setCatComponentes] = useState<CatalogoItem[]>([]);
-  const [catCriterios, setCatCriterios] = useState<CatalogoItem[]>([]);
-  const [catNiveles, setCatNiveles] = useState<CatalogoItem[]>([]);
-
-  const [componentes, setComponentes] = useState<RubricaComponente[]>([]);
-  const [criteriosPorComponente, setCriteriosPorComponente] = useState<Record<number, RubricaCriterioNivel[]>>({});
-
-  const nombreComp = (id: number) => catComponentes.find(x => x.id === id)?.nombre || `Componente #${id}`;
-  const nombreCrit = (id: number) => catCriterios.find(x => x.id === id)?.nombre || `Criterio #${id}`;
-  const nombreNivel = (id: number) => catNiveles.find(x => x.id === id)?.nombre || `Nivel #${id}`;
 
   useEffect(() => {
-    (async () => {
-      try { setCatComponentes(await catalogosService.componentes({ includeInactive: true })); } catch {}
-      try { setCatCriterios(await catalogosService.criterios({ includeInactive: true })); } catch {}
-      try { setCatNiveles(await catalogosService.niveles({ includeInactive: true })); } catch {}
-    })();
-  }, []);
-
-  useEffect(() => {
-    (async () => {
-      setLoading(true);
-      setMsg(null);
-      try {
-        const list = await rubricaService.list({ carreraPeriodoId: cpId, includeInactive: true });
-        setRubricas(Array.isArray(list) ? list : []);
-      } catch (e: any) {
-        setMsg(e?.response?.data?.message || "Error cargando rúbricas.");
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [cpId]);
-
-  useEffect(() => {
-    (async () => {
-      if (!rubricaActiva?.id_rubrica) return;
-
-      setLoading(true);
-      setMsg(null);
-      try {
-        const comps = await rubricaComponenteService.list({ rubricaId: rubricaActiva.id_rubrica, includeInactive: true });
-        const list = (Array.isArray(comps) ? comps : []).filter(x => isActive(x.estado));
-        setComponentes(list);
-
-        // ✅ cargar criterios por componente CATÁLOGO (id_componente)
-        const map: Record<number, RubricaCriterioNivel[]> = {};
-        for (const c of list) {
-          const rows = await rubricaCriterioNivelService.list({
-            componenteId: c.id_componente, // ✅ catálogo
-            includeInactive: true,
-          });
-          map[c.id_componente] = (Array.isArray(rows) ? rows : []).filter(x => isActive(x.estado));
-        }
-        setCriteriosPorComponente(map);
-      } catch (e: any) {
-        setMsg(e?.response?.data?.message || "Error cargando diseño.");
-      } finally {
-        setLoading(false);
-      }
-    })();
+    load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rubricaActiva?.id_rubrica]);
+  }, [idPeriodo]);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const res = await axiosClient.get("/rubricas", {
+        params: { periodoId: Number(idPeriodo), includeInactive: true },
+      });
+      setRubricas(res.data ?? []);
+    } catch (e) {
+      console.error(e);
+      alert("No se pudo cargar las rúbricas del período");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const ensureAndGo = async (tipo: "ORAL" | "ESCRITA") => {
+    try {
+      const res = await axiosClient.post("/rubricas/ensure", {
+        id_periodo: Number(idPeriodo),
+        tipo_rubrica: tipo,
+      });
+      const idRubrica = res.data?.rubrica?.id_rubrica;
+      if (!idRubrica) throw new Error("No vino id_rubrica");
+      navigate(`/rubricas/diseno/${idRubrica}`);
+    } catch (e) {
+      console.error(e);
+      alert("No se pudo abrir la rúbrica");
+    }
+  };
+
+  const oral = rubricas.find((r) => r.tipo_rubrica === "ORAL");
+  const escrita = rubricas.find((r) => r.tipo_rubrica === "ESCRITA");
 
   return (
-    <div className="cp3-page">
-      <div className="cp3-panel">
-        <div className="cp3-panel-top">
-          <div>
-            <h1 className="cp3-title">Ver Rúbricas</h1>
-            <p className="cp3-subtitle">Carrera–Período: <b>#{cpId}</b></p>
-          </div>
-
-          <div className="row-actions">
-            <button className="btn-action assign" onClick={() => nav(`/rubricas/diseno/${cpId}`)}>Editar diseño</button>
-            <button className="btn-action" onClick={() => nav("/rubricas")}>Volver</button>
-          </div>
+    <div className="rv-page">
+      <div className="rv-panel">
+        <div>
+          <h1 className="rv-title">Ver Rúbricas del Período</h1>
+          <p className="rv-subtitle">Aquí deben existir dos: ORAL y ESCRITA.</p>
         </div>
 
-        {msg && <div className="cp3-error">{msg}</div>}
-
-        <div className="rub-tabs">
-          <button className={`rub-tab ${tab === "ESCRITA" ? "on" : ""}`} onClick={() => setTab("ESCRITA")}>ESCRITA</button>
-          <button className={`rub-tab ${tab === "ORAL" ? "on" : ""}`} onClick={() => setTab("ORAL")}>ORAL</button>
-        </div>
+        <button className="rv-btn back" onClick={() => navigate("/rubricas")}>
+          Volver
+        </button>
       </div>
 
-      <div className="cp3-card">
-        {loading && <div className="td-mini">Cargando…</div>}
+      <div className="rv-grid">
+        <div className="rv-card">
+          <div className="rv-card-head">
+            <h2>ORAL</h2>
+            <span className={`badge ${oral?.estado === 1 ? "ok" : "off"}`}>
+              {oral?.estado === 1 ? "Activa" : oral ? "Inactiva" : "No creada"}
+            </span>
+          </div>
 
-        {!loading && !rubricaActiva && (
-          <div className="td-center">No existe rúbrica {tab}.</div>
-        )}
-
-        {!loading && rubricaActiva && (
-          <>
-            <div className="rub-header">
-              <div>
-                <div className="rub-h-title">{rubricaActiva.nombre_rubrica}</div>
-                <div className="td-mini">{rubricaActiva.descripcion_rubrica || ""}</div>
-              </div>
-              <span className="badge active">Ponderación global: {rubricaActiva.ponderacion_global ?? 50}%</span>
+          <div className="rv-body">
+            <div className="rv-row">
+              <span className="k">Nombre</span>
+              <span className="v">{oral?.nombre_rubrica ?? "—"}</span>
+            </div>
+            <div className="rv-row">
+              <span className="k">Ponderación global</span>
+              <span className="v">{oral?.ponderacion_global ?? "—"}</span>
+            </div>
+            <div className="rv-row">
+              <span className="k">Descripción</span>
+              <span className="v">{oral?.descripcion_rubrica ?? "—"}</span>
             </div>
 
-            {componentes.length === 0 ? (
-              <div className="td-center">No hay componentes activos.</div>
-            ) : (
-              componentes.map((c) => (
-                <div key={c.id_rubrica_componente} className="rub-block">
-                  <div className="rub-block-top">
-                    <div className="td-strong">
-                      {c.nombre_componente || nombreComp(c.id_componente)}
-                      <span className="td-mini"> · Orden {c.orden_componente}</span>
-                    </div>
-                    <span className="badge active">{Number(c.ponderacion_porcentaje).toFixed(2)}%</span>
-                  </div>
+            <button className="rv-btn oral" onClick={() => ensureAndGo("ORAL")}>
+              Crear / Editar ORAL
+            </button>
+          </div>
+        </div>
 
-                  <div className="rub-block-body">
-                    {(criteriosPorComponente[c.id_componente] || []).length === 0 ? (
-                      <div className="td-mini">Sin criterios/niveles activos.</div>
-                    ) : (
-                      <ul className="rub-list">
-                        {(criteriosPorComponente[c.id_componente] || []).map((x) => (
-                          <li key={x.id_rubrica_criterio_nivel}>
-                            <b>{nombreCrit(x.id_criterio)}</b> · <b>{nombreNivel(x.id_nivel)}</b> — {x.descripcion}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                </div>
-              ))
-            )}
-          </>
-        )}
+        <div className="rv-card">
+          <div className="rv-card-head">
+            <h2>ESCRITA</h2>
+            <span className={`badge ${escrita?.estado === 1 ? "ok" : "off"}`}>
+              {escrita?.estado === 1 ? "Activa" : escrita ? "Inactiva" : "No creada"}
+            </span>
+          </div>
+
+          <div className="rv-body">
+            <div className="rv-row">
+              <span className="k">Nombre</span>
+              <span className="v">{escrita?.nombre_rubrica ?? "—"}</span>
+            </div>
+            <div className="rv-row">
+              <span className="k">Ponderación global</span>
+              <span className="v">{escrita?.ponderacion_global ?? "—"}</span>
+            </div>
+            <div className="rv-row">
+              <span className="k">Descripción</span>
+              <span className="v">{escrita?.descripcion_rubrica ?? "—"}</span>
+            </div>
+
+            <button
+              className="rv-btn escrita"
+              onClick={() => ensureAndGo("ESCRITA")}
+            >
+              Crear / Editar ESCRITA
+            </button>
+          </div>
+        </div>
       </div>
+
+      {loading && <div className="rv-muted">Cargando…</div>}
     </div>
   );
 }
