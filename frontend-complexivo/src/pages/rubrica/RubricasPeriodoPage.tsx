@@ -8,7 +8,8 @@ type CarreraPeriodo = {
   nombre_carrera: string;
   codigo_periodo: string;
   descripcion_periodo: string;
-  estado: number;
+  estado_cp?: number;
+  estado?: number;
 };
 
 export default function RubricasPeriodoPage() {
@@ -20,10 +21,8 @@ export default function RubricasPeriodoPage() {
     const load = async () => {
       setLoading(true);
       try {
-        // usamos EL MISMO endpoint real que ya tienes
-        const res = await axiosClient.get("/carreras-periodos", {
-          params: { includeInactive: true },
-        });
+        const res = await axiosClient.get("/carreras-periodos/list", { params: { includeInactive: true }});
+
         setData(res.data ?? []);
       } catch (e) {
         console.error("Error cargando carrera-periodo", e);
@@ -55,38 +54,41 @@ export default function RubricasPeriodoPage() {
               </tr>
             </thead>
             <tbody>
-              {data.map((row) => (
-                <tr key={row.id_carrera_periodo}>
-                  <td>{row.codigo_periodo}</td>
-                  <td>{row.nombre_carrera}</td>
-                  <td>
-                    {row.estado === 1 ? (
-                      <span className="rp-badge rp-ok">Activo</span>
-                    ) : (
-                      <span className="rp-badge rp-off">Inactivo</span>
-                    )}
-                  </td>
-                  <td className="rp-actions">
-                    <button
-                      className="rp-btn rp-primary"
-                      onClick={() =>
-                        navigate(`/rubricas/diseno/${row.id_carrera_periodo}`)
-                      }
-                    >
-                      Diseñar
-                    </button>
+              {data.map((row) => {
+                const estado = row.estado_cp ?? row.estado ?? 1;
+                return (
+                  <tr key={row.id_carrera_periodo}>
+                    <td>{row.codigo_periodo}</td>
+                    <td>{row.nombre_carrera}</td>
+                    <td>
+                      {Number(estado) === 1 ? (
+                        <span className="rp-badge rp-ok">Activo</span>
+                      ) : (
+                        <span className="rp-badge rp-off">Inactivo</span>
+                      )}
+                    </td>
+                    <td className="rp-actions">
+                      <button
+                        className="rp-btn rp-primary"
+                        onClick={() =>
+                          navigate(`/rubricas/diseno/${row.id_carrera_periodo}`)
+                        }
+                      >
+                        Diseñar
+                      </button>
 
-                    <button
-                      className="rp-btn rp-secondary"
-                      onClick={() =>
-                        navigate(`/rubricas/ver/${row.id_carrera_periodo}`)
-                      }
-                    >
-                      Ver
-                    </button>
-                  </td>
-                </tr>
-              ))}
+                      <button
+                        className="rp-btn rp-secondary"
+                        onClick={() =>
+                          navigate(`/rubricas/ver/${row.id_carrera_periodo}`)
+                        }
+                      >
+                        Ver
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
 
               {data.length === 0 && (
                 <tr>

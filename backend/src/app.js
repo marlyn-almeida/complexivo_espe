@@ -27,6 +27,7 @@ app.use("/api/tribunales-estudiantes", require("./routes/tribunal_estudiante.rou
 
 app.use("/api/calificaciones", require("./routes/calificacion.routes"));
 app.use("/api/actas", require("./routes/acta.routes"));
+app.use("/api", require("./routes/catalogos.routes"));
 
 app.use("/api/rubricas", require("./routes/rubrica.routes"));
 app.use("/api/componentes", require("./routes/componente.routes"));

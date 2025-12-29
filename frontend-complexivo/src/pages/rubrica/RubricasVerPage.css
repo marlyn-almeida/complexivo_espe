@@ -1,0 +1,11 @@
+.rub-tabs{display:flex;gap:10px;margin-top:12px}
+.rub-tab{padding:10px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:inherit;cursor:pointer;font-weight:600}
+.rub-tab.on{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.22)}
+
+.rub-header{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:12px}
+.rub-h-title{font-size:18px;font-weight:800}
+
+.rub-block{margin-top:12px;padding:12px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.10)}
+.rub-block-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.rub-block-body{opacity:.95}
+.rub-list{margin:0;padding-left:18px}

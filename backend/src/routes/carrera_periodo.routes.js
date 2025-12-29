@@ -4,59 +4,81 @@ const ctrl = require("../controllers/carrera_periodo.controller");
 
 const router = express.Router();
 
-// ✅ tabla principal: periodos + conteos
+/**
+ * ✅ NUEVO (seguro): GET /api/carreras-periodos/list
+ * Lista carrera_periodo + joins (para /rubricas)
+ */
+router.get(
+  "/list",
+  [
+    query("includeInactive")
+      .optional()
+      .isIn(["true", "false"])
+      .withMessage("includeInactive debe ser true/false"),
+    query("q").optional().isString(),
+    query("periodoId")
+      .optional()
+      .isInt({ min: 1 })
+      .withMessage("periodoId inválido"),
+  ],
+  ctrl.list
+);
+
+/**
+ * GET /api/carreras-periodos/resumen
+ */
 router.get(
   "/resumen",
   [
-    query("includeInactive").optional().isIn(["true", "false"]).withMessage("includeInactive debe ser true/false"),
+    query("includeInactive")
+      .optional()
+      .isIn(["true", "false"])
+      .withMessage("includeInactive debe ser true/false"),
     query("q").optional().isString(),
   ],
   ctrl.resumen
 );
 
-// ✅ ver/editar: lista de carreras por periodo
+/**
+ * GET /api/carreras-periodos/por-periodo/:periodoId
+ */
 router.get(
   "/por-periodo/:periodoId",
   [
     param("periodoId").isInt({ min: 1 }).withMessage("periodoId inválido"),
-    query("includeInactive").optional().isIn(["true", "false"]).withMessage("includeInactive debe ser true/false"),
+    query("includeInactive")
+      .optional()
+      .isIn(["true", "false"])
+      .withMessage("includeInactive debe ser true/false"),
     query("q").optional().isString(),
   ],
   ctrl.porPeriodo
 );
 
-// ✅ Asignar (no quita, activa + inserta)
+/**
+ * POST /api/carreras-periodos/bulk
+ */
 router.post(
   "/bulk",
   [
     body("id_periodo").isInt({ min: 1 }).withMessage("id_periodo es obligatorio"),
-    body("carreraIds").isArray({ min: 1 }).withMessage("carreraIds debe ser arreglo con al menos 1"),
+    body("carreraIds").isArray({ min: 1 }).withMessage("carreraIds debe ser un arreglo con al menos 1 elemento"),
     body("carreraIds.*").isInt({ min: 1 }).withMessage("carreraIds contiene valores inválidos"),
   ],
   ctrl.bulk
 );
 
-// ✅ Editar (sync): deja exactamente las seleccionadas activas
+/**
+ * PUT /api/carreras-periodos/sync
+ */
 router.put(
   "/sync",
   [
     body("id_periodo").isInt({ min: 1 }).withMessage("id_periodo es obligatorio"),
-    body("carreraIds").isArray().withMessage("carreraIds debe ser arreglo (puede ser vacío)"),
+    body("carreraIds").isArray().withMessage("carreraIds debe ser un arreglo (puede ser vacío)"),
     body("carreraIds.*").optional().isInt({ min: 1 }).withMessage("carreraIds contiene valores inválidos"),
   ],
   ctrl.sync
 );
-
-// ✅ lista completa: carrera_periodo + joins (para poblar select en /rubricas)
-router.get(
-  "/",
-  [
-    query("includeInactive").optional().isIn(["true", "false"]).withMessage("includeInactive debe ser true/false"),
-    query("q").optional().isString(),
-    query("periodoId").optional().isInt({ min: 1 }).withMessage("periodoId inválido"),
-  ],
-  ctrl.list
-);
-
 
 module.exports = router;

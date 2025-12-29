@@ -53,9 +53,8 @@ async function sync(req, res, next) {
   }
 }
 
-const service = require("../services/carrera_periodo.service");
-
-exports.list = async (req, res, next) => {
+// ✅ NUEVO: GET /api/carreras-periodos
+async function list(req, res, next) {
   try {
     const includeInactive = req.query.includeInactive === "true";
     const q = (req.query.q || "").trim();
@@ -63,10 +62,9 @@ exports.list = async (req, res, next) => {
 
     const data = await service.list({ includeInactive, q, periodoId });
     res.json(data);
-  } catch (err) {
-    next(err);
+  } catch (e) {
+    next(e);
   }
-};
+}
 
-
-module.exports = { resumen, porPeriodo, bulk, sync };
+module.exports = { resumen, porPeriodo, bulk, sync, list };

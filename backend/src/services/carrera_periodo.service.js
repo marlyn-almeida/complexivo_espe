@@ -1,39 +1,51 @@
 const repo = require("../repositories/carrera_periodo.repo");
 
 async function resumen(q) {
-  return repo.resumen({
-    q: q.q || "",
-    includeInactive: q.includeInactive === "true",
-  });
+  return repo.resumen(q);
 }
 
-async function listByPeriodo(q) {
+async function listByPeriodo({ periodoId, includeInactive = "false", q = "" }) {
   return repo.listByPeriodo({
-    periodoId: q.periodoId,
-    includeInactive: q.includeInactive === "true",
-    q: q.q || "",
+    periodoId: Number(periodoId),
+    includeInactive: includeInactive === "true" || includeInactive === true,
+    q: (q || "").trim(),
   });
 }
 
-async function bulkAssign(d) {
+// ✅ FIX: mapear id_periodo -> periodoId
+async function bulkAssign(payload) {
+  const periodoId = payload.periodoId ?? payload.id_periodo;
   return repo.bulkAssign({
-    periodoId: d.id_periodo,
-    carreraIds: d.carreraIds,
+    ...payload,
+    periodoId: Number(periodoId),
   });
 }
 
-async function syncPeriodo(d) {
+// ✅ FIX: mapear id_periodo -> periodoId
+async function syncPeriodo(payload) {
+  const periodoId = payload.periodoId ?? payload.id_periodo;
   return repo.syncPeriodo({
-    periodoId: d.id_periodo,
-    carreraIds: d.carreraIds,
+    ...payload,
+    periodoId: Number(periodoId),
   });
 }
 
-const repo = require("../repositories/carrera_periodo.repo");
+/**
+ * ✅ NUEVO
+ * Lista completa carrera_periodo + joins
+ */
+async function list({ includeInactive = false, q = "", periodoId = null }) {
+  return repo.list({
+    includeInactive: includeInactive === true || includeInactive === "true",
+    q: (q || "").trim(),
+    periodoId: periodoId ? Number(periodoId) : null,
+  });
+}
 
-exports.list = async ({ includeInactive = false, q = "", periodoId = null }) => {
-  return repo.list({ includeInactive, q, periodoId });
+module.exports = {
+  resumen,
+  listByPeriodo,
+  bulkAssign,
+  syncPeriodo,
+  list,
 };
-
-
-module.exports = { resumen, listByPeriodo, bulkAssign, syncPeriodo };

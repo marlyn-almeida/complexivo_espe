@@ -1,0 +1,15 @@
+.rub-tabs{display:flex;gap:10px;margin-top:12px}
+.rub-tab{padding:10px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:inherit;cursor:pointer;font-weight:600}
+.rub-tab.on{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.22)}
+
+.rub-header{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:12px}
+.rub-h-title{font-size:18px;font-weight:800}
+.rub-h-right{display:flex;align-items:center;gap:10px}
+
+.rub-add{margin:10px 0 14px;padding:12px;border-radius:14px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.10)}
+.rub-add-row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
+.rub-field{display:flex;flex-direction:column;gap:6px;min-width:210px}
+.rub-field.grow{flex:1;min-width:280px}
+
+.rub-criteria{margin-top:14px;padding:12px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.10)}
+.rub-criteria-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}

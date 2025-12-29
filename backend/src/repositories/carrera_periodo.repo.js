@@ -37,8 +37,6 @@ async function resumen({ q = "", includeInactive = false } = {}) {
     params.push(like, like);
   }
 
-  // Si includeInactive=false, solo contamos asignaciones activas
-  // pero igual listamos el periodo (con 0 si no hay)
   const cpJoin = includeInactive
     ? `LEFT JOIN carrera_periodo cp ON cp.id_periodo = pa.id_periodo`
     : `LEFT JOIN carrera_periodo cp ON cp.id_periodo = pa.id_periodo AND cp.estado = 1`;
@@ -68,8 +66,6 @@ async function resumen({ q = "", includeInactive = false } = {}) {
 
 /**
  * Lista de carreras asignadas a un periodo (para Ver / Editar)
- * includeInactive=true -> trae activas e inactivas
- * q filtra por carrera
  */
 async function listByPeriodo({ periodoId, includeInactive = true, q = "" }) {
   const where = ["cp.id_periodo=?"];
@@ -116,9 +112,7 @@ async function listByPeriodo({ periodoId, includeInactive = true, q = "" }) {
 }
 
 /**
- * ✅ ASIGNAR (no quita nada): activa las seleccionadas + inserta las nuevas
- * - Si ya existían inactivas, las activa
- * - Si no existían, las inserta
+ * ✅ ASIGNAR: activa + inserta
  */
 async function bulkAssign({ periodoId, carreraIds }) {
   const pid = Number(periodoId);
@@ -144,13 +138,11 @@ async function bulkAssign({ periodoId, carreraIds }) {
 
   await pool.query("START TRANSACTION");
   try {
-    // 1) activa las que ya existían (aunque estén inactivas)
     await pool.query(
       `UPDATE carrera_periodo SET estado=1 WHERE id_periodo=? AND id_carrera IN (${ids.map(() => "?").join(",")})`,
       [pid, ...ids]
     );
 
-    // 2) inserta las que no existían
     const values = ids.map(() => "(?,?,1)").join(",");
     const params = ids.flatMap((cid) => [cid, pid]);
 
@@ -170,8 +162,7 @@ async function bulkAssign({ periodoId, carreraIds }) {
 }
 
 /**
- * ✅ EDITAR (sync): deja EXACTAMENTE las seleccionadas activas y el resto inactivas
- * (no borra, solo cambia estado)
+ * ✅ SYNC: deja EXACTAMENTE las seleccionadas activas
  */
 async function syncPeriodo({ periodoId, carreraIds }) {
   const pid = Number(periodoId);
@@ -183,7 +174,6 @@ async function syncPeriodo({ periodoId, carreraIds }) {
 
   const ids = [...new Set((carreraIds || []).map((x) => Number(x)).filter((x) => Number.isInteger(x) && x > 0))];
 
-  // si mandas [], significa “dejar todas inactivas”
   if (ids.length) {
     const chk = await carrerasExistAll(ids);
     if (!chk.ok) {
@@ -195,17 +185,14 @@ async function syncPeriodo({ periodoId, carreraIds }) {
 
   await pool.query("START TRANSACTION");
   try {
-    // 1) inactiva todas las relaciones del periodo
     await pool.query(`UPDATE carrera_periodo SET estado=0 WHERE id_periodo=?`, [pid]);
 
     if (ids.length) {
-      // 2) activa las seleccionadas si existen
       await pool.query(
         `UPDATE carrera_periodo SET estado=1 WHERE id_periodo=? AND id_carrera IN (${ids.map(() => "?").join(",")})`,
         [pid, ...ids]
       );
 
-      // 3) inserta las que no existían y deben quedar activas
       const values = ids.map(() => "(?,?,1)").join(",");
       const params = ids.flatMap((cid) => [cid, pid]);
 
@@ -225,32 +212,34 @@ async function syncPeriodo({ periodoId, carreraIds }) {
   return { synced: true, items };
 }
 
-const db = require("../config/db"); // ajusta a tu forma real de obtener conexión (pool/conn)
-
-exports.list = async ({ includeInactive = false, q = "", periodoId = null }) => {
+/**
+ * ✅ NUEVO: lista completa (para /rubricas select)
+ */
+async function list({ includeInactive = false, q = "", periodoId = null } = {}) {
   const params = [];
   let sql = `
-    SELECT 
+    SELECT
       cp.id_carrera_periodo,
+      cp.id_carrera,
+      cp.id_periodo,
       cp.estado AS estado_cp,
       cp.created_at,
       cp.updated_at,
 
-      p.id_periodo,
-      p.codigo_periodo,
-      p.descripcion_periodo,
-      p.fecha_inicio,
-      p.fecha_fin,
-      p.estado AS estado_periodo,
+      pa.codigo_periodo,
+      pa.descripcion_periodo,
+      pa.fecha_inicio,
+      pa.fecha_fin,
+      pa.estado AS estado_periodo,
 
-      c.id_carrera,
       c.nombre_carrera,
-      c.descripcion_carrera,
+      c.codigo_carrera,
+      c.sede,
+      c.modalidad,
       c.estado AS estado_carrera
-
     FROM carrera_periodo cp
-    INNER JOIN periodo_academico p ON p.id_periodo = cp.id_periodo
-    INNER JOIN carrera c ON c.id_carrera = cp.id_carrera
+    JOIN carrera c ON c.id_carrera = cp.id_carrera
+    JOIN periodo_academico pa ON pa.id_periodo = cp.id_periodo
     WHERE 1=1
   `;
 
@@ -260,30 +249,33 @@ exports.list = async ({ includeInactive = false, q = "", periodoId = null }) => 
 
   if (periodoId) {
     sql += ` AND cp.id_periodo = ? `;
-    params.push(periodoId);
+    params.push(Number(periodoId));
   }
 
-  if (q) {
+  const term = String(q || "").trim().toLowerCase();
+  if (term) {
     sql += ` AND (
-      p.codigo_periodo LIKE ? OR
-      p.descripcion_periodo LIKE ? OR
-      c.nombre_carrera LIKE ? OR
-      c.descripcion_carrera LIKE ?
+      LOWER(pa.codigo_periodo) LIKE ? OR
+      LOWER(COALESCE(pa.descripcion_periodo,'')) LIKE ? OR
+      LOWER(c.nombre_carrera) LIKE ? OR
+      LOWER(COALESCE(c.codigo_carrera,'')) LIKE ? OR
+      LOWER(COALESCE(c.sede,'')) LIKE ? OR
+      LOWER(COALESCE(c.modalidad,'')) LIKE ?
     ) `;
-    const like = `%${q}%`;
-    params.push(like, like, like, like);
+    const like = `%${term}%`;
+    params.push(like, like, like, like, like, like);
   }
 
-  sql += ` ORDER BY p.id_periodo DESC, c.nombre_carrera ASC `;
+  sql += ` ORDER BY pa.fecha_inicio DESC, c.nombre_carrera ASC `;
 
-  const [rows] = await db.query(sql, params);
+  const [rows] = await pool.query(sql, params);
   return rows;
-};
-
+}
 
 module.exports = {
   resumen,
   listByPeriodo,
   bulkAssign,
   syncPeriodo,
+  list, // ✅ IMPORTANTÍSIMO: exportar list
 };
