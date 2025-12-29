@@ -225,6 +225,62 @@ async function syncPeriodo({ periodoId, carreraIds }) {
   return { synced: true, items };
 }
 
+const db = require("../config/db"); // ajusta a tu forma real de obtener conexión (pool/conn)
+
+exports.list = async ({ includeInactive = false, q = "", periodoId = null }) => {
+  const params = [];
+  let sql = `
+    SELECT 
+      cp.id_carrera_periodo,
+      cp.estado AS estado_cp,
+      cp.created_at,
+      cp.updated_at,
+
+      p.id_periodo,
+      p.codigo_periodo,
+      p.descripcion_periodo,
+      p.fecha_inicio,
+      p.fecha_fin,
+      p.estado AS estado_periodo,
+
+      c.id_carrera,
+      c.nombre_carrera,
+      c.descripcion_carrera,
+      c.estado AS estado_carrera
+
+    FROM carrera_periodo cp
+    INNER JOIN periodo_academico p ON p.id_periodo = cp.id_periodo
+    INNER JOIN carrera c ON c.id_carrera = cp.id_carrera
+    WHERE 1=1
+  `;
+
+  if (!includeInactive) {
+    sql += ` AND cp.estado = 1 `;
+  }
+
+  if (periodoId) {
+    sql += ` AND cp.id_periodo = ? `;
+    params.push(periodoId);
+  }
+
+  if (q) {
+    sql += ` AND (
+      p.codigo_periodo LIKE ? OR
+      p.descripcion_periodo LIKE ? OR
+      c.nombre_carrera LIKE ? OR
+      c.descripcion_carrera LIKE ?
+    ) `;
+    const like = `%${q}%`;
+    params.push(like, like, like, like);
+  }
+
+  sql += ` ORDER BY p.id_periodo DESC, c.nombre_carrera ASC `;
+
+  const [rows] = await db.query(sql, params);
+  return rows;
+};
+
+
 module.exports = {
   resumen,
   listByPeriodo,

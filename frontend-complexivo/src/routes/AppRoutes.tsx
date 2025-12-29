@@ -11,6 +11,10 @@ import CarrerasPage from "../pages/carreras/CarrerasPage";
 import DocentesPage from "../pages/docentes/DocentesPage";
 import EstudiantesPage from "../pages/estudiantes/EstudiantesPage";
 import CarreraPeriodoPage from "../pages/carreraPeriodo/CarreraPeriodoPage";
+import RubricasPeriodoPage from "../pages/rubrica/RubricasPeriodoPage";
+
+// ✅ NUEVO: página para diseñar rúbrica por carrera_periodo
+import RubricaDisenoPage from "../pages/rubrica/RubricaCrearDisenarPage";
 
 import ProtectedRoute from "../components/auth/ProtectedRoute";
 import { dashboardByRole, getActiveRole, getToken } from "../utils/auth";
@@ -100,11 +104,22 @@ export default function AppRoutes() {
             }
           />
 
+          {/* ✅ LISTA PRINCIPAL DE RÚBRICAS (por período/carrera_periodo) */}
           <Route
             path="/rubricas"
             element={
               <ProtectedRoute allowRoles={[1]}>
-                <Placeholder title="Rúbricas (pendiente)" />
+                <RubricasPeriodoPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* ✅ NUEVO: DISEÑO/EDICIÓN DE RÚBRICA PARA UN carrera_periodo */}
+          <Route
+            path="/rubricas/:idCarreraPeriodo"
+            element={
+              <ProtectedRoute allowRoles={[1]}>
+                <RubricaDisenoPage />
               </ProtectedRoute>
             }
           />

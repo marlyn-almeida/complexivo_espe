@@ -11,7 +11,7 @@ const PAGE_SIZE = 10;
 const toYMD = (v: any) => (v ? String(v).slice(0, 10) : "");
 const isActive = (estado: boolean | number) => (typeof estado === "boolean" ? estado : estado === 1);
 
-function periodoLabel(p: any) {
+function periodoLabel(p: PeriodoResumen) {
   const codigo = p.codigo_periodo ?? "";
   const desc = p.descripcion_periodo ?? "";
   const fi = toYMD(p.fecha_inicio);
@@ -21,41 +21,45 @@ function periodoLabel(p: any) {
   return (base || `Período #${p.id_periodo}`) + rango;
 }
 
-export default function CarreraPeriodoPage() {
-  const [loading, setLoading] = useState(false);
+function carreraMeta(x: any) {
+  const parts = [x.codigo_carrera, x.modalidad, x.sede].filter(Boolean);
+  return parts.join(" · ");
+}
 
+export default function CarreraPeriodoPage() {
   // base
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
   const [carreras, setCarreras] = useState<Carrera[]>([]);
 
-  // tabla principal (periodos)
+  // tabla principal: periodos
   const [periodos, setPeriodos] = useState<PeriodoResumen[]>([]);
   const [qPeriodos, setQPeriodos] = useState("");
   const [includeInactiveCount, setIncludeInactiveCount] = useState(false);
 
-  // paginación tabla principal
+  // paginación
   const [page, setPage] = useState(1);
-  const pageCount = useMemo(() => Math.max(1, Math.ceil(periodos.length / PAGE_SIZE)), [periodos.length]);
-  const pagedPeriodos = useMemo(() => {
-    const start = (page - 1) * PAGE_SIZE;
-    return periodos.slice(start, start + PAGE_SIZE);
-  }, [periodos, page]);
 
-  // modal state
-  const [modalMode, setModalMode] = useState<null | "assign" | "edit" | "view">(null);
+  // modal general
+  const [modalMode, setModalMode] = useState<null | "assign" | "view" | "edit">(null);
   const [selectedPeriodo, setSelectedPeriodo] = useState<PeriodoResumen | null>(null);
 
-  // datos del periodo (carreras asignadas)
+  // datos del período (carreras asignadas)
   const [periodoItems, setPeriodoItems] = useState<CarreraPeriodo[]>([]);
   const [periodoSearch, setPeriodoSearch] = useState("");
   const [periodoIncludeInactive, setPeriodoIncludeInactive] = useState(true);
 
-  // selección en modal (bloques)
+  // selección por bloques
   const [selectSearch, setSelectSearch] = useState("");
   const [selectedCarreraIds, setSelectedCarreraIds] = useState<Set<number>>(new Set());
 
+  // =========================
+  // Helpers memo
+  // =========================
   const carrerasSorted = useMemo(() => {
     const arr = [...carreras];
-    arr.sort((a: any, b: any) => String(a.nombre_carrera).localeCompare(String(b.nombre_carrera)));
+    arr.sort((a: any, b: any) => String(a.nombre_carrera || "").localeCompare(String(b.nombre_carrera || "")));
     return arr;
   }, [carreras]);
 
@@ -71,42 +75,61 @@ export default function CarreraPeriodoPage() {
     });
   }, [selectSearch, carrerasSorted]);
 
+  const filteredPeriodos = useMemo(() => {
+    const term = qPeriodos.trim().toLowerCase();
+    if (!term) return periodos;
+    return periodos.filter((p) => {
+      const c = String(p.codigo_periodo || "").toLowerCase();
+      const d = String(p.descripcion_periodo || "").toLowerCase();
+      return c.includes(term) || d.includes(term);
+    });
+  }, [periodos, qPeriodos]);
+
+  const pageCount = useMemo(() => Math.max(1, Math.ceil(filteredPeriodos.length / PAGE_SIZE)), [filteredPeriodos.length]);
+
+  const pagedPeriodos = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return filteredPeriodos.slice(start, start + PAGE_SIZE);
+  }, [filteredPeriodos, page]);
+
   const carreraAsignadaMap = useMemo(() => {
     const m = new Map<number, CarreraPeriodo>();
-    periodoItems.forEach((x) => m.set(x.id_carrera, x));
+    periodoItems.forEach((x) => m.set(Number(x.id_carrera), x));
     return m;
   }, [periodoItems]);
 
-  const fetchBase = async () => {
-    setLoading(true);
-    try {
-      const cs = await carrerasService.list();
-      setCarreras(cs ?? []);
-    } finally {
-      setLoading(false);
-    }
+  // =========================
+  // Fetch
+  // =========================
+  const fetchCarreras = async () => {
+    const cs = await carrerasService.list();
+    setCarreras(cs ?? []);
   };
 
   const fetchResumen = async () => {
     setLoading(true);
+    setErrorMsg(null);
     try {
       const data = await carreraPeriodoService.resumen({
         includeInactive: includeInactiveCount,
         q: qPeriodos,
       });
-      setPeriodos(data ?? []);
+      setPeriodos(Array.isArray(data) ? data : []);
       setPage(1);
+    } catch (e: any) {
+      setErrorMsg(e?.userMessage || "Error cargando períodos");
+      setPeriodos([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchPeriodoItems = async (periodoId: number) => {
+  const fetchPeriodoItems = async (periodoId: number, opts?: { includeInactive?: boolean; q?: string }) => {
     setLoading(true);
     try {
       const data = await carreraPeriodoService.listByPeriodo(periodoId, {
-        includeInactive: periodoIncludeInactive,
-        q: periodoSearch,
+        includeInactive: opts?.includeInactive ?? periodoIncludeInactive,
+        q: opts?.q ?? periodoSearch,
       });
       setPeriodoItems(data ?? []);
     } finally {
@@ -115,17 +138,23 @@ export default function CarreraPeriodoPage() {
   };
 
   useEffect(() => {
-    fetchBase();
-    fetchResumen();
+    (async () => {
+      setLoading(true);
+      try {
+        await Promise.all([fetchCarreras(), fetchResumen()]);
+      } finally {
+        setLoading(false);
+      }
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     fetchResumen();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [qPeriodos, includeInactiveCount]);
+  }, [includeInactiveCount]);
 
-  // refetch dentro de modal cuando cambian filtros
+  // Cuando cambian filtros de modal (ver/editar), recarga items del periodo
   useEffect(() => {
     if (!selectedPeriodo) return;
     if (modalMode === "view" || modalMode === "edit") {
@@ -134,35 +163,38 @@ export default function CarreraPeriodoPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [periodoSearch, periodoIncludeInactive]);
 
-  const openModal = async (mode: "assign" | "edit" | "view", p: PeriodoResumen) => {
+  // =========================
+  // Modal actions
+  // =========================
+  const openModal = async (mode: "assign" | "view" | "edit", p: PeriodoResumen) => {
     setSelectedPeriodo(p);
     setModalMode(mode);
 
+    // reset filtros modal
     setPeriodoSearch("");
     setPeriodoIncludeInactive(true);
     setSelectSearch("");
 
+    // siempre cargamos asignadas (para ver, para editar, y para bloquear en assign)
+    await fetchPeriodoItems(p.id_periodo, { includeInactive: true, q: "" });
+
     if (mode === "assign") {
-      // asignar: NO preselecciona, pero sí necesitamos saber qué ya está asignado para bloquear “ya asignada”
-      const items = await carreraPeriodoService.listByPeriodo(p.id_periodo, { includeInactive: true });
-      setPeriodoItems(items ?? []);
-      setSelectedCarreraIds(new Set()); // vacío
+      setSelectedCarreraIds(new Set()); // sin preselección
     }
 
     if (mode === "view") {
-      const items = await carreraPeriodoService.listByPeriodo(p.id_periodo, { includeInactive: true });
-      setPeriodoItems(items ?? []);
       setSelectedCarreraIds(new Set());
     }
 
     if (mode === "edit") {
-      // editar: preselecciona las activas actuales (para poder deseleccionar)
-      const items = await carreraPeriodoService.listByPeriodo(p.id_periodo, { includeInactive: true });
-      setPeriodoItems(items ?? []);
-
+      // preselecciona activas actuales
       const activeIds = new Set<number>();
+      // usamos el estado actual de periodoItems (ya cargado)
+      // pero como setState es async, calculamos desde el fetch directo:
+      const items = await carreraPeriodoService.listByPeriodo(p.id_periodo, { includeInactive: true, q: "" });
+      setPeriodoItems(items ?? []);
       (items ?? []).forEach((x) => {
-        if (isActive(x.estado)) activeIds.add(x.id_carrera);
+        if (isActive(x.estado)) activeIds.add(Number(x.id_carrera));
       });
       setSelectedCarreraIds(activeIds);
     }
@@ -174,8 +206,13 @@ export default function CarreraPeriodoPage() {
     setPeriodoItems([]);
     setSelectedCarreraIds(new Set());
     setSelectSearch("");
+    setPeriodoSearch("");
+    setPeriodoIncludeInactive(true);
   };
 
+  // =========================
+  // Selection helpers
+  // =========================
   const toggleSelect = (id: number) => {
     setSelectedCarreraIds((prev) => {
       const next = new Set(prev);
@@ -195,6 +232,9 @@ export default function CarreraPeriodoPage() {
 
   const clearSelection = () => setSelectedCarreraIds(new Set());
 
+  // =========================
+  // Submit handlers
+  // =========================
   const onSubmitAssign = async (e: FormEvent) => {
     e.preventDefault();
     if (!selectedPeriodo) return;
@@ -210,11 +250,10 @@ export default function CarreraPeriodoPage() {
       });
 
       await fetchResumen();
-      const items = await carreraPeriodoService.listByPeriodo(selectedPeriodo.id_periodo, { includeInactive: true });
-      setPeriodoItems(items ?? []);
+      await fetchPeriodoItems(selectedPeriodo.id_periodo, { includeInactive: true, q: "" });
       closeModal();
-    } catch {
-      alert("No se pudo asignar carreras. Revisa backend/consola.");
+    } catch (err: any) {
+      alert(err?.userMessage || "No se pudo asignar carreras.");
     } finally {
       setLoading(false);
     }
@@ -224,7 +263,7 @@ export default function CarreraPeriodoPage() {
     e.preventDefault();
     if (!selectedPeriodo) return;
 
-    const ids = Array.from(selectedCarreraIds); // puede ser vacío (deja todo inactivo)
+    const ids = Array.from(selectedCarreraIds); // puede ser vacío -> deja todo inactivo
 
     setLoading(true);
     try {
@@ -234,11 +273,10 @@ export default function CarreraPeriodoPage() {
       });
 
       await fetchResumen();
-      const items = await carreraPeriodoService.listByPeriodo(selectedPeriodo.id_periodo, { includeInactive: true });
-      setPeriodoItems(items ?? []);
+      await fetchPeriodoItems(selectedPeriodo.id_periodo, { includeInactive: true, q: "" });
       closeModal();
-    } catch {
-      alert("No se pudo editar (sync). Revisa backend/consola.");
+    } catch (err: any) {
+      alert(err?.userMessage || "No se pudo guardar cambios.");
     } finally {
       setLoading(false);
     }
@@ -247,6 +285,9 @@ export default function CarreraPeriodoPage() {
   const modalTitle =
     modalMode === "assign" ? "Asignar carreras" : modalMode === "edit" ? "Editar carreras del período" : "Ver carreras asignadas";
 
+  // =========================
+  // Render
+  // =========================
   return (
     <div className="cp3-page">
       <div className="cp3-panel">
@@ -254,7 +295,7 @@ export default function CarreraPeriodoPage() {
           <div>
             <h1 className="cp3-title">Carrera – Período</h1>
             <p className="cp3-subtitle">
-              La tabla principal muestra períodos. En acciones puedes asignar, ver o editar carreras por período.
+              Listado de períodos con acciones para asignar, ver y editar carreras.
             </p>
           </div>
         </div>
@@ -267,6 +308,10 @@ export default function CarreraPeriodoPage() {
             placeholder="Buscar por código o descripción del período…"
           />
 
+          <button className="btn-secondary" onClick={fetchResumen} disabled={loading}>
+            Buscar
+          </button>
+
           <label className="switch">
             <input
               type="checkbox"
@@ -277,6 +322,8 @@ export default function CarreraPeriodoPage() {
             <span className="switch-text">Contar inactivas</span>
           </label>
         </div>
+
+        {errorMsg && <div className="cp3-error">{errorMsg}</div>}
       </div>
 
       <div className="cp3-card">
@@ -294,11 +341,15 @@ export default function CarreraPeriodoPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={4} className="td-center">Cargando…</td>
+                  <td colSpan={4} className="td-center">
+                    Cargando…
+                  </td>
                 </tr>
               ) : pagedPeriodos.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="td-center">Sin períodos</td>
+                  <td colSpan={4} className="td-center">
+                    Sin períodos
+                  </td>
                 </tr>
               ) : (
                 pagedPeriodos.map((p) => {
@@ -306,12 +357,12 @@ export default function CarreraPeriodoPage() {
                   return (
                     <tr key={p.id_periodo}>
                       <td className="td-strong">
-                        {(p.codigo_periodo || "—")}
+                        {(p.codigo_periodo || "—") as any}
                         <div className="td-mini">{p.descripcion_periodo || ""}</div>
                       </td>
                       <td className="td-muted">{rango}</td>
                       <td>
-                        <span className="count-pill">{Number(p.total_asignadas || 0)}</span>
+                        <span className="count-pill">{Number(p.total_asignadas ?? 0)}</span>
                       </td>
                       <td>
                         <div className="row-actions">
@@ -356,26 +407,49 @@ export default function CarreraPeriodoPage() {
                 <h2 className="modal-title">{modalTitle}</h2>
                 <p className="modal-subtitle">{periodoLabel(selectedPeriodo)}</p>
               </div>
-              <button className="icon-btn" onClick={closeModal}>✕</button>
+              <button className="icon-btn" onClick={closeModal}>
+                ✕
+              </button>
             </div>
 
             {/* VIEW */}
             {modalMode === "view" && (
               <div className="modal-body">
+                <div className="assign-tools">
+                  <input
+                    className="input-base"
+                    value={periodoSearch}
+                    onChange={(e) => setPeriodoSearch(e.target.value)}
+                    placeholder="Buscar carrera asignada…"
+                  />
+                  <label className="switch">
+                    <input
+                      type="checkbox"
+                      checked={periodoIncludeInactive}
+                      onChange={(e) => setPeriodoIncludeInactive(e.target.checked)}
+                    />
+                    <span className="slider" />
+                    <span className="switch-text">Incluir inactivas</span>
+                  </label>
+                </div>
+
                 {loading ? (
-                  <div className="td-center">Cargando…</div>
+                  <div className="td-center" style={{ marginTop: 12 }}>
+                    Cargando…
+                  </div>
                 ) : periodoItems.length === 0 ? (
-                  <div className="td-center">No hay carreras asignadas.</div>
+                  <div className="td-center" style={{ marginTop: 12 }}>
+                    No hay carreras asignadas.
+                  </div>
                 ) : (
                   <div className="view-list">
                     {periodoItems.map((x) => {
                       const activo = isActive(x.estado);
-                      const meta = [x.codigo_carrera, x.modalidad, x.sede].filter(Boolean).join(" · ");
                       return (
                         <div className="view-item" key={x.id_carrera_periodo}>
                           <div>
-                            <div className="view-name">{x.nombre_carrera}</div>
-                            <div className="view-meta">{meta || "—"}</div>
+                            <div className="view-name">{x.nombre_carrera || "—"}</div>
+                            <div className="view-meta">{carreraMeta(x) || "—"}</div>
                           </div>
                           <span className={`badge ${activo ? "active" : "inactive"}`}>
                             {activo ? "ACTIVO" : "INACTIVO"}
@@ -387,12 +461,14 @@ export default function CarreraPeriodoPage() {
                 )}
 
                 <div className="modal-footer">
-                  <button className="btn-secondary" onClick={closeModal}>Cerrar</button>
+                  <button className="btn-secondary" onClick={closeModal}>
+                    Cerrar
+                  </button>
                 </div>
               </div>
             )}
 
-            {/* ASSIGN / EDIT (grid) */}
+            {/* ASSIGN / EDIT */}
             {(modalMode === "assign" || modalMode === "edit") && (
               <form onSubmit={modalMode === "assign" ? onSubmitAssign : onSubmitEdit} className="modal-body">
                 <div className="assign-tools">
@@ -402,9 +478,11 @@ export default function CarreraPeriodoPage() {
                     onChange={(e) => setSelectSearch(e.target.value)}
                     placeholder="Buscar carrera (nombre, código, sede, modalidad)…"
                   />
+
                   <button type="button" className="btn-secondary" onClick={selectAllVisible}>
                     Seleccionar visibles
                   </button>
+
                   <button type="button" className="btn-secondary" onClick={clearSelection}>
                     Limpiar
                   </button>
@@ -419,11 +497,9 @@ export default function CarreraPeriodoPage() {
                     const id = Number(c.id_carrera);
                     const checked = selectedCarreraIds.has(id);
 
-                    // En "assign" bloqueamos las ya asignadas (para que no se confunda)
+                    // En assign: si ya existe relación, la bloqueamos para no confundir
                     const yaExiste = carreraAsignadaMap.has(id);
                     const disabledAssign = modalMode === "assign" && yaExiste;
-
-                    const meta = [c.codigo_carrera, c.modalidad, c.sede].filter(Boolean).join(" · ");
 
                     return (
                       <label key={id} className={`assign-item ${disabledAssign ? "disabled" : ""}`}>
@@ -433,12 +509,13 @@ export default function CarreraPeriodoPage() {
                           disabled={disabledAssign}
                           onChange={() => toggleSelect(id)}
                         />
+
                         <div className="assign-text">
                           <div className="assign-name">
                             {c.nombre_carrera}
                             {disabledAssign ? <span className="tag">Ya asignada</span> : null}
                           </div>
-                          <div className="assign-meta">{meta || "—"}</div>
+                          <div className="assign-meta">{carreraMeta(c) || "—"}</div>
                         </div>
                       </label>
                     );
@@ -449,8 +526,9 @@ export default function CarreraPeriodoPage() {
                   <button type="button" className="btn-secondary" onClick={closeModal}>
                     Cancelar
                   </button>
+
                   <button type="submit" className="btn-primary" disabled={loading}>
-                    {modalMode === "assign" ? `Asignar (${selectedCarreraIds.size})` : `Guardar cambios (${selectedCarreraIds.size})`}
+                    {modalMode === "assign" ? `Asignar (${selectedCarreraIds.size})` : `Guardar (${selectedCarreraIds.size})`}
                   </button>
                 </div>
               </form>

@@ -53,4 +53,20 @@ async function sync(req, res, next) {
   }
 }
 
+const service = require("../services/carrera_periodo.service");
+
+exports.list = async (req, res, next) => {
+  try {
+    const includeInactive = req.query.includeInactive === "true";
+    const q = (req.query.q || "").trim();
+    const periodoId = req.query.periodoId ? Number(req.query.periodoId) : null;
+
+    const data = await service.list({ includeInactive, q, periodoId });
+    res.json(data);
+  } catch (err) {
+    next(err);
+  }
+};
+
+
 module.exports = { resumen, porPeriodo, bulk, sync };

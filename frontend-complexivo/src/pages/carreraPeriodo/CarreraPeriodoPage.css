@@ -12,6 +12,8 @@
 .cp3-title { margin: 0; font-size: 22px; font-weight: 900; }
 .cp3-subtitle { margin: 4px 0 0; color: #6b7280; font-weight: 800; }
 
+.cp3-panel-top { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }
+
 .cp3-filters {
   margin-top: 14px;
   display: flex;
@@ -69,6 +71,17 @@
 .switch input:checked + .slider { background: rgba(16,185,129,0.55); }
 .switch input:checked + .slider::after { transform: translateX(18px); }
 .switch-text { color: #111827; font-weight: 900; font-size: 13px; }
+
+/* Error */
+.cp3-error{
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(239,68,68,0.10);
+  border: 1px solid rgba(239,68,68,0.25);
+  color: #7f1d1d;
+  font-weight: 900;
+}
 
 /* Tabla */
 .cp3-card {
@@ -248,7 +261,7 @@
 }
 
 /* View list */
-.view-list { display: grid; gap: 10px; }
+.view-list { display: grid; gap: 10px; margin-top: 12px; }
 .view-item {
   display: flex;
   justify-content: space-between;

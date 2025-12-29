@@ -47,4 +47,16 @@ router.put(
   ctrl.sync
 );
 
+// ✅ lista completa: carrera_periodo + joins (para poblar select en /rubricas)
+router.get(
+  "/",
+  [
+    query("includeInactive").optional().isIn(["true", "false"]).withMessage("includeInactive debe ser true/false"),
+    query("q").optional().isString(),
+    query("periodoId").optional().isInt({ min: 1 }).withMessage("periodoId inválido"),
+  ],
+  ctrl.list
+);
+
+
 module.exports = router;

@@ -29,4 +29,11 @@ async function syncPeriodo(d) {
   });
 }
 
+const repo = require("../repositories/carrera_periodo.repo");
+
+exports.list = async ({ includeInactive = false, q = "", periodoId = null }) => {
+  return repo.list({ includeInactive, q, periodoId });
+};
+
+
 module.exports = { resumen, listByPeriodo, bulkAssign, syncPeriodo };
