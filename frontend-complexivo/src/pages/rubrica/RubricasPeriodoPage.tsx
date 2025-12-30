@@ -12,131 +12,106 @@ type PeriodoResumen = {
   total_asignadas: number;
 };
 
-const toYMD = (v: any) => (v ? String(v).slice(0, 10) : "");
-
 export default function RubricasPeriodoPage() {
   const navigate = useNavigate();
-
   const [loading, setLoading] = useState(false);
-  const [periodos, setPeriodos] = useState<PeriodoResumen[]>([]);
-
-  useEffect(() => {
-    load();
-  }, []);
+  const [data, setData] = useState<PeriodoResumen[]>([]);
+  const [q, setQ] = useState("");
 
   const load = async () => {
     setLoading(true);
     try {
       const res = await axiosClient.get("/carreras-periodos/resumen", {
-        params: { includeInactive: true },
+        params: { includeInactive: true, q: q.trim() || undefined },
       });
-      setPeriodos(res.data ?? []);
+      setData(res.data ?? []);
     } catch (e) {
-      console.error("Error cargando períodos", e);
+      console.error(e);
+      alert("No se pudo cargar el resumen de períodos");
     } finally {
       setLoading(false);
     }
   };
 
-  const ensureRubrica = async (idPeriodo: number, tipo: "ORAL" | "ESCRITA") => {
-    try {
-      const res = await axiosClient.post("/rubricas/ensure", {
-        id_periodo: idPeriodo,
-        tipo_rubrica: tipo,
-      });
-
-      const idRubrica = res.data?.rubrica?.id_rubrica;
-      if (!idRubrica) throw new Error("No se pudo obtener la rúbrica");
-
-      navigate(`/rubricas/diseno/${idRubrica}`);
-    } catch (e) {
-      console.error(e);
-      alert("No se pudo crear o cargar la rúbrica");
-    }
-  };
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
-    <div className="rp3-page">
-      {/* PANEL SUPERIOR */}
-      <div className="rp3-panel">
-        <h1 className="rp3-title">Rúbricas por Período</h1>
-        <p className="rp3-subtitle">
-          Selecciona un período y diseña las rúbricas ORAL y ESCRITA del complexivo.
-        </p>
+    <div className="rp-page">
+      <div className="rp-header">
+        <div>
+          <h1 className="rp-title">Rúbricas</h1>
+          <p className="rp-subtitle">
+            Selecciona un período y crea/edita la rúbrica general de ese período.
+          </p>
+        </div>
       </div>
 
-      {/* TABLA */}
-      <div className="rp3-card">
-        <div className="rp3-table-scroll">
-          <table className="rp3-table">
+      <div className="rp-card">
+        <div className="rp-toolbar">
+          <input
+            className="rp-input"
+            placeholder="Buscar por código o descripción…"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
+          <button className="rp-btn rp-ghost" onClick={load}>
+            Buscar
+          </button>
+        </div>
+
+        {loading && <div className="rp-muted">Cargando…</div>}
+
+        {!loading && (
+          <table className="rp-table">
             <thead>
               <tr>
                 <th>Período</th>
                 <th>Rango</th>
-                <th># Carreras</th>
-                <th className="rp3-actions-col">Rúbricas</th>
+                <th>#Carreras</th>
+                <th>Acciones</th>
               </tr>
             </thead>
-
             <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={4} className="td-center">
-                    Cargando…
+              {data.map((row) => (
+                <tr key={row.id_periodo}>
+                  <td>
+                    <div className="rp-strong">{row.codigo_periodo}</div>
+                    <div className="rp-muted">{row.descripcion_periodo}</div>
+                  </td>
+                  <td>
+                    {row.fecha_inicio} → {row.fecha_fin}
+                  </td>
+                  <td>
+                    <span className={`rp-pill ${row.total_asignadas > 0 ? "ok" : ""}`}>
+                      {row.total_asignadas}
+                    </span>
+                  </td>
+                  <td className="rp-actions">
+                    <button
+                      className="rp-btn rp-primary"
+                      disabled={row.total_asignadas === 0}
+                      onClick={() => navigate(`/rubricas/periodo/${row.id_periodo}`)}
+                      title={row.total_asignadas === 0 ? "Asigna carreras al período primero" : ""}
+                    >
+                      Abrir rúbrica
+                    </button>
                   </td>
                 </tr>
-              ) : periodos.length === 0 ? (
+              ))}
+
+              {data.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="td-center">
-                    No existen períodos
+                  <td colSpan={4} className="rp-muted">
+                    No existen períodos registrados
                   </td>
                 </tr>
-              ) : (
-                periodos.map((p) => (
-                  <tr key={p.id_periodo}>
-                    <td className="td-strong">
-                      {p.codigo_periodo}
-                      <div className="td-mini">{p.descripcion_periodo}</div>
-                    </td>
-
-                    <td className="td-muted">
-                      {toYMD(p.fecha_inicio)} → {toYMD(p.fecha_fin)}
-                    </td>
-
-                    <td>
-                      <span className="count-pill">{p.total_asignadas}</span>
-                    </td>
-
-                    <td>
-                      <div className="row-actions">
-                        <button
-                          className="btn-action oral"
-                          onClick={() => ensureRubrica(p.id_periodo, "ORAL")}
-                        >
-                          ORAL
-                        </button>
-
-                        <button
-                          className="btn-action escrita"
-                          onClick={() => ensureRubrica(p.id_periodo, "ESCRITA")}
-                        >
-                          ESCRITA
-                        </button>
-
-                        <button
-                          className="btn-action view"
-                          onClick={() => navigate(`/rubricas/ver/${p.id_periodo}`)}
-                        >
-                          VER
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
               )}
             </tbody>
           </table>
-        </div>
+        )}
       </div>
     </div>
   );

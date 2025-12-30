@@ -7,20 +7,39 @@ export type DocenteCreateDTO = {
   nombres_docente: string;
   apellidos_docente: string;
 
-  correo_docente?: string;      // ✅ opcional
-  telefono_docente?: string;    // ✅ opcional
-  nombre_usuario?: string;      // ✅ opcional (si lo generas)
+  correo_docente?: string;
+  telefono_docente?: string;
 
-  debe_cambiar_password?: 0 | 1;
+  nombre_usuario: string;
+
+  // opcional: si NO mandas, backend usa username como password inicial
+  password?: string;
 };
 
+export type DocenteUpdateDTO = {
+  id_institucional_docente: string;
+  cedula: string;
+  nombres_docente: string;
+  apellidos_docente: string;
 
-export type DocenteUpdateDTO = Partial<DocenteCreateDTO>;
+  correo_docente?: string;
+  telefono_docente?: string;
+
+  nombre_usuario: string;
+};
 
 export const docentesService = {
-  list: async (): Promise<Docente[]> => {
-    const res = await axiosClient.get<Docente[]>("/docentes");
+  // mismo patrón de Carreras: list(mostrarInactivas)
+  list: async (includeInactive: boolean = false): Promise<Docente[]> => {
+    const res = await axiosClient.get<Docente[]>("/docentes", {
+      params: { includeInactive },
+    });
     return res.data ?? [];
+  },
+
+  get: async (id: number): Promise<Docente> => {
+    const res = await axiosClient.get<Docente>(`/docentes/${id}`);
+    return res.data;
   },
 
   create: async (payload: DocenteCreateDTO) => {

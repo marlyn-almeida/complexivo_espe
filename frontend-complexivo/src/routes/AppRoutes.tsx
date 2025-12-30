@@ -115,7 +115,7 @@ export default function AppRoutes() {
             }
           />
 
-          {/* ✅ RÚBRICAS (FLUJO FINAL) */}
+          {/* ✅ RÚBRICAS (FLUJO NUEVO: 1 rúbrica por período) */}
           <Route
             path="/rubricas"
             element={
@@ -125,9 +125,9 @@ export default function AppRoutes() {
             }
           />
 
-          {/* ✅ Ver las 2 rúbricas del período (ORAL + ESCRITA) */}
+          {/* ✅ Pantalla por período: crea/abre la rúbrica del período */}
           <Route
-            path="/rubricas/ver/:idPeriodo"
+            path="/rubricas/periodo/:idPeriodo"
             element={
               <ProtectedRoute allowRoles={[1]}>
                 <RubricasVerPage />
@@ -135,9 +135,9 @@ export default function AppRoutes() {
             }
           />
 
-          {/* ✅ Editor grande por id_rubrica */}
+          {/* ✅ Editor por id_rubrica */}
           <Route
-            path="/rubricas/diseno/:idRubrica"
+            path="/rubricas/editar/:idRubrica"
             element={
               <ProtectedRoute allowRoles={[1]}>
                 <RubricaEditorPage />

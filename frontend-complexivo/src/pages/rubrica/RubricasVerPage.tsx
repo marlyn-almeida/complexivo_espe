@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axiosClient from "../../api/axiosClient";
 import "./RubricasVerPage.css";
@@ -6,7 +6,6 @@ import "./RubricasVerPage.css";
 type Rubrica = {
   id_rubrica: number;
   id_periodo: number;
-  tipo_rubrica: "ORAL" | "ESCRITA";
   ponderacion_global: string | number;
   nombre_rubrica: string;
   descripcion_rubrica?: string | null;
@@ -15,156 +14,110 @@ type Rubrica = {
 
 export default function RubricasVerPage() {
   const { idPeriodo } = useParams();
-  const periodoId = Number(idPeriodo);
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(false);
-  const [rubricas, setRubricas] = useState<Rubrica[]>([]);
-
-  useEffect(() => {
-    if (!periodoId) return;
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [periodoId]);
+  const [rubrica, setRubrica] = useState<Rubrica | null>(null);
 
   const load = async () => {
     setLoading(true);
     try {
       const res = await axiosClient.get("/rubricas", {
-        params: { periodoId, includeInactive: true },
+        params: { periodoId: Number(idPeriodo), includeInactive: true },
       });
-      setRubricas(res.data ?? []);
+      const arr: Rubrica[] = res.data ?? [];
+      setRubrica(arr[0] ?? null);
     } catch (e) {
       console.error(e);
-      alert("No se pudo cargar las rúbricas del período");
+      alert("No se pudo cargar la rúbrica del período");
     } finally {
       setLoading(false);
     }
   };
 
-  const oral = useMemo(
-    () => rubricas.find((r) => r.tipo_rubrica === "ORAL") ?? null,
-    [rubricas]
-  );
-  const escrita = useMemo(
-    () => rubricas.find((r) => r.tipo_rubrica === "ESCRITA") ?? null,
-    [rubricas]
-  );
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idPeriodo]);
 
-  const ensureAndGo = async (tipo: "ORAL" | "ESCRITA") => {
-    if (!periodoId) return;
-
-    setLoading(true);
+  const createAndOpen = async () => {
     try {
-      const res = await axiosClient.post("/rubricas/ensure", {
-        id_periodo: periodoId,
-        tipo_rubrica: tipo,
+      setLoading(true);
+      const res = await axiosClient.post("/rubricas", {
+        id_periodo: Number(idPeriodo),
+        nombre_rubrica: "Rúbrica Complexivo",
+        ponderacion_global: 100,
+        descripcion_rubrica: null,
       });
-
-      const idRubrica = res.data?.rubrica?.id_rubrica;
-      if (!idRubrica) throw new Error("No vino id_rubrica");
-
-      // ✅ refresca lista para que al volver ya se vea creada/activa
-      await load();
-
-      // ✅ ir al editor grande
-      navigate(`/rubricas/diseno/${idRubrica}`);
+      const created: Rubrica = res.data;
+      navigate(`/rubricas/editar/${created.id_rubrica}`);
     } catch (e) {
       console.error(e);
-      alert("No se pudo abrir/crear la rúbrica");
+      alert("No se pudo crear/abrir la rúbrica");
     } finally {
       setLoading(false);
     }
   };
-
-  const cardStatus = (r: Rubrica | null) => {
-    if (!r) return { text: "No creada", cls: "off" };
-    if (r.estado === 1) return { text: "Activa", cls: "ok" };
-    return { text: "Inactiva", cls: "off" };
-  };
-
-  const btnText = (r: Rubrica | null) => (!r ? "Crear" : "Editar");
 
   return (
     <div className="rv-page">
       <div className="rv-panel">
         <div>
-          <h1 className="rv-title">Rúbricas del Período #{periodoId}</h1>
+          <h1 className="rv-title">Rúbrica del Período #{idPeriodo}</h1>
           <p className="rv-subtitle">
-            Deben existir dos rúbricas: ORAL y ESCRITA.
+            Esta rúbrica es general para el período. Dentro puedes crear componentes ORAL/ESCRITA.
           </p>
         </div>
 
-        <button className="rv-btn back" onClick={() => navigate("/rubricas")}>
+        <button className="rv-btn ghost" onClick={() => navigate("/rubricas")}>
           Volver
         </button>
       </div>
 
-      <div className="rv-grid">
-        {/* ORAL */}
-        <div className="rv-card">
-          <div className="rv-card-head">
-            <h2>ORAL</h2>
-            <span className={`badge ${cardStatus(oral).cls}`}>
-              {cardStatus(oral).text}
-            </span>
+      <div className="rv-card">
+        <div className="rv-card-head">
+          <div>
+            <div className="rv-k">Estado</div>
+            <div className={`rv-badge ${rubrica?.estado === 1 ? "ok" : "off"}`}>
+              {rubrica ? (rubrica.estado === 1 ? "Activa" : "Inactiva") : "No creada"}
+            </div>
           </div>
 
-          <div className="rv-body">
-            <div className="rv-row">
-              <span className="k">Nombre</span>
-              <span className="v">{oral?.nombre_rubrica ?? "—"}</span>
-            </div>
-            <div className="rv-row">
-              <span className="k">Ponderación global</span>
-              <span className="v">{oral?.ponderacion_global ?? "—"}</span>
-            </div>
-            <div className="rv-row">
-              <span className="k">Descripción</span>
-              <span className="v">{oral?.descripcion_rubrica ?? "—"}</span>
-            </div>
-
-            <button
-              className="rv-btn oral"
-              onClick={() => ensureAndGo("ORAL")}
-              disabled={loading}
-            >
-              {btnText(oral)} / Diseñar ORAL
-            </button>
+          <div className="rv-actions">
+            {rubrica ? (
+              <button
+                className="rv-btn primary"
+                onClick={() => navigate(`/rubricas/editar/${rubrica.id_rubrica}`)}
+              >
+                Editar rúbrica
+              </button>
+            ) : (
+              <button className="rv-btn primary" onClick={createAndOpen}>
+                Crear rúbrica
+              </button>
+            )}
           </div>
         </div>
 
-        {/* ESCRITA */}
-        <div className="rv-card">
-          <div className="rv-card-head">
-            <h2>ESCRITA</h2>
-            <span className={`badge ${cardStatus(escrita).cls}`}>
-              {cardStatus(escrita).text}
-            </span>
+        <div className="rv-body">
+          <div className="rv-row">
+            <span className="k">Nombre</span>
+            <span className="v">{rubrica?.nombre_rubrica ?? "—"}</span>
+          </div>
+          <div className="rv-row">
+            <span className="k">Ponderación global</span>
+            <span className="v">{rubrica?.ponderacion_global ?? "—"}</span>
+          </div>
+          <div className="rv-row">
+            <span className="k">Descripción</span>
+            <span className="v">{rubrica?.descripcion_rubrica ?? "—"}</span>
           </div>
 
-          <div className="rv-body">
-            <div className="rv-row">
-              <span className="k">Nombre</span>
-              <span className="v">{escrita?.nombre_rubrica ?? "—"}</span>
+          {!rubrica && (
+            <div className="rv-hint">
+              Primero crea la rúbrica. Luego podrás agregar niveles, componentes y criterios.
             </div>
-            <div className="rv-row">
-              <span className="k">Ponderación global</span>
-              <span className="v">{escrita?.ponderacion_global ?? "—"}</span>
-            </div>
-            <div className="rv-row">
-              <span className="k">Descripción</span>
-              <span className="v">{escrita?.descripcion_rubrica ?? "—"}</span>
-            </div>
-
-            <button
-              className="rv-btn escrita"
-              onClick={() => ensureAndGo("ESCRITA")}
-              disabled={loading}
-            >
-              {btnText(escrita)} / Diseñar ESCRITA
-            </button>
-          </div>
+          )}
         </div>
       </div>
 
