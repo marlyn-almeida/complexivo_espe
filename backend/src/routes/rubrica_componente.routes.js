@@ -1,35 +1,42 @@
-const router = require("express").Router();
+const router = require("express").Router({ mergeParams: true });
 const { body, param, query } = require("express-validator");
 const validate = require("../middlewares/validate.middleware");
 const ctrl = require("../controllers/rubrica_componente.controller");
 
-router.get("/",
+router.get(
+  "/",
   query("includeInactive").optional().isBoolean().toBoolean(),
-  query("rubricaId").optional().isInt({min:1}).toInt(),
-  validate, ctrl.list
+  validate,
+  ctrl.list
 );
 
-router.get("/:id", param("id").isInt({min:1}).toInt(), validate, ctrl.get);
-
-router.post("/",
-  body("id_rubrica").isInt({min:1}).toInt(),
-  body("id_componente").isInt({min:1}).toInt(),
-  body("ponderacion_porcentaje").isDecimal(),
-  body("orden_componente").isInt({min:1}).toInt(),
-  validate, ctrl.create
+router.post(
+  "/",
+  body("nombre_componente").isString().trim().notEmpty(),
+  body("tipo_componente").optional().isIn(["ESCRITA", "ORAL", "OTRO"]),
+  body("ponderacion").isDecimal(),
+  body("orden").isInt({ min: 1 }).toInt(),
+  validate,
+  ctrl.create
 );
 
-router.put("/:id",
-  param("id").isInt({min:1}).toInt(),
-  body("ponderacion_porcentaje").isDecimal(),
-  body("orden_componente").isInt({min:1}).toInt(),
-  validate, ctrl.update
+router.put(
+  "/:id",
+  param("id").isInt({ min: 1 }).toInt(),
+  body("nombre_componente").isString().trim().notEmpty(),
+  body("tipo_componente").optional().isIn(["ESCRITA", "ORAL", "OTRO"]),
+  body("ponderacion").isDecimal(),
+  body("orden").isInt({ min: 1 }).toInt(),
+  validate,
+  ctrl.update
 );
 
-router.patch("/:id/estado",
-  param("id").isInt({min:1}).toInt(),
+router.patch(
+  "/:id/estado",
+  param("id").isInt({ min: 1 }).toInt(),
   body("estado").isBoolean().toBoolean(),
-  validate, ctrl.changeEstado
+  validate,
+  ctrl.changeEstado
 );
 
 module.exports = router;

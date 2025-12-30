@@ -12,11 +12,10 @@ import DocentesPage from "../pages/docentes/DocentesPage";
 import EstudiantesPage from "../pages/estudiantes/EstudiantesPage";
 import CarreraPeriodoPage from "../pages/carreraPeriodo/CarreraPeriodoPage";
 
+// ✅ Rúbricas (solo estas 3 se usan)
 import RubricasPeriodoPage from "../pages/rubrica/RubricasPeriodoPage";
 import RubricasVerPage from "../pages/rubrica/RubricasVerPage";
-
-// ✅ Diseño de rúbrica por id_rubrica (ORAL o ESCRITA)
-import RubricaDisenoPage from "../pages/rubrica/RubricaCrearDisenarPage";
+import RubricaEditorPage from "../pages/rubrica/RubricaEditorPage";
 
 import ProtectedRoute from "../components/auth/ProtectedRoute";
 import { dashboardByRole, getActiveRole, getToken } from "../utils/auth";
@@ -106,7 +105,17 @@ export default function AppRoutes() {
             }
           />
 
-          {/* ✅ RÚBRICAS (NUEVO FLUJO) */}
+          {/* ✅ CARRERA - PERIODO */}
+          <Route
+            path="/carrera-periodo"
+            element={
+              <ProtectedRoute allowRoles={[1]}>
+                <CarreraPeriodoPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* ✅ RÚBRICAS (FLUJO FINAL) */}
           <Route
             path="/rubricas"
             element={
@@ -126,12 +135,12 @@ export default function AppRoutes() {
             }
           />
 
-          {/* ✅ Diseñar rúbrica por id_rubrica */}
+          {/* ✅ Editor grande por id_rubrica */}
           <Route
             path="/rubricas/diseno/:idRubrica"
             element={
               <ProtectedRoute allowRoles={[1]}>
-                <RubricaDisenoPage />
+                <RubricaEditorPage />
               </ProtectedRoute>
             }
           />
@@ -151,15 +160,6 @@ export default function AppRoutes() {
             element={
               <ProtectedRoute allowRoles={[1]}>
                 <Placeholder title="Asignación de personal por carrera (pendiente)" />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/carrera-periodo"
-            element={
-              <ProtectedRoute allowRoles={[1]}>
-                <CarreraPeriodoPage />
               </ProtectedRoute>
             }
           />

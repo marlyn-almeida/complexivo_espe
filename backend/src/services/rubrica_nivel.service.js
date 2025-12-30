@@ -1,15 +1,5 @@
-const repo = require("../repositories/rubrica_componente.repo");
+const repo = require("../repositories/rubrica_nivel.repo");
 const rubricaRepo = require("../repositories/rubrica.repo");
-
-function validarPonderacion(p) {
-  const n = Number(p);
-  if (!Number.isFinite(n) || n < 0 || n > 100) {
-    const e = new Error("ponderacion debe estar entre 0 y 100");
-    e.status = 422;
-    throw e;
-  }
-  return Number(n.toFixed(2));
-}
 
 async function assertRubrica(rubricaId) {
   const r = await rubricaRepo.findById(Number(rubricaId));
@@ -32,22 +22,19 @@ async function create(rubricaId, d) {
   await assertRubrica(rubricaId);
   return repo.create({
     id_rubrica: Number(rubricaId),
-    nombre_componente: d.nombre_componente,
-    tipo_componente: d.tipo_componente || "OTRO",
-    ponderacion: validarPonderacion(d.ponderacion),
-    orden: Number(d.orden),
+    nombre_nivel: d.nombre_nivel,
+    valor_nivel: Number(d.valor_nivel),
+    orden_nivel: Number(d.orden_nivel),
   });
 }
 
 async function update(rubricaId, id, d) {
   await assertRubrica(rubricaId);
   await repo.mustBelongToRubrica(Number(id), Number(rubricaId));
-
   return repo.update(Number(id), {
-    nombre_componente: d.nombre_componente,
-    tipo_componente: d.tipo_componente || "OTRO",
-    ponderacion: validarPonderacion(d.ponderacion),
-    orden: Number(d.orden),
+    nombre_nivel: d.nombre_nivel,
+    valor_nivel: Number(d.valor_nivel),
+    orden_nivel: Number(d.orden_nivel),
   });
 }
 

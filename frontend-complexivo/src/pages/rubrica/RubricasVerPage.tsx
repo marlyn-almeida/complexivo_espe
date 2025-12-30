@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axiosClient from "../../api/axiosClient";
 import "./RubricasVerPage.css";
@@ -15,21 +15,23 @@ type Rubrica = {
 
 export default function RubricasVerPage() {
   const { idPeriodo } = useParams();
+  const periodoId = Number(idPeriodo);
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(false);
   const [rubricas, setRubricas] = useState<Rubrica[]>([]);
 
   useEffect(() => {
+    if (!periodoId) return;
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idPeriodo]);
+  }, [periodoId]);
 
   const load = async () => {
     setLoading(true);
     try {
       const res = await axiosClient.get("/rubricas", {
-        params: { periodoId: Number(idPeriodo), includeInactive: true },
+        params: { periodoId, includeInactive: true },
       });
       setRubricas(res.data ?? []);
     } catch (e) {
@@ -40,30 +42,57 @@ export default function RubricasVerPage() {
     }
   };
 
+  const oral = useMemo(
+    () => rubricas.find((r) => r.tipo_rubrica === "ORAL") ?? null,
+    [rubricas]
+  );
+  const escrita = useMemo(
+    () => rubricas.find((r) => r.tipo_rubrica === "ESCRITA") ?? null,
+    [rubricas]
+  );
+
   const ensureAndGo = async (tipo: "ORAL" | "ESCRITA") => {
+    if (!periodoId) return;
+
+    setLoading(true);
     try {
       const res = await axiosClient.post("/rubricas/ensure", {
-        id_periodo: Number(idPeriodo),
+        id_periodo: periodoId,
         tipo_rubrica: tipo,
       });
+
       const idRubrica = res.data?.rubrica?.id_rubrica;
       if (!idRubrica) throw new Error("No vino id_rubrica");
+
+      // ✅ refresca lista para que al volver ya se vea creada/activa
+      await load();
+
+      // ✅ ir al editor grande
       navigate(`/rubricas/diseno/${idRubrica}`);
     } catch (e) {
       console.error(e);
-      alert("No se pudo abrir la rúbrica");
+      alert("No se pudo abrir/crear la rúbrica");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const oral = rubricas.find((r) => r.tipo_rubrica === "ORAL");
-  const escrita = rubricas.find((r) => r.tipo_rubrica === "ESCRITA");
+  const cardStatus = (r: Rubrica | null) => {
+    if (!r) return { text: "No creada", cls: "off" };
+    if (r.estado === 1) return { text: "Activa", cls: "ok" };
+    return { text: "Inactiva", cls: "off" };
+  };
+
+  const btnText = (r: Rubrica | null) => (!r ? "Crear" : "Editar");
 
   return (
     <div className="rv-page">
       <div className="rv-panel">
         <div>
-          <h1 className="rv-title">Ver Rúbricas del Período</h1>
-          <p className="rv-subtitle">Aquí deben existir dos: ORAL y ESCRITA.</p>
+          <h1 className="rv-title">Rúbricas del Período #{periodoId}</h1>
+          <p className="rv-subtitle">
+            Deben existir dos rúbricas: ORAL y ESCRITA.
+          </p>
         </div>
 
         <button className="rv-btn back" onClick={() => navigate("/rubricas")}>
@@ -72,11 +101,12 @@ export default function RubricasVerPage() {
       </div>
 
       <div className="rv-grid">
+        {/* ORAL */}
         <div className="rv-card">
           <div className="rv-card-head">
             <h2>ORAL</h2>
-            <span className={`badge ${oral?.estado === 1 ? "ok" : "off"}`}>
-              {oral?.estado === 1 ? "Activa" : oral ? "Inactiva" : "No creada"}
+            <span className={`badge ${cardStatus(oral).cls}`}>
+              {cardStatus(oral).text}
             </span>
           </div>
 
@@ -94,17 +124,22 @@ export default function RubricasVerPage() {
               <span className="v">{oral?.descripcion_rubrica ?? "—"}</span>
             </div>
 
-            <button className="rv-btn oral" onClick={() => ensureAndGo("ORAL")}>
-              Crear / Editar ORAL
+            <button
+              className="rv-btn oral"
+              onClick={() => ensureAndGo("ORAL")}
+              disabled={loading}
+            >
+              {btnText(oral)} / Diseñar ORAL
             </button>
           </div>
         </div>
 
+        {/* ESCRITA */}
         <div className="rv-card">
           <div className="rv-card-head">
             <h2>ESCRITA</h2>
-            <span className={`badge ${escrita?.estado === 1 ? "ok" : "off"}`}>
-              {escrita?.estado === 1 ? "Activa" : escrita ? "Inactiva" : "No creada"}
+            <span className={`badge ${cardStatus(escrita).cls}`}>
+              {cardStatus(escrita).text}
             </span>
           </div>
 
@@ -125,8 +160,9 @@ export default function RubricasVerPage() {
             <button
               className="rv-btn escrita"
               onClick={() => ensureAndGo("ESCRITA")}
+              disabled={loading}
             >
-              Crear / Editar ESCRITA
+              {btnText(escrita)} / Diseñar ESCRITA
             </button>
           </div>
         </div>

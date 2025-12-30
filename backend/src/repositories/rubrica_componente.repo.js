@@ -1,57 +1,60 @@
-const pool = require("../config/db");
+const db = require("../config/db");
 
-async function rubricaExists(id_rubrica){
-  const [r]=await pool.query(`SELECT id_rubrica FROM rubrica WHERE id_rubrica=? LIMIT 1`, [id_rubrica]);
-  return !!r.length;
-}
-async function componenteExists(id_componente){
-  const [r]=await pool.query(`SELECT id_componente FROM componente WHERE id_componente=? LIMIT 1`, [id_componente]);
-  return !!r.length;
-}
-
-async function findAll({ rubricaId=null, includeInactive=false }={}){
-  const where=[], params=[];
-  if(!includeInactive) where.push("rc.estado=1");
-  if(rubricaId){ where.push("rc.id_rubrica=?"); params.push(+rubricaId); }
-  const ws = where.length ? `WHERE ${where.join(" AND ")}` : "";
-
-  const [rows]=await pool.query(`
-    SELECT rc.*, c.nombre_componente
-    FROM rubrica_componente rc
-    JOIN componente c ON c.id_componente=rc.id_componente
-    ${ws}
-    ORDER BY rc.orden_componente ASC
-  `, params);
+exports.findAll = async ({ id_rubrica, includeInactive = false }) => {
+  const params = [Number(id_rubrica)];
+  let sql = `SELECT * FROM rubrica_componente WHERE id_rubrica=?`;
+  if (!includeInactive) sql += ` AND estado=1`;
+  sql += ` ORDER BY orden ASC, id_rubrica_componente ASC`;
+  const [rows] = await db.query(sql, params);
   return rows;
-}
+};
 
-async function findById(id){
-  const [r]=await pool.query(`SELECT * FROM rubrica_componente WHERE id_rubrica_componente=?`, [id]);
-  return r[0]||null;
-}
-
-async function create(d){
-  const [res]=await pool.query(
-    `INSERT INTO rubrica_componente (id_rubrica, id_componente, ponderacion_porcentaje, orden_componente, estado)
-     VALUES (?,?,?,?,1)`,
-    [d.id_rubrica, d.id_componente, d.ponderacion_porcentaje, d.orden_componente]
+exports.findById = async (id) => {
+  const [rows] = await db.query(
+    `SELECT * FROM rubrica_componente WHERE id_rubrica_componente=? LIMIT 1`,
+    [Number(id)]
   );
-  return findById(res.insertId);
-}
+  return rows[0] || null;
+};
 
-async function update(id, d){
-  await pool.query(
+exports.mustBelongToRubrica = async (id_rubrica_componente, id_rubrica) => {
+  const row = await exports.findById(id_rubrica_componente);
+  if (!row) {
+    const e = new Error("Componente no existe");
+    e.status = 404;
+    throw e;
+  }
+  if (Number(row.id_rubrica) !== Number(id_rubrica)) {
+    const e = new Error("Componente no pertenece a esta rúbrica");
+    e.status = 409;
+    throw e;
+  }
+  return true;
+};
+
+exports.create = async (d) => {
+  const [res] = await db.query(
+    `INSERT INTO rubrica_componente (id_rubrica, nombre_componente, tipo_componente, ponderacion, orden, estado)
+     VALUES (?,?,?,?,?,1)`,
+    [d.id_rubrica, d.nombre_componente, d.tipo_componente, d.ponderacion, d.orden]
+  );
+  return exports.findById(res.insertId);
+};
+
+exports.update = async (id, d) => {
+  await db.query(
     `UPDATE rubrica_componente
-     SET ponderacion_porcentaje=?, orden_componente=?
+     SET nombre_componente=?, tipo_componente=?, ponderacion=?, orden=?, updated_at=CURRENT_TIMESTAMP
      WHERE id_rubrica_componente=?`,
-    [d.ponderacion_porcentaje, d.orden_componente, id]
+    [d.nombre_componente, d.tipo_componente, d.ponderacion, d.orden, Number(id)]
   );
-  return findById(id);
-}
+  return exports.findById(id);
+};
 
-async function setEstado(id, estado){
-  await pool.query(`UPDATE rubrica_componente SET estado=? WHERE id_rubrica_componente=?`, [estado?1:0, id]);
-  return findById(id);
-}
-
-module.exports = { rubricaExists, componenteExists, findAll, findById, create, update, setEstado };
+exports.setEstado = async (id, estado) => {
+  await db.query(
+    `UPDATE rubrica_componente SET estado=?, updated_at=CURRENT_TIMESTAMP WHERE id_rubrica_componente=?`,
+    [estado ? 1 : 0, Number(id)]
+  );
+  return exports.findById(id);
+};

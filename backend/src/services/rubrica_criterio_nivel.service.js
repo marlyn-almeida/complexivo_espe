@@ -1,32 +1,62 @@
 const repo = require("../repositories/rubrica_criterio_nivel.repo");
+const criterioRepo = require("../repositories/rubrica_criterio.repo");
+const nivelRepo = require("../repositories/rubrica_nivel.repo");
 
-async function list(q){
+async function assertCriterio(criterioId) {
+  const c = await criterioRepo.findById(Number(criterioId));
+  if (!c) {
+    const e = new Error("Criterio no existe");
+    e.status = 422;
+    throw e;
+  }
+  return c;
+}
+
+async function list(criterioId, q) {
+  await assertCriterio(criterioId);
   return repo.findAll({
-    includeInactive: q.includeInactive==="true",
-    componenteId: q.componenteId || null
+    id_rubrica_criterio: Number(criterioId),
+    includeInactive: !!q.includeInactive,
   });
 }
 
-async function get(id){
-  const r=await repo.findById(id);
-  if(!r){ const e=new Error("rubrica_criterio_nivel no encontrado"); e.status=404; throw e; }
-  return r;
+async function upsert(criterioId, d) {
+  const criterio = await assertCriterio(criterioId);
+
+  const nivel = await nivelRepo.findById(Number(d.id_rubrica_nivel));
+  if (!nivel) {
+    const e = new Error("Nivel no existe");
+    e.status = 422;
+    throw e;
+  }
+
+  // garantizar que el nivel sea de la misma rubrica del componente del criterio
+  // criterio -> componente -> rubrica, pero aquí no tenemos join; lo validamos en repo con SQL join
+  const ok = await repo.nivelPerteneceALaRubricaDelCriterio(Number(criterioId), Number(d.id_rubrica_nivel));
+  if (!ok) {
+    const e = new Error("El nivel no pertenece a la misma rúbrica del criterio");
+    e.status = 409;
+    throw e;
+  }
+
+  const descripcion = String(d.descripcion || "").trim();
+  if (!descripcion) {
+    const e = new Error("descripcion es obligatoria");
+    e.status = 422;
+    throw e;
+  }
+
+  return repo.upsert({
+    id_rubrica_criterio: Number(criterioId),
+    id_rubrica_nivel: Number(d.id_rubrica_nivel),
+    descripcion,
+  });
 }
 
-async function create(d){
-  if(!await repo.componenteExists(d.id_componente)){ const e=new Error("componente no existe"); e.status=422; throw e; }
-  if(!await repo.criterioExists(d.id_criterio)){ const e=new Error("criterio no existe"); e.status=422; throw e; }
-  if(!await repo.nivelExists(d.id_nivel)){ const e=new Error("nivel no existe"); e.status=422; throw e; }
-  if(!d.descripcion || !String(d.descripcion).trim()){ const e=new Error("descripcion es obligatoria"); e.status=422; throw e; }
-  return repo.create(d); // UNIQUE triple lo asegura la BD
+async function changeEstado(criterioId, id, estado) {
+  await assertCriterio(criterioId);
+  await repo.mustBelongToCriterio(Number(id), Number(criterioId));
+  return repo.setEstado(Number(id), estado ? 1 : 0);
 }
 
-async function update(id, d){
-  await get(id);
-  if(!d.descripcion || !String(d.descripcion).trim()){ const e=new Error("descripcion es obligatoria"); e.status=422; throw e; }
-  return repo.update(id, d);
-}
-
-async function changeEstado(id, estado){ await get(id); return repo.setEstado(id, estado); }
-
-module.exports = { list, get, create, update, changeEstado };
+module.exports = { list, upsert, changeEstado };

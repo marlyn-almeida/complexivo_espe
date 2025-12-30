@@ -1,9 +1,8 @@
 const router = require("express").Router({ mergeParams: true });
 const { body, param, query } = require("express-validator");
 const validate = require("../middlewares/validate.middleware");
-const ctrl = require("../controllers/rubrica_criterio_nivel.controller");
+const ctrl = require("../controllers/rubrica_criterio.controller");
 
-// listar celdas de un criterio (opcional)
 router.get(
   "/",
   query("includeInactive").optional().isBoolean().toBoolean(),
@@ -11,13 +10,21 @@ router.get(
   ctrl.list
 );
 
-// upsert: si existe (criterio+nivel) actualiza, si no existe crea
 router.post(
   "/",
-  body("id_rubrica_nivel").isInt({ min: 1 }).toInt(),
-  body("descripcion").isString().trim().notEmpty(),
+  body("nombre_criterio").isString().trim().notEmpty(),
+  body("orden").isInt({ min: 1 }).toInt(),
   validate,
-  ctrl.upsert
+  ctrl.create
+);
+
+router.put(
+  "/:id",
+  param("id").isInt({ min: 1 }).toInt(),
+  body("nombre_criterio").isString().trim().notEmpty(),
+  body("orden").isInt({ min: 1 }).toInt(),
+  validate,
+  ctrl.update
 );
 
 router.patch(

@@ -1,7 +1,7 @@
 const repo = require("../repositories/rubrica.repo");
 
-async function list({ includeInactive = false, periodoId = null, tipo_rubrica = null }) {
-  return repo.findAll({ includeInactive, periodoId, tipo_rubrica });
+async function list({ includeInactive = false, periodoId = null }) {
+  return repo.findAll({ includeInactive, periodoId });
 }
 
 async function get(id) {
@@ -14,24 +14,24 @@ async function get(id) {
   return row;
 }
 
-async function create(d) {
-  const pid = Number(d.id_periodo);
+async function getByPeriodo(id_periodo) {
+  const pid = Number(id_periodo);
   if (!(await repo.periodoExists(pid))) {
     const e = new Error("periodo_academico no existe");
     e.status = 422;
     throw e;
   }
-
-  return repo.create({
-    id_periodo: pid,
-    tipo_rubrica: d.tipo_rubrica,
-    ponderacion_global: d.ponderacion_global ?? 50.0,
-    nombre_rubrica: d.nombre_rubrica,
-    descripcion_rubrica: d.descripcion_rubrica ?? null,
-  });
+  const row = await repo.findByPeriodo(pid);
+  if (!row) {
+    const e = new Error("No existe rúbrica para este período");
+    e.status = 404;
+    throw e;
+  }
+  return row;
 }
 
-async function ensure({ id_periodo, tipo_rubrica, nombre_base }) {
+// crea si no existe. Si existe, devuelve la misma.
+async function ensureByPeriodo(id_periodo, payload = {}) {
   const pid = Number(id_periodo);
 
   if (!(await repo.periodoExists(pid))) {
@@ -40,40 +40,43 @@ async function ensure({ id_periodo, tipo_rubrica, nombre_base }) {
     throw e;
   }
 
-  const existing = await repo.findByPeriodoTipo(pid, tipo_rubrica);
+  const existing = await repo.findByPeriodo(pid);
   if (existing) return { created: false, rubrica: existing };
 
-  const base = (nombre_base && String(nombre_base).trim()) ? String(nombre_base).trim() : "Rúbrica Complexivo";
-  const nombre = `${base} (${tipo_rubrica})`;
+  const nombre = (payload.nombre_rubrica && String(payload.nombre_rubrica).trim())
+    ? String(payload.nombre_rubrica).trim()
+    : `Rúbrica del período #${pid}`;
+
+  const descripcion = payload.descripcion_rubrica ?? null;
+  const ponderacion = payload.ponderacion_global ?? 50.0;
 
   const created = await repo.create({
     id_periodo: pid,
-    tipo_rubrica,
-    ponderacion_global: 50.0,
     nombre_rubrica: nombre,
-    descripcion_rubrica: null,
+    descripcion_rubrica: descripcion,
+    ponderacion_global: ponderacion,
   });
 
   return { created: true, rubrica: created };
 }
 
-async function update(id, d) {
+async function update(id, payload) {
   await get(id);
 
-  const pid = Number(d.id_periodo);
-  if (!(await repo.periodoExists(pid))) {
-    const e = new Error("periodo_academico no existe");
+  const nombre = String(payload.nombre_rubrica || "").trim();
+  if (!nombre) {
+    const e = new Error("nombre_rubrica es obligatorio");
     e.status = 422;
     throw e;
   }
 
-  return repo.update(id, {
-    id_periodo: pid,
-    tipo_rubrica: d.tipo_rubrica,
-    ponderacion_global: d.ponderacion_global ?? 50.0,
-    nombre_rubrica: d.nombre_rubrica,
-    descripcion_rubrica: d.descripcion_rubrica ?? null,
+  const out = await repo.update(id, {
+    nombre_rubrica: nombre,
+    descripcion_rubrica: payload.descripcion_rubrica ?? null,
+    ponderacion_global: payload.ponderacion_global ?? 50.0,
   });
+
+  return out;
 }
 
 async function changeEstado(id, estado) {
@@ -82,4 +85,11 @@ async function changeEstado(id, estado) {
   return { updated: true };
 }
 
-module.exports = { list, get, create, ensure, update, changeEstado };
+module.exports = {
+  list,
+  get,
+  getByPeriodo,
+  ensureByPeriodo,
+  update,
+  changeEstado,
+};

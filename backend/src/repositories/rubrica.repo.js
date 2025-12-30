@@ -1,24 +1,16 @@
-const db = require("../config/db"); // ajusta si tu pool se llama distinto
+const db = require("../config/db");
 
-exports.findAll = async ({ includeInactive = false, periodoId = null, tipo_rubrica = null }) => {
+exports.findAll = async ({ includeInactive = false, periodoId = null }) => {
   const params = [];
-  let sql = `
-    SELECT r.*
-    FROM rubrica r
-    WHERE 1=1
-  `;
+  let sql = `SELECT r.* FROM rubrica r WHERE 1=1`;
 
-  if (!includeInactive) sql += ` AND r.estado = 1 `;
+  if (!includeInactive) sql += ` AND r.estado = 1`;
   if (periodoId) {
-    sql += ` AND r.id_periodo = ? `;
+    sql += ` AND r.id_periodo = ?`;
     params.push(Number(periodoId));
   }
-  if (tipo_rubrica) {
-    sql += ` AND r.tipo_rubrica = ? `;
-    params.push(tipo_rubrica);
-  }
 
-  sql += ` ORDER BY r.id_periodo DESC, FIELD(r.tipo_rubrica,'ORAL','ESCRITA') ASC`;
+  sql += ` ORDER BY r.id_periodo DESC`;
 
   const [rows] = await db.query(sql, params);
   return rows;
@@ -32,48 +24,37 @@ exports.findById = async (id) => {
   return rows[0] || null;
 };
 
-exports.findByPeriodoTipo = async (periodoId, tipo) => {
+exports.findByPeriodo = async (id_periodo) => {
   const [rows] = await db.query(
-    `SELECT * FROM rubrica WHERE id_periodo = ? AND tipo_rubrica = ? LIMIT 1`,
-    [Number(periodoId), tipo]
+    `SELECT * FROM rubrica WHERE id_periodo = ? LIMIT 1`,
+    [Number(id_periodo)]
   );
   return rows[0] || null;
 };
 
 exports.create = async (d) => {
-  const [r] = await db.query(
-    `INSERT INTO rubrica
-      (id_periodo, tipo_rubrica, ponderacion_global, nombre_rubrica, descripcion_rubrica, estado)
-     VALUES (?,?,?,?,?,1)`,
+  const [res] = await db.query(
+    `INSERT INTO rubrica (id_periodo, ponderacion_global, nombre_rubrica, descripcion_rubrica, estado)
+     VALUES (?,?,?,?,1)`,
     [
       d.id_periodo,
-      d.tipo_rubrica,
       d.ponderacion_global,
       d.nombre_rubrica,
       d.descripcion_rubrica,
     ]
   );
-  return exports.findById(r.insertId);
+  return exports.findById(res.insertId);
 };
 
 exports.update = async (id, d) => {
   await db.query(
     `UPDATE rubrica
-     SET id_periodo=?,
-         tipo_rubrica=?,
-         ponderacion_global=?,
+     SET ponderacion_global=?,
          nombre_rubrica=?,
          descripcion_rubrica=?,
          updated_at=CURRENT_TIMESTAMP
      WHERE id_rubrica=?`,
-    [
-      d.id_periodo,
-      d.tipo_rubrica,
-      d.ponderacion_global,
-      d.nombre_rubrica,
-      d.descripcion_rubrica,
-      Number(id),
-    ]
+    [d.ponderacion_global, d.nombre_rubrica, d.descripcion_rubrica, Number(id)]
   );
   return exports.findById(id);
 };
