@@ -59,6 +59,33 @@ app.get("/api/health", (req, res) => {
   res.json({ ok: true, message: "API funcionando" });
 });
 
+// =========================
+// 404 JSON (si no existe la ruta)
+// =========================
+app.use((req, res) => {
+  res.status(404).json({
+    ok: false,
+    message: "Ruta no encontrada",
+    path: req.originalUrl,
+  });
+});
+
+// =========================
+// Error handler GLOBAL (para ver el error real)
+// =========================
+app.use((err, req, res, next) => {
+  console.error("🔥 ERROR:", err);
+
+  const status = err.status || 500;
+
+  res.status(status).json({
+    ok: false,
+    message: err.message || "Internal Server Error",
+    // temporalmente para depurar (luego lo puedes quitar)
+    stack: err.stack,
+  });
+});
+
 // Iniciar servidor
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, "0.0.0.0", () => {
