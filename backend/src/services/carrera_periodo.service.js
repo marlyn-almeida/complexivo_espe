@@ -1,4 +1,5 @@
 const repo = require("../repositories/carrera_periodo.repo");
+const adminRepo = require("../repositories/carrera_admin.repo");
 
 async function resumen(q) {
   return repo.resumen(q);
@@ -42,10 +43,26 @@ async function list({ includeInactive = false, q = "", periodoId = null }) {
   });
 }
 
+/**
+ * ✅ NUEVO: obtener director y apoyo de una carrera_periodo
+ */
+async function getAdmins(idCarreraPeriodo) {
+  return adminRepo.getAdmins(idCarreraPeriodo);
+}
+
+/**
+ * ✅ NUEVO: asignar director/apoyo + asegurar rol ADMIN(2)
+ */
+async function setAdmins(idCarreraPeriodo, payload) {
+  return adminRepo.setAdmins(idCarreraPeriodo, payload);
+}
+
 module.exports = {
   resumen,
   listByPeriodo,
   bulkAssign,
   syncPeriodo,
   list,
+  getAdmins,
+  setAdmins,
 };

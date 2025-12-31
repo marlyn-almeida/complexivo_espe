@@ -53,7 +53,7 @@ async function sync(req, res, next) {
   }
 }
 
-// ✅ NUEVO: GET /api/carreras-periodos
+// ✅ GET /api/carreras-periodos/list
 async function list(req, res, next) {
   try {
     const includeInactive = req.query.includeInactive === "true";
@@ -67,4 +67,26 @@ async function list(req, res, next) {
   }
 }
 
-module.exports = { resumen, porPeriodo, bulk, sync, list };
+// ✅ NUEVO: GET /api/carreras-periodos/:idCarreraPeriodo/admin
+async function getAdmins(req, res, next) {
+  try {
+    if (handleValidation(req, res)) return;
+    const data = await service.getAdmins(req.params.idCarreraPeriodo);
+    res.json(data);
+  } catch (e) {
+    next(e);
+  }
+}
+
+// ✅ NUEVO: PUT /api/carreras-periodos/:idCarreraPeriodo/admin
+async function setAdmins(req, res, next) {
+  try {
+    if (handleValidation(req, res)) return;
+    const data = await service.setAdmins(req.params.idCarreraPeriodo, req.body);
+    res.json(data);
+  } catch (e) {
+    next(e);
+  }
+}
+
+module.exports = { resumen, porPeriodo, bulk, sync, list, getAdmins, setAdmins };

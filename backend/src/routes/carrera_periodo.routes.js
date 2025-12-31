@@ -5,7 +5,7 @@ const ctrl = require("../controllers/carrera_periodo.controller");
 const router = express.Router();
 
 /**
- * ✅ NUEVO (seguro): GET /api/carreras-periodos/list
+ * ✅ GET /api/carreras-periodos/list
  * Lista carrera_periodo + joins (para /rubricas)
  */
 router.get(
@@ -79,6 +79,28 @@ router.put(
     body("carreraIds.*").optional().isInt({ min: 1 }).withMessage("carreraIds contiene valores inválidos"),
   ],
   ctrl.sync
+);
+
+/**
+ * ✅ NUEVO: GET /api/carreras-periodos/:idCarreraPeriodo/admin
+ */
+router.get(
+  "/:idCarreraPeriodo/admin",
+  [param("idCarreraPeriodo").isInt({ min: 1 }).withMessage("idCarreraPeriodo inválido")],
+  ctrl.getAdmins
+);
+
+/**
+ * ✅ NUEVO: PUT /api/carreras-periodos/:idCarreraPeriodo/admin
+ */
+router.put(
+  "/:idCarreraPeriodo/admin",
+  [
+    param("idCarreraPeriodo").isInt({ min: 1 }).withMessage("idCarreraPeriodo inválido"),
+    body("id_docente_director").optional().isInt({ min: 1 }).withMessage("id_docente_director inválido"),
+    body("id_docente_apoyo").optional().isInt({ min: 1 }).withMessage("id_docente_apoyo inválido"),
+  ],
+  ctrl.setAdmins
 );
 
 module.exports = router;
