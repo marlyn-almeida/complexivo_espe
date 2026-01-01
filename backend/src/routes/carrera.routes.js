@@ -3,6 +3,9 @@ const { body, param, query } = require("express-validator");
 const validate = require("../middlewares/validate.middleware");
 const repo = require("../repositories/carrera.repo");
 
+// ✅ NUEVO: controller para Director/Apoyo
+const carreraAdminController = require("../controllers/carrera_admin.controller");
+
 // Helpers normalización
 function normalizeModalidad(value) {
   if (value === undefined || value === null) return value;
@@ -24,6 +27,38 @@ function normalizeSede(value) {
   if (value === undefined || value === null) return value;
   return String(value).trim();
 }
+
+// =======================
+// ADMIN (DIRECTOR / APOYO) POR CARRERA
+// =======================
+
+// GET /api/carreras/:id/admin
+router.get(
+  "/:id/admin",
+  param("id").isInt().withMessage("ID inválido"),
+  validate,
+  (req, res, next) => carreraAdminController.getAdmins(req, res, next)
+);
+
+// PUT /api/carreras/:id/admin
+router.put(
+  "/:id/admin",
+  param("id").isInt().withMessage("ID inválido"),
+
+  // puede venir null para "quitar"
+  body("id_docente_director")
+    .optional({ nullable: true })
+    .custom((v) => v === null || v === "" || Number.isInteger(Number(v)))
+    .withMessage("id_docente_director debe ser int o null"),
+
+  body("id_docente_apoyo")
+    .optional({ nullable: true })
+    .custom((v) => v === null || v === "" || Number.isInteger(Number(v)))
+    .withMessage("id_docente_apoyo debe ser int o null"),
+
+  validate,
+  (req, res, next) => carreraAdminController.setAdmins(req, res, next)
+);
 
 // LISTAR
 router.get(

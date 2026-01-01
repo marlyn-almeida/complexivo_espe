@@ -8,6 +8,7 @@ import DashboardAdmin from "../pages/dashboard/DashboardAdmin";
 
 import PeriodosPage from "../pages/periodos/PeriodosPage";
 import CarrerasPage from "../pages/carreras/CarrerasPage";
+import CarreraAdminsPage from "../pages/carreras/CarreraAdminsPage"; // ✅ NUEVO
 import DocentesPage from "../pages/docentes/DocentesPage";
 import EstudiantesPage from "../pages/estudiantes/EstudiantesPage";
 import CarreraPeriodoPage from "../pages/carreraPeriodo/CarreraPeriodoPage";
@@ -92,6 +93,16 @@ export default function AppRoutes() {
             element={
               <ProtectedRoute allowRoles={[1]}>
                 <CarrerasPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* ✅ NUEVA VISTA: ASIGNAR AUTORIDADES POR CARRERA */}
+          <Route
+            path="/carreras/:id/admin"
+            element={
+              <ProtectedRoute allowRoles={[1]}>
+                <CarreraAdminsPage />
               </ProtectedRoute>
             }
           />

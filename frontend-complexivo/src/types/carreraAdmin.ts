@@ -1,4 +1,5 @@
 // src/types/carreraAdmin.ts
+
 export type TipoAdmin = "DIRECTOR" | "APOYO";
 
 export type AdminDocenteLite = {
@@ -9,13 +10,13 @@ export type AdminDocenteLite = {
   nombre_usuario: string;
 };
 
-export type CarreraPeriodoAdminsResponse = {
-  id_carrera_periodo: number;
+export type CarreraAdminsResponse = {
+  id_carrera: number;
   director: AdminDocenteLite | null;
   apoyo: AdminDocenteLite | null;
 };
 
-export type CarreraPeriodoAdminsUpdateDTO = {
+export type CarreraAdminsUpdateDTO = {
   id_docente_director?: number | null;
   id_docente_apoyo?: number | null;
 };

@@ -1,14 +1,17 @@
+// src/repositories/carrera_admin.repo.js
 const pool = require("../config/db");
 const ADMIN_ROLE_ID = 2;
 
-async function carreraPeriodoExists(idCarreraPeriodo) {
+// ✅ ahora es por CARRERA (no carrera_periodo)
+async function carreraExists(idCarrera) {
   const [r] = await pool.query(
-    `SELECT id_carrera_periodo FROM carrera_periodo WHERE id_carrera_periodo=? LIMIT 1`,
-    [Number(idCarreraPeriodo)]
+    `SELECT id_carrera FROM carrera WHERE id_carrera=? LIMIT 1`,
+    [Number(idCarrera)]
   );
   return !!r.length;
 }
 
+// ✅ valida docente existente y ACTIVO
 async function docenteActivoExists(idDocente) {
   const [r] = await pool.query(
     `SELECT id_docente, estado FROM docente WHERE id_docente=? LIMIT 1`,
@@ -19,7 +22,8 @@ async function docenteActivoExists(idDocente) {
   return { ok: true };
 }
 
-async function getAdmins(idCarreraPeriodo) {
+// ✅ devuelve director/apoyo activos por carrera (incluye datos del docente)
+async function getAdmins(idCarrera) {
   const [rows] = await pool.query(
     `
     SELECT
@@ -30,17 +34,17 @@ async function getAdmins(idCarreraPeriodo) {
       d.nombre_usuario
     FROM carrera_docente cd
     JOIN docente d ON d.id_docente = cd.id_docente
-    WHERE cd.id_carrera_periodo = ?
+    WHERE cd.id_carrera = ?
       AND cd.estado = 1
       AND cd.tipo_admin IN ('DIRECTOR','APOYO')
     `,
-    [Number(idCarreraPeriodo)]
+    [Number(idCarrera)]
   );
 
   const director = rows.find((x) => x.tipo_admin === "DIRECTOR") || null;
   const apoyo = rows.find((x) => x.tipo_admin === "APOYO") || null;
 
-  return { id_carrera_periodo: Number(idCarreraPeriodo), director, apoyo };
+  return { id_carrera: Number(idCarrera), director, apoyo };
 }
 
 async function ensureAdminRole(idDocente, conn) {
@@ -65,26 +69,26 @@ async function ensureAdminRole(idDocente, conn) {
   );
 }
 
-async function deactivateCurrent(idCarreraPeriodo, tipoAdmin, conn) {
+async function deactivateCurrent(idCarrera, tipoAdmin, conn) {
   await conn.query(
     `
     UPDATE carrera_docente
     SET estado=0, updated_at=CURRENT_TIMESTAMP
-    WHERE id_carrera_periodo=? AND tipo_admin=? AND estado=1
+    WHERE id_carrera=? AND tipo_admin=? AND estado=1
     `,
-    [Number(idCarreraPeriodo), tipoAdmin]
+    [Number(idCarrera), tipoAdmin]
   );
 }
 
-async function assign(idCarreraPeriodo, idDocente, tipoAdmin, conn) {
+async function assign(idCarrera, idDocente, tipoAdmin, conn) {
   const [ex] = await conn.query(
     `
     SELECT id_carrera_docente
     FROM carrera_docente
-    WHERE id_carrera_periodo=? AND id_docente=? AND tipo_admin=?
+    WHERE id_carrera=? AND id_docente=? AND tipo_admin=?
     LIMIT 1
     `,
-    [Number(idCarreraPeriodo), Number(idDocente), tipoAdmin]
+    [Number(idCarrera), Number(idDocente), tipoAdmin]
   );
 
   if (ex.length) {
@@ -97,30 +101,39 @@ async function assign(idCarreraPeriodo, idDocente, tipoAdmin, conn) {
 
   await conn.query(
     `
-    INSERT INTO carrera_docente (id_docente, id_carrera_periodo, tipo_admin, estado)
+    INSERT INTO carrera_docente (id_docente, id_carrera, tipo_admin, estado)
     VALUES (?, ?, ?, 1)
     `,
-    [Number(idDocente), Number(idCarreraPeriodo), tipoAdmin]
+    [Number(idDocente), Number(idCarrera), tipoAdmin]
   );
 }
 
-async function setAdmins(idCarreraPeriodo, { id_docente_director, id_docente_apoyo }) {
-  const cpOk = await carreraPeriodoExists(idCarreraPeriodo);
-  if (!cpOk) {
-    const e = new Error("carrera_periodo no existe");
+async function setAdmins(idCarrera, { id_docente_director, id_docente_apoyo }) {
+  const cOk = await carreraExists(idCarrera);
+  if (!cOk) {
+    const e = new Error("Carrera no existe");
     e.status = 404;
     throw e;
   }
 
-  const idDir = id_docente_director ? Number(id_docente_director) : null;
-  const idApo = id_docente_apoyo ? Number(id_docente_apoyo) : null;
+  const idDir =
+    id_docente_director === null || id_docente_director === undefined || id_docente_director === ""
+      ? null
+      : Number(id_docente_director);
 
-  if (!idDir && !idApo) {
-    const e = new Error("Debe enviar id_docente_director y/o id_docente_apoyo");
+  const idApo =
+    id_docente_apoyo === null || id_docente_apoyo === undefined || id_docente_apoyo === ""
+      ? null
+      : Number(id_docente_apoyo);
+
+  // ✅ regla: no pueden ser el mismo
+  if (idDir && idApo && Number(idDir) === Number(idApo)) {
+    const e = new Error("Director y apoyo no pueden ser el mismo docente");
     e.status = 422;
     throw e;
   }
 
+  // ✅ validar docentes si vienen
   if (idDir) {
     const chk = await docenteActivoExists(idDir);
     if (!chk.ok) {
@@ -129,7 +142,6 @@ async function setAdmins(idCarreraPeriodo, { id_docente_director, id_docente_apo
       throw e;
     }
   }
-
   if (idApo) {
     const chk = await docenteActivoExists(idApo);
     if (!chk.ok) {
@@ -143,20 +155,26 @@ async function setAdmins(idCarreraPeriodo, { id_docente_director, id_docente_apo
   try {
     await conn.beginTransaction();
 
-    if (idDir) {
-      await deactivateCurrent(idCarreraPeriodo, "DIRECTOR", conn);
-      await assign(idCarreraPeriodo, idDir, "DIRECTOR", conn);
-      await ensureAdminRole(idDir, conn);
+    // ✅ Director: si viene null => desactiva el actual y listo
+    if (idDir !== null) {
+      await deactivateCurrent(idCarrera, "DIRECTOR", conn);
+      if (idDir) {
+        await assign(idCarrera, idDir, "DIRECTOR", conn);
+        await ensureAdminRole(idDir, conn);
+      }
     }
 
-    if (idApo) {
-      await deactivateCurrent(idCarreraPeriodo, "APOYO", conn);
-      await assign(idCarreraPeriodo, idApo, "APOYO", conn);
-      await ensureAdminRole(idApo, conn);
+    // ✅ Apoyo: si viene null => desactiva el actual y listo
+    if (idApo !== null) {
+      await deactivateCurrent(idCarrera, "APOYO", conn);
+      if (idApo) {
+        await assign(idCarrera, idApo, "APOYO", conn);
+        await ensureAdminRole(idApo, conn);
+      }
     }
 
     await conn.commit();
-    return await getAdmins(idCarreraPeriodo);
+    return await getAdmins(idCarrera);
   } catch (err) {
     await conn.rollback();
     throw err;

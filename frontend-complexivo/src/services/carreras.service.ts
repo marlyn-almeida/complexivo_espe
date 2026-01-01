@@ -14,15 +14,16 @@ export type CarreraCreateDTO = {
 export type CarreraUpdateDTO = Partial<CarreraCreateDTO>;
 
 export const carrerasService = {
-  // ✅ Trae TODO lo que el backend permite en 1 llamada (hasta 100)
- // src/services/carreras.service.ts
-list: async (includeInactive = false): Promise<Carrera[]> => {
-  const res = await axiosClient.get<Carrera[]>("/carreras", {
-    params: { page: 1, limit: 100, includeInactive: includeInactive ? 1 : 0 },
-  });
-  return res.data ?? [];
-},
-
+  list: async (includeInactive = false): Promise<Carrera[]> => {
+    const res = await axiosClient.get<Carrera[]>("/carreras", {
+      params: {
+        page: 1,
+        limit: 100,
+        includeInactive: includeInactive ? 1 : 0,
+      },
+    });
+    return res.data ?? [];
+  },
 
   create: async (payload: CarreraCreateDTO) => {
     const res = await axiosClient.post("/carreras", payload);
@@ -36,8 +37,9 @@ list: async (includeInactive = false): Promise<Carrera[]> => {
 
   toggleEstado: async (id: number, currentEstado: Estado01) => {
     const nuevo: Estado01 = currentEstado === 1 ? 0 : 1;
-    const res = await axiosClient.patch(`/carreras/${id}/estado`, { estado: nuevo });
+    const res = await axiosClient.patch(`/carreras/${id}/estado`, {
+      estado: nuevo,
+    });
     return res.data;
   },
-  
 };

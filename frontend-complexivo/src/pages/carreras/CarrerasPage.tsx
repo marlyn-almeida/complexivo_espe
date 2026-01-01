@@ -1,10 +1,23 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+
 import { carrerasService } from "../../services/carreras.service";
+import { carreraAdminService } from "../../services/carreraAdmin.service";
 import { departamentosService } from "../../services/departamentos.service";
+
 import type { Carrera } from "../../types/carrera";
 import type { Departamento } from "../../types/departamento";
+import type { CarreraAdminsResponse } from "../../types/carreraAdmin";
 
-import { Plus, Pencil, Eye, ToggleLeft, ToggleRight, Search } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Eye,
+  ToggleLeft,
+  ToggleRight,
+  Search,
+  UserCog,
+} from "lucide-react";
 
 import "./CarrerasPage.css";
 
@@ -25,12 +38,20 @@ type CarreraFormState = {
 };
 
 export default function CarrerasPage() {
+  const nav = useNavigate();
+
   // ===========================
   // ESTADOS PRINCIPALES
   // ===========================
   const [carreras, setCarreras] = useState<Carrera[]>([]);
   const [departamentos, setDepartamentos] = useState<Departamento[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // ===========================
+  // ADMIN POR CARRERA (solo lectura aquí)
+  // ===========================
+  const [adminsByCarrera, setAdminsByCarrera] = useState<Record<number, CarreraAdminsResponse>>({});
+  const [loadingAdmins, setLoadingAdmins] = useState(false);
 
   // ===========================
   // FILTROS
@@ -74,24 +95,49 @@ export default function CarrerasPage() {
   // ===========================
   useEffect(() => {
     loadAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mostrarInactivas]);
 
-async function loadAll() {
-  try {
-    setLoading(true);
-    const [car, dep] = await Promise.all([
-      carrerasService.list(mostrarInactivas), // ✅ aquí
-      departamentosService.list(),
-    ]);
-    setCarreras(car);
-    setDepartamentos(dep);
-  } catch (e) {
-    showToast("Error al cargar datos", "error");
-  } finally {
-    setLoading(false);
-  }
-}
+  async function loadAll() {
+    try {
+      setLoading(true);
+      const [car, dep] = await Promise.all([
+        carrerasService.list(mostrarInactivas),
+        departamentosService.list(),
+      ]);
+      setCarreras(car);
+      setDepartamentos(dep);
 
+      // cargar admins por carrera (solo lectura)
+      await loadAdminsForCarreras(car);
+    } catch (e) {
+      showToast("Error al cargar datos", "error");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function loadAdminsForCarreras(list: Carrera[]) {
+    try {
+      setLoadingAdmins(true);
+
+      const results = await Promise.allSettled(
+        list.map((c) => carreraAdminService.get(c.id_carrera))
+      );
+
+      const map: Record<number, CarreraAdminsResponse> = {};
+      for (const r of results) {
+        if (r.status === "fulfilled" && r.value?.id_carrera) {
+          map[r.value.id_carrera] = r.value;
+        }
+      }
+      setAdminsByCarrera(map);
+    } catch {
+      setAdminsByCarrera({});
+    } finally {
+      setLoadingAdmins(false);
+    }
+  }
 
   // ===========================
   // HELPERS
@@ -142,30 +188,27 @@ async function loadAll() {
     setShowViewModal(true);
   }
 
-  // Normaliza código (sin obligarte a ti a escribir así)
+  function getAdminText(idCarrera: number, kind: "director" | "apoyo") {
+    const a = adminsByCarrera[idCarrera];
+    const item = kind === "director" ? a?.director : a?.apoyo;
+    if (!item) return "—";
+    return `${item.apellidos_docente} ${item.nombres_docente}`.trim() || `Docente #${item.id_docente}`;
+  }
+
+  // Normaliza código
   function normalizeCodigo(input: string) {
-    // 1) trim
     let s = input.trim();
-
-    // 2) reemplaza espacios por _
     s = s.replace(/\s+/g, "_");
-
-    // 3) quita caracteres raros (deja letras, números y _)
     s = s.replace(/[^a-zA-Z0-9_]/g, "");
-
-    // 4) MAYÚSCULAS (automático)
     s = s.toUpperCase();
-
     return s;
   }
 
-  // Traer errores reales del backend (422)
   function extractBackendError(err: any): string {
     const msg = err?.response?.data?.message;
     const list = err?.response?.data?.errors;
 
     if (Array.isArray(list) && list.length) {
-      // si viene express-validator
       const first = list[0];
       if (first?.msg) return String(first.msg);
     }
@@ -207,7 +250,6 @@ async function loadAll() {
     return filtered.slice(start, start + PAGE_SIZE);
   }, [filtered, page]);
 
-  // resumen
   const totalCarreras = carreras.length;
   const activas = carreras.filter((c) => c.estado === 1).length;
   const inactivas = carreras.filter((c) => c.estado === 0).length;
@@ -222,7 +264,6 @@ async function loadAll() {
     if (form.nombre_carrera.trim().length < 3) e.nombre_carrera = "Mínimo 3 caracteres.";
 
     if (!form.codigo_carrera.trim()) e.codigo_carrera = "El código es obligatorio.";
-    // dejamos que el sistema lo normalice, pero igual validamos que no quede vacío después
     if (form.codigo_carrera.trim().length < 3) e.codigo_carrera = "Mínimo 3 caracteres.";
 
     if (!form.id_departamento) e.id_departamento = "Seleccione un departamento.";
@@ -263,7 +304,6 @@ async function loadAll() {
     } catch (err: any) {
       showToast(extractBackendError(err), "error");
 
-      // si el backend manda errores por campo, los colocamos en errors
       const list = err?.response?.data?.errors;
       if (Array.isArray(list)) {
         const mapped: Record<string, string> = {};
@@ -385,6 +425,8 @@ async function loadAll() {
               <th>Departamento</th>
               <th>Sede</th>
               <th>Modalidad</th>
+              <th>Director</th>
+              <th>Apoyo</th>
               <th>Estado</th>
               <th className="thActions">Acciones</th>
             </tr>
@@ -393,7 +435,7 @@ async function loadAll() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={7} className="muted" style={{ padding: 16 }}>
+                <td colSpan={9} className="muted" style={{ padding: 16 }}>
                   Cargando...
                 </td>
               </tr>
@@ -405,6 +447,14 @@ async function loadAll() {
                   <td>{getDepartamentoNombre(c.id_departamento)}</td>
                   <td>{c.sede || "-"}</td>
                   <td>{c.modalidad || "-"}</td>
+
+                  <td className="muted" style={{ whiteSpace: "nowrap" }}>
+                    {loadingAdmins ? "…" : getAdminText(c.id_carrera, "director")}
+                  </td>
+                  <td className="muted" style={{ whiteSpace: "nowrap" }}>
+                    {loadingAdmins ? "…" : getAdminText(c.id_carrera, "apoyo")}
+                  </td>
+
                   <td>
                     <span className={`badge ${c.estado ? "badge-success" : "badge-danger"}`}>
                       {c.estado ? "Activo" : "Inactivo"}
@@ -412,6 +462,15 @@ async function loadAll() {
                   </td>
 
                   <td className="actions">
+                    {/* ✅ YA NO MODAL: NAVEGA A LA VISTA */}
+                    <button
+                      className="btnIcon"
+                      title="Asignar Director/Apoyo"
+                      onClick={() => nav(`/carreras/${c.id_carrera}/admin`)}
+                    >
+                      <UserCog size={16} />
+                    </button>
+
                     <button className="btnIcon btnView" title="Ver" onClick={() => openView(c)}>
                       <Eye size={16} />
                     </button>
@@ -440,7 +499,7 @@ async function loadAll() {
               ))
             ) : (
               <tr>
-                <td colSpan={7} className="muted" style={{ padding: 16 }}>
+                <td colSpan={9} className="muted" style={{ padding: 16 }}>
                   No hay carreras para mostrar.
                 </td>
               </tr>
@@ -617,6 +676,17 @@ async function loadAll() {
               <div className="viewItem">
                 <div className="viewKey">Sede</div>
                 <div className="viewVal">{viewCarrera.sede || "-"}</div>
+              </div>
+
+              {/* ✅ AQUÍ YA MUESTRA ASIGNADOS O "—" */}
+              <div className="viewItem">
+                <div className="viewKey">Director</div>
+                <div className="viewVal">{getAdminText(viewCarrera.id_carrera, "director")}</div>
+              </div>
+
+              <div className="viewItem">
+                <div className="viewKey">Apoyo</div>
+                <div className="viewVal">{getAdminText(viewCarrera.id_carrera, "apoyo")}</div>
               </div>
 
               <div className="viewItem">
