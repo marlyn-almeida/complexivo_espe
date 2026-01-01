@@ -80,29 +80,18 @@ async function deactivateCurrent(idCarrera, tipoAdmin, conn) {
   );
 }
 
+/**
+ * ✅ FIX: UPSERT para evitar "Duplicate entry ... uq_carrera_docente"
+ * Si ya existe la relación (según el UNIQUE), se reactiva y actualiza timestamp.
+ */
 async function assign(idCarrera, idDocente, tipoAdmin, conn) {
-  const [ex] = await conn.query(
-    `
-    SELECT id_carrera_docente
-    FROM carrera_docente
-    WHERE id_carrera=? AND id_docente=? AND tipo_admin=?
-    LIMIT 1
-    `,
-    [Number(idCarrera), Number(idDocente), tipoAdmin]
-  );
-
-  if (ex.length) {
-    await conn.query(
-      `UPDATE carrera_docente SET estado=1, updated_at=CURRENT_TIMESTAMP WHERE id_carrera_docente=?`,
-      [ex[0].id_carrera_docente]
-    );
-    return;
-  }
-
   await conn.query(
     `
     INSERT INTO carrera_docente (id_docente, id_carrera, tipo_admin, estado)
     VALUES (?, ?, ?, 1)
+    ON DUPLICATE KEY UPDATE
+      estado = 1,
+      updated_at = CURRENT_TIMESTAMP
     `,
     [Number(idDocente), Number(idCarrera), tipoAdmin]
   );
