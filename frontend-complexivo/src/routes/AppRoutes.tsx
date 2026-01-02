@@ -13,6 +13,9 @@ import DocentesPage from "../pages/docentes/DocentesPage";
 import EstudiantesPage from "../pages/estudiantes/EstudiantesPage";
 import CarreraPeriodoPage from "../pages/carreraPeriodo/CarreraPeriodoPage";
 
+// ✅ PERFIL (nuevo)
+import PerfilPage from "../pages/perfil/PerfilPage";
+
 // ✅ Rúbricas (solo estas 3 se usan)
 import RubricasPeriodoPage from "../pages/rubrica/RubricasPeriodoPage";
 import RubricasVerPage from "../pages/rubrica/RubricasVerPage";
@@ -73,12 +76,12 @@ export default function AppRoutes() {
             }
           />
 
-          {/* Perfil (todos) */}
+          {/* ✅ Perfil (todos) */}
           <Route
             path="/perfil"
             element={
               <ProtectedRoute allowRoles={[1, 2, 3]}>
-                <Placeholder title="Mi perfil (pendiente)" />
+                <PerfilPage />
               </ProtectedRoute>
             }
           />
