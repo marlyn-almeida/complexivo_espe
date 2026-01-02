@@ -12,6 +12,8 @@ app.use(express.json());
 // Rutas del sistema
 // =========================
 app.use("/api/auth", require("./routes/auth.routes"));
+app.use("/api/perfil", require("./routes/perfil.routes")); // ✅ NUEVO (Mi Perfil + cambiar contraseña)
+
 app.use("/api/roles", require("./routes/rol.routes"));
 app.use("/api/docentes", require("./routes/docente.routes"));
 app.use("/api/carreras", require("./routes/carrera.routes"));

@@ -72,6 +72,11 @@ async function findById(id) {
   return rows[0] || null;
 }
 
+// ✅ NUEVO: Perfil (por ahora devuelve lo mismo que findById, pero separado para claridad)
+async function findProfileById(id) {
+  return findById(id);
+}
+
 async function findByCedula(cedula) {
   const [rows] = await pool.query(
     `SELECT id_docente, cedula FROM docente WHERE cedula=? LIMIT 1`,
@@ -107,8 +112,8 @@ async function findAuthByUsername(nombre_usuario) {
 }
 
 /**
- * NUEVO: roles activos del docente
- * Devuelve: [{ id_rol: number, nombre_rol: string }, ...]
+ * Roles activos del docente
+ * Devuelve: [{ id_rol, nombre_rol }, ...]
  */
 async function getRolesByDocenteId(id_docente) {
   const [rows] = await pool.query(
@@ -133,7 +138,7 @@ async function create(data) {
     correo_docente = null,
     telefono_docente = null,
     nombre_usuario,
-    passwordHash
+    passwordHash,
   } = data;
 
   const [result] = await pool.query(
@@ -148,7 +153,7 @@ async function create(data) {
       correo_docente,
       telefono_docente,
       nombre_usuario,
-      passwordHash
+      passwordHash,
     ]
   );
 
@@ -163,7 +168,7 @@ async function update(id, data) {
     apellidos_docente,
     correo_docente = null,
     telefono_docente = null,
-    nombre_usuario
+    nombre_usuario,
   } = data;
 
   await pool.query(
@@ -178,7 +183,7 @@ async function update(id, data) {
       correo_docente,
       telefono_docente,
       nombre_usuario,
-      id
+      id,
     ]
   );
 
@@ -186,26 +191,37 @@ async function update(id, data) {
 }
 
 async function setEstado(id, estado) {
-  await pool.query(
-    `UPDATE docente SET estado=? WHERE id_docente=?`,
-    [estado ? 1 : 0, id]
-  );
+  await pool.query(`UPDATE docente SET estado=? WHERE id_docente=?`, [estado ? 1 : 0, id]);
   return findById(id);
 }
 
+// Primer login / token temporal: actualiza password y baja el flag
 async function updatePasswordAndClearFlag(id, passwordHash) {
-  await pool.query(
-    `UPDATE docente SET password=?, debe_cambiar_password=0 WHERE id_docente=?`,
-    [passwordHash, id]
-  );
+  await pool.query(`UPDATE docente SET password=?, debe_cambiar_password=0 WHERE id_docente=?`, [
+    passwordHash,
+    id,
+  ]);
+  return findById(id);
+}
+
+// ✅ NUEVO: cambio de contraseña desde Perfil (NO toca debe_cambiar_password)
+async function updatePassword(id, passwordHash) {
+  await pool.query(`UPDATE docente SET password=? WHERE id_docente=?`, [passwordHash, id]);
   return findById(id);
 }
 
 module.exports = {
-  findAll, findById,
-  findByCedula, findByUsername, findByInstitucional,
+  findAll,
+  findById,
+  findProfileById, // ✅
+  findByCedula,
+  findByUsername,
+  findByInstitucional,
   findAuthByUsername,
-  getRolesByDocenteId, // <-- NUEVO
-  create, update, setEstado,
-  updatePasswordAndClearFlag
+  getRolesByDocenteId,
+  create,
+  update,
+  setEstado,
+  updatePasswordAndClearFlag,
+  updatePassword, // ✅
 };

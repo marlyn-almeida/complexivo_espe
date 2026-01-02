@@ -55,7 +55,7 @@ router.post(
         return res.json({
           mustChangePassword: true,
           tempToken,
-          __version: "LOGIN_WITH_ROLES_V2" // sello para verificar deploy
+          __version: "LOGIN_WITH_ROLES_V2"
         });
       }
 
@@ -67,7 +67,7 @@ router.post(
         });
       }
 
-      const roles = await docenteRepo.getRolesByDocenteId(user.id_docente); // [{id_rol,nombre_rol}, ...]
+      const roles = await docenteRepo.getRolesByDocenteId(user.id_docente);
       const activeRoleId = pickActiveRoleId(roles);
 
       if (!activeRoleId) {
@@ -96,7 +96,7 @@ router.post(
         roles,
         activeRole,
         redirectTo: redirectByRole(activeRoleId),
-        __version: "LOGIN_WITH_ROLES_V2" // sello para verificar deploy
+        __version: "LOGIN_WITH_ROLES_V2"
       });
     } catch (err) {
       console.error("AUTH LOGIN ERROR:", err);
@@ -109,15 +109,23 @@ router.post(
   }
 );
 
-// PATCH /api/auth/change-password
+// PATCH /api/auth/change-password  ✅ ahora con confirmPassword
 router.patch(
   "/change-password",
   body("tempToken").isString().notEmpty(),
   body("newPassword").isString().isLength({ min: 6 }),
+  body("confirmPassword").isString().notEmpty(),
   validate,
   async (req, res) => {
     try {
-      const { tempToken, newPassword } = req.body;
+      const { tempToken, newPassword, confirmPassword } = req.body;
+
+      if (newPassword !== confirmPassword) {
+        return res.status(422).json({
+          message: "Las contraseñas no coinciden",
+          __version: "LOGIN_WITH_ROLES_V2"
+        });
+      }
 
       // Verificar token temporal
       let decoded;
