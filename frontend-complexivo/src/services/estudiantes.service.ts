@@ -1,27 +1,13 @@
 import axiosClient from "../api/axiosClient";
+import type { Estudiante, Estado01 } from "../types/estudiante";
 
-export type Estado01 = 0 | 1;
-
-export interface Estudiante {
-  id_estudiante: number;
-  id_carrera_periodo: number;
-
-  id_institucional_estudiante: string;
-  nombres_estudiante: string;
-  apellidos_estudiante: string;
-
-  correo_estudiante?: string | null;
-  telefono_estudiante?: string | null;
-
-  estado: Estado01;
-
-  created_at?: string;
-  updated_at?: string | null;
-
-  // joins opcionales si el backend los manda
-  nombre_carrera?: string;
-  codigo_periodo?: string;
-}
+export type EstudianteListParams = {
+  carreraPeriodoId?: number;
+  includeInactive?: boolean;
+  q?: string;
+  page?: number;
+  limit?: number;
+};
 
 export type EstudianteCreateDTO = {
   id_carrera_periodo: number;
@@ -35,14 +21,17 @@ export type EstudianteCreateDTO = {
 export type EstudianteUpdateDTO = EstudianteCreateDTO;
 
 export const estudiantesService = {
-  list: async (params?: {
-    includeInactive?: boolean;
-    q?: string;
-    carreraPeriodoId?: number | null;
-    page?: number;
-    limit?: number;
-  }): Promise<Estudiante[]> => {
-    const res = await axiosClient.get<Estudiante[]>("/estudiantes", { params });
+  list: async (params?: EstudianteListParams): Promise<Estudiante[]> => {
+    const res = await axiosClient.get<Estudiante[]>("/estudiantes", {
+      params: {
+        carreraPeriodoId: params?.carreraPeriodoId,
+        // ✅ AQUÍ EL FIX: 1/0 en lugar de "true"/"false"
+        includeInactive: params?.includeInactive ? 1 : 0,
+        q: params?.q?.trim() || undefined,
+        page: params?.page ?? 1,
+        limit: params?.limit ?? 200,
+      },
+    });
     return res.data ?? [];
   },
 

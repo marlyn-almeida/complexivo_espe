@@ -1,31 +1,61 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
-import type { CarreraPeriodo } from "../../types/carreraPeriodo";
+import { useEffect, useMemo, useState } from "react";
 import type { Estudiante, Estado01 } from "../../types/estudiante";
-import { carreraPeriodoService } from "../../services/carreraPeriodo.service";
+import type { CarreraPeriodo } from "../../types/carreraPeriodo";
+
 import { estudiantesService } from "../../services/estudiantes.service";
+import { carreraPeriodoService } from "../../services/carreraPeriodo.service";
+
+import { Plus, Pencil, Eye, ToggleLeft, ToggleRight, Search } from "lucide-react";
 import "./EstudiantesPage.css";
 
-type FormState = {
+const PAGE_SIZE = 10;
+
+type ToastType = "success" | "error" | "info";
+
+type EstudianteFormState = {
+  id_carrera_periodo: number | "";
   id_institucional_estudiante: string;
   nombres_estudiante: string;
   apellidos_estudiante: string;
-  correo_estudiante?: string;
-  telefono_estudiante?: string;
+  correo_estudiante: string;
+  telefono_estudiante: string;
 };
 
 export default function EstudiantesPage() {
-  const [cpList, setCpList] = useState<CarreraPeriodo[]>([]);
-  const [cpId, setCpId] = useState<number | null>(null);
+  // ===========================
+  // ESTADOS PRINCIPALES
+  // ===========================
+  const [carreraPeriodos, setCarreraPeriodos] = useState<CarreraPeriodo[]>([]);
+  const [selectedCP, setSelectedCP] = useState<number | "">("");
 
-  const [items, setItems] = useState<Estudiante[]>([]);
+  const [estudiantes, setEstudiantes] = useState<Estudiante[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const [q, setQ] = useState("");
+  // ===========================
+  // FILTROS
+  // ===========================
+  const [search, setSearch] = useState("");
   const [mostrarInactivos, setMostrarInactivos] = useState(false);
 
-  const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<Estudiante | null>(null);
-  const [form, setForm] = useState<FormState>({
+  // ===========================
+  // PAGINACIÓN
+  // ===========================
+  const [page, setPage] = useState(1);
+
+  // ===========================
+  // MODALES
+  // ===========================
+  const [showFormModal, setShowFormModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
+
+  const [editingEstudiante, setEditingEstudiante] = useState<Estudiante | null>(null);
+  const [viewEstudiante, setViewEstudiante] = useState<Estudiante | null>(null);
+
+  // ===========================
+  // FORM
+  // ===========================
+  const [form, setForm] = useState<EstudianteFormState>({
+    id_carrera_periodo: "",
     id_institucional_estudiante: "",
     nombres_estudiante: "",
     apellidos_estudiante: "",
@@ -33,384 +63,600 @@ export default function EstudiantesPage() {
     telefono_estudiante: "",
   });
 
-  const isActive = (e: Estudiante) => Number(e.estado) === 1;
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [toast, setToast] = useState<{ msg: string; type: ToastType } | null>(null);
 
-  const loadCarreraPeriodos = async () => {
-    setLoading(true);
-    try {
-      const data = await carreraPeriodoService.list();
-      setCpList(data);
-
-      const first = data.find((x) => Boolean(x.estado)) ?? data[0];
-      if (first) setCpId(first.id_carrera_periodo);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadEstudiantes = async (idCarreraPeriodo: number) => {
-    setLoading(true);
-    try {
-      const data = await estudiantesService.list({
-        carreraPeriodoId: idCarreraPeriodo,
-        includeInactive: mostrarInactivos,
-        q: q.trim() || undefined,
-      });
-      setItems(data);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // ===========================
+  // CARGA INICIAL
+  // ===========================
   useEffect(() => {
     loadCarreraPeriodos();
   }, []);
 
   useEffect(() => {
-    if (cpId) loadEstudiantes(cpId);
+    // cada vez que cambias CP o “mostrar inactivos”, recarga
+    if (selectedCP) loadAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cpId, mostrarInactivos]);
+  }, [selectedCP, mostrarInactivos]);
 
-  const filtered = useMemo(() => {
-    const query = q.trim().toLowerCase();
-    if (!query) return items;
+  async function loadCarreraPeriodos() {
+    try {
+      setLoading(true);
 
-    return items.filter((e) => {
-      const full = `${e.nombres_estudiante ?? ""} ${e.apellidos_estudiante ?? ""}`.toLowerCase();
-      const inst = (e.id_institucional_estudiante ?? "").toLowerCase();
-      const mail = (e.correo_estudiante ?? "").toLowerCase();
-      return full.includes(query) || inst.includes(query) || mail.includes(query);
-    });
-  }, [items, q]);
+      // ✅ patrón igual a Carreras/Docentes
+      const cps = await carreraPeriodoService.list(false);
 
-  const metrics = useMemo(() => {
-    const total = items.length;
-    const activos = items.filter((x) => isActive(x)).length;
-    const inactivos = total - activos;
-    return { total, activos, inactivos };
-  }, [items]);
+      setCarreraPeriodos(cps);
 
-  const currentCpLabel = useMemo(() => {
-    const current = cpList.find((x) => x.id_carrera_periodo === cpId);
-    if (!current) return "Seleccione Carrera – Período";
-    const cn = current.carrera_nombre ?? "Carrera";
-    const pn = current.periodo_nombre ?? "Período";
-    return `${cn} – ${pn}`;
-  }, [cpList, cpId]);
+      // auto-seleccionar el primero activo (o el primero)
+      const first = cps.find((x) => Boolean(x.estado)) ?? cps[0];
+      if (first) setSelectedCP(first.id_carrera_periodo);
+    } catch {
+      showToast("Error al cargar Carrera–Período", "error");
+      setCarreraPeriodos([]);
+      setSelectedCP("");
+    } finally {
+      setLoading(false);
+    }
+  }
 
-  const openCreate = () => {
-    if (!cpId) return alert("Selecciona una Carrera–Período primero.");
-    setEditing(null);
+  async function loadAll() {
+    if (!selectedCP) return;
+
+    try {
+      setLoading(true);
+      const data = await estudiantesService.list({
+        includeInactive: mostrarInactivos,
+        carreraPeriodoId: Number(selectedCP),
+        q: search.trim() || undefined,
+        page: 1,
+        limit: 200,
+      });
+      setEstudiantes(data);
+    } catch {
+      showToast("Error al cargar estudiantes", "error");
+      setEstudiantes([]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // ===========================
+  // HELPERS
+  // ===========================
+  function showToast(msg: string, type: ToastType = "info") {
+    setToast({ msg, type });
+    window.setTimeout(() => setToast(null), 3200);
+  }
+
+  function resetForm() {
+    setEditingEstudiante(null);
     setForm({
+      id_carrera_periodo: selectedCP || "",
       id_institucional_estudiante: "",
       nombres_estudiante: "",
       apellidos_estudiante: "",
       correo_estudiante: "",
       telefono_estudiante: "",
     });
-    setOpen(true);
-  };
+    setErrors({});
+  }
 
-  const openEdit = (e: Estudiante) => {
-    setEditing(e);
+  function openCreate() {
+    if (!selectedCP) {
+      showToast("Seleccione una Carrera–Período primero.", "error");
+      return;
+    }
+    resetForm();
+    setShowFormModal(true);
+  }
+
+  function openEdit(e: Estudiante) {
+    setEditingEstudiante(e);
     setForm({
+      id_carrera_periodo: e.id_carrera_periodo,
       id_institucional_estudiante: e.id_institucional_estudiante ?? "",
       nombres_estudiante: e.nombres_estudiante ?? "",
       apellidos_estudiante: e.apellidos_estudiante ?? "",
       correo_estudiante: e.correo_estudiante ?? "",
       telefono_estudiante: e.telefono_estudiante ?? "",
     });
-    setOpen(true);
-  };
+    setErrors({});
+    setShowFormModal(true);
+  }
 
-  const closeModal = () => {
-    setOpen(false);
-    setEditing(null);
-  };
+  function openView(e: Estudiante) {
+    setViewEstudiante(e);
+    setShowViewModal(true);
+  }
 
-  const validate = () => {
-    if (!cpId) return "Selecciona una Carrera–Período.";
-    if (!form.id_institucional_estudiante.trim()) return "El ID institucional es obligatorio.";
-    if (!form.nombres_estudiante.trim()) return "Los nombres son obligatorios.";
-    if (!form.apellidos_estudiante.trim()) return "Los apellidos son obligatorios.";
-    return null;
-  };
+  function extractBackendError(err: any): string {
+    const msg = err?.response?.data?.message;
+    const list = err?.response?.data?.errors;
 
-  const onSubmit = async (ev: FormEvent) => {
-    ev.preventDefault();
-    const err = validate();
-    if (err) return alert(err);
+    if (Array.isArray(list) && list.length) {
+      const first = list[0];
+      if (first?.msg) return String(first.msg);
+    }
+    if (typeof msg === "string" && msg.trim()) return msg;
 
-    setLoading(true);
+    return "Error al guardar estudiante";
+  }
+
+  // ===========================
+  // FILTRADO + ORDEN + PAGINACIÓN
+  // ===========================
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase().trim();
+
+    return estudiantes
+      .filter((e) => (mostrarInactivos ? true : e.estado === 1))
+      .filter((e) => {
+        if (!q) return true;
+        return (
+          (e.id_institucional_estudiante || "").toLowerCase().includes(q) ||
+          (e.nombres_estudiante || "").toLowerCase().includes(q) ||
+          (e.apellidos_estudiante || "").toLowerCase().includes(q) ||
+          (e.correo_estudiante || "").toLowerCase().includes(q)
+        );
+      })
+      .sort((a, b) =>
+        `${a.apellidos_estudiante || ""} ${a.nombres_estudiante || ""}`.localeCompare(
+          `${b.apellidos_estudiante || ""} ${b.nombres_estudiante || ""}`,
+          "es"
+        )
+      );
+  }, [estudiantes, search, mostrarInactivos]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, mostrarInactivos, selectedCP]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+
+  const pageData = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return filtered.slice(start, start + PAGE_SIZE);
+  }, [filtered, page]);
+
+  // resumen
+  const total = estudiantes.length;
+  const activos = estudiantes.filter((e) => e.estado === 1).length;
+  const inactivos = estudiantes.filter((e) => e.estado === 0).length;
+
+  const selectedCPLabel = useMemo(() => {
+    const cp = carreraPeriodos.find((x) => x.id_carrera_periodo === selectedCP);
+    if (!cp) return "";
+    const carrera = cp.nombre_carrera ?? "Carrera";
+    const periodo = cp.codigo_periodo ?? cp.descripcion_periodo ?? "Período";
+    return `${carrera} — ${periodo}`;
+  }, [carreraPeriodos, selectedCP]);
+
+  // ===========================
+  // VALIDACIONES FRONT (UX)
+  // ===========================
+  function validateForm(): Record<string, string> {
+    const e: Record<string, string> = {};
+
+    if (!form.id_carrera_periodo) e.id_carrera_periodo = "Seleccione Carrera–Período.";
+    if (!form.id_institucional_estudiante.trim()) e.id_institucional_estudiante = "ID institucional obligatorio.";
+
+    if (!form.nombres_estudiante.trim()) e.nombres_estudiante = "Nombres obligatorios.";
+    if (form.nombres_estudiante.trim().length < 3) e.nombres_estudiante = "Mínimo 3 caracteres.";
+
+    if (!form.apellidos_estudiante.trim()) e.apellidos_estudiante = "Apellidos obligatorios.";
+    if (form.apellidos_estudiante.trim().length < 3) e.apellidos_estudiante = "Mínimo 3 caracteres.";
+
+    if (form.correo_estudiante.trim() && !/^\S+@\S+\.\S+$/.test(form.correo_estudiante.trim())) {
+      e.correo_estudiante = "Correo no válido.";
+    }
+
+    return e;
+  }
+
+  async function onSave() {
+    const e = validateForm();
+    setErrors(e);
+
+    if (Object.keys(e).length) {
+      showToast("Revisa los campos obligatorios.", "error");
+      return;
+    }
+
     try {
+      setLoading(true);
+
       const payload = {
-        id_carrera_periodo: cpId!,
+        id_carrera_periodo: Number(form.id_carrera_periodo),
         id_institucional_estudiante: form.id_institucional_estudiante.trim(),
         nombres_estudiante: form.nombres_estudiante.trim(),
         apellidos_estudiante: form.apellidos_estudiante.trim(),
-        correo_estudiante: form.correo_estudiante?.trim() || undefined,
-        telefono_estudiante: form.telefono_estudiante?.trim() || undefined,
+        correo_estudiante: form.correo_estudiante.trim() ? form.correo_estudiante.trim() : undefined,
+        telefono_estudiante: form.telefono_estudiante.trim() ? form.telefono_estudiante.trim() : undefined,
       };
 
-      if (editing) {
-        await estudiantesService.update(editing.id_estudiante, payload);
+      if (editingEstudiante) {
+        await estudiantesService.update(editingEstudiante.id_estudiante, payload);
+        showToast("Estudiante actualizado.", "success");
       } else {
         await estudiantesService.create(payload);
+        showToast("Estudiante creado.", "success");
       }
 
-      await loadEstudiantes(cpId!);
-      closeModal();
-    } catch (e) {
-      console.error(e);
-      alert("No se pudo guardar el estudiante. Revisa consola/servidor.");
+      setShowFormModal(false);
+      await loadAll();
+    } catch (err: any) {
+      showToast(extractBackendError(err), "error");
+
+      const list = err?.response?.data?.errors;
+      if (Array.isArray(list)) {
+        const mapped: Record<string, string> = {};
+        for (const it of list) {
+          if (it?.path && it?.msg) mapped[String(it.path)] = String(it.msg);
+          if (it?.param && it?.msg) mapped[String(it.param)] = String(it.msg);
+        }
+        if (Object.keys(mapped).length) setErrors((prev) => ({ ...prev, ...mapped }));
+      }
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const toggleEstado = async (e: Estudiante) => {
-    const action = isActive(e) ? "desactivar" : "activar";
-    if (!confirm(`¿Seguro que deseas ${action} a "${e.nombres_estudiante} ${e.apellidos_estudiante}"?`)) return;
-
-    setLoading(true);
+  async function onToggleEstado(e: Estudiante) {
     try {
+      setLoading(true);
       await estudiantesService.toggleEstado(e.id_estudiante, e.estado as Estado01);
-      await loadEstudiantes(cpId!);
+      showToast(e.estado ? "Estudiante desactivado." : "Estudiante activado.", "success");
+      await loadAll();
+    } catch {
+      showToast("No se pudo cambiar el estado.", "error");
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const onBuscar = async () => {
-    if (!cpId) return;
-    await loadEstudiantes(cpId);
-  };
-
+  // ===========================
+  // RENDER
+  // ===========================
   return (
-    <div className="est-page space-y-5">
-      {/* Header */}
-      <div className="est-header">
-        <div>
-          <h1 className="text-lg font-semibold text-espeDark">Estudiantes</h1>
-          <p className="text-xs text-slate-500">
-            Gestión de estudiantes habilitados por Carrera–Período.
-          </p>
-        </div>
+    <div className="page">
+      {/* HEADER */}
+      <div className="card">
+        <div className="headerRow">
+          <div>
+            <h2 className="title">Estudiantes</h2>
+            <p className="subtitle">Gestión de estudiantes habilitados por Carrera–Período.</p>
+            {selectedCPLabel ? <p className="estudiantes-sub">Trabajando en: <b>{selectedCPLabel}</b></p> : null}
+          </div>
 
-        <div className="est-controls">
-          {/* Selector Carrera-Periodo */}
-          <select
-            value={cpId ?? ""}
-            onChange={(e) => setCpId(e.target.value ? Number(e.target.value) : null)}
-            className="est-input"
-          >
-            <option value="">{currentCpLabel}</option>
-            {cpList.map((cp) => (
-              <option key={cp.id_carrera_periodo} value={cp.id_carrera_periodo}>
-                {(cp.carrera_nombre ?? "Carrera")} – {(cp.periodo_nombre ?? "Período")}
-              </option>
-            ))}
-          </select>
-
-          {/* Buscar */}
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Buscar por ID institucional, nombre o correo..."
-            className="est-input"
-          />
-
-          <button onClick={onBuscar} className="est-btn est-btn-ghost" disabled={loading || !cpId}>
-            Buscar
-          </button>
-
-          <label className="est-switch">
-            <input
-              type="checkbox"
-              checked={mostrarInactivos}
-              onChange={(e) => setMostrarInactivos(e.target.checked)}
-            />
-            <span>Mostrar inactivos</span>
-          </label>
-
-          <button onClick={openCreate} className="btn-primary whitespace-nowrap" disabled={!cpId}>
-            + Nuevo
+          <button className="btnPrimary" onClick={openCreate}>
+            <Plus size={18} /> Nuevo estudiante
           </button>
         </div>
-      </div>
 
-      {/* Métricas */}
-      <div className="est-metrics">
-        <div className="est-metric">
-          <div className="est-metric-label">Total</div>
-          <div className="est-metric-value">{metrics.total}</div>
-        </div>
-        <div className="est-metric">
-          <div className="est-metric-label">Activos</div>
-          <div className="est-metric-value">{metrics.activos}</div>
-        </div>
-        <div className="est-metric">
-          <div className="est-metric-label">Inactivos</div>
-          <div className="est-metric-value">{metrics.inactivos}</div>
-        </div>
-      </div>
-
-      {/* Tabla */}
-      <div className="rounded-lg bg-white shadow-espeSoft overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-slate-600">
-              <tr>
-                <th className="px-4 py-3 text-left">ID Institucional</th>
-                <th className="px-4 py-3 text-left">Nombres</th>
-                <th className="px-4 py-3 text-left">Apellidos</th>
-                <th className="px-4 py-3 text-left">Correo</th>
-                <th className="px-4 py-3 text-center">Estado</th>
-                <th className="px-4 py-3 text-right">Acciones</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {loading && (
-                <tr>
-                  <td className="px-4 py-4 text-slate-500" colSpan={6}>
-                    Cargando...
-                  </td>
-                </tr>
-              )}
-
-              {!loading && filtered.length === 0 && (
-                <tr>
-                  <td className="px-4 py-4 text-slate-500" colSpan={6}>
-                    No hay estudiantes para mostrar.
-                  </td>
-                </tr>
-              )}
-
-              {!loading &&
-                filtered.map((e) => (
-                  <tr key={e.id_estudiante} className="border-t">
-                    <td className="px-4 py-3 font-medium text-espeDark">
-                      {e.id_institucional_estudiante}
-                    </td>
-                    <td className="px-4 py-3 text-slate-600">{e.nombres_estudiante}</td>
-                    <td className="px-4 py-3 text-slate-600">{e.apellidos_estudiante}</td>
-                    <td className="px-4 py-3 text-slate-600">{e.correo_estudiante ?? "—"}</td>
-                    <td className="px-4 py-3 text-center">
-                      <span
-                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs ${
-                          isActive(e)
-                            ? "bg-emerald-50 text-espeGreen"
-                            : "bg-slate-100 text-slate-500"
-                        }`}
-                      >
-                        {isActive(e) ? "ACTIVO" : "INACTIVO"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex justify-end gap-2">
-                        <button
-                          onClick={() => openEdit(e)}
-                          className="rounded-full border border-espeGray bg-white px-3 py-1.5 text-xs text-espeDark hover:bg-slate-50"
-                        >
-                          Editar
-                        </button>
-                        <button
-                          onClick={() => toggleEstado(e)}
-                          className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
-                            isActive(e)
-                              ? "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                              : "bg-emerald-50 text-espeGreen hover:bg-emerald-100"
-                          }`}
-                        >
-                          {isActive(e) ? "Desactivar" : "Activar"}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Modal */}
-      {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40" onClick={closeModal} />
-          <div className="relative w-full max-w-lg rounded-lg bg-white p-5 shadow-espeSoft est-modal">
-            <div className="mb-3">
-              <h2 className="text-base font-semibold text-espeDark">
-                {editing ? "Editar estudiante" : "Nuevo estudiante"}
-              </h2>
-              <p className="text-xs text-slate-500">
-                Se registrará dentro de la Carrera–Período seleccionada.
-              </p>
+        {/* RESUMEN + ACCIONES */}
+        <div className="summaryRow">
+          <div className="summaryBoxes">
+            <div className="summaryBox">
+              <span className="label">Total</span>
+              <span className="value">{total}</span>
             </div>
 
-            <form onSubmit={onSubmit} className="space-y-3">
-              <div>
-                <label className="block text-xs text-slate-700 mb-1">ID Institucional</label>
+            <div className="summaryBox active">
+              <span className="label">Activos</span>
+              <span className="value">{activos}</span>
+            </div>
+
+            <div className="summaryBox inactive">
+              <span className="label">Inactivos</span>
+              <span className="value">{inactivos}</span>
+            </div>
+          </div>
+
+          <div className="summaryActions">
+            <label className="toggle">
+              <input
+                type="checkbox"
+                checked={mostrarInactivos}
+                onChange={(ev) => setMostrarInactivos(ev.target.checked)}
+              />
+              <span className="slider" />
+              <span className="toggleText">Mostrar inactivos</span>
+            </label>
+
+            <button className="btnSecondary" onClick={loadAll} title="Actualizar">
+              ⟳ Actualizar
+            </button>
+          </div>
+        </div>
+
+        {/* FILTROS */}
+        <div className="filtersRow">
+          <div className="selectInline">
+            <select
+              className={`fieldSelect ${errors.id_carrera_periodo ? "input-error" : ""}`}
+              value={selectedCP}
+              onChange={(e) => setSelectedCP((e.target.value ? Number(e.target.value) : "") as any)}
+              disabled={loading}
+              title="Seleccione Carrera–Período"
+            >
+              <option value="">Seleccione Carrera–Período</option>
+              {carreraPeriodos.map((cp) => {
+                const carrera = cp.nombre_carrera ?? `Carrera ${cp.id_carrera}`;
+                const periodo = cp.codigo_periodo ?? cp.descripcion_periodo ?? `Período ${cp.id_periodo}`;
+                return (
+                  <option key={cp.id_carrera_periodo} value={cp.id_carrera_periodo}>
+                    {carrera} — {periodo}
+                  </option>
+                );
+              })}
+            </select>
+            {errors.id_carrera_periodo && <div className="field-error">{errors.id_carrera_periodo}</div>}
+          </div>
+
+          <div className="searchInline">
+            <Search size={18} />
+            <input
+              type="text"
+              placeholder="Buscar por ID institucional, nombre o correo..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* TABLA */}
+      <div className="card tableWrap">
+        <table className="table">
+          <thead>
+            <tr>
+              <th>ID Institucional</th>
+              <th>Nombres</th>
+              <th>Apellidos</th>
+              <th>Correo</th>
+              <th>Estado</th>
+              <th className="thActions">Acciones</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {loading ? (
+              <tr>
+                <td colSpan={6} className="muted" style={{ padding: 16 }}>
+                  Cargando...
+                </td>
+              </tr>
+            ) : pageData.length ? (
+              pageData.map((e) => (
+                <tr key={e.id_estudiante}>
+                  <td className="tdCode">{e.id_institucional_estudiante}</td>
+                  <td className="tdStrong">{e.nombres_estudiante}</td>
+                  <td className="tdStrong">{e.apellidos_estudiante}</td>
+                  <td>{e.correo_estudiante || "-"}</td>
+                  <td>
+                    <span className={`badge ${e.estado ? "badge-success" : "badge-danger"}`}>
+                      {e.estado ? "Activo" : "Inactivo"}
+                    </span>
+                  </td>
+
+                  <td className="actions">
+                    <button className="btnIcon btnView" title="Ver" onClick={() => openView(e)}>
+                      <Eye size={16} />
+                    </button>
+
+                    <button className="btnIcon btnEdit" title="Editar" onClick={() => openEdit(e)}>
+                      <Pencil size={16} />
+                    </button>
+
+                    <button
+                      className={`btnIcon ${e.estado ? "btnDeactivate" : "btnActivate"}`}
+                      title={e.estado ? "Desactivar" : "Activar"}
+                      onClick={() => onToggleEstado(e)}
+                    >
+                      {e.estado ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
+                    </button>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={6} className="muted" style={{ padding: 16 }}>
+                  No hay estudiantes para mostrar.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* PAGINACIÓN */}
+      <div className="card paginationCard">
+        <div className="paginationCenter">
+          <button className="btnGhost" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>
+            ← Anterior
+          </button>
+
+          <span className="muted">
+            Página {page} de {totalPages}
+          </span>
+
+          <button className="btnGhost" disabled={page === totalPages} onClick={() => setPage((p) => p + 1)}>
+            Siguiente →
+          </button>
+        </div>
+      </div>
+
+      {/* MODAL CREAR / EDITAR */}
+      {showFormModal && (
+        <div className="modalOverlay">
+          <div className="modal">
+            <div className="modalHeader">
+              <div className="modalTitle">{editingEstudiante ? "Editar estudiante" : "Nuevo estudiante"}</div>
+              <button className="modalClose" onClick={() => setShowFormModal(false)}>
+                ✕
+              </button>
+            </div>
+
+            <div className="modalBody formStack">
+              <div className="formField">
+                <label className="label">Carrera–Período *</label>
+                <select
+                  className={`fieldSelect ${errors.id_carrera_periodo ? "input-error" : ""}`}
+                  value={form.id_carrera_periodo}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, id_carrera_periodo: e.target.value ? Number(e.target.value) : "" }))
+                  }
+                >
+                  <option value="">Seleccione Carrera–Período</option>
+                  {carreraPeriodos.map((cp) => {
+                    const carrera = cp.nombre_carrera ?? `Carrera ${cp.id_carrera}`;
+                    const periodo = cp.codigo_periodo ?? cp.descripcion_periodo ?? `Período ${cp.id_periodo}`;
+                    return (
+                      <option key={cp.id_carrera_periodo} value={cp.id_carrera_periodo}>
+                        {carrera} — {periodo}
+                      </option>
+                    );
+                  })}
+                </select>
+                {errors.id_carrera_periodo && <div className="field-error">{errors.id_carrera_periodo}</div>}
+              </div>
+
+              <div className="formField">
+                <label className="label">ID institucional *</label>
                 <input
+                  className={`fieldInput ${errors.id_institucional_estudiante ? "input-error" : ""}`}
                   value={form.id_institucional_estudiante}
                   onChange={(e) => setForm((p) => ({ ...p, id_institucional_estudiante: e.target.value }))}
-                  className="est-input"
-                  placeholder="Ej: TI-2023-0001"
+                  placeholder="Ej: ESPE-2025-00123"
+                />
+                {errors.id_institucional_estudiante && (
+                  <div className="field-error">{errors.id_institucional_estudiante}</div>
+                )}
+              </div>
+
+              <div className="formField">
+                <label className="label">Nombres *</label>
+                <input
+                  className={`fieldInput ${errors.nombres_estudiante ? "input-error" : ""}`}
+                  value={form.nombres_estudiante}
+                  onChange={(e) => setForm((p) => ({ ...p, nombres_estudiante: e.target.value }))}
+                  placeholder="Ej: María Fernanda"
+                />
+                {errors.nombres_estudiante && <div className="field-error">{errors.nombres_estudiante}</div>}
+              </div>
+
+              <div className="formField">
+                <label className="label">Apellidos *</label>
+                <input
+                  className={`fieldInput ${errors.apellidos_estudiante ? "input-error" : ""}`}
+                  value={form.apellidos_estudiante}
+                  onChange={(e) => setForm((p) => ({ ...p, apellidos_estudiante: e.target.value }))}
+                  placeholder="Ej: Almeida Quiroz"
+                />
+                {errors.apellidos_estudiante && <div className="field-error">{errors.apellidos_estudiante}</div>}
+              </div>
+
+              <div className="formField">
+                <label className="label">Correo</label>
+                <input
+                  className={`fieldInput ${errors.correo_estudiante ? "input-error" : ""}`}
+                  value={form.correo_estudiante}
+                  onChange={(e) => setForm((p) => ({ ...p, correo_estudiante: e.target.value }))}
+                  placeholder="correo@espe.edu.ec"
+                />
+                {errors.correo_estudiante && <div className="field-error">{errors.correo_estudiante}</div>}
+              </div>
+
+              <div className="formField">
+                <label className="label">Teléfono</label>
+                <input
+                  className="fieldInput"
+                  value={form.telefono_estudiante}
+                  onChange={(e) => setForm((p) => ({ ...p, telefono_estudiante: e.target.value }))}
+                  placeholder="0999999999"
                 />
               </div>
+            </div>
 
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                <div>
-                  <label className="block text-xs text-slate-700 mb-1">Nombres</label>
-                  <input
-                    value={form.nombres_estudiante}
-                    onChange={(e) => setForm((p) => ({ ...p, nombres_estudiante: e.target.value }))}
-                    className="est-input"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-slate-700 mb-1">Apellidos</label>
-                  <input
-                    value={form.apellidos_estudiante}
-                    onChange={(e) => setForm((p) => ({ ...p, apellidos_estudiante: e.target.value }))}
-                    className="est-input"
-                  />
-                </div>
-              </div>
+            <div className="modalFooter">
+              <button className="btnGhost" onClick={() => setShowFormModal(false)}>
+                Cancelar
+              </button>
 
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                <div>
-                  <label className="block text-xs text-slate-700 mb-1">Correo (opcional)</label>
-                  <input
-                    value={form.correo_estudiante ?? ""}
-                    onChange={(e) => setForm((p) => ({ ...p, correo_estudiante: e.target.value }))}
-                    className="est-input"
-                    placeholder="correo@espe.edu.ec"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-slate-700 mb-1">Teléfono (opcional)</label>
-                  <input
-                    value={form.telefono_estudiante ?? ""}
-                    onChange={(e) => setForm((p) => ({ ...p, telefono_estudiante: e.target.value }))}
-                    className="est-input"
-                    placeholder="0999999999"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2">
-                <button type="button" onClick={closeModal} className="est-btn est-btn-ghost">
-                  Cancelar
-                </button>
-                <button type="submit" className="btn-primary" disabled={loading}>
-                  {editing ? "Guardar cambios" : "Crear"}
-                </button>
-              </div>
-            </form>
+              <button className="btnPrimary" onClick={onSave}>
+                Guardar
+              </button>
+            </div>
           </div>
         </div>
       )}
+
+      {/* MODAL VER */}
+      {showViewModal && viewEstudiante && (
+        <div className="modalOverlay">
+          <div className="modal">
+            <div className="modalHeader">
+              <div className="modalTitle">Detalle de estudiante</div>
+              <button className="modalClose" onClick={() => setShowViewModal(false)}>
+                ✕
+              </button>
+            </div>
+
+            <div className="modalBody viewGrid">
+              <div className="viewItem">
+                <div className="viewKey">ID institucional</div>
+                <div className="viewVal tdCode">{viewEstudiante.id_institucional_estudiante}</div>
+              </div>
+
+              <div className="viewItem">
+                <div className="viewKey">Estudiante</div>
+                <div className="viewVal">
+                  {viewEstudiante.apellidos_estudiante} {viewEstudiante.nombres_estudiante}
+                </div>
+              </div>
+
+              <div className="viewItem">
+                <div className="viewKey">Correo</div>
+                <div className="viewVal">{viewEstudiante.correo_estudiante || "-"}</div>
+              </div>
+
+              <div className="viewItem">
+                <div className="viewKey">Teléfono</div>
+                <div className="viewVal">{viewEstudiante.telefono_estudiante || "-"}</div>
+              </div>
+
+              <div className="viewItem">
+                <div className="viewKey">Carrera–Período</div>
+                <div className="viewVal">{selectedCPLabel || viewEstudiante.id_carrera_periodo}</div>
+              </div>
+
+              <div className="viewItem">
+                <div className="viewKey">Estado</div>
+                <div className="viewVal">
+                  <span className={`badge ${viewEstudiante.estado ? "badge-success" : "badge-danger"}`}>
+                    {viewEstudiante.estado ? "Activo" : "Inactivo"}
+                  </span>
+                </div>
+              </div>
+
+              <div className="viewItem viewItemFull">
+                <div className="viewKey">Creado</div>
+                <div className="viewVal">{viewEstudiante.created_at || "-"}</div>
+              </div>
+            </div>
+
+            <div className="modalFooter">
+              <button className="btnGhost" onClick={() => setShowViewModal(false)}>
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TOAST */}
+      {toast && <div className={`toast toast-${toast.type}`}>{toast.msg}</div>}
     </div>
   );
 }

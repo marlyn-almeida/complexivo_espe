@@ -3,10 +3,15 @@ const { body, param, query } = require("express-validator");
 const validate = require("../middlewares/validate.middleware");
 const ctrl = require("../controllers/estudiante.controller");
 
-// GET /api/estudiantes?includeInactive=true&q=...&carreraPeriodoId=...&page=1&limit=50
+// GET /api/estudiantes?includeInactive=true|false|1|0&q=...&carreraPeriodoId=...&page=1&limit=50
 router.get(
   "/",
-  query("includeInactive").optional().isBoolean().toBoolean(),
+  query("includeInactive")
+    .optional()
+    .isIn(["true", "false", "1", "0"])
+    .withMessage("includeInactive debe ser true/false/1/0")
+    .toBoolean(),
+
   query("q").optional().isString(),
   query("carreraPeriodoId").optional().isInt({ min: 1 }).toInt(),
   query("page").optional().isInt({ min: 1 }).toInt(),

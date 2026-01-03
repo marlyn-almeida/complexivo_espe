@@ -1,7 +1,9 @@
+// src/types/estudiante.ts
 export type Estado01 = 0 | 1;
 
 export interface Estudiante {
   id_estudiante: number;
+
   id_carrera_periodo: number;
 
   id_institucional_estudiante: string;
@@ -16,10 +18,11 @@ export interface Estudiante {
   created_at?: string;
   updated_at?: string | null;
 
-  // Opcionales si tu backend lista con JOIN (tu repo listAll devuelve esto)
+  // joins (si tu repo los manda en list)
   id_carrera?: number;
   nombre_carrera?: string;
   codigo_carrera?: string;
+
   id_periodo?: number;
   codigo_periodo?: string;
 }
