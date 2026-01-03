@@ -9,8 +9,10 @@ const docenteRepo = require("../repositories/docente.repo");
 // ===== Helpers =====
 function pickActiveRoleId(roles) {
   const ids = roles.map((r) => r.id_rol);
+
+  // ✅ PARA MÓDULOS DIRECTOR/APOYO (ROL 2): priorizamos ADMIN
+  if (ids.includes(2)) return 2; // ADMIN (Director/Apoyo)
   if (ids.includes(1)) return 1; // SUPER_ADMIN
-  if (ids.includes(2)) return 2; // ADMIN
   if (ids.includes(3)) return 3; // DOCENTE
   return null;
 }
@@ -55,15 +57,16 @@ router.post(
         return res.json({
           mustChangePassword: true,
           tempToken,
-          __version: "LOGIN_WITH_ROLES_V2"
+          __version: "LOGIN_WITH_ROLES_V2",
         });
       }
 
       // ===== Roles =====
       if (typeof docenteRepo.getRolesByDocenteId !== "function") {
         return res.status(500).json({
-          message: "getRolesByDocenteId no está implementado/exportado en docente.repo.js",
-          __version: "LOGIN_WITH_ROLES_V2"
+          message:
+            "getRolesByDocenteId no está implementado/exportado en docente.repo.js",
+          __version: "LOGIN_WITH_ROLES_V2",
         });
       }
 
@@ -73,7 +76,7 @@ router.post(
       if (!activeRoleId) {
         return res.status(403).json({
           message: "El usuario no tiene roles activos",
-          __version: "LOGIN_WITH_ROLES_V2"
+          __version: "LOGIN_WITH_ROLES_V2",
         });
       }
 
@@ -84,7 +87,7 @@ router.post(
         {
           id: user.id_docente,
           roles: roles.map((r) => r.id_rol),
-          activeRole: activeRoleId
+          activeRole: activeRoleId,
         },
         process.env.JWT_SECRET,
         { expiresIn: "8h" }
@@ -96,14 +99,14 @@ router.post(
         roles,
         activeRole,
         redirectTo: redirectByRole(activeRoleId),
-        __version: "LOGIN_WITH_ROLES_V2"
+        __version: "LOGIN_WITH_ROLES_V2",
       });
     } catch (err) {
       console.error("AUTH LOGIN ERROR:", err);
       return res.status(500).json({
         message: "Error interno en login",
         detail: err?.message || String(err),
-        __version: "LOGIN_WITH_ROLES_V2"
+        __version: "LOGIN_WITH_ROLES_V2",
       });
     }
   }
@@ -123,7 +126,7 @@ router.patch(
       if (newPassword !== confirmPassword) {
         return res.status(422).json({
           message: "Las contraseñas no coinciden",
-          __version: "LOGIN_WITH_ROLES_V2"
+          __version: "LOGIN_WITH_ROLES_V2",
         });
       }
 
@@ -134,14 +137,14 @@ router.patch(
       } catch {
         return res.status(401).json({
           message: "Token temporal inválido o expirado",
-          __version: "LOGIN_WITH_ROLES_V2"
+          __version: "LOGIN_WITH_ROLES_V2",
         });
       }
 
       if (decoded.purpose !== "CHANGE_PASSWORD") {
         return res.status(401).json({
           message: "Token temporal no válido para este propósito",
-          __version: "LOGIN_WITH_ROLES_V2"
+          __version: "LOGIN_WITH_ROLES_V2",
         });
       }
 
@@ -152,8 +155,9 @@ router.patch(
       // ===== Roles para emitir accessToken completo =====
       if (typeof docenteRepo.getRolesByDocenteId !== "function") {
         return res.status(500).json({
-          message: "getRolesByDocenteId no está implementado/exportado en docente.repo.js",
-          __version: "LOGIN_WITH_ROLES_V2"
+          message:
+            "getRolesByDocenteId no está implementado/exportado en docente.repo.js",
+          __version: "LOGIN_WITH_ROLES_V2",
         });
       }
 
@@ -163,7 +167,7 @@ router.patch(
       if (!activeRoleId) {
         return res.status(403).json({
           message: "El usuario no tiene roles activos",
-          __version: "LOGIN_WITH_ROLES_V2"
+          __version: "LOGIN_WITH_ROLES_V2",
         });
       }
 
@@ -173,7 +177,7 @@ router.patch(
         {
           id: decoded.id,
           roles: roles.map((r) => r.id_rol),
-          activeRole: activeRoleId
+          activeRole: activeRoleId,
         },
         process.env.JWT_SECRET,
         { expiresIn: "8h" }
@@ -184,14 +188,14 @@ router.patch(
         roles,
         activeRole,
         redirectTo: redirectByRole(activeRoleId),
-        __version: "LOGIN_WITH_ROLES_V2"
+        __version: "LOGIN_WITH_ROLES_V2",
       });
     } catch (err) {
       console.error("AUTH CHANGE-PASSWORD ERROR:", err);
       return res.status(500).json({
         message: "Error interno en change-password",
         detail: err?.message || String(err),
-        __version: "LOGIN_WITH_ROLES_V2"
+        __version: "LOGIN_WITH_ROLES_V2",
       });
     }
   }
