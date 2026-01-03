@@ -2,6 +2,9 @@ const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 
+const { auth } = require("./middlewares/auth.middleware");
+const { attachScope } = require("./middlewares/scope.middleware");
+
 const app = express();
 
 // Middlewares
@@ -9,57 +12,73 @@ app.use(cors());
 app.use(express.json());
 
 // =========================
-// Rutas del sistema
+// RUTAS PÚBLICAS
 // =========================
 app.use("/api/auth", require("./routes/auth.routes"));
-app.use("/api/perfil", require("./routes/perfil.routes")); // ✅ NUEVO (Mi Perfil + cambiar contraseña)
-
-app.use("/api/roles", require("./routes/rol.routes"));
-app.use("/api/docentes", require("./routes/docente.routes"));
-app.use("/api/carreras", require("./routes/carrera.routes"));
-app.use("/api/departamentos", require("./routes/departamento.routes"));
-
-app.use("/api/periodos", require("./routes/periodo.routes"));
-app.use("/api/carreras-periodos", require("./routes/carrera_periodo.routes"));
-app.use("/api/estudiantes", require("./routes/estudiante.routes"));
-
-app.use("/api/franjas-horarias", require("./routes/franja_horario.routes"));
-app.use("/api/carreras-docentes", require("./routes/carrera_docente.routes"));
-app.use("/api/tribunales", require("./routes/tribunal.routes"));
-app.use("/api/tribunales-estudiantes", require("./routes/tribunal_estudiante.routes"));
-
-app.use("/api/calificaciones", require("./routes/calificacion.routes"));
-app.use("/api/actas", require("./routes/acta.routes"));
-app.use("/api", require("./routes/catalogos.routes"));
-
-// =========================
-// Catálogos (si los sigues usando en otras pantallas)
-// =========================
-app.use("/api/componentes", require("./routes/componente.routes"));
-app.use("/api/criterios", require("./routes/criterio.routes"));
-app.use("/api/niveles", require("./routes/nivel.routes"));
-
-// =========================
-// RÚBRICAS (nuevo flujo: 1 rubrica por período)
-// =========================
-app.use("/api/rubricas", require("./routes/rubrica.routes"));
-
-// Niveles dentro de una rúbrica (rubrica_nivel)
-app.use("/api/rubricas/:rubricaId/niveles", require("./routes/rubrica_nivel.routes"));
-
-// Componentes dentro de una rúbrica (rubrica_componente)
-app.use("/api/rubricas/:rubricaId/componentes", require("./routes/rubrica_componente.routes"));
-
-// Criterios dentro de un componente (rubrica_criterio)
-app.use("/api/componentes/:componenteId/criterios", require("./routes/rubrica_criterio.routes"));
-
-// Descripciones por nivel dentro de un criterio (rubrica_criterio_nivel)
-app.use("/api/criterios/:criterioId/niveles", require("./routes/rubrica_criterio_nivel.routes"));
 
 // Health check (para Render)
 app.get("/api/health", (req, res) => {
   res.json({ ok: true, message: "API funcionando" });
 });
+
+// =========================
+// RUTAS PROTEGIDAS (JWT + SCOPE rol 2)
+// =========================
+const protectedApi = express.Router();
+protectedApi.use(auth, attachScope);
+
+// OJO: desde aquí todo requiere token
+protectedApi.use("/perfil", require("./routes/perfil.routes"));
+
+protectedApi.use("/roles", require("./routes/rol.routes"));
+protectedApi.use("/docentes", require("./routes/docente.routes"));
+protectedApi.use("/carreras", require("./routes/carrera.routes"));
+protectedApi.use("/departamentos", require("./routes/departamento.routes"));
+
+protectedApi.use("/periodos", require("./routes/periodo.routes"));
+protectedApi.use("/carreras-periodos", require("./routes/carrera_periodo.routes"));
+protectedApi.use("/estudiantes", require("./routes/estudiante.routes"));
+
+protectedApi.use("/franjas-horarias", require("./routes/franja_horario.routes"));
+protectedApi.use("/carreras-docentes", require("./routes/carrera_docente.routes"));
+protectedApi.use("/tribunales", require("./routes/tribunal.routes"));
+protectedApi.use("/tribunales-estudiantes", require("./routes/tribunal_estudiante.routes"));
+
+protectedApi.use("/calificaciones", require("./routes/calificacion.routes"));
+protectedApi.use("/actas", require("./routes/acta.routes"));
+protectedApi.use("/", require("./routes/catalogos.routes"));
+
+// =========================
+// Catálogos (si los sigues usando en otras pantallas)
+// =========================
+protectedApi.use("/componentes", require("./routes/componente.routes"));
+protectedApi.use("/criterios", require("./routes/criterio.routes"));
+protectedApi.use("/niveles", require("./routes/nivel.routes"));
+
+// =========================
+// RÚBRICAS (nuevo flujo: 1 rubrica por período)
+// =========================
+protectedApi.use("/rubricas", require("./routes/rubrica.routes"));
+
+// Niveles dentro de una rúbrica (rubrica_nivel)
+protectedApi.use("/rubricas/:rubricaId/niveles", require("./routes/rubrica_nivel.routes"));
+
+// Componentes dentro de una rúbrica (rubrica_componente)
+protectedApi.use("/rubricas/:rubricaId/componentes", require("./routes/rubrica_componente.routes"));
+
+// Criterios dentro de un componente (rubrica_criterio)
+protectedApi.use("/componentes/:componenteId/criterios", require("./routes/rubrica_criterio.routes"));
+
+// Descripciones por nivel dentro de un criterio (rubrica_criterio_nivel)
+protectedApi.use("/criterios/:criterioId/niveles", require("./routes/rubrica_criterio_nivel.routes"));
+
+// (Opcional) DEBUG para confirmar scope
+protectedApi.get("/debug/whoami", (req, res) => {
+  res.json({ ok: true, user: req.user });
+});
+
+// Montar el router protegido
+app.use("/api", protectedApi);
 
 // =========================
 // 404 JSON (si no existe la ruta)
@@ -83,7 +102,6 @@ app.use((err, req, res, next) => {
   res.status(status).json({
     ok: false,
     message: err.message || "Internal Server Error",
-    // temporalmente para depurar (luego lo puedes quitar)
     stack: err.stack,
   });
 });
