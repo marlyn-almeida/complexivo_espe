@@ -213,9 +213,10 @@ async function syncPeriodo({ periodoId, carreraIds }) {
 }
 
 /**
- * ✅ NUEVO: lista completa (para /rubricas select)
+ * ✅ LISTA COMPLETA (para /rubricas select)
+ * ✅ NUEVO: scopeCarreraId para filtrar por carrera (rol 2)
  */
-async function list({ includeInactive = false, q = "", periodoId = null } = {}) {
+async function list({ includeInactive = false, q = "", periodoId = null, scopeCarreraId = null } = {}) {
   const params = [];
   let sql = `
     SELECT
@@ -250,6 +251,12 @@ async function list({ includeInactive = false, q = "", periodoId = null } = {}) 
   if (periodoId) {
     sql += ` AND cp.id_periodo = ? `;
     params.push(Number(periodoId));
+  }
+
+  // ✅ filtro por carrera (rol 2)
+  if (scopeCarreraId) {
+    sql += ` AND cp.id_carrera = ? `;
+    params.push(Number(scopeCarreraId));
   }
 
   const term = String(q || "").trim().toLowerCase();

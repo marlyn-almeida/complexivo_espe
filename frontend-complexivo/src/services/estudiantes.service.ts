@@ -1,20 +1,53 @@
 import axiosClient from "../api/axiosClient";
-import type { Estudiante } from "../types/estudiante";
+
+export type Estado01 = 0 | 1;
+
+export interface Estudiante {
+  id_estudiante: number;
+  id_carrera_periodo: number;
+
+  id_institucional_estudiante: string;
+  nombres_estudiante: string;
+  apellidos_estudiante: string;
+
+  correo_estudiante?: string | null;
+  telefono_estudiante?: string | null;
+
+  estado: Estado01;
+
+  created_at?: string;
+  updated_at?: string | null;
+
+  // joins opcionales si el backend los manda
+  nombre_carrera?: string;
+  codigo_periodo?: string;
+}
 
 export type EstudianteCreateDTO = {
-  cedula: string;
-  nombres: string;
-  apellidos: string;
   id_carrera_periodo: number;
+  id_institucional_estudiante: string;
+  nombres_estudiante: string;
+  apellidos_estudiante: string;
+  correo_estudiante?: string;
+  telefono_estudiante?: string;
 };
 
 export type EstudianteUpdateDTO = EstudianteCreateDTO;
 
 export const estudiantesService = {
-  listByCarreraPeriodo: async (idCarreraPeriodo: number): Promise<Estudiante[]> => {
-    const res = await axiosClient.get<Estudiante[]>(
-      `/estudiantes?carreraPeriodoId=${idCarreraPeriodo}`
-    );
+  list: async (params?: {
+    includeInactive?: boolean;
+    q?: string;
+    carreraPeriodoId?: number | null;
+    page?: number;
+    limit?: number;
+  }): Promise<Estudiante[]> => {
+    const res = await axiosClient.get<Estudiante[]>("/estudiantes", { params });
+    return res.data ?? [];
+  },
+
+  get: async (id: number): Promise<Estudiante> => {
+    const res = await axiosClient.get<Estudiante>(`/estudiantes/${id}`);
     return res.data;
   },
 
@@ -28,8 +61,9 @@ export const estudiantesService = {
     return res.data;
   },
 
-  toggleEstado: async (id: number) => {
-    const res = await axiosClient.patch(`/estudiantes/${id}/estado`);
+  toggleEstado: async (id: number, currentEstado: Estado01) => {
+    const nuevo: Estado01 = currentEstado === 1 ? 0 : 1;
+    const res = await axiosClient.patch(`/estudiantes/${id}/estado`, { estado: nuevo });
     return res.data;
   },
 };

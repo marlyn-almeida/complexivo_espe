@@ -53,21 +53,51 @@ async function sync(req, res, next) {
   }
 }
 
-// ✅ GET /api/carreras-periodos/list
+/**
+ * ✅ GET /api/carreras-periodos/list
+ * - Rol 1: devuelve todo (según filtros)
+ * - Rol 2: devuelve SOLO carrera_periodo de su carrera (scope.id_carrera)
+ */
 async function list(req, res, next) {
   try {
     const includeInactive = req.query.includeInactive === "true";
     const q = (req.query.q || "").trim();
     const periodoId = req.query.periodoId ? Number(req.query.periodoId) : null;
 
-    const data = await service.list({ includeInactive, q, periodoId });
+    const activeRole = req.user?.activeRole ?? req.user?.rol ?? null;
+
+    // ✅ si es rol 2, filtro por carrera del scope
+    const scopeCarreraId =
+      Number(activeRole) === 2 ? Number(req.user?.scope?.id_carrera || 0) : null;
+
+    const data = await service.list({
+      includeInactive,
+      q,
+      periodoId,
+      scopeCarreraId: scopeCarreraId || null,
+    });
+
     res.json(data);
   } catch (e) {
     next(e);
   }
 }
 
-// ✅ NUEVO: GET /api/carreras-periodos/:idCarreraPeriodo/admin
+/**
+ * ✅ GET /api/carreras-periodos/mis-activos
+ * SOLO rol 2: devuelve carrera_periodo activos de su carrera
+ * Sirve para "contexto de trabajo".
+ */
+async function misActivos(req, res, next) {
+  try {
+    const data = await service.misActivos(req.user);
+    res.json(data);
+  } catch (e) {
+    next(e);
+  }
+}
+
+// ✅ GET /api/carreras-periodos/:idCarreraPeriodo/admin
 async function getAdmins(req, res, next) {
   try {
     if (handleValidation(req, res)) return;
@@ -78,7 +108,7 @@ async function getAdmins(req, res, next) {
   }
 }
 
-// ✅ NUEVO: PUT /api/carreras-periodos/:idCarreraPeriodo/admin
+// ✅ PUT /api/carreras-periodos/:idCarreraPeriodo/admin
 async function setAdmins(req, res, next) {
   try {
     if (handleValidation(req, res)) return;
@@ -89,4 +119,13 @@ async function setAdmins(req, res, next) {
   }
 }
 
-module.exports = { resumen, porPeriodo, bulk, sync, list, getAdmins, setAdmins };
+module.exports = {
+  resumen,
+  porPeriodo,
+  bulk,
+  sync,
+  list,
+  misActivos,
+  getAdmins,
+  setAdmins,
+};

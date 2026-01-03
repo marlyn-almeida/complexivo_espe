@@ -25,6 +25,12 @@ router.get(
 );
 
 /**
+ * ✅ GET /api/carreras-periodos/mis-activos
+ * Para Rol 2: devuelve SOLO carrera_periodo activos de su carrera (scope)
+ */
+router.get("/mis-activos", ctrl.misActivos);
+
+/**
  * GET /api/carreras-periodos/resumen
  */
 router.get(
@@ -82,7 +88,7 @@ router.put(
 );
 
 /**
- * ✅ NUEVO: GET /api/carreras-periodos/:idCarreraPeriodo/admin
+ * ✅ GET /api/carreras-periodos/:idCarreraPeriodo/admin
  */
 router.get(
   "/:idCarreraPeriodo/admin",
@@ -91,7 +97,7 @@ router.get(
 );
 
 /**
- * ✅ NUEVO: PUT /api/carreras-periodos/:idCarreraPeriodo/admin
+ * ✅ PUT /api/carreras-periodos/:idCarreraPeriodo/admin
  */
 router.put(
   "/:idCarreraPeriodo/admin",

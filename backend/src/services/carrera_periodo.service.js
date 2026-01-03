@@ -32,26 +32,46 @@ async function syncPeriodo(payload) {
 }
 
 /**
- * ✅ NUEVO
- * Lista completa carrera_periodo + joins
+ * ✅ LISTA COMPLETA carrera_periodo + joins
+ * - Si scopeCarreraId viene: filtra cp.id_carrera = scopeCarreraId
  */
-async function list({ includeInactive = false, q = "", periodoId = null }) {
+async function list({ includeInactive = false, q = "", periodoId = null, scopeCarreraId = null }) {
   return repo.list({
     includeInactive: includeInactive === true || includeInactive === "true",
     q: (q || "").trim(),
     periodoId: periodoId ? Number(periodoId) : null,
+    scopeCarreraId: scopeCarreraId ? Number(scopeCarreraId) : null,
   });
 }
 
 /**
- * ✅ NUEVO: obtener director y apoyo de una carrera_periodo
+ * ✅ CONTEXTO rol 2:
+ * Devuelve SOLO los carrera_periodo ACTIVOS de la carrera del scope.
+ */
+async function misActivos(user) {
+  const activeRole = user?.activeRole ?? user?.rol ?? null;
+  if (Number(activeRole) !== 2) return [];
+
+  const id_carrera = Number(user?.scope?.id_carrera || 0);
+  if (!id_carrera) return [];
+
+  return repo.list({
+    includeInactive: false,
+    q: "",
+    periodoId: null,
+    scopeCarreraId: id_carrera,
+  });
+}
+
+/**
+ * ✅ obtener director y apoyo de una carrera_periodo
  */
 async function getAdmins(idCarreraPeriodo) {
   return adminRepo.getAdmins(idCarreraPeriodo);
 }
 
 /**
- * ✅ NUEVO: asignar director/apoyo + asegurar rol ADMIN(2)
+ * ✅ asignar director/apoyo + asegurar rol ADMIN(2)
  */
 async function setAdmins(idCarreraPeriodo, payload) {
   return adminRepo.setAdmins(idCarreraPeriodo, payload);
@@ -63,6 +83,7 @@ module.exports = {
   bulkAssign,
   syncPeriodo,
   list,
+  misActivos,
   getAdmins,
   setAdmins,
 };

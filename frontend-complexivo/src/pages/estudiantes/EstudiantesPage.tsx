@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import type { CarreraPeriodo } from "../../types/carreraPeriodo";
-import type { Estudiante } from "../../types/estudiante";
+import type { Estudiante, Estado01 } from "../../types/estudiante";
 import { carreraPeriodoService } from "../../services/carreraPeriodo.service";
 import { estudiantesService } from "../../services/estudiantes.service";
+import "./EstudiantesPage.css";
 
 type FormState = {
-  cedula: string;
-  nombres: string;
-  apellidos: string;
+  id_institucional_estudiante: string;
+  nombres_estudiante: string;
+  apellidos_estudiante: string;
+  correo_estudiante?: string;
+  telefono_estudiante?: string;
 };
 
 export default function EstudiantesPage() {
@@ -16,13 +19,21 @@ export default function EstudiantesPage() {
 
   const [items, setItems] = useState<Estudiante[]>([]);
   const [loading, setLoading] = useState(false);
+
   const [q, setQ] = useState("");
+  const [mostrarInactivos, setMostrarInactivos] = useState(false);
 
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Estudiante | null>(null);
-  const [form, setForm] = useState<FormState>({ cedula: "", nombres: "", apellidos: "" });
+  const [form, setForm] = useState<FormState>({
+    id_institucional_estudiante: "",
+    nombres_estudiante: "",
+    apellidos_estudiante: "",
+    correo_estudiante: "",
+    telefono_estudiante: "",
+  });
 
-  const isActive = (e: Estudiante) => Boolean(e.estado);
+  const isActive = (e: Estudiante) => Number(e.estado) === 1;
 
   const loadCarreraPeriodos = async () => {
     setLoading(true);
@@ -30,7 +41,6 @@ export default function EstudiantesPage() {
       const data = await carreraPeriodoService.list();
       setCpList(data);
 
-      // Selecciona uno por defecto: primero activo, sino el primero
       const first = data.find((x) => Boolean(x.estado)) ?? data[0];
       if (first) setCpId(first.id_carrera_periodo);
     } finally {
@@ -41,7 +51,11 @@ export default function EstudiantesPage() {
   const loadEstudiantes = async (idCarreraPeriodo: number) => {
     setLoading(true);
     try {
-      const data = await estudiantesService.listByCarreraPeriodo(idCarreraPeriodo);
+      const data = await estudiantesService.list({
+        carreraPeriodoId: idCarreraPeriodo,
+        includeInactive: mostrarInactivos,
+        q: q.trim() || undefined,
+      });
       setItems(data);
     } finally {
       setLoading(false);
@@ -54,23 +68,31 @@ export default function EstudiantesPage() {
 
   useEffect(() => {
     if (cpId) loadEstudiantes(cpId);
-  }, [cpId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cpId, mostrarInactivos]);
 
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase();
     if (!query) return items;
 
     return items.filter((e) => {
-      const full = `${e.nombres ?? ""} ${e.apellidos ?? ""}`.toLowerCase();
-      const ci = (e.cedula ?? "").toLowerCase();
-      return full.includes(query) || ci.includes(query);
+      const full = `${e.nombres_estudiante ?? ""} ${e.apellidos_estudiante ?? ""}`.toLowerCase();
+      const inst = (e.id_institucional_estudiante ?? "").toLowerCase();
+      const mail = (e.correo_estudiante ?? "").toLowerCase();
+      return full.includes(query) || inst.includes(query) || mail.includes(query);
     });
   }, [items, q]);
+
+  const metrics = useMemo(() => {
+    const total = items.length;
+    const activos = items.filter((x) => isActive(x)).length;
+    const inactivos = total - activos;
+    return { total, activos, inactivos };
+  }, [items]);
 
   const currentCpLabel = useMemo(() => {
     const current = cpList.find((x) => x.id_carrera_periodo === cpId);
     if (!current) return "Seleccione Carrera – Período";
-
     const cn = current.carrera_nombre ?? "Carrera";
     const pn = current.periodo_nombre ?? "Período";
     return `${cn} – ${pn}`;
@@ -79,16 +101,24 @@ export default function EstudiantesPage() {
   const openCreate = () => {
     if (!cpId) return alert("Selecciona una Carrera–Período primero.");
     setEditing(null);
-    setForm({ cedula: "", nombres: "", apellidos: "" });
+    setForm({
+      id_institucional_estudiante: "",
+      nombres_estudiante: "",
+      apellidos_estudiante: "",
+      correo_estudiante: "",
+      telefono_estudiante: "",
+    });
     setOpen(true);
   };
 
   const openEdit = (e: Estudiante) => {
     setEditing(e);
     setForm({
-      cedula: e.cedula ?? "",
-      nombres: e.nombres ?? "",
-      apellidos: e.apellidos ?? "",
+      id_institucional_estudiante: e.id_institucional_estudiante ?? "",
+      nombres_estudiante: e.nombres_estudiante ?? "",
+      apellidos_estudiante: e.apellidos_estudiante ?? "",
+      correo_estudiante: e.correo_estudiante ?? "",
+      telefono_estudiante: e.telefono_estudiante ?? "",
     });
     setOpen(true);
   };
@@ -100,9 +130,9 @@ export default function EstudiantesPage() {
 
   const validate = () => {
     if (!cpId) return "Selecciona una Carrera–Período.";
-    if (!form.cedula.trim()) return "La cédula es obligatoria.";
-    if (!form.nombres.trim()) return "Los nombres son obligatorios.";
-    if (!form.apellidos.trim()) return "Los apellidos son obligatorios.";
+    if (!form.id_institucional_estudiante.trim()) return "El ID institucional es obligatorio.";
+    if (!form.nombres_estudiante.trim()) return "Los nombres son obligatorios.";
+    if (!form.apellidos_estudiante.trim()) return "Los apellidos son obligatorios.";
     return null;
   };
 
@@ -114,10 +144,12 @@ export default function EstudiantesPage() {
     setLoading(true);
     try {
       const payload = {
-        cedula: form.cedula.trim(),
-        nombres: form.nombres.trim(),
-        apellidos: form.apellidos.trim(),
         id_carrera_periodo: cpId!,
+        id_institucional_estudiante: form.id_institucional_estudiante.trim(),
+        nombres_estudiante: form.nombres_estudiante.trim(),
+        apellidos_estudiante: form.apellidos_estudiante.trim(),
+        correo_estudiante: form.correo_estudiante?.trim() || undefined,
+        telefono_estudiante: form.telefono_estudiante?.trim() || undefined,
       };
 
       if (editing) {
@@ -128,7 +160,8 @@ export default function EstudiantesPage() {
 
       await loadEstudiantes(cpId!);
       closeModal();
-    } catch {
+    } catch (e) {
+      console.error(e);
       alert("No se pudo guardar el estudiante. Revisa consola/servidor.");
     } finally {
       setLoading(false);
@@ -137,21 +170,26 @@ export default function EstudiantesPage() {
 
   const toggleEstado = async (e: Estudiante) => {
     const action = isActive(e) ? "desactivar" : "activar";
-    if (!confirm(`¿Seguro que deseas ${action} a "${e.nombres} ${e.apellidos}"?`)) return;
+    if (!confirm(`¿Seguro que deseas ${action} a "${e.nombres_estudiante} ${e.apellidos_estudiante}"?`)) return;
 
     setLoading(true);
     try {
-      await estudiantesService.toggleEstado(e.id_estudiante);
+      await estudiantesService.toggleEstado(e.id_estudiante, e.estado as Estado01);
       await loadEstudiantes(cpId!);
     } finally {
       setLoading(false);
     }
   };
 
+  const onBuscar = async () => {
+    if (!cpId) return;
+    await loadEstudiantes(cpId);
+  };
+
   return (
-    <div className="space-y-5">
+    <div className="est-page space-y-5">
       {/* Header */}
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <div className="est-header">
         <div>
           <h1 className="text-lg font-semibold text-espeDark">Estudiantes</h1>
           <p className="text-xs text-slate-500">
@@ -159,12 +197,12 @@ export default function EstudiantesPage() {
           </p>
         </div>
 
-        <div className="flex flex-col gap-2 md:flex-row md:items-center">
+        <div className="est-controls">
           {/* Selector Carrera-Periodo */}
           <select
             value={cpId ?? ""}
             onChange={(e) => setCpId(e.target.value ? Number(e.target.value) : null)}
-            className="w-full md:w-96 rounded-full border border-espeGray bg-white px-3 py-2 text-sm outline-none focus:border-espeGreen focus:ring-1 focus:ring-espeGreen"
+            className="est-input"
           >
             <option value="">{currentCpLabel}</option>
             {cpList.map((cp) => (
@@ -178,13 +216,42 @@ export default function EstudiantesPage() {
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Buscar por cédula o nombre..."
-            className="w-full md:w-72 rounded-full border border-espeGray bg-white px-3 py-2 text-sm outline-none focus:border-espeGreen focus:ring-1 focus:ring-espeGreen"
+            placeholder="Buscar por ID institucional, nombre o correo..."
+            className="est-input"
           />
 
-          <button onClick={openCreate} className="btn-primary whitespace-nowrap">
+          <button onClick={onBuscar} className="est-btn est-btn-ghost" disabled={loading || !cpId}>
+            Buscar
+          </button>
+
+          <label className="est-switch">
+            <input
+              type="checkbox"
+              checked={mostrarInactivos}
+              onChange={(e) => setMostrarInactivos(e.target.checked)}
+            />
+            <span>Mostrar inactivos</span>
+          </label>
+
+          <button onClick={openCreate} className="btn-primary whitespace-nowrap" disabled={!cpId}>
             + Nuevo
           </button>
+        </div>
+      </div>
+
+      {/* Métricas */}
+      <div className="est-metrics">
+        <div className="est-metric">
+          <div className="est-metric-label">Total</div>
+          <div className="est-metric-value">{metrics.total}</div>
+        </div>
+        <div className="est-metric">
+          <div className="est-metric-label">Activos</div>
+          <div className="est-metric-value">{metrics.activos}</div>
+        </div>
+        <div className="est-metric">
+          <div className="est-metric-label">Inactivos</div>
+          <div className="est-metric-value">{metrics.inactivos}</div>
         </div>
       </div>
 
@@ -194,9 +261,10 @@ export default function EstudiantesPage() {
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-slate-600">
               <tr>
-                <th className="px-4 py-3 text-left">Cédula</th>
+                <th className="px-4 py-3 text-left">ID Institucional</th>
                 <th className="px-4 py-3 text-left">Nombres</th>
                 <th className="px-4 py-3 text-left">Apellidos</th>
+                <th className="px-4 py-3 text-left">Correo</th>
                 <th className="px-4 py-3 text-center">Estado</th>
                 <th className="px-4 py-3 text-right">Acciones</th>
               </tr>
@@ -205,7 +273,7 @@ export default function EstudiantesPage() {
             <tbody>
               {loading && (
                 <tr>
-                  <td className="px-4 py-4 text-slate-500" colSpan={5}>
+                  <td className="px-4 py-4 text-slate-500" colSpan={6}>
                     Cargando...
                   </td>
                 </tr>
@@ -213,7 +281,7 @@ export default function EstudiantesPage() {
 
               {!loading && filtered.length === 0 && (
                 <tr>
-                  <td className="px-4 py-4 text-slate-500" colSpan={5}>
+                  <td className="px-4 py-4 text-slate-500" colSpan={6}>
                     No hay estudiantes para mostrar.
                   </td>
                 </tr>
@@ -222,9 +290,12 @@ export default function EstudiantesPage() {
               {!loading &&
                 filtered.map((e) => (
                   <tr key={e.id_estudiante} className="border-t">
-                    <td className="px-4 py-3 font-medium text-espeDark">{e.cedula}</td>
-                    <td className="px-4 py-3 text-slate-600">{e.nombres}</td>
-                    <td className="px-4 py-3 text-slate-600">{e.apellidos}</td>
+                    <td className="px-4 py-3 font-medium text-espeDark">
+                      {e.id_institucional_estudiante}
+                    </td>
+                    <td className="px-4 py-3 text-slate-600">{e.nombres_estudiante}</td>
+                    <td className="px-4 py-3 text-slate-600">{e.apellidos_estudiante}</td>
+                    <td className="px-4 py-3 text-slate-600">{e.correo_estudiante ?? "—"}</td>
                     <td className="px-4 py-3 text-center">
                       <span
                         className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs ${
@@ -267,7 +338,7 @@ export default function EstudiantesPage() {
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40" onClick={closeModal} />
-          <div className="relative w-full max-w-lg rounded-lg bg-white p-5 shadow-espeSoft">
+          <div className="relative w-full max-w-lg rounded-lg bg-white p-5 shadow-espeSoft est-modal">
             <div className="mb-3">
               <h2 className="text-base font-semibold text-espeDark">
                 {editing ? "Editar estudiante" : "Nuevo estudiante"}
@@ -279,12 +350,12 @@ export default function EstudiantesPage() {
 
             <form onSubmit={onSubmit} className="space-y-3">
               <div>
-                <label className="block text-xs text-slate-700 mb-1">Cédula</label>
+                <label className="block text-xs text-slate-700 mb-1">ID Institucional</label>
                 <input
-                  value={form.cedula}
-                  onChange={(e) => setForm((p) => ({ ...p, cedula: e.target.value }))}
-                  className="w-full rounded-full border border-espeGray bg-white px-3 py-2 text-sm outline-none focus:border-espeGreen focus:ring-1 focus:ring-espeGreen"
-                  placeholder="Ej: 1712345678"
+                  value={form.id_institucional_estudiante}
+                  onChange={(e) => setForm((p) => ({ ...p, id_institucional_estudiante: e.target.value }))}
+                  className="est-input"
+                  placeholder="Ej: TI-2023-0001"
                 />
               </div>
 
@@ -292,27 +363,44 @@ export default function EstudiantesPage() {
                 <div>
                   <label className="block text-xs text-slate-700 mb-1">Nombres</label>
                   <input
-                    value={form.nombres}
-                    onChange={(e) => setForm((p) => ({ ...p, nombres: e.target.value }))}
-                    className="w-full rounded-full border border-espeGray bg-white px-3 py-2 text-sm outline-none focus:border-espeGreen focus:ring-1 focus:ring-espeGreen"
+                    value={form.nombres_estudiante}
+                    onChange={(e) => setForm((p) => ({ ...p, nombres_estudiante: e.target.value }))}
+                    className="est-input"
                   />
                 </div>
                 <div>
                   <label className="block text-xs text-slate-700 mb-1">Apellidos</label>
                   <input
-                    value={form.apellidos}
-                    onChange={(e) => setForm((p) => ({ ...p, apellidos: e.target.value }))}
-                    className="w-full rounded-full border border-espeGray bg-white px-3 py-2 text-sm outline-none focus:border-espeGreen focus:ring-1 focus:ring-espeGreen"
+                    value={form.apellidos_estudiante}
+                    onChange={(e) => setForm((p) => ({ ...p, apellidos_estudiante: e.target.value }))}
+                    className="est-input"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div>
+                  <label className="block text-xs text-slate-700 mb-1">Correo (opcional)</label>
+                  <input
+                    value={form.correo_estudiante ?? ""}
+                    onChange={(e) => setForm((p) => ({ ...p, correo_estudiante: e.target.value }))}
+                    className="est-input"
+                    placeholder="correo@espe.edu.ec"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-700 mb-1">Teléfono (opcional)</label>
+                  <input
+                    value={form.telefono_estudiante ?? ""}
+                    onChange={(e) => setForm((p) => ({ ...p, telefono_estudiante: e.target.value }))}
+                    className="est-input"
+                    placeholder="0999999999"
                   />
                 </div>
               </div>
 
               <div className="flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="rounded-full border border-espeGray bg-white px-4 py-2 text-sm text-espeDark hover:bg-slate-50"
-                >
+                <button type="button" onClick={closeModal} className="est-btn est-btn-ghost">
                   Cancelar
                 </button>
                 <button type="submit" className="btn-primary" disabled={loading}>

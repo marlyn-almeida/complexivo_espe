@@ -66,10 +66,22 @@ export const carreraPeriodoService = {
   },
 
   // =========================================================
-  // ✅ NUEVO: para pantalla "Asignar Director/Apoyo"
+  // ✅ NUEVO: alias para páginas que llaman carreraPeriodoService.list()
   // =========================================================
+  list: async (params?: { includeInactive?: boolean; q?: string; periodoId?: number | null }): Promise<CarreraPeriodo[]> => {
+    const res = await axiosClient.get<CarreraPeriodo[]>("/carreras-periodos/list", {
+      params: params
+        ? {
+            includeInactive: params.includeInactive ? "true" : "false",
+            q: params.q?.trim() || undefined,
+            periodoId: params.periodoId || undefined,
+          }
+        : undefined,
+    });
+    return res.data ?? [];
+  },
 
-  // Lista completa carrera_periodo + joins -> GET /list
+  // Lista completa carrera_periodo + joins -> GET /list (se mantiene)
   listAll: async (params?: { includeInactive?: boolean; q?: string; periodoId?: number | null }): Promise<CarreraPeriodo[]> => {
     const res = await axiosClient.get<CarreraPeriodo[]>("/carreras-periodos/list", {
       params: params
@@ -85,7 +97,9 @@ export const carreraPeriodoService = {
 
   // Ver asignación actual (director/apoyo)
   getAdmins: async (idCarreraPeriodo: number): Promise<CarreraPeriodoAdminsResponse> => {
-    const res = await axiosClient.get<CarreraPeriodoAdminsResponse>(`/carreras-periodos/${idCarreraPeriodo}/admin`);
+    const res = await axiosClient.get<CarreraPeriodoAdminsResponse>(
+      `/carreras-periodos/${idCarreraPeriodo}/admin`
+    );
     return res.data;
   },
 
