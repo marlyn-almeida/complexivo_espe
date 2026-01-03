@@ -1,25 +1,44 @@
 const bcrypt = require("bcryptjs");
 const repo = require("../repositories/docente.repo");
 
-async function list(query = {}) {
+function isRol2(user) {
+  return Number(user?.rol) === 2;
+}
+
+async function list(query = {}, user) {
   const includeInactive = query.includeInactive === "true";
   const q = query.q || "";
   const page = query.page || 1;
   const limit = query.limit || 50;
-  return repo.findAll({ includeInactive, q, page, limit });
+
+  // Si es rol 2, forzamos scope
+  const scopeCarreraId = isRol2(user) ? user?.scope?.id_carrera : null;
+
+  return repo.findAll({ includeInactive, q, page, limit, scopeCarreraId });
 }
 
-async function get(id) {
+async function get(id, user) {
   const doc = await repo.findById(id);
   if (!doc) {
     const err = new Error("Docente no encontrado");
     err.status = 404;
     throw err;
   }
+
+  // Si es rol 2, validar que el docente pertenezca a SU carrera
+  if (isRol2(user)) {
+    const ok = await repo.isDocenteInCarrera(Number(id), Number(user.scope.id_carrera));
+    if (!ok) {
+      const err = new Error("Acceso denegado: el docente no pertenece a tu carrera");
+      err.status = 403;
+      throw err;
+    }
+  }
+
   return doc;
 }
 
-async function create(payload) {
+async function create(payload, user) {
   const byInst = await repo.findByInstitucional(payload.id_institucional_docente);
   if (byInst) { const err = new Error("Ya existe un docente con ese ID institucional"); err.status = 409; throw err; }
 
@@ -40,7 +59,8 @@ async function create(payload) {
 
   const passwordHash = await bcrypt.hash(passwordPlano, 10);
 
-  return repo.create({
+  // 1) Crear el docente
+  const created = await repo.create({
     id_institucional_docente: payload.id_institucional_docente,
     cedula: payload.cedula,
     nombres_docente: payload.nombres_docente,
@@ -50,10 +70,22 @@ async function create(payload) {
     nombre_usuario: payload.nombre_usuario,
     passwordHash
   });
+
+  // 2) Si es rol 2, asignarlo a SU carrera como DOCENTE
+  if (isRol2(user)) {
+    await repo.assignDocenteToCarrera({
+      id_carrera: Number(user.scope.id_carrera),
+      id_docente: Number(created.id_docente),
+      tipo_admin: "DOCENTE"
+    });
+  }
+
+  return created;
 }
 
-async function update(id, payload) {
-  await get(id);
+async function update(id, payload, user) {
+  // esto ya valida existencia + si rol 2, que sea de su carrera
+  await get(id, user);
 
   const byInst = await repo.findByInstitucional(payload.id_institucional_docente);
   if (byInst && Number(byInst.id_docente) !== Number(id)) {
@@ -87,8 +119,9 @@ async function update(id, payload) {
   });
 }
 
-async function changeEstado(id, estado) {
-  await get(id);
+async function changeEstado(id, estado, user) {
+  // valida existencia + pertenencia si rol 2
+  await get(id, user);
   return repo.setEstado(id, estado);
 }
 

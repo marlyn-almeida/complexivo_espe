@@ -1,6 +1,6 @@
 const pool = require("../config/db");
 
-async function findAll({ includeInactive = false, q = "", page = 1, limit = 50 } = {}) {
+async function findAll({ includeInactive = false, q = "", page = 1, limit = 50, scopeCarreraId = null } = {}) {
   const safeLimit = Math.min(Math.max(Number(limit) || 50, 1), 100);
   const safePage = Math.max(Number(page) || 1, 1);
   const offset = (safePage - 1) * safeLimit;
@@ -8,42 +8,59 @@ async function findAll({ includeInactive = false, q = "", page = 1, limit = 50 }
   const where = [];
   const params = [];
 
-  if (!includeInactive) where.push("estado=1");
+  // Si NO incluye inactivos, filtra docente.estado=1
+  if (!includeInactive) where.push("d.estado=1");
 
+  // Búsqueda
   if (q && q.trim()) {
     where.push(`(
-      cedula LIKE ? OR
-      id_institucional_docente LIKE ? OR
-      nombres_docente LIKE ? OR
-      apellidos_docente LIKE ? OR
-      IFNULL(correo_docente,'') LIKE ? OR
-      nombre_usuario LIKE ?
+      d.cedula LIKE ? OR
+      d.id_institucional_docente LIKE ? OR
+      d.nombres_docente LIKE ? OR
+      d.apellidos_docente LIKE ? OR
+      IFNULL(d.correo_docente,'') LIKE ? OR
+      d.nombre_usuario LIKE ?
     )`);
     const like = `%${q.trim()}%`;
     params.push(like, like, like, like, like, like);
+  }
+
+  // Scope rol 2: solo docentes asignados a esa carrera
+  // usamos carrera_docente como relación
+  let joinSql = "";
+  if (scopeCarreraId) {
+    joinSql = `
+      JOIN carrera_docente cd
+        ON cd.id_docente = d.id_docente
+       AND cd.estado = 1
+       AND cd.id_carrera = ?
+    `;
+    params.unshift(Number(scopeCarreraId)); // debe ir primero si el JOIN lo usa
   }
 
   const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
 
   const sql = `
     SELECT
-      id_docente,
-      id_institucional_docente,
-      cedula,
-      nombres_docente,
-      apellidos_docente,
-      correo_docente,
-      telefono_docente,
-      nombre_usuario,
-      debe_cambiar_password,
-      estado,
-      created_at,
-      updated_at
-    FROM docente
+      d.id_docente,
+      d.id_institucional_docente,
+      d.cedula,
+      d.nombres_docente,
+      d.apellidos_docente,
+      d.correo_docente,
+      d.telefono_docente,
+      d.nombre_usuario,
+      d.debe_cambiar_password,
+      d.estado,
+      d.created_at,
+      d.updated_at
+    FROM docente d
+    ${joinSql}
     ${whereSql}
-    ORDER BY id_docente DESC
+    ORDER BY d.id_docente DESC
     LIMIT ? OFFSET ?
   `;
+
   params.push(safeLimit, offset);
 
   const [rows] = await pool.query(sql, params);
@@ -72,7 +89,6 @@ async function findById(id) {
   return rows[0] || null;
 }
 
-// ✅ NUEVO: Perfil (por ahora devuelve lo mismo que findById, pero separado para claridad)
 async function findProfileById(id) {
   return findById(id);
 }
@@ -111,10 +127,6 @@ async function findAuthByUsername(nombre_usuario) {
   return rows[0] || null;
 }
 
-/**
- * Roles activos del docente
- * Devuelve: [{ id_rol, nombre_rol }, ...]
- */
 async function getRolesByDocenteId(id_docente) {
   const [rows] = await pool.query(
     `SELECT r.id_rol, r.nombre_rol
@@ -127,6 +139,33 @@ async function getRolesByDocenteId(id_docente) {
     [id_docente]
   );
   return rows;
+}
+
+// ✅ NUEVO: validar que un docente pertenece a una carrera (relación activa)
+async function isDocenteInCarrera(id_docente, id_carrera) {
+  const [rows] = await pool.query(
+    `SELECT 1
+     FROM carrera_docente
+     WHERE id_docente = ?
+       AND id_carrera = ?
+       AND estado = 1
+     LIMIT 1`,
+    [id_docente, id_carrera]
+  );
+  return rows.length > 0;
+}
+
+// ✅ NUEVO: asignar docente a carrera como DOCENTE (upsert seguro)
+async function assignDocenteToCarrera({ id_carrera, id_docente, tipo_admin = "DOCENTE" }) {
+  // Tu tabla tiene UNIQUE (id_carrera, id_docente, tipo_admin) en BD.
+  // Entonces hacemos INSERT ... ON DUPLICATE KEY UPDATE para evitar errores.
+  await pool.query(
+    `INSERT INTO carrera_docente (id_docente, id_carrera, tipo_admin, estado)
+     VALUES (?, ?, ?, 1)
+     ON DUPLICATE KEY UPDATE estado=1`,
+    [id_docente, id_carrera, tipo_admin]
+  );
+  return true;
 }
 
 async function create(data) {
@@ -195,7 +234,6 @@ async function setEstado(id, estado) {
   return findById(id);
 }
 
-// Primer login / token temporal: actualiza password y baja el flag
 async function updatePasswordAndClearFlag(id, passwordHash) {
   await pool.query(`UPDATE docente SET password=?, debe_cambiar_password=0 WHERE id_docente=?`, [
     passwordHash,
@@ -204,7 +242,6 @@ async function updatePasswordAndClearFlag(id, passwordHash) {
   return findById(id);
 }
 
-// ✅ NUEVO: cambio de contraseña desde Perfil (NO toca debe_cambiar_password)
 async function updatePassword(id, passwordHash) {
   await pool.query(`UPDATE docente SET password=? WHERE id_docente=?`, [passwordHash, id]);
   return findById(id);
@@ -213,15 +250,17 @@ async function updatePassword(id, passwordHash) {
 module.exports = {
   findAll,
   findById,
-  findProfileById, // ✅
+  findProfileById,
   findByCedula,
   findByUsername,
   findByInstitucional,
   findAuthByUsername,
   getRolesByDocenteId,
+  isDocenteInCarrera,        // ✅
+  assignDocenteToCarrera,    // ✅
   create,
   update,
   setEstado,
   updatePasswordAndClearFlag,
-  updatePassword, // ✅
+  updatePassword,
 };
