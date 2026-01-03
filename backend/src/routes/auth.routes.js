@@ -4,6 +4,8 @@ const jwt = require("jsonwebtoken");
 const { body } = require("express-validator");
 const validate = require("../middlewares/validate.middleware");
 
+const { auth } = require("../middlewares/auth.middleware"); // ✅ NUEVO
+
 const docenteRepo = require("../repositories/docente.repo");
 
 // ===== Helpers =====
@@ -105,6 +107,63 @@ router.post(
       console.error("AUTH LOGIN ERROR:", err);
       return res.status(500).json({
         message: "Error interno en login",
+        detail: err?.message || String(err),
+        __version: "LOGIN_WITH_ROLES_V2",
+      });
+    }
+  }
+);
+
+// ✅ NUEVO: POST /api/auth/active-role
+// Permite cambiar el perfil actual (rol activo) sin volver a loguearse.
+// Body: { "activeRole": 1|2|3 }
+router.post(
+  "/active-role",
+  auth,
+  body("activeRole").isInt({ min: 1 }).toInt(),
+  validate,
+  async (req, res) => {
+    try {
+      const { activeRole } = req.body;
+
+      // Roles permitidos desde el token actual
+      const roleIds = req.user?.roles ?? [];
+
+      if (!roleIds.includes(activeRole)) {
+        return res.status(403).json({
+          ok: false,
+          message: "No tienes permisos para usar ese rol",
+          __version: "LOGIN_WITH_ROLES_V2",
+        });
+      }
+
+      // Traer roles completos (para devolver activeRole object y lista bonita)
+      const roles = await docenteRepo.getRolesByDocenteId(req.user.id);
+      const activeRoleObj = roles.find((r) => r.id_rol === activeRole) || null;
+
+      const accessToken = jwt.sign(
+        {
+          id: req.user.id,
+          roles: roleIds,
+          activeRole: activeRole,
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: "8h" }
+      );
+
+      return res.json({
+        ok: true,
+        accessToken,
+        roles,
+        activeRole: activeRoleObj,
+        redirectTo: redirectByRole(activeRole),
+        __version: "LOGIN_WITH_ROLES_V2",
+      });
+    } catch (err) {
+      console.error("AUTH ACTIVE-ROLE ERROR:", err);
+      return res.status(500).json({
+        ok: false,
+        message: "Error interno en active-role",
         detail: err?.message || String(err),
         __version: "LOGIN_WITH_ROLES_V2",
       });
