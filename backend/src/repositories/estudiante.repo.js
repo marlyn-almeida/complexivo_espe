@@ -5,13 +5,33 @@ async function carreraPeriodoExists(id_carrera_periodo) {
     `SELECT id_carrera_periodo FROM carrera_periodo WHERE id_carrera_periodo=? LIMIT 1`,
     [id_carrera_periodo]
   );
-  return !!r.length;
+  return r.length > 0;
 }
 
-async function findAll({ includeInactive=false, q="", page=1, limit=50, carreraPeriodoId=null } = {}) {
-  const safeLimit = Math.min(Math.max(+limit||50,1),100);
-  const safePage = Math.max(+page||1,1);
-  const offset = (safePage-1)*safeLimit;
+// ✅ NUEVO: valida que un carrera_periodo pertenezca a una carrera (para scope rol 2)
+async function carreraPeriodoBelongsToCarrera(id_carrera_periodo, id_carrera) {
+  const [r] = await pool.query(
+    `SELECT 1
+     FROM carrera_periodo
+     WHERE id_carrera_periodo = ?
+       AND id_carrera = ?
+     LIMIT 1`,
+    [id_carrera_periodo, id_carrera]
+  );
+  return r.length > 0;
+}
+
+async function findAll({
+  includeInactive = false,
+  q = "",
+  page = 1,
+  limit = 50,
+  carreraPeriodoId = null,
+  scopeCarreraId = null, // ✅ NUEVO
+} = {}) {
+  const safeLimit = Math.min(Math.max(+limit || 50, 1), 100);
+  const safePage = Math.max(+page || 1, 1);
+  const offset = (safePage - 1) * safeLimit;
 
   const where = [];
   const params = [];
@@ -34,9 +54,15 @@ async function findAll({ includeInactive=false, q="", page=1, limit=50, carreraP
     params.push(like, like, like, like);
   }
 
+  // ✅ Scope rol 2: solo estudiantes de la carrera del usuario
+  // Como ya tienes JOIN carrera c, filtramos por c.id_carrera
+  if (scopeCarreraId) {
+    where.push("c.id_carrera=?");
+    params.push(+scopeCarreraId);
+  }
+
   const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
 
-  // Incluye info útil: carrera + periodo (para reportes/admin)
   const sql = `
     SELECT
       e.id_estudiante,
@@ -102,7 +128,7 @@ async function create(d) {
       d.nombres_estudiante,
       d.apellidos_estudiante,
       d.correo_estudiante ?? null,
-      d.telefono_estudiante ?? null
+      d.telefono_estudiante ?? null,
     ]
   );
   return findById(res.insertId);
@@ -120,22 +146,27 @@ async function update(id, d) {
       d.apellidos_estudiante,
       d.correo_estudiante ?? null,
       d.telefono_estudiante ?? null,
-      id
+      id,
     ]
   );
   return findById(id);
 }
 
 async function setEstado(id, estado) {
-  await pool.query(
-    `UPDATE estudiante SET estado=? WHERE id_estudiante=?`,
-    [estado ? 1 : 0, id]
-  );
+  await pool.query(`UPDATE estudiante SET estado=? WHERE id_estudiante=?`, [
+    estado ? 1 : 0,
+    id,
+  ]);
   return findById(id);
 }
 
 module.exports = {
   carreraPeriodoExists,
-  findAll, findById, findByInstitucional,
-  create, update, setEstado
+  carreraPeriodoBelongsToCarrera, // ✅ NUEVO
+  findAll,
+  findById,
+  findByInstitucional,
+  create,
+  update,
+  setEstado,
 };

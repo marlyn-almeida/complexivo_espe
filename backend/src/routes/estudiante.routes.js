@@ -3,8 +3,7 @@ const { body, param, query } = require("express-validator");
 const validate = require("../middlewares/validate.middleware");
 const ctrl = require("../controllers/estudiante.controller");
 
-// 🔐 luego: auth + authorize(["SUPER_ADMIN","ADMIN"])
-
+// GET /api/estudiantes?includeInactive=true&q=...&carreraPeriodoId=...&page=1&limit=50
 router.get(
   "/",
   query("includeInactive").optional().isBoolean().toBoolean(),
