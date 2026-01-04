@@ -1,3 +1,4 @@
+// src/middlewares/auth.middleware.js
 const jwt = require("jsonwebtoken");
 
 function auth(req, res, next) {
@@ -32,6 +33,7 @@ function auth(req, res, next) {
       roles,
       activeRole: effectiveRole,
       rol: effectiveRole, // ✅ ROL EFECTIVO
+      scope: decoded.scope ?? null, // ✅ NUEVO
     };
 
     next();

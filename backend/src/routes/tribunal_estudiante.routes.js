@@ -1,7 +1,19 @@
+// src/routes/tribunal_estudiante.routes.js
 const router = require("express").Router();
 const { body, param, query } = require("express-validator");
 const validate = require("../middlewares/validate.middleware");
 const ctrl = require("../controllers/tribunal_estudiante.controller");
+const { auth, authorize } = require("../middlewares/auth.middleware");
+
+// ✅ NUEVO: Mis asignaciones (ROL 3)
+router.get(
+  "/mis-asignaciones",
+  auth,
+  authorize([3]),
+  query("includeInactive").optional().isBoolean().toBoolean(),
+  validate,
+  ctrl.misAsignaciones
+);
 
 router.get(
   "/",

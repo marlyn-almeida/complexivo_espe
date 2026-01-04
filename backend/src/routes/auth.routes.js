@@ -1,3 +1,4 @@
+// src/routes/auth.routes.js
 const router = require("express").Router();
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
@@ -24,6 +25,24 @@ function redirectByRole(activeRoleId) {
   if (activeRoleId === 2) return "/admin/dashboard";
   if (activeRoleId === 3) return "/docente/dashboard";
   return "/login";
+}
+
+// ✅ NUEVO: scope solo para rol 2 (admin/director/apoyo)
+// Requiere que en docente.repo.js exista y esté exportada:
+//   getScopeCarreraForRol2(id_docente) -> devuelve id_carrera (number) o null
+async function buildScopeForRole(activeRoleId, id_docente) {
+  if (activeRoleId !== 2) return null;
+
+  if (typeof docenteRepo.getScopeCarreraForRol2 !== "function") {
+    // No rompemos el login si aún no implementas esto en el repo.
+    // Pero OJO: si no hay scope, tus servicios rol 2 que filtran por carrera no podrán restringir.
+    return null;
+  }
+
+  const id_carrera = await docenteRepo.getScopeCarreraForRol2(id_docente);
+  if (!id_carrera) return null;
+
+  return { id_carrera: Number(id_carrera) };
 }
 
 // POST /api/auth/login
@@ -84,12 +103,16 @@ router.post(
 
       const activeRole = roles.find((r) => r.id_rol === activeRoleId) || null;
 
-      // JWT normal con roles
+      // ✅ NUEVO: scope (solo rol 2)
+      const scope = await buildScopeForRole(activeRoleId, user.id_docente);
+
+      // JWT normal con roles + scope
       const accessToken = jwt.sign(
         {
           id: user.id_docente,
           roles: roles.map((r) => r.id_rol),
           activeRole: activeRoleId,
+          scope, // ✅ NUEVO
         },
         process.env.JWT_SECRET,
         { expiresIn: "8h" }
@@ -100,6 +123,7 @@ router.post(
         accessToken,
         roles,
         activeRole,
+        scope, // ✅ NUEVO
         redirectTo: redirectByRole(activeRoleId),
         __version: "LOGIN_WITH_ROLES_V2",
       });
@@ -141,11 +165,15 @@ router.post(
       const roles = await docenteRepo.getRolesByDocenteId(req.user.id);
       const activeRoleObj = roles.find((r) => r.id_rol === activeRole) || null;
 
+      // ✅ NUEVO: scope para el rol activo elegido
+      const scope = await buildScopeForRole(activeRole, req.user.id);
+
       const accessToken = jwt.sign(
         {
           id: req.user.id,
           roles: roleIds,
           activeRole: activeRole,
+          scope, // ✅ NUEVO
         },
         process.env.JWT_SECRET,
         { expiresIn: "8h" }
@@ -156,6 +184,7 @@ router.post(
         accessToken,
         roles,
         activeRole: activeRoleObj,
+        scope, // ✅ NUEVO
         redirectTo: redirectByRole(activeRole),
         __version: "LOGIN_WITH_ROLES_V2",
       });
@@ -232,11 +261,15 @@ router.patch(
 
       const activeRole = roles.find((r) => r.id_rol === activeRoleId) || null;
 
+      // ✅ NUEVO: scope (solo rol 2)
+      const scope = await buildScopeForRole(activeRoleId, decoded.id);
+
       const accessToken = jwt.sign(
         {
           id: decoded.id,
           roles: roles.map((r) => r.id_rol),
           activeRole: activeRoleId,
+          scope, // ✅ NUEVO
         },
         process.env.JWT_SECRET,
         { expiresIn: "8h" }
@@ -246,6 +279,7 @@ router.patch(
         accessToken,
         roles,
         activeRole,
+        scope, // ✅ NUEVO
         redirectTo: redirectByRole(activeRoleId),
         __version: "LOGIN_WITH_ROLES_V2",
       });

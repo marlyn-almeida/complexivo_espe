@@ -1,3 +1,4 @@
+// src/services/tribunal_estudiante.service.js
 const repo = require("../repositories/tribunal_estudiante.repo");
 
 function err(msg, status) {
@@ -6,8 +7,16 @@ function err(msg, status) {
   return e;
 }
 
+function isRol3(user) {
+  return Number(user?.rol) === 3;
+}
+
 async function list(query = {}, scope = null) {
-  const includeInactive = query.includeInactive === true; // ✅ ya viene boolean
+  const includeInactive =
+    query.includeInactive === true ||
+    query.includeInactive === 1 ||
+    query.includeInactive === "true";
+
   const scopeCarreraId = scope?.id_carrera ? +scope.id_carrera : null;
 
   return repo.findAll({
@@ -54,11 +63,25 @@ async function create(d, scope = null) {
 }
 
 async function changeEstado(id, estado, scope = null) {
-  // aquí podrías validar scope leyendo la asignación y el tribunal,
-  // pero lo dejamos simple por ahora, igual que tus otros módulos.
   const r = await repo.setEstado(id, estado);
   if (!r) throw err("Asignación tribunal_estudiante no encontrada", 404);
   return r;
 }
 
-module.exports = { list, create, changeEstado };
+// ✅ NUEVO: Mis asignaciones (ROL 3)
+async function misAsignaciones(query = {}, user) {
+  if (!isRol3(user)) throw err("Acceso denegado", 403);
+
+  const includeInactive =
+    query.includeInactive === true ||
+    query.includeInactive === 1 ||
+    query.includeInactive === "true";
+
+  // En tu JWT: req.user.id = id_docente
+  return repo.findMisAsignaciones({
+    id_docente: Number(user.id),
+    includeInactive,
+  });
+}
+
+module.exports = { list, create, changeEstado, misAsignaciones };

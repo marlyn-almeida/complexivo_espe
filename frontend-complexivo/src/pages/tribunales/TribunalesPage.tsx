@@ -11,12 +11,13 @@ import type { CarreraDocente } from "../../types/carreraDocente";
 
 import { carreraPeriodoService } from "../../services/carreraPeriodo.service";
 import { estudiantesService } from "../../services/estudiantes.service";
-import { franjaHorarioService } from "../../services/franjasHorarias.service"; // ✅ lo dejas como tú lo tienes
+import { franjaHorarioService } from "../../services/franjasHorarias.service";
 import { tribunalesService } from "../../services/tribunales.service";
 import { tribunalEstudiantesService } from "../../services/tribunalEstudiantes.service";
-import { carreraDocenteService } from "../../services/carreraDocente.service"; // ✅ NUEVO
+import { carreraDocenteService } from "../../services/carreraDocente.service";
 
 import TribunalAsignacionesModal from "./TribunalAsignacionesModal";
+import TribunalViewModal from "./TribunalViewModal";
 
 const PAGE_SIZE = 10;
 
@@ -25,10 +26,10 @@ type ToastType = "success" | "error" | "info";
 type TribunalFormState = {
   id_carrera_periodo: number | "";
   nombre_tribunal: string;
-  caso: string; // input string (opcional)
+  caso: string;
   descripcion_tribunal: string;
 
-  // ✅ ahora son id_carrera_docente
+  // ✅ id_carrera_docente
   presidente: number | "";
   integrante1: number | "";
   integrante2: number | "";
@@ -45,7 +46,7 @@ export default function TribunalesPage() {
   const [selectedCP, setSelectedCP] = useState<number | "">("");
 
   const [tribunales, setTribunales] = useState<Tribunal[]>([]);
-  const [docentes, setDocentes] = useState<CarreraDocente[]>([]); // ✅ CAMBIO
+  const [docentes, setDocentes] = useState<CarreraDocente[]>([]);
   const [loading, setLoading] = useState(false);
 
   // ===== UI / FILTROS =====
@@ -56,6 +57,7 @@ export default function TribunalesPage() {
   // ===== MODALES =====
   const [showFormModal, setShowFormModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
+
   const [editingTribunal, setEditingTribunal] = useState<Tribunal | null>(null);
   const [viewTribunal, setViewTribunal] = useState<Tribunal | null>(null);
 
@@ -137,7 +139,7 @@ export default function TribunalesPage() {
       nombre_tribunal: t.nombre_tribunal ?? "",
       caso: t.caso == null ? "" : String(t.caso),
       descripcion_tribunal: t.descripcion_tribunal ?? "",
-      // si quieres, luego hacemos GET detalle con miembros para precargar
+      // si luego quieres, se puede precargar miembros con un endpoint detalle
       presidente: "",
       integrante1: "",
       integrante2: "",
@@ -173,7 +175,7 @@ export default function TribunalesPage() {
   useEffect(() => {
     if (selectedCP) {
       loadAll();
-      loadDocentesByCP(); // ✅ importante: docentes por ese CP
+      loadDocentesByCP();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCP, mostrarInactivos]);
@@ -195,35 +197,29 @@ export default function TribunalesPage() {
     }
   }
 
-async function loadDocentesByCP() {
-  if (!selectedCP) return;
+  async function loadDocentesByCP() {
+    if (!selectedCP) return;
 
-  try {
-    // 🔑 selectedCP = id_carrera_periodo
-    // 🔑 carrera_docente trabaja por id_carrera
+    try {
+      // selectedCP = id_carrera_periodo  -> necesitamos id_carrera
+      const cp = carreraPeriodos.find((x) => Number(x.id_carrera_periodo) === Number(selectedCP));
+      const carreraId = cp?.id_carrera;
 
-    const cp = carreraPeriodos.find(
-      (x) => Number(x.id_carrera_periodo) === Number(selectedCP)
-    );
+      if (!carreraId) {
+        setDocentes([]);
+        return;
+      }
 
-    const carreraId = cp?.id_carrera;
+      const data = await carreraDocenteService.list({
+        includeInactive: false,
+        carreraId: Number(carreraId),
+      });
 
-    if (!carreraId) {
+      setDocentes(data ?? []);
+    } catch {
       setDocentes([]);
-      return;
     }
-
-    const data = await carreraDocenteService.list({
-      includeInactive: false,
-      carreraId: Number(carreraId), // ✅ FIX REAL
-    });
-
-    setDocentes(data ?? []);
-  } catch {
-    setDocentes([]);
   }
-}
-
 
   async function loadAll() {
     if (!selectedCP) return;
@@ -289,7 +285,6 @@ async function loadDocentesByCP() {
   }
 
   function buildDocentesPayloadObject() {
-    // ✅ ya son ids de carrera_docente
     return {
       presidente: Number(form.presidente),
       integrante1: Number(form.integrante1),
@@ -604,177 +599,19 @@ async function loadDocentesByCP() {
         </div>
       </div>
 
-      {/* MODAL FORM */}
-      {showFormModal ? (
-        <div className="modalOverlay" onMouseDown={() => setShowFormModal(false)}>
-          <div className="modalCard" onMouseDown={(e) => e.stopPropagation()}>
-            <div className="modalHeader">
-              <h3 className="modalTitle">{editingTribunal ? "Editar tribunal" : "Nuevo tribunal"}</h3>
-              <button className="btnClose" onClick={() => setShowFormModal(false)}>
-                ✕
-              </button>
-            </div>
-
-            <div className="modalBody">
-              <div className="grid2">
-                <div className="field">
-                  <label className="fieldLabel">Carrera–Período</label>
-                  <select
-                    className="select"
-                    value={form.id_carrera_periodo}
-                    onChange={(e) => setForm((p) => ({ ...p, id_carrera_periodo: e.target.value ? Number(e.target.value) : "" }))}
-                  >
-                    <option value="">Seleccione...</option>
-                    {carreraPeriodos.map((cp) => (
-                      <option key={cp.id_carrera_periodo} value={cp.id_carrera_periodo}>
-                        {(cp.nombre_carrera ?? "Carrera") + " — " + (cp.codigo_periodo ?? cp.descripcion_periodo ?? "Período")}
-                      </option>
-                    ))}
-                  </select>
-                  {errors.id_carrera_periodo ? <p className="error">{errors.id_carrera_periodo}</p> : null}
-                </div>
-
-                <div className="field">
-                  <label className="fieldLabel">Caso (opcional)</label>
-                  <input className="input" value={form.caso} onChange={(e) => setForm((p) => ({ ...p, caso: e.target.value }))} placeholder="Ej: 6" />
-                  {errors.caso ? <p className="error">{errors.caso}</p> : null}
-                </div>
-
-                <div className="field full">
-                  <label className="fieldLabel">Nombre del tribunal</label>
-                  <input
-                    className="input"
-                    value={form.nombre_tribunal}
-                    onChange={(e) => setForm((p) => ({ ...p, nombre_tribunal: e.target.value }))}
-                    placeholder="Ej: Tribunal 1"
-                  />
-                  {errors.nombre_tribunal ? <p className="error">{errors.nombre_tribunal}</p> : null}
-                </div>
-
-                <div className="field full">
-                  <label className="fieldLabel">Descripción (opcional)</label>
-                  <textarea
-                    className="textarea"
-                    value={form.descripcion_tribunal}
-                    onChange={(e) => setForm((p) => ({ ...p, descripcion_tribunal: e.target.value }))}
-                    placeholder="Notas / detalles..."
-                  />
-                </div>
-
-                {/* ✅ SELECTS CON id_carrera_docente */}
-                <div className="field">
-                  <label className="fieldLabel">Presidente</label>
-                  <select
-                    className="select"
-                    value={form.presidente}
-                    onChange={(e) => setForm((p) => ({ ...p, presidente: e.target.value ? Number(e.target.value) : "" }))}
-                  >
-                    <option value="">Seleccione...</option>
-                    {docentes.map((cd) => (
-                      <option key={cd.id_carrera_docente} value={cd.id_carrera_docente}>
-                        {cd.apellidos_docente} {cd.nombres_docente} — {cd.id_institucional_docente}
-                      </option>
-                    ))}
-                  </select>
-                  {errors.presidente ? <p className="error">{errors.presidente}</p> : null}
-                </div>
-
-                <div className="field">
-                  <label className="fieldLabel">Integrante 1</label>
-                  <select
-                    className="select"
-                    value={form.integrante1}
-                    onChange={(e) => setForm((p) => ({ ...p, integrante1: e.target.value ? Number(e.target.value) : "" }))}
-                  >
-                    <option value="">Seleccione...</option>
-                    {docentes.map((cd) => (
-                      <option key={cd.id_carrera_docente} value={cd.id_carrera_docente}>
-                        {cd.apellidos_docente} {cd.nombres_docente} — {cd.id_institucional_docente}
-                      </option>
-                    ))}
-                  </select>
-                  {errors.integrante1 ? <p className="error">{errors.integrante1}</p> : null}
-                </div>
-
-                <div className="field">
-                  <label className="fieldLabel">Integrante 2</label>
-                  <select
-                    className="select"
-                    value={form.integrante2}
-                    onChange={(e) => setForm((p) => ({ ...p, integrante2: e.target.value ? Number(e.target.value) : "" }))}
-                  >
-                    <option value="">Seleccione...</option>
-                    {docentes.map((cd) => (
-                      <option key={cd.id_carrera_docente} value={cd.id_carrera_docente}>
-                        {cd.apellidos_docente} {cd.nombres_docente} — {cd.id_institucional_docente}
-                      </option>
-                    ))}
-                  </select>
-                  {errors.integrante2 ? <p className="error">{errors.integrante2}</p> : null}
-                </div>
-
-                {errors.docentes ? (
-                  <div className="field full">
-                    <p className="error">{errors.docentes}</p>
-                  </div>
-                ) : null}
-              </div>
-            </div>
-
-            <div className="modalFooter">
-              <button className="btnSecondary" onClick={() => setShowFormModal(false)} disabled={loading}>
-                Cancelar
-              </button>
-              <button className="btnPrimary" onClick={onSave} disabled={loading}>
-                {loading ? "Guardando..." : "Guardar"}
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {/* MODAL VIEW */}
-      {showViewModal && viewTribunal ? (
-        <div className="modalOverlay" onMouseDown={() => setShowViewModal(false)}>
-          <div className="modalCard" onMouseDown={(e) => e.stopPropagation()}>
-            <div className="modalHeader">
-              <h3 className="modalTitle">Detalle del tribunal</h3>
-              <button className="btnClose" onClick={() => setShowViewModal(false)}>
-                ✕
-              </button>
-            </div>
-            <div className="modalBody">
-              <div className="kv">
-                <div className="kvRow">
-                  <span className="kvKey">Nombre</span>
-                  <span className="kvVal">{viewTribunal.nombre_tribunal}</span>
-                </div>
-                <div className="kvRow">
-                  <span className="kvKey">Caso</span>
-                  <span className="kvVal">{viewTribunal.caso == null ? "—" : viewTribunal.caso}</span>
-                </div>
-                <div className="kvRow">
-                  <span className="kvKey">Descripción</span>
-                  <span className="kvVal">{viewTribunal.descripcion_tribunal?.trim() ? viewTribunal.descripcion_tribunal : "—"}</span>
-                </div>
-                <div className="kvRow">
-                  <span className="kvKey">Carrera–Período</span>
-                  <span className="kvVal">{selectedCPLabel() || "—"}</span>
-                </div>
-                <div className="kvRow">
-                  <span className="kvKey">Estado</span>
-                  <span className="kvVal">{isActivo(viewTribunal.estado) ? "Activo" : "Inactivo"}</span>
-                </div>
-              </div>
-            </div>
-            <div className="modalFooter">
-              <button className="btnPrimary" onClick={() => setShowViewModal(false)}>
-                Cerrar
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      {/* ✅ MODAL VIEW */}
+      <TribunalViewModal
+        open={showViewModal}
+        onClose={() => setShowViewModal(false)}
+        tribunal={viewTribunal}
+        cpLabel={selectedCPLabel() || ""}
+        isActivo={isActivo}
+        showToast={showToast}
+        onOpenAsignaciones={(t) => {
+          setShowViewModal(false);
+          openAsignaciones(t);
+        }}
+      />
 
       {/* MODAL ASIGNACIONES */}
       <TribunalAsignacionesModal

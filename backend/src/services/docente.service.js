@@ -40,13 +40,25 @@ async function get(id, user) {
 
 async function create(payload, user) {
   const byInst = await repo.findByInstitucional(payload.id_institucional_docente);
-  if (byInst) { const err = new Error("Ya existe un docente con ese ID institucional"); err.status = 409; throw err; }
+  if (byInst) {
+    const err = new Error("Ya existe un docente con ese ID institucional");
+    err.status = 409;
+    throw err;
+  }
 
   const byCedula = await repo.findByCedula(payload.cedula);
-  if (byCedula) { const err = new Error("Ya existe un docente con esa cédula"); err.status = 409; throw err; }
+  if (byCedula) {
+    const err = new Error("Ya existe un docente con esa cédula");
+    err.status = 409;
+    throw err;
+  }
 
   const byUser = await repo.findByUsername(payload.nombre_usuario);
-  if (byUser) { const err = new Error("Ya existe un docente con ese nombre de usuario"); err.status = 409; throw err; }
+  if (byUser) {
+    const err = new Error("Ya existe un docente con ese nombre de usuario");
+    err.status = 409;
+    throw err;
+  }
 
   let passwordPlano = payload.password;
   if (!passwordPlano || !passwordPlano.trim()) passwordPlano = payload.nombre_usuario;
@@ -68,7 +80,14 @@ async function create(payload, user) {
     correo_docente: payload.correo_docente ?? null,
     telefono_docente: payload.telefono_docente ?? null,
     nombre_usuario: payload.nombre_usuario,
-    passwordHash
+    passwordHash,
+  });
+
+  // ✅ 1.1) ROL 3 AUTOMÁTICO (DOCENTE)
+  // Crea (o reactiva) el rol 3 en rol_docente
+  await repo.assignRolToDocente({
+    id_rol: 3,
+    id_docente: Number(created.id_docente),
   });
 
   // 2) Si es rol 2, asignarlo a SU carrera como DOCENTE
@@ -76,7 +95,7 @@ async function create(payload, user) {
     await repo.assignDocenteToCarrera({
       id_carrera: Number(user.scope.id_carrera),
       id_docente: Number(created.id_docente),
-      tipo_admin: "DOCENTE"
+      tipo_admin: "DOCENTE",
     });
   }
 
@@ -115,7 +134,7 @@ async function update(id, payload, user) {
     apellidos_docente: payload.apellidos_docente,
     correo_docente: payload.correo_docente ?? null,
     telefono_docente: payload.telefono_docente ?? null,
-    nombre_usuario: payload.nombre_usuario
+    nombre_usuario: payload.nombre_usuario,
   });
 }
 

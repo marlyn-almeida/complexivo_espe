@@ -15,11 +15,13 @@ export type TribunalEstudianteCreateDTO = {
   id_franja_horario: number;
 };
 
+const BASE = "/tribunales-estudiantes"; // ✅ PLURAL (como está montado en el backend)
+
 export const tribunalEstudiantesService = {
   list: async (params?: TribunalEstudianteListParams): Promise<TribunalEstudiante[]> => {
     const limit = Math.min(params?.limit ?? 100, 100);
 
-    const res = await axiosClient.get<TribunalEstudiante[]>("/tribunal-estudiantes", {
+    const res = await axiosClient.get<TribunalEstudiante[]>(BASE, {
       params: {
         tribunalId: params?.tribunalId,
         includeInactive: params?.includeInactive ? 1 : 0,
@@ -32,13 +34,13 @@ export const tribunalEstudiantesService = {
   },
 
   create: async (payload: TribunalEstudianteCreateDTO) => {
-    const res = await axiosClient.post("/tribunal-estudiantes", payload);
+    const res = await axiosClient.post(BASE, payload);
     return res.data;
   },
 
   toggleEstado: async (id: number, currentEstado: Estado01) => {
     const nuevo: Estado01 = currentEstado === 1 ? 0 : 1;
-    const res = await axiosClient.patch(`/tribunal-estudiantes/${id}/estado`, { estado: nuevo });
+    const res = await axiosClient.patch(`${BASE}/${id}/estado`, { estado: nuevo });
     return res.data;
   },
 };

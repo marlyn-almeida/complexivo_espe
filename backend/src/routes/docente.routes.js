@@ -1,7 +1,12 @@
+// src/routes/docente.routes.js
 const router = require("express").Router();
 const { body, param, query } = require("express-validator");
 const validate = require("../middlewares/validate.middleware");
 const ctrl = require("../controllers/docente.controller");
+const { auth, authorize } = require("../middlewares/auth.middleware");
+
+// ✅ NUEVO: /me (antes de /:id para que no choque)
+router.get("/me", auth, authorize([3, 2, 1]), ctrl.me);
 
 router.get(
   "/",
@@ -29,7 +34,7 @@ router.post(
   body("correo_docente").optional().isEmail(),
   body("telefono_docente").optional().isString(),
   body("nombre_usuario").isString().trim().notEmpty(),
-  body("password").optional().isString(), // si no viene, se usa username
+  body("password").optional().isString(),
   validate,
   ctrl.create
 );

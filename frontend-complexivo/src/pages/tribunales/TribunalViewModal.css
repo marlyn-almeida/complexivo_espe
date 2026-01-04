@@ -1,0 +1,103 @@
+/* src/pages/tribunales/TribunalViewModal.css */
+
+.tribunalViewCard{
+  padding: 14px;
+}
+
+.tvHeaderLeft{
+  display:flex;
+  flex-direction:column;
+  gap: 2px;
+}
+
+.tvSubtitle{
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-weight: 800;
+  font-size: 0.85rem;
+}
+
+.tvHeaderRight{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.tvBody{
+  margin-top: 10px;
+}
+
+.tvGrid{
+  display:grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.tvItem{
+  border: 1px solid var(--border-soft);
+  border-radius: 14px;
+  padding: 12px;
+  background: white;
+}
+
+.tvItemFull{
+  grid-column: 1 / -1;
+}
+
+.tvKey{
+  font-size: 0.78rem;
+  font-weight: 900;
+  color: var(--text-muted);
+}
+
+.tvVal{
+  margin-top: 6px;
+  font-weight: 900;
+  color: var(--text-main);
+  word-break: break-word;
+}
+
+.tvAsignHeader{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.tvSectionTitle{
+  margin: 0;
+  font-weight: 900;
+  font-size: 1rem;
+}
+
+.tvSectionSub{
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-weight: 800;
+  font-size: 0.85rem;
+}
+
+.tvToggle{
+  transform: translateY(2px);
+}
+
+.tvTableWrap{
+  border: 1px solid var(--border-soft);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.tvTable thead th{
+  background: var(--bg-soft);
+}
+
+.tvHint{
+  margin-top: 12px;
+}
+
+@media (max-width: 720px){
+  .tvGrid{ grid-template-columns: 1fr; }
+}

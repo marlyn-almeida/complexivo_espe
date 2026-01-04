@@ -1,3 +1,4 @@
+// src/repositories/tribunal.repo.js
 const pool = require("../config/db");
 
 async function carreraPeriodoExists(id_carrera_periodo) {
@@ -153,7 +154,6 @@ async function upsertDocentesTx(conn, id_tribunal, docentes) {
   );
 }
 
-
 async function createWithDocentes(d) {
   const conn = await pool.getConnection();
   try {
@@ -224,6 +224,45 @@ async function setEstado(id, estado) {
   return findById(id);
 }
 
+// ✅ NUEVO: Mis tribunales (ROL 3)
+// Devuelve tribunales donde el docente está asignado en tribunal_docente.
+async function findMisTribunales({ id_docente, includeInactive = false } = {}) {
+  const [rows] = await pool.query(
+    `
+    SELECT
+      t.id_tribunal,
+      t.id_carrera_periodo,
+      t.id_carrera_docente,
+      t.caso,
+      t.nombre_tribunal,
+      t.descripcion_tribunal,
+      t.estado,
+      t.created_at,
+      t.updated_at,
+
+      td.designacion,
+
+      c.nombre_carrera,
+      c.codigo_carrera,
+      pa.codigo_periodo
+    FROM tribunal_docente td
+    JOIN carrera_docente cd ON cd.id_carrera_docente = td.id_carrera_docente
+    JOIN tribunal t ON t.id_tribunal = td.id_tribunal
+    JOIN carrera_periodo cp ON cp.id_carrera_periodo = t.id_carrera_periodo
+    JOIN carrera c ON c.id_carrera = cp.id_carrera
+    JOIN periodo_academico pa ON pa.id_periodo = cp.id_periodo
+    WHERE cd.id_docente = ?
+      AND cd.estado = 1
+      AND td.estado = 1
+      AND (? = 1 OR t.estado = 1)
+    ORDER BY t.caso DESC, t.created_at DESC
+    `,
+    [Number(id_docente), includeInactive ? 1 : 0]
+  );
+
+  return rows;
+}
+
 module.exports = {
   carreraPeriodoExists,
   getCarreraIdByCarreraPeriodo,
@@ -234,4 +273,5 @@ module.exports = {
   createWithDocentes,
   updateWithDocentes,
   setEstado,
+  findMisTribunales, // ✅ NUEVO
 };

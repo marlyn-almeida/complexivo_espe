@@ -1,7 +1,12 @@
+// src/services/tribunal.service.js
 const repo = require("../repositories/tribunal.repo");
 
 function isRol2(user) {
   return Number(user?.rol) === 2;
+}
+
+function isRol3(user) {
+  return Number(user?.rol) === 3;
 }
 
 function validarDocentes(docentes) {
@@ -188,4 +193,18 @@ async function changeEstado(id, estado, user) {
   return repo.setEstado(id, estado);
 }
 
-module.exports = { list, get, create, update, changeEstado };
+// ✅ NUEVO: Mis tribunales (ROL 3)
+async function misTribunales(query = {}, user) {
+  if (!isRol3(user)) {
+    const e = new Error("Acceso denegado");
+    e.status = 403;
+    throw e;
+  }
+
+  return repo.findMisTribunales({
+    id_docente: Number(user.id), // en tu JWT: id = id_docente
+    includeInactive: query.includeInactive === "true",
+  });
+}
+
+module.exports = { list, get, create, update, changeEstado, misTribunales };

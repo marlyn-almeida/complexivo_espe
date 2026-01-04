@@ -1,3 +1,4 @@
+// src/controllers/tribunal_estudiante.controller.js
 const s = require("../services/tribunal_estudiante.service");
 
 module.exports = {
@@ -20,6 +21,15 @@ module.exports = {
   changeEstado: async (req, res, n) => {
     try {
       res.json(await s.changeEstado(req.params.id, req.body.estado, req.user?.scope || null));
+    } catch (e) {
+      n(e);
+    }
+  },
+
+  // ✅ NUEVO: rol 3 (docente) -> ver sus asignaciones (agenda)
+  misAsignaciones: async (req, res, n) => {
+    try {
+      res.json(await s.misAsignaciones(req.query, req.user));
     } catch (e) {
       n(e);
     }

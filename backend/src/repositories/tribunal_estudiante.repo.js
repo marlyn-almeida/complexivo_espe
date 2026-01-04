@@ -1,3 +1,4 @@
+// src/repositories/tribunal_estudiante.repo.js
 const pool = require("../config/db");
 
 async function getTribunal(id_tribunal) {
@@ -142,6 +143,61 @@ async function setEstado(id, estado) {
   return r[0] || null;
 }
 
+// ✅ NUEVO: Mis asignaciones (ROL 3)
+// Filtra por docente a través de tribunal_docente -> carrera_docente -> id_docente.
+async function findMisAsignaciones({ id_docente, includeInactive = false } = {}) {
+  const [rows] = await pool.query(
+    `
+    SELECT
+      te.id_tribunal_estudiante,
+      te.id_tribunal,
+      te.id_estudiante,
+      te.id_franja_horario,
+      te.estado,
+      te.created_at,
+      te.updated_at,
+
+      e.nombres_estudiante,
+      e.apellidos_estudiante,
+      e.id_institucional_estudiante,
+
+      f.fecha,
+      f.hora_inicio,
+      f.hora_fin,
+      f.laboratorio,
+
+      t.caso,
+      t.nombre_tribunal,
+
+      c.nombre_carrera,
+      pa.codigo_periodo,
+
+      td.designacion
+
+    FROM tribunal_docente td
+    JOIN carrera_docente cd ON cd.id_carrera_docente = td.id_carrera_docente
+    JOIN tribunal t ON t.id_tribunal = td.id_tribunal
+    JOIN tribunal_estudiante te ON te.id_tribunal = t.id_tribunal
+
+    JOIN carrera_periodo cp ON cp.id_carrera_periodo = t.id_carrera_periodo
+    JOIN carrera c ON c.id_carrera = cp.id_carrera
+    JOIN periodo_academico pa ON pa.id_periodo = cp.id_periodo
+
+    JOIN estudiante e ON e.id_estudiante = te.id_estudiante
+    JOIN franja_horario f ON f.id_franja_horario = te.id_franja_horario
+
+    WHERE cd.id_docente = ?
+      AND cd.estado = 1
+      AND td.estado = 1
+      AND (? = 1 OR te.estado = 1)
+    ORDER BY f.fecha DESC, f.hora_inicio DESC
+    `,
+    [Number(id_docente), includeInactive ? 1 : 0]
+  );
+
+  return rows;
+}
+
 module.exports = {
   getTribunal,
   getTribunalCarreraId,
@@ -152,4 +208,5 @@ module.exports = {
   findAll,
   create,
   setEstado,
+  findMisAsignaciones, // ✅ NUEVO
 };

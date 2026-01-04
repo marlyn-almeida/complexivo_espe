@@ -1,3 +1,4 @@
+// src/controllers/tribunal.controller.js
 const s = require("../services/tribunal.service");
 
 module.exports = {
@@ -36,6 +37,15 @@ module.exports = {
   changeEstado: async (req, res, next) => {
     try {
       res.json(await s.changeEstado(req.params.id, req.body.estado, req.user?.scope || null));
+    } catch (e) {
+      next(e);
+    }
+  },
+
+  // ✅ NUEVO: rol 3 (docente) -> ver sus tribunales
+  misTribunales: async (req, res, next) => {
+    try {
+      res.json(await s.misTribunales(req.query, req.user));
     } catch (e) {
       next(e);
     }
