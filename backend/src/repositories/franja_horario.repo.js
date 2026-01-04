@@ -5,15 +5,27 @@ async function carreraPeriodoExists(id_carrera_periodo) {
     `SELECT id_carrera_periodo FROM carrera_periodo WHERE id_carrera_periodo=? LIMIT 1`,
     [id_carrera_periodo]
   );
-  return !!r.length;
+  return r.length > 0;
 }
 
+// ✅ valida que ese carrera_periodo pertenezca a la carrera del scope (Rol2)
+async function carreraPeriodoBelongsToCarrera(id_carrera_periodo, id_carrera) {
+  const [r] = await pool.query(
+    `SELECT 1
+     FROM carrera_periodo
+     WHERE id_carrera_periodo=? AND id_carrera=? LIMIT 1`,
+    [id_carrera_periodo, id_carrera]
+  );
+  return r.length > 0;
+}
+
+// ✅ overlap estándar
 async function overlapExists(d, excludeId = null) {
   const params = [
     d.id_carrera_periodo,
     d.fecha,
-    d.hora_inicio,
-    d.hora_fin
+    d.hora_fin,     // nueva_hora_fin
+    d.hora_inicio   // nueva_hora_inicio
   ];
 
   let sql = `
@@ -22,10 +34,7 @@ async function overlapExists(d, excludeId = null) {
     WHERE id_carrera_periodo=?
       AND fecha=?
       AND estado=1
-      AND (
-        (hora_inicio < ? AND hora_fin > ?) OR
-        (hora_inicio >= ? AND hora_inicio < ?)
-      )
+      AND (hora_inicio < ? AND hora_fin > ?)
   `;
 
   if (excludeId) {
@@ -37,11 +46,17 @@ async function overlapExists(d, excludeId = null) {
   return r.length > 0;
 }
 
-async function findAll({ includeInactive=false, carreraPeriodoId=null, fecha=null }={}) {
-  const where=[], params=[];
+// ✅ findAll con filtro por carrera (scope)
+async function findAll({ includeInactive=false, carreraPeriodoId=null, fecha=null, scopeCarreraId=null } = {}) {
+  const where = [];
+  const params = [];
+
   if (!includeInactive) where.push("f.estado=1");
   if (carreraPeriodoId) { where.push("f.id_carrera_periodo=?"); params.push(+carreraPeriodoId); }
   if (fecha) { where.push("f.fecha=?"); params.push(fecha); }
+
+  // 👇 si viene scope, amarra a la carrera por join
+  if (scopeCarreraId) { where.push("c.id_carrera=?"); params.push(+scopeCarreraId); }
 
   const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
 
@@ -105,6 +120,7 @@ async function setEstado(id, estado) {
 
 module.exports = {
   carreraPeriodoExists,
+  carreraPeriodoBelongsToCarrera,
   overlapExists,
   findAll,
   findById,

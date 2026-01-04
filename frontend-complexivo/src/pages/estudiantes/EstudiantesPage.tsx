@@ -67,66 +67,19 @@ export default function EstudiantesPage() {
   const [toast, setToast] = useState<{ msg: string; type: ToastType } | null>(null);
 
   // ===========================
-  // CARGA INICIAL
-  // ===========================
-  useEffect(() => {
-    loadCarreraPeriodos();
-  }, []);
-
-  useEffect(() => {
-    // cada vez que cambias CP o “mostrar inactivos”, recarga
-    if (selectedCP) loadAll();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCP, mostrarInactivos]);
-
-  async function loadCarreraPeriodos() {
-    try {
-      setLoading(true);
-
-      // ✅ patrón igual a Carreras/Docentes
-      const cps = await carreraPeriodoService.list(false);
-
-      setCarreraPeriodos(cps);
-
-      // auto-seleccionar el primero activo (o el primero)
-      const first = cps.find((x) => Boolean(x.estado)) ?? cps[0];
-      if (first) setSelectedCP(first.id_carrera_periodo);
-    } catch {
-      showToast("Error al cargar Carrera–Período", "error");
-      setCarreraPeriodos([]);
-      setSelectedCP("");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function loadAll() {
-    if (!selectedCP) return;
-
-    try {
-      setLoading(true);
-      const data = await estudiantesService.list({
-        includeInactive: mostrarInactivos,
-        carreraPeriodoId: Number(selectedCP),
-        q: search.trim() || undefined,
-        page: 1,
-        limit: 200,
-      });
-      setEstudiantes(data);
-    } catch {
-      showToast("Error al cargar estudiantes", "error");
-      setEstudiantes([]);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  // ===========================
   // HELPERS
   // ===========================
   function showToast(msg: string, type: ToastType = "info") {
     setToast({ msg, type });
     window.setTimeout(() => setToast(null), 3200);
+  }
+
+  // ✅ Normaliza estado: soporta 1/0, "1"/"0", true/false
+  function estado01(v: any): 0 | 1 {
+    return Number(v) === 1 ? 1 : 0;
+  }
+  function isActivo(v: any): boolean {
+    return estado01(v) === 1;
   }
 
   function resetForm() {
@@ -184,13 +137,68 @@ export default function EstudiantesPage() {
   }
 
   // ===========================
+  // CARGA INICIAL
+  // ===========================
+  useEffect(() => {
+    loadCarreraPeriodos();
+  }, []);
+
+  useEffect(() => {
+    // cada vez que cambias CP o “mostrar inactivos”, recarga
+    if (selectedCP) loadAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCP, mostrarInactivos]);
+
+  async function loadCarreraPeriodos() {
+    try {
+      setLoading(true);
+
+      // ✅ patrón igual a Carreras/Docentes
+      const cps = await carreraPeriodoService.list(false);
+
+      setCarreraPeriodos(cps);
+
+      // auto-seleccionar el primero activo (o el primero)
+      const first = cps.find((x) => Boolean(x.estado)) ?? cps[0];
+      if (first) setSelectedCP(first.id_carrera_periodo);
+    } catch {
+      showToast("Error al cargar Carrera–Período", "error");
+      setCarreraPeriodos([]);
+      setSelectedCP("");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function loadAll() {
+    if (!selectedCP) return;
+
+    try {
+      setLoading(true);
+      const data = await estudiantesService.list({
+        includeInactive: mostrarInactivos,
+        carreraPeriodoId: Number(selectedCP),
+        q: search.trim() || undefined,
+        page: 1,
+        limit: 100, // ✅ tu backend valida max 100
+      });
+      setEstudiantes(data);
+    } catch {
+      showToast("Error al cargar estudiantes", "error");
+      setEstudiantes([]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // ===========================
   // FILTRADO + ORDEN + PAGINACIÓN
   // ===========================
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
 
     return estudiantes
-      .filter((e) => (mostrarInactivos ? true : e.estado === 1))
+      .filter((e) => (mostrarInactivos ? true : isActivo(e.estado)))
       .filter((e) => {
         if (!q) return true;
         return (
@@ -219,10 +227,10 @@ export default function EstudiantesPage() {
     return filtered.slice(start, start + PAGE_SIZE);
   }, [filtered, page]);
 
-  // resumen
+  // ✅ resumen (consistente con la tabla)
   const total = estudiantes.length;
-  const activos = estudiantes.filter((e) => e.estado === 1).length;
-  const inactivos = estudiantes.filter((e) => e.estado === 0).length;
+  const activos = estudiantes.filter((e) => isActivo(e.estado)).length;
+  const inactivos = total - activos;
 
   const selectedCPLabel = useMemo(() => {
     const cp = carreraPeriodos.find((x) => x.id_carrera_periodo === selectedCP);
@@ -305,8 +313,11 @@ export default function EstudiantesPage() {
   async function onToggleEstado(e: Estudiante) {
     try {
       setLoading(true);
-      await estudiantesService.toggleEstado(e.id_estudiante, e.estado as Estado01);
-      showToast(e.estado ? "Estudiante desactivado." : "Estudiante activado.", "success");
+
+      const current: Estado01 = estado01(e.estado) as Estado01;
+      await estudiantesService.toggleEstado(e.id_estudiante, current);
+
+      showToast(current === 1 ? "Estudiante desactivado." : "Estudiante activado.", "success");
       await loadAll();
     } catch {
       showToast("No se pudo cambiar el estado.", "error");
@@ -326,7 +337,11 @@ export default function EstudiantesPage() {
           <div>
             <h2 className="title">Estudiantes</h2>
             <p className="subtitle">Gestión de estudiantes habilitados por Carrera–Período.</p>
-            {selectedCPLabel ? <p className="estudiantes-sub">Trabajando en: <b>{selectedCPLabel}</b></p> : null}
+            {selectedCPLabel ? (
+              <p className="estudiantes-sub">
+                Trabajando en: <b>{selectedCPLabel}</b>
+              </p>
+            ) : null}
           </div>
 
           <button className="btnPrimary" onClick={openCreate}>
@@ -428,37 +443,41 @@ export default function EstudiantesPage() {
                 </td>
               </tr>
             ) : pageData.length ? (
-              pageData.map((e) => (
-                <tr key={e.id_estudiante}>
-                  <td className="tdCode">{e.id_institucional_estudiante}</td>
-                  <td className="tdStrong">{e.nombres_estudiante}</td>
-                  <td className="tdStrong">{e.apellidos_estudiante}</td>
-                  <td>{e.correo_estudiante || "-"}</td>
-                  <td>
-                    <span className={`badge ${e.estado ? "badge-success" : "badge-danger"}`}>
-                      {e.estado ? "Activo" : "Inactivo"}
-                    </span>
-                  </td>
+              pageData.map((e) => {
+                const activo = isActivo(e.estado);
 
-                  <td className="actions">
-                    <button className="btnIcon btnView" title="Ver" onClick={() => openView(e)}>
-                      <Eye size={16} />
-                    </button>
+                return (
+                  <tr key={e.id_estudiante}>
+                    <td className="tdCode">{e.id_institucional_estudiante}</td>
+                    <td className="tdStrong">{e.nombres_estudiante}</td>
+                    <td className="tdStrong">{e.apellidos_estudiante}</td>
+                    <td>{e.correo_estudiante || "-"}</td>
+                    <td>
+                      <span className={`badge ${activo ? "badge-success" : "badge-danger"}`}>
+                        {activo ? "Activo" : "Inactivo"}
+                      </span>
+                    </td>
 
-                    <button className="btnIcon btnEdit" title="Editar" onClick={() => openEdit(e)}>
-                      <Pencil size={16} />
-                    </button>
+                    <td className="actions">
+                      <button className="btnIcon btnView" title="Ver" onClick={() => openView(e)}>
+                        <Eye size={16} />
+                      </button>
 
-                    <button
-                      className={`btnIcon ${e.estado ? "btnDeactivate" : "btnActivate"}`}
-                      title={e.estado ? "Desactivar" : "Activar"}
-                      onClick={() => onToggleEstado(e)}
-                    >
-                      {e.estado ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
-                    </button>
-                  </td>
-                </tr>
-              ))
+                      <button className="btnIcon btnEdit" title="Editar" onClick={() => openEdit(e)}>
+                        <Pencil size={16} />
+                      </button>
+
+                      <button
+                        className={`btnIcon ${activo ? "btnDeactivate" : "btnActivate"}`}
+                        title={activo ? "Desactivar" : "Activar"}
+                        onClick={() => onToggleEstado(e)}
+                      >
+                        {activo ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })
             ) : (
               <tr>
                 <td colSpan={6} className="muted" style={{ padding: 16 }}>
@@ -634,8 +653,8 @@ export default function EstudiantesPage() {
               <div className="viewItem">
                 <div className="viewKey">Estado</div>
                 <div className="viewVal">
-                  <span className={`badge ${viewEstudiante.estado ? "badge-success" : "badge-danger"}`}>
-                    {viewEstudiante.estado ? "Activo" : "Inactivo"}
+                  <span className={`badge ${isActivo(viewEstudiante.estado) ? "badge-success" : "badge-danger"}`}>
+                    {isActivo(viewEstudiante.estado) ? "Activo" : "Inactivo"}
                   </span>
                 </div>
               </div>

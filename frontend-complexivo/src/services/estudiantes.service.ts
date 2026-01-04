@@ -22,16 +22,18 @@ export type EstudianteUpdateDTO = EstudianteCreateDTO;
 
 export const estudiantesService = {
   list: async (params?: EstudianteListParams): Promise<Estudiante[]> => {
+    const limit = Math.min(params?.limit ?? 100, 100); // ✅ nunca pasa de 100
+
     const res = await axiosClient.get<Estudiante[]>("/estudiantes", {
       params: {
         carreraPeriodoId: params?.carreraPeriodoId,
-        // ✅ AQUÍ EL FIX: 1/0 en lugar de "true"/"false"
         includeInactive: params?.includeInactive ? 1 : 0,
         q: params?.q?.trim() || undefined,
         page: params?.page ?? 1,
-        limit: params?.limit ?? 200,
+        limit,
       },
     });
+
     return res.data ?? [];
   },
 
