@@ -127,3 +127,32 @@
 .asignBtnIcon:hover {
   background: rgba(0,0,0,0.03);
 }
+
+/* ✅ Modal ancho para Asignaciones */
+.modalWide {
+  width: min(980px, 96vw);
+  max-height: 86vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* En modales grandes, que el body scrollee */
+.modalWide .modalBody {
+  overflow: auto;
+}
+
+/* Ajuste: la tabla dentro del modal se vea bien */
+.modalWide .tableWrap {
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.modalWide .table thead th {
+  background: rgba(0,0,0,0.03);
+}
+
+.modalWide .empty {
+  padding: 14px;
+}

@@ -106,7 +106,7 @@ async function findDocentesByTribunal(id_tribunal) {
 // ✅ TRANSACCIONES
 // =====================================================
 
-// calcula caso = MAX+1 bajo lock por carrera_periodo (evita carreras)
+// calcula caso = MAX+1 bajo lock por carrera_periodo
 async function getNextCasoTx(conn, id_carrera_periodo) {
   const [r] = await conn.query(
     `SELECT COALESCE(MAX(caso),0)+1 AS nextCaso
@@ -139,10 +139,11 @@ async function upsertDocentesTx(conn, id_tribunal, docentes) {
   // estrategia simple y segura: borrar y volver a insertar
   await conn.query(`DELETE FROM tribunal_docente WHERE id_tribunal=?`, [id_tribunal]);
 
+  // ✅ FIX: cada fila debe tener 4 valores porque insertas 4 columnas
   const values = [
-    [id_tribunal, docentes.presidente, "PRESIDENTE"],
-    [id_tribunal, docentes.integrante1, "INTEGRANTE_1"],
-    [id_tribunal, docentes.integrante2, "INTEGRANTE_2"],
+    [id_tribunal, Number(docentes.presidente),  "PRESIDENTE",   1],
+    [id_tribunal, Number(docentes.integrante1), "INTEGRANTE_1", 1],
+    [id_tribunal, Number(docentes.integrante2), "INTEGRANTE_2", 1],
   ];
 
   await conn.query(
@@ -151,6 +152,7 @@ async function upsertDocentesTx(conn, id_tribunal, docentes) {
     [values]
   );
 }
+
 
 async function createWithDocentes(d) {
   const conn = await pool.getConnection();

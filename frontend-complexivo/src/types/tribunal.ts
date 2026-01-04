@@ -5,17 +5,18 @@ export interface Tribunal {
   id_tribunal: number;
   id_carrera_periodo: number;
 
-  nombre_tribunal: string;
-
-  // ✅ opcional (si tu tabla lo tiene nullable)
+  id_carrera_docente: number; // (según tu backend)
   caso?: number | null;
+
+  nombre_tribunal: string | null;
+  descripcion_tribunal?: string | null; // ✅
 
   estado: Estado01;
 
   created_at?: string;
   updated_at?: string | null;
 
-  // joins (si tu repo los manda en list)
+  // joins (si vienen en list)
   nombre_carrera?: string;
   codigo_carrera?: string;
   codigo_periodo?: string;

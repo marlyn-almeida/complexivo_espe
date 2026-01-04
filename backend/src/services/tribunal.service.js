@@ -1,151 +1,190 @@
 const repo = require("../repositories/tribunal.repo");
 
-function err(msg, status) {
-  const e = new Error(msg);
-  e.status = status;
-  return e;
-}
-
-async function list(query = {}, scope = null) {
-  // ✅ tu route convierte includeInactive a boolean
-  const includeInactive = query.includeInactive === true;
-  const scopeCarreraId = scope?.id_carrera ? +scope.id_carrera : null;
-
-  return repo.findAll({
-    includeInactive,
-    carreraPeriodoId: query.carreraPeriodoId || null,
-    scopeCarreraId,
-  });
-}
-
-async function get(id, scope = null) {
-  const t = await repo.findById(id);
-  if (!t) throw err("Tribunal no encontrado", 404);
-
-  // ✅ scope: que el tribunal pertenezca a su carrera
-  if (scope?.id_carrera) {
-    const carreraId = await repo.getCarreraIdByCarreraPeriodo(t.id_carrera_periodo);
-    if (+carreraId !== +scope.id_carrera) throw err("No autorizado para acceder a este tribunal", 403);
-  }
-
-  // devolvemos también docentes del tribunal
-  const docentes = await repo.findDocentesByTribunal(id);
-  return { ...t, docentes };
+function isRol2(user) {
+  return Number(user?.rol) === 2;
 }
 
 function validarDocentes(docentes) {
-  if (!docentes) throw err("Debe enviar docentes del tribunal", 422);
+  if (!docentes || typeof docentes !== "object") {
+    const e = new Error("Debe enviar docentes { presidente, integrante1, integrante2 }");
+    e.status = 422;
+    throw e;
+  }
 
-  const presidente = +docentes.presidente;
-  const integrante1 = +docentes.integrante1;
-  const integrante2 = +docentes.integrante2;
+  const { presidente, integrante1, integrante2 } = docentes;
 
   if (!presidente || !integrante1 || !integrante2) {
-    throw err("Debe seleccionar Presidente, Integrante 1 e Integrante 2", 422);
+    const e = new Error("Debe seleccionar presidente, integrante1 e integrante2");
+    e.status = 422;
+    throw e;
   }
 
-  const set = new Set([presidente, integrante1, integrante2]);
-  if (set.size !== 3) throw err("Los docentes del tribunal no pueden repetirse", 422);
-
-  return { presidente, integrante1, integrante2 };
+  const set = new Set([+presidente, +integrante1, +integrante2]);
+  if (set.size !== 3) {
+    const e = new Error("No se puede repetir el mismo docente en el tribunal");
+    e.status = 422;
+    throw e;
+  }
 }
 
-async function validarCoherenciaCarrera(d, scope) {
-  const okCP = await repo.carreraPeriodoExists(d.id_carrera_periodo);
-  if (!okCP) throw err("La relación carrera_periodo no existe", 422);
+async function list(query = {}, user) {
+  return repo.findAll({
+    includeInactive: query.includeInactive === "true",
+    carreraPeriodoId: query.carreraPeriodoId || null,
+    scopeCarreraId: isRol2(user) ? user?.scope?.id_carrera : null,
+  });
+}
 
-  const carreraIdCP = await repo.getCarreraIdByCarreraPeriodo(d.id_carrera_periodo);
-  if (!carreraIdCP) throw err("No se pudo obtener la carrera del carrera_periodo", 422);
-
-  // ✅ scope (Rol 2): solo su carrera
-  if (scope?.id_carrera && +scope.id_carrera !== +carreraIdCP) {
-    throw err("No autorizado para operar en otra carrera", 403);
+async function get(id, user) {
+  const t = await repo.findById(id);
+  if (!t) {
+    const e = new Error("Tribunal no encontrado");
+    e.status = 404;
+    throw e;
   }
 
-  const docentes = validarDocentes(d.docentes);
-
-  // valida que cada carrera_docente pertenezca a la MISMA carrera
-  for (const id_cd of [docentes.presidente, docentes.integrante1, docentes.integrante2]) {
-    const cd = await repo.getCarreraIdByCarreraDocente(id_cd);
-    if (!cd) throw err("La asignación carrera_docente no existe", 422);
-    if (+cd.id_carrera !== +carreraIdCP) {
-      throw err("Un docente seleccionado no pertenece a la misma carrera del Carrera–Período", 422);
+  // si es rol 2: validar que el tribunal sea de su carrera (por carrera_periodo)
+  if (isRol2(user)) {
+    const carreraId = await repo.getCarreraIdByCarreraPeriodo(t.id_carrera_periodo);
+    if (Number(carreraId) !== Number(user?.scope?.id_carrera)) {
+      const e = new Error("Acceso denegado: tribunal fuera de tu carrera");
+      e.status = 403;
+      throw e;
     }
   }
 
-  return { carreraIdCP, docentes };
+  // opcional: incluir docentes asignados
+  t.docentes = await repo.findDocentesByTribunal(id);
+  return t;
 }
 
-async function create(d, scope = null) {
-  if (!d.nombre_tribunal || !String(d.nombre_tribunal).trim()) {
-    throw err("nombre_tribunal es requerido", 422);
+async function create(d, user) {
+  const okCP = await repo.carreraPeriodoExists(d.id_carrera_periodo);
+  if (!okCP) {
+    const e = new Error("La relación carrera_periodo no existe");
+    e.status = 422;
+    throw e;
   }
 
-  // caso opcional: si viene, validamos que sea int>=1 (la ruta también puede hacerlo)
-  if (d.caso != null && d.caso !== "") {
-    const c = +d.caso;
-    if (!Number.isInteger(c) || c < 1) throw err("caso debe ser entero >= 1", 422);
-    d.caso = c;
-  } else {
-    delete d.caso; // para que repo lo autogenere
+  validarDocentes(d.docentes);
+
+  const carreraId = await repo.getCarreraIdByCarreraPeriodo(d.id_carrera_periodo);
+  if (!carreraId) {
+    const e = new Error("No se pudo determinar la carrera del carrera_periodo");
+    e.status = 422;
+    throw e;
   }
 
-  const { docentes } = await validarCoherenciaCarrera(d, scope);
+  // rol 2: no puede crear para otra carrera
+  if (isRol2(user) && Number(carreraId) !== Number(user?.scope?.id_carrera)) {
+    const e = new Error("Acceso denegado: solo puedes crear tribunales para tu carrera");
+    e.status = 403;
+    throw e;
+  }
 
-  // ✅ mantenemos tribunal.id_carrera_docente = PRESIDENTE (responsable)
-  const payload = {
-    id_carrera_periodo: +d.id_carrera_periodo,
-    id_carrera_docente: docentes.presidente,
-    caso: d.caso, // puede venir o no
-    nombre_tribunal: String(d.nombre_tribunal).trim(),
-    descripcion_tribunal: d.descripcion_tribunal ? String(d.descripcion_tribunal).trim() : null,
-    docentes,
-  };
+  // validar cada carrera_docente
+  const ids = [
+    { id: +d.docentes.presidente, label: "PRESIDENTE" },
+    { id: +d.docentes.integrante1, label: "INTEGRANTE_1" },
+    { id: +d.docentes.integrante2, label: "INTEGRANTE_2" },
+  ];
 
-  const id = await repo.createWithDocentes(payload);
-  return get(id, scope);
+  for (const x of ids) {
+    const cd = await repo.getCarreraIdByCarreraDocente(x.id);
+    if (!cd || Number(cd.estado) !== 1) {
+      const e = new Error(`carrera_docente inválido o inactivo (${x.label})`);
+      e.status = 422;
+      throw e;
+    }
+    if (Number(cd.id_carrera) !== Number(carreraId)) {
+      const e = new Error(`El docente (${x.label}) no pertenece a la carrera del tribunal`);
+      e.status = 422;
+      throw e;
+    }
+  }
+
+  // ✅ campo legacy en tribunal: id_carrera_docente = PRESIDENTE
+  const tribunalId = await repo.createWithDocentes({
+    id_carrera_periodo: d.id_carrera_periodo,
+    id_carrera_docente: +d.docentes.presidente,
+    caso: d.caso, // opcional: si no viene, repo lo genera
+    nombre_tribunal: d.nombre_tribunal,
+    descripcion_tribunal: d.descripcion_tribunal ?? null,
+    docentes: d.docentes,
+  });
+
+  const created = await repo.findById(tribunalId);
+  created.docentes = await repo.findDocentesByTribunal(tribunalId);
+  return created;
 }
 
-async function update(id, d, scope = null) {
-  const current = await get(id, scope); // valida existencia + scope
+async function update(id, d, user) {
+  await get(id, user); // valida existencia + scope rol 2
 
-  if (!d.nombre_tribunal || !String(d.nombre_tribunal).trim()) {
-    throw err("nombre_tribunal es requerido", 422);
+  const okCP = await repo.carreraPeriodoExists(d.id_carrera_periodo);
+  if (!okCP) {
+    const e = new Error("La relación carrera_periodo no existe");
+    e.status = 422;
+    throw e;
   }
 
-  if (!d.id_carrera_periodo) throw err("id_carrera_periodo es requerido", 422);
-
-  // caso opcional: si lo mandan, lo respetamos, si no -> se mantiene
-  if (d.caso != null && d.caso !== "") {
-    const c = +d.caso;
-    if (!Number.isInteger(c) || c < 1) throw err("caso debe ser entero >= 1", 422);
-    d.caso = c;
-  } else {
-    d.caso = null;
-  }
-
-  // si mandan docentes, validamos coherencia; si no mandan, se mantiene
-  let docentes = null;
+  // si mandan docentes, validarlos y validar coherencia
   if (d.docentes) {
-    const r = await validarCoherenciaCarrera(d, scope);
-    docentes = r.docentes;
+    validarDocentes(d.docentes);
+
+    const carreraId = await repo.getCarreraIdByCarreraPeriodo(d.id_carrera_periodo);
+    if (!carreraId) {
+      const e = new Error("No se pudo determinar la carrera del carrera_periodo");
+      e.status = 422;
+      throw e;
+    }
+
+    if (isRol2(user) && Number(carreraId) !== Number(user?.scope?.id_carrera)) {
+      const e = new Error("Acceso denegado: solo puedes actualizar tribunales de tu carrera");
+      e.status = 403;
+      throw e;
+    }
+
+    const ids = [
+      { id: +d.docentes.presidente, label: "PRESIDENTE" },
+      { id: +d.docentes.integrante1, label: "INTEGRANTE_1" },
+      { id: +d.docentes.integrante2, label: "INTEGRANTE_2" },
+    ];
+
+    for (const x of ids) {
+      const cd = await repo.getCarreraIdByCarreraDocente(x.id);
+      if (!cd || Number(cd.estado) !== 1) {
+        const e = new Error(`carrera_docente inválido o inactivo (${x.label})`);
+        e.status = 422;
+        throw e;
+      }
+      if (Number(cd.id_carrera) !== Number(carreraId)) {
+        const e = new Error(`El docente (${x.label}) no pertenece a la carrera del tribunal`);
+        e.status = 422;
+        throw e;
+      }
+    }
   }
 
-  const payload = {
-    id_carrera_periodo: +d.id_carrera_periodo,
-    id_carrera_docente: docentes ? docentes.presidente : current.id_carrera_docente,
-    caso: d.caso, // null -> repo mantiene el actual
-    nombre_tribunal: String(d.nombre_tribunal).trim(),
-    descripcion_tribunal: d.descripcion_tribunal ? String(d.descripcion_tribunal).trim() : null,
-    docentes, // null -> no toca tribunal_docente
-  };
+  // id_carrera_docente legacy: si mandan docentes, PRESIDENTE; si no, mantener el que venga
+  const idCarreraDocente = d.docentes ? +d.docentes.presidente : +d.id_carrera_docente;
 
-  await repo.updateWithDocentes(+id, payload);
-  return get(+id, scope);
+  await repo.updateWithDocentes(id, {
+    id_carrera_periodo: d.id_carrera_periodo,
+    id_carrera_docente: idCarreraDocente,
+    caso: d.caso,
+    nombre_tribunal: d.nombre_tribunal,
+    descripcion_tribunal: d.descripcion_tribunal ?? null,
+    docentes: d.docentes, // opcional
+  });
+
+  const updated = await repo.findById(id);
+  updated.docentes = await repo.findDocentesByTribunal(id);
+  return updated;
 }
 
-async function changeEstado(id, estado, scope = null) {
-  await get(id, scope);
+async function changeEstado(id, estado, user) {
+  await get(id, user);
   return repo.setEstado(id, estado);
 }
 

@@ -1,7 +1,5 @@
-// src/services/tribunales.service.ts
 import axiosClient from "../api/axiosClient";
 import type { Tribunal, Estado01 } from "../types/tribunal";
-import type { TribunalDocenteDTO } from "../types/tribunalDocente";
 
 export type TribunalListParams = {
   carreraPeriodoId?: number;
@@ -14,13 +12,31 @@ export type TribunalListParams = {
 export type TribunalCreateDTO = {
   id_carrera_periodo: number;
   nombre_tribunal: string;
-  caso?: number | null;
 
-  // ✅ docentes en la misma creación (como dijiste)
-  docentes: TribunalDocenteDTO[];
+  // opcional
+  caso?: number;
+  descripcion_tribunal?: string;
+
+  // ✅ EXACTO como tribunal.routes espera
+  docentes: {
+    presidente: number;    // id_carrera_docente
+    integrante1: number;   // id_carrera_docente
+    integrante2: number;   // id_carrera_docente
+  };
 };
 
-export type TribunalUpdateDTO = TribunalCreateDTO;
+// para update: tu route permite docentes opcional, pero tú normalmente lo mandas
+export type TribunalUpdateDTO = {
+  id_carrera_periodo: number;
+  nombre_tribunal: string;
+  caso?: number;
+  descripcion_tribunal?: string;
+  docentes?: {
+    presidente?: number;
+    integrante1?: number;
+    integrante2?: number;
+  };
+};
 
 export const tribunalesService = {
   list: async (params?: TribunalListParams): Promise<Tribunal[]> => {
@@ -45,12 +61,25 @@ export const tribunalesService = {
   },
 
   create: async (payload: TribunalCreateDTO) => {
-    const res = await axiosClient.post("/tribunales", payload);
+    const body = {
+      ...payload,
+      // ✅ evita mandar caso vacío o NaN
+      caso: typeof payload.caso === "number" ? payload.caso : undefined,
+      descripcion_tribunal: payload.descripcion_tribunal?.trim() || undefined,
+    };
+
+    const res = await axiosClient.post("/tribunales", body);
     return res.data;
   },
 
   update: async (id: number, payload: TribunalUpdateDTO) => {
-    const res = await axiosClient.put(`/tribunales/${id}`, payload);
+    const body = {
+      ...payload,
+      caso: typeof payload.caso === "number" ? payload.caso : undefined,
+      descripcion_tribunal: payload.descripcion_tribunal?.trim() || undefined,
+    };
+
+    const res = await axiosClient.put(`/tribunales/${id}`, body);
     return res.data;
   },
 

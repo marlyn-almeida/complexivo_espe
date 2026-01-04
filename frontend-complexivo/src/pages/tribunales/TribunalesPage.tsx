@@ -1,25 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Pencil, Eye, ToggleLeft, ToggleRight, Search, CalendarPlus, Users } from "lucide-react";
+import { Plus, Pencil, Eye, ToggleLeft, ToggleRight, Search, CalendarPlus } from "lucide-react";
 import "./TribunalesPage.css";
 
 import type { Tribunal, Estado01 as Estado01Trib } from "../../types/tribunal";
 import type { TribunalEstudiante, Estado01 as Estado01TE } from "../../types/tribunalEstudiante";
-import type { TribunalDocenteDTO } from "../../types/tribunalDocente";
-
 import type { CarreraPeriodo } from "../../types/carreraPeriodo";
 import type { Estudiante } from "../../types/estudiante";
 import type { FranjaHorario } from "../../types/franjaHoraria";
-import type { Docente } from "../../types/docente";
+import type { CarreraDocente } from "../../types/carreraDocente";
 
 import { carreraPeriodoService } from "../../services/carreraPeriodo.service";
 import { estudiantesService } from "../../services/estudiantes.service";
-import { docentesService } from "../../services/docentes.service";
-
-// ✅ IMPORT CORRECTO (tu archivo real es franjaHorario.service.ts)
-import { franjaHorarioService } from "../../services/franjasHorarias.service";
-
+import { franjaHorarioService } from "../../services/franjasHorarias.service"; // ✅ lo dejas como tú lo tienes
 import { tribunalesService } from "../../services/tribunales.service";
 import { tribunalEstudiantesService } from "../../services/tribunalEstudiantes.service";
+import { carreraDocenteService } from "../../services/carreraDocente.service"; // ✅ NUEVO
 
 import TribunalAsignacionesModal from "./TribunalAsignacionesModal";
 
@@ -31,7 +26,9 @@ type TribunalFormState = {
   id_carrera_periodo: number | "";
   nombre_tribunal: string;
   caso: string; // input string (opcional)
+  descripcion_tribunal: string;
 
+  // ✅ ahora son id_carrera_docente
   presidente: number | "";
   integrante1: number | "";
   integrante2: number | "";
@@ -48,8 +45,7 @@ export default function TribunalesPage() {
   const [selectedCP, setSelectedCP] = useState<number | "">("");
 
   const [tribunales, setTribunales] = useState<Tribunal[]>([]);
-  const [docentes, setDocentes] = useState<Docente[]>([]);
-
+  const [docentes, setDocentes] = useState<CarreraDocente[]>([]); // ✅ CAMBIO
   const [loading, setLoading] = useState(false);
 
   // ===== UI / FILTROS =====
@@ -75,6 +71,7 @@ export default function TribunalesPage() {
     id_carrera_periodo: "",
     nombre_tribunal: "",
     caso: "",
+    descripcion_tribunal: "",
     presidente: "",
     integrante1: "",
     integrante2: "",
@@ -110,18 +107,13 @@ export default function TribunalesPage() {
     return `${carrera} — ${periodo}`;
   }
 
-  function docenteLabel(d: Docente) {
-    const nombre = `${d.apellidos_docente ?? ""} ${d.nombres_docente ?? ""}`.trim();
-    const ced = d.cedula ? ` — ${d.cedula}` : "";
-    return (nombre || `Docente ${d.id_docente}`) + ced;
-  }
-
   function resetForm() {
     setEditingTribunal(null);
     setForm({
       id_carrera_periodo: selectedCP || "",
       nombre_tribunal: "",
       caso: "",
+      descripcion_tribunal: "",
       presidente: "",
       integrante1: "",
       integrante2: "",
@@ -144,6 +136,8 @@ export default function TribunalesPage() {
       id_carrera_periodo: t.id_carrera_periodo,
       nombre_tribunal: t.nombre_tribunal ?? "",
       caso: t.caso == null ? "" : String(t.caso),
+      descripcion_tribunal: t.descripcion_tribunal ?? "",
+      // si quieres, luego hacemos GET detalle con miembros para precargar
       presidente: "",
       integrante1: "",
       integrante2: "",
@@ -179,7 +173,7 @@ export default function TribunalesPage() {
   useEffect(() => {
     if (selectedCP) {
       loadAll();
-      loadDocentes(); // ✅ lista de docentes del módulo (rol2 filtrado por scope carrera)
+      loadDocentesByCP(); // ✅ importante: docentes por ese CP
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCP, mostrarInactivos]);
@@ -198,6 +192,19 @@ export default function TribunalesPage() {
       setSelectedCP("");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadDocentesByCP() {
+    if (!selectedCP) return;
+    try {
+      const data = await carreraDocenteService.list({
+        includeInactive: false,
+        carreraPeriodoId: Number(selectedCP),
+      });
+      setDocentes(data ?? []);
+    } catch {
+      setDocentes([]);
     }
   }
 
@@ -222,17 +229,6 @@ export default function TribunalesPage() {
       setLoading(false);
     }
   }
-
-async function loadDocentes() {
-  try {
-    // ✅ tu service REAL: list(includeInactive:boolean)
-    const data = await docentesService.list(false);
-    setDocentes(data ?? []);
-  } catch {
-    setDocentes([]);
-  }
-}
-
 
   // ===== FILTRO + PAGINACIÓN =====
   const filtered = useMemo(() => {
@@ -272,23 +268,16 @@ async function loadDocentes() {
     const ids = [form.presidente, form.integrante1, form.integrante2].filter(Boolean) as number[];
     if (ids.length === 3 && new Set(ids).size !== 3) e.docentes = "No puedes repetir el mismo docente en el tribunal.";
 
-    // ✅ si no viene id_carrera_docente (backend no actualizado), avisa
-    if (
-      form.presidente &&
-      !docentes.some((d) => Number(d.id_carrera_docente) === Number(form.presidente))
-    ) {
-      e.presidente = "No se encontró id_carrera_docente. Revisa que /docentes devuelva id_carrera_docente.";
-    }
-
     return e;
   }
 
-  function buildDocentesPayload(): TribunalDocenteDTO[] {
-    const arr: TribunalDocenteDTO[] = [];
-    if (form.presidente) arr.push({ id_carrera_docente: Number(form.presidente), designacion: "PRESIDENTE" });
-    if (form.integrante1) arr.push({ id_carrera_docente: Number(form.integrante1), designacion: "INTEGRANTE_1" });
-    if (form.integrante2) arr.push({ id_carrera_docente: Number(form.integrante2), designacion: "INTEGRANTE_2" });
-    return arr;
+  function buildDocentesPayloadObject() {
+    // ✅ ya son ids de carrera_docente
+    return {
+      presidente: Number(form.presidente),
+      integrante1: Number(form.integrante1),
+      integrante2: Number(form.integrante2),
+    };
   }
 
   async function onSave() {
@@ -306,15 +295,16 @@ async function loadDocentes() {
       const payload = {
         id_carrera_periodo: Number(form.id_carrera_periodo),
         nombre_tribunal: form.nombre_tribunal.trim(),
-        caso: form.caso.trim() ? Number(form.caso.trim()) : null,
-        docentes: buildDocentesPayload(),
+        caso: form.caso.trim() ? Number(form.caso.trim()) : undefined,
+        descripcion_tribunal: form.descripcion_tribunal.trim() ? form.descripcion_tribunal.trim() : undefined,
+        docentes: buildDocentesPayloadObject(),
       };
 
       if (editingTribunal) {
-        await tribunalesService.update(editingTribunal.id_tribunal, payload);
+        await tribunalesService.update(editingTribunal.id_tribunal, payload as any);
         showToast("Tribunal actualizado.", "success");
       } else {
-        await tribunalesService.create(payload);
+        await tribunalesService.create(payload as any);
         showToast("Tribunal creado.", "success");
       }
 
@@ -452,13 +442,7 @@ async function loadDocentes() {
     }
   }
 
-  // ===== RENDER =====
   const cpLabel = selectedCPLabel();
-
-  const docentesDisponibles = useMemo(
-    () => (docentes ?? []).filter((d) => d.estado === 1 && d.id_carrera_docente),
-    [docentes]
-  );
 
   return (
     <div className="page">
@@ -650,14 +634,28 @@ async function loadDocentes() {
                   {errors.nombre_tribunal ? <p className="error">{errors.nombre_tribunal}</p> : null}
                 </div>
 
-                {/* ✅ SELECTS de docentes */}
+                <div className="field full">
+                  <label className="fieldLabel">Descripción (opcional)</label>
+                  <textarea
+                    className="textarea"
+                    value={form.descripcion_tribunal}
+                    onChange={(e) => setForm((p) => ({ ...p, descripcion_tribunal: e.target.value }))}
+                    placeholder="Notas / detalles..."
+                  />
+                </div>
+
+                {/* ✅ SELECTS CON id_carrera_docente */}
                 <div className="field">
                   <label className="fieldLabel">Presidente</label>
-                  <select className="select" value={form.presidente} onChange={(e) => setForm((p) => ({ ...p, presidente: e.target.value ? Number(e.target.value) : "" }))}>
+                  <select
+                    className="select"
+                    value={form.presidente}
+                    onChange={(e) => setForm((p) => ({ ...p, presidente: e.target.value ? Number(e.target.value) : "" }))}
+                  >
                     <option value="">Seleccione...</option>
-                    {docentesDisponibles.map((d) => (
-                      <option key={Number(d.id_carrera_docente)} value={Number(d.id_carrera_docente)}>
-                        {docenteLabel(d)}
+                    {docentes.map((cd) => (
+                      <option key={cd.id_carrera_docente} value={cd.id_carrera_docente}>
+                        {cd.apellidos_docente} {cd.nombres_docente} — {cd.id_institucional_docente}
                       </option>
                     ))}
                   </select>
@@ -666,11 +664,15 @@ async function loadDocentes() {
 
                 <div className="field">
                   <label className="fieldLabel">Integrante 1</label>
-                  <select className="select" value={form.integrante1} onChange={(e) => setForm((p) => ({ ...p, integrante1: e.target.value ? Number(e.target.value) : "" }))}>
+                  <select
+                    className="select"
+                    value={form.integrante1}
+                    onChange={(e) => setForm((p) => ({ ...p, integrante1: e.target.value ? Number(e.target.value) : "" }))}
+                  >
                     <option value="">Seleccione...</option>
-                    {docentesDisponibles.map((d) => (
-                      <option key={Number(d.id_carrera_docente)} value={Number(d.id_carrera_docente)}>
-                        {docenteLabel(d)}
+                    {docentes.map((cd) => (
+                      <option key={cd.id_carrera_docente} value={cd.id_carrera_docente}>
+                        {cd.apellidos_docente} {cd.nombres_docente} — {cd.id_institucional_docente}
                       </option>
                     ))}
                   </select>
@@ -679,23 +681,26 @@ async function loadDocentes() {
 
                 <div className="field">
                   <label className="fieldLabel">Integrante 2</label>
-                  <select className="select" value={form.integrante2} onChange={(e) => setForm((p) => ({ ...p, integrante2: e.target.value ? Number(e.target.value) : "" }))}>
+                  <select
+                    className="select"
+                    value={form.integrante2}
+                    onChange={(e) => setForm((p) => ({ ...p, integrante2: e.target.value ? Number(e.target.value) : "" }))}
+                  >
                     <option value="">Seleccione...</option>
-                    {docentesDisponibles.map((d) => (
-                      <option key={Number(d.id_carrera_docente)} value={Number(d.id_carrera_docente)}>
-                        {docenteLabel(d)}
+                    {docentes.map((cd) => (
+                      <option key={cd.id_carrera_docente} value={cd.id_carrera_docente}>
+                        {cd.apellidos_docente} {cd.nombres_docente} — {cd.id_institucional_docente}
                       </option>
                     ))}
                   </select>
                   {errors.integrante2 ? <p className="error">{errors.integrante2}</p> : null}
                 </div>
 
-                {errors.docentes ? <p className="error full">{errors.docentes}</p> : null}
-
-                <div className="hint full">
-                  <Users size={16} />
-                  <span>Selecciona los docentes disponibles para tu carrera (rol 2) y se guardará su <b>id_carrera_docente</b>.</span>
-                </div>
+                {errors.docentes ? (
+                  <div className="field full">
+                    <p className="error">{errors.docentes}</p>
+                  </div>
+                ) : null}
               </div>
             </div>
 
@@ -711,7 +716,7 @@ async function loadDocentes() {
         </div>
       ) : null}
 
-      {/* MODAL VER */}
+      {/* MODAL VIEW */}
       {showViewModal && viewTribunal ? (
         <div className="modalOverlay" onMouseDown={() => setShowViewModal(false)}>
           <div className="modalCard" onMouseDown={(e) => e.stopPropagation()}>
@@ -721,36 +726,30 @@ async function loadDocentes() {
                 ✕
               </button>
             </div>
-
             <div className="modalBody">
-              <div className="viewGrid">
-                <div className="viewItem">
-                  <div className="viewKey">Nombre</div>
-                  <div className="viewVal">{viewTribunal.nombre_tribunal}</div>
+              <div className="kv">
+                <div className="kvRow">
+                  <span className="kvKey">Nombre</span>
+                  <span className="kvVal">{viewTribunal.nombre_tribunal}</span>
                 </div>
-
-                <div className="viewItem">
-                  <div className="viewKey">Caso</div>
-                  <div className="viewVal">{viewTribunal.caso == null ? "—" : viewTribunal.caso}</div>
+                <div className="kvRow">
+                  <span className="kvKey">Caso</span>
+                  <span className="kvVal">{viewTribunal.caso == null ? "—" : viewTribunal.caso}</span>
                 </div>
-
-                <div className="viewItem">
-                  <div className="viewKey">Carrera</div>
-                  <div className="viewVal">{viewTribunal.nombre_carrera ?? "—"}</div>
+                <div className="kvRow">
+                  <span className="kvKey">Descripción</span>
+                  <span className="kvVal">{viewTribunal.descripcion_tribunal?.trim() ? viewTribunal.descripcion_tribunal : "—"}</span>
                 </div>
-
-                <div className="viewItem">
-                  <div className="viewKey">Período</div>
-                  <div className="viewVal">{viewTribunal.codigo_periodo ?? "—"}</div>
+                <div className="kvRow">
+                  <span className="kvKey">Carrera–Período</span>
+                  <span className="kvVal">{selectedCPLabel() || "—"}</span>
                 </div>
-
-                <div className="viewItem viewItemFull">
-                  <div className="viewKey">Estado</div>
-                  <div className="viewVal">{isActivo(viewTribunal.estado) ? "Activo" : "Inactivo"}</div>
+                <div className="kvRow">
+                  <span className="kvKey">Estado</span>
+                  <span className="kvVal">{isActivo(viewTribunal.estado) ? "Activo" : "Inactivo"}</span>
                 </div>
               </div>
             </div>
-
             <div className="modalFooter">
               <button className="btnPrimary" onClick={() => setShowViewModal(false)}>
                 Cerrar
@@ -760,7 +759,7 @@ async function loadDocentes() {
         </div>
       ) : null}
 
-      {/* ✅ MODAL ASIGNACIÓN (SEPARADO) */}
+      {/* MODAL ASIGNACIONES */}
       <TribunalAsignacionesModal
         showAsignModal={showAsignModal}
         setShowAsignModal={setShowAsignModal}
