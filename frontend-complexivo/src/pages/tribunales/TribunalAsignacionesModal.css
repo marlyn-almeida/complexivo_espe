@@ -1,0 +1,129 @@
+/* TribunalAsignacionesModal.css */
+
+.asignModalCard {
+  width: min(980px, 96vw);
+  max-height: 86vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.asignModalBody {
+  padding: 14px 16px 16px;
+  overflow: auto;
+}
+
+.asignHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.asignTitleRow {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.asignTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.asignSubtitle {
+  margin: 0;
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.asignGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 10px;
+  align-items: end;
+  margin-top: 10px;
+}
+
+@media (max-width: 860px) {
+  .asignGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.asignTableWrap {
+  margin-top: 14px;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.asignTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.asignTable th,
+.asignTable td {
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  text-align: left;
+  font-size: 13px;
+}
+
+.asignTable thead th {
+  background: rgba(0,0,0,0.03);
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.asignTable tbody tr:hover td {
+  background: rgba(0,0,0,0.02);
+}
+
+.asignBadge {
+  display: inline-flex;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid rgba(0,0,0,0.10);
+}
+
+.asignBadge.ok {
+  background: rgba(0, 140, 70, 0.10);
+}
+
+.asignBadge.off {
+  background: rgba(210, 0, 0, 0.10);
+}
+
+.asignActions {
+  display: inline-flex;
+  gap: 8px;
+}
+
+.asignEmpty {
+  padding: 14px;
+  text-align: center;
+  opacity: 0.7;
+}
+
+/* Pequeño botón icono para activar/desactivar */
+.asignBtnIcon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid rgba(0,0,0,0.10);
+  background: white;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.asignBtnIcon:hover {
+  background: rgba(0,0,0,0.03);
+}

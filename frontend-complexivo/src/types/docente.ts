@@ -19,4 +19,7 @@ export interface Docente {
 
   created_at?: string;
   updated_at?: string | null;
+
+  // ✅ NUEVO (solo se llena cuando viene del JOIN con carrera_docente)
+  id_carrera_docente?: number | null;
 }

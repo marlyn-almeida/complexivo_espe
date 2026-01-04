@@ -25,15 +25,18 @@ async function findAll({ includeInactive = false, q = "", page = 1, limit = 50, 
     params.push(like, like, like, like, like, like);
   }
 
-  // Scope rol 2: solo docentes asignados a esa carrera
-  // usamos carrera_docente como relación
+  // ✅ Scope rol 2: solo docentes asignados a esa carrera
+  // ✅ PERO: evitamos duplicados usando subquery (si un docente tiene varias filas en carrera_docente)
   let joinSql = "";
   if (scopeCarreraId) {
     joinSql = `
-      JOIN carrera_docente cd
-        ON cd.id_docente = d.id_docente
-       AND cd.estado = 1
-       AND cd.id_carrera = ?
+      JOIN (
+        SELECT id_docente, MIN(id_carrera_docente) AS id_carrera_docente
+        FROM carrera_docente
+        WHERE estado = 1
+          AND id_carrera = ?
+        GROUP BY id_docente
+      ) cd ON cd.id_docente = d.id_docente
     `;
     params.unshift(Number(scopeCarreraId)); // debe ir primero si el JOIN lo usa
   }
@@ -42,6 +45,7 @@ async function findAll({ includeInactive = false, q = "", page = 1, limit = 50, 
 
   const sql = `
     SELECT
+      ${scopeCarreraId ? "cd.id_carrera_docente" : "NULL"} AS id_carrera_docente,
       d.id_docente,
       d.id_institucional_docente,
       d.cedula,

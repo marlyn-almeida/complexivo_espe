@@ -21,6 +21,12 @@ import RubricasPeriodoPage from "../pages/rubrica/RubricasPeriodoPage";
 import RubricasVerPage from "../pages/rubrica/RubricasVerPage";
 import RubricaEditorPage from "../pages/rubrica/RubricaEditorPage";
 
+// ✅ NUEVO: Franjas Horarias (página real)
+import FranjaHorariaPage from "../pages/franja-horaria/FranjaHorariaPage";
+
+// ✅ NUEVO: Tribunales (página real)
+import TribunalesPage from "../pages/tribunales/TribunalesPage";
+
 import ProtectedRoute from "../components/auth/ProtectedRoute";
 import { dashboardByRole, getActiveRole, getToken } from "../utils/auth";
 
@@ -209,20 +215,22 @@ export default function AppRoutes() {
             }
           />
 
+          {/* ✅ /franjas ya no es Placeholder */}
           <Route
             path="/franjas"
             element={
               <ProtectedRoute allowRoles={[2]}>
-                <Placeholder title="Franjas horarias (pendiente)" />
+                <FranjaHorariaPage />
               </ProtectedRoute>
             }
           />
 
+          {/* ✅ /tribunales ya no es Placeholder */}
           <Route
             path="/tribunales"
             element={
               <ProtectedRoute allowRoles={[2]}>
-                <Placeholder title="Tribunales (pendiente)" />
+                <TribunalesPage />
               </ProtectedRoute>
             }
           />

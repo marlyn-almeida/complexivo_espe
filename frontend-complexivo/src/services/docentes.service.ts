@@ -1,5 +1,12 @@
 import axiosClient from "../api/axiosClient";
-import type { Docente } from "../types/docente";
+import type { Docente, Estado01 } from "../types/docente";
+
+export type DocenteListParams = {
+  includeInactive?: boolean;
+  q?: string;
+  page?: number;
+  limit?: number;
+};
 
 export type DocenteCreateDTO = {
   id_institucional_docente: string;
@@ -29,11 +36,25 @@ export type DocenteUpdateDTO = {
 };
 
 export const docentesService = {
-  // mismo patrón de Carreras: list(mostrarInactivas)
-  list: async (includeInactive: boolean = false): Promise<Docente[]> => {
+  // ✅ compatible con tu versión vieja:
+  // docentesService.list(false)
+  // y también con params:
+  // docentesService.list({ includeInactive:false, q:"", page:1, limit:100 })
+  list: async (arg: boolean | DocenteListParams = false): Promise<Docente[]> => {
+    const paramsObj: DocenteListParams =
+      typeof arg === "boolean" ? { includeInactive: arg } : arg;
+
+    const limit = Math.min(paramsObj.limit ?? 100, 100);
+
     const res = await axiosClient.get<Docente[]>("/docentes", {
-      params: { includeInactive },
+      params: {
+        includeInactive: paramsObj.includeInactive ? 1 : 0,
+        q: paramsObj.q?.trim() || undefined,
+        page: paramsObj.page ?? 1,
+        limit,
+      },
     });
+
     return res.data ?? [];
   },
 
@@ -52,8 +73,8 @@ export const docentesService = {
     return res.data;
   },
 
-  toggleEstado: async (id: number, currentEstado: 0 | 1) => {
-    const nuevo: 0 | 1 = currentEstado === 1 ? 0 : 1;
+  toggleEstado: async (id: number, currentEstado: Estado01) => {
+    const nuevo: Estado01 = currentEstado === 1 ? 0 : 1;
     const res = await axiosClient.patch(`/docentes/${id}/estado`, { estado: nuevo });
     return res.data;
   },

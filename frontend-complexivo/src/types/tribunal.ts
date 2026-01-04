@@ -1,15 +1,14 @@
-// src/types/franjaHorario.ts
+// src/types/tribunal.ts
 export type Estado01 = 0 | 1;
 
-export interface FranjaHorario {
-  id_franja_horario: number;
-
+export interface Tribunal {
+  id_tribunal: number;
   id_carrera_periodo: number;
 
-  fecha: string; // YYYY-MM-DD
-  hora_inicio: string; // HH:MM o HH:MM:SS
-  hora_fin: string; // HH:MM o HH:MM:SS
-  laboratorio: string;
+  nombre_tribunal: string;
+
+  // ✅ opcional (si tu tabla lo tiene nullable)
+  caso?: number | null;
 
   estado: Estado01;
 
@@ -18,5 +17,6 @@ export interface FranjaHorario {
 
   // joins (si tu repo los manda en list)
   nombre_carrera?: string;
+  codigo_carrera?: string;
   codigo_periodo?: string;
 }
