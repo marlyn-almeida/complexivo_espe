@@ -1,20 +1,19 @@
-// src/services/carreraDocente.service.ts
 import axiosClient from "../api/axiosClient";
 import type { CarreraDocente } from "../types/carreraDocente";
 
 export type CarreraDocenteListParams = {
   includeInactive?: boolean;
   docenteId?: number;
-  carreraPeriodoId?: number;
+  carreraId?: number;
 };
 
 export const carreraDocenteService = {
   list: async (params?: CarreraDocenteListParams): Promise<CarreraDocente[]> => {
-    const res = await axiosClient.get<CarreraDocente[]>("/carrera-docente", {
+    const res = await axiosClient.get<CarreraDocente[]>("/carreras-docentes", {
       params: {
         includeInactive: params?.includeInactive ? 1 : 0,
         docenteId: params?.docenteId,
-        carreraPeriodoId: params?.carreraPeriodoId,
+        carreraId: params?.carreraId,
       },
     });
     return res.data ?? [];

@@ -251,6 +251,16 @@ async function updatePassword(id, passwordHash) {
   return findById(id);
 }
 
+async function addRolToDocente(id_docente, id_rol) {
+  await pool.query(
+    `INSERT INTO rol_docente (id_rol, id_docente, estado)
+     VALUES (?,?,1)
+     ON DUPLICATE KEY UPDATE estado=1`,
+    [id_rol, id_docente]
+  );
+  return true;
+}
+
 module.exports = {
   findAll,
   findById,
@@ -267,4 +277,5 @@ module.exports = {
   setEstado,
   updatePasswordAndClearFlag,
   updatePassword,
+  addRolToDocente,
 };

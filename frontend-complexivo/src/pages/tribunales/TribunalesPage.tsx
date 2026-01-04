@@ -195,18 +195,35 @@ export default function TribunalesPage() {
     }
   }
 
-  async function loadDocentesByCP() {
-    if (!selectedCP) return;
-    try {
-      const data = await carreraDocenteService.list({
-        includeInactive: false,
-        carreraPeriodoId: Number(selectedCP),
-      });
-      setDocentes(data ?? []);
-    } catch {
+async function loadDocentesByCP() {
+  if (!selectedCP) return;
+
+  try {
+    // 🔑 selectedCP = id_carrera_periodo
+    // 🔑 carrera_docente trabaja por id_carrera
+
+    const cp = carreraPeriodos.find(
+      (x) => Number(x.id_carrera_periodo) === Number(selectedCP)
+    );
+
+    const carreraId = cp?.id_carrera;
+
+    if (!carreraId) {
       setDocentes([]);
+      return;
     }
+
+    const data = await carreraDocenteService.list({
+      includeInactive: false,
+      carreraId: Number(carreraId), // ✅ FIX REAL
+    });
+
+    setDocentes(data ?? []);
+  } catch {
+    setDocentes([]);
   }
+}
+
 
   async function loadAll() {
     if (!selectedCP) return;
