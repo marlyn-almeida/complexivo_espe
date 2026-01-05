@@ -67,6 +67,14 @@ export const carreraPeriodoService = {
     return res.data ?? [];
   },
 
+  /**
+   * ✅ Alias para compatibilidad:
+   * Algunas páginas llaman carreraPeriodoService.listAll(...)
+   */
+  listAll: async (params?: CarreraPeriodoListParams): Promise<CarreraPeriodo[]> => {
+    return carreraPeriodoService.list(params ?? false);
+  },
+
   // =========================
   // Tu flujo existente
   // =========================

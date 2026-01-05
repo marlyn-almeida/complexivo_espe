@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Plus, Pencil, Eye, ToggleLeft, ToggleRight, Search, CalendarPlus } from "lucide-react";
 import "./TribunalesPage.css";
 
-import type { Tribunal, Estado01 as Estado01Trib } from "../../types/tribunal";
-import type { TribunalEstudiante, Estado01 as Estado01TE } from "../../types/tribunalEstudiante";
+import type { Tribunal } from "../../types/tribunal";
+import type { TribunalEstudiante } from "../../types/tribunalEstudiante";
 import type { CarreraPeriodo } from "../../types/carreraPeriodo";
 import type { Estudiante } from "../../types/estudiante";
 import type { FranjaHorario } from "../../types/franjaHoraria";
@@ -23,18 +23,6 @@ const PAGE_SIZE = 10;
 
 type ToastType = "success" | "error" | "info";
 
-type TribunalFormState = {
-  id_carrera_periodo: number | "";
-  nombre_tribunal: string;
-  caso: string;
-  descripcion_tribunal: string;
-
-  // ✅ id_carrera_docente
-  presidente: number | "";
-  integrante1: number | "";
-  integrante2: number | "";
-};
-
 type AsignacionFormState = {
   id_estudiante: number | "";
   id_franja_horario: number | "";
@@ -46,7 +34,7 @@ export default function TribunalesPage() {
   const [selectedCP, setSelectedCP] = useState<number | "">("");
 
   const [tribunales, setTribunales] = useState<Tribunal[]>([]);
-  const [docentes, setDocentes] = useState<CarreraDocente[]>([]);
+  const [docentes, setDocentes] = useState<CarreraDocente[]>([]); // se usa para modal crear/editar en el futuro
   const [loading, setLoading] = useState(false);
 
   // ===== UI / FILTROS =====
@@ -55,10 +43,7 @@ export default function TribunalesPage() {
   const [page, setPage] = useState(1);
 
   // ===== MODALES =====
-  const [showFormModal, setShowFormModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
-
-  const [editingTribunal, setEditingTribunal] = useState<Tribunal | null>(null);
   const [viewTribunal, setViewTribunal] = useState<Tribunal | null>(null);
 
   // ===== MODAL ASIGNACIÓN =====
@@ -67,17 +52,6 @@ export default function TribunalesPage() {
   const [asignaciones, setAsignaciones] = useState<TribunalEstudiante[]>([]);
   const [estudiantes, setEstudiantes] = useState<Estudiante[]>([]);
   const [franjas, setFranjas] = useState<FranjaHorario[]>([]);
-
-  // ===== FORM tribunal =====
-  const [form, setForm] = useState<TribunalFormState>({
-    id_carrera_periodo: "",
-    nombre_tribunal: "",
-    caso: "",
-    descripcion_tribunal: "",
-    presidente: "",
-    integrante1: "",
-    integrante2: "",
-  });
 
   // ===== FORM asignación =====
   const [asignForm, setAsignForm] = useState<AsignacionFormState>({
@@ -102,68 +76,16 @@ export default function TribunalesPage() {
   }
 
   function selectedCPLabel(): string {
-    const cp = carreraPeriodos.find((x) => x.id_carrera_periodo === selectedCP);
+    const cp = carreraPeriodos.find((x) => Number(x.id_carrera_periodo) === Number(selectedCP));
     if (!cp) return "";
     const carrera = cp.nombre_carrera ?? "Carrera";
     const periodo = cp.codigo_periodo ?? cp.descripcion_periodo ?? "Período";
     return `${carrera} — ${periodo}`;
   }
 
-  function resetForm() {
-    setEditingTribunal(null);
-    setForm({
-      id_carrera_periodo: selectedCP || "",
-      nombre_tribunal: "",
-      caso: "",
-      descripcion_tribunal: "",
-      presidente: "",
-      integrante1: "",
-      integrante2: "",
-    });
-    setErrors({});
-  }
-
-  function openCreate() {
-    if (!selectedCP) {
-      showToast("Seleccione una Carrera–Período primero.", "error");
-      return;
-    }
-    resetForm();
-    setShowFormModal(true);
-  }
-
-  function openEdit(t: Tribunal) {
-    setEditingTribunal(t);
-    setForm({
-      id_carrera_periodo: t.id_carrera_periodo,
-      nombre_tribunal: t.nombre_tribunal ?? "",
-      caso: t.caso == null ? "" : String(t.caso),
-      descripcion_tribunal: t.descripcion_tribunal ?? "",
-      // si luego quieres, se puede precargar miembros con un endpoint detalle
-      presidente: "",
-      integrante1: "",
-      integrante2: "",
-    });
-    setErrors({});
-    setShowFormModal(true);
-  }
-
   function openView(t: Tribunal) {
     setViewTribunal(t);
     setShowViewModal(true);
-  }
-
-  function extractBackendError(err: any): string {
-    const msg = err?.response?.data?.message;
-    const list = err?.response?.data?.errors;
-
-    if (Array.isArray(list) && list.length) {
-      const first = list[0];
-      if (first?.msg) return String(first.msg);
-    }
-    if (typeof msg === "string" && msg.trim()) return msg;
-
-    return "Error al guardar";
   }
 
   // ===== LOADS =====
@@ -201,7 +123,6 @@ export default function TribunalesPage() {
     if (!selectedCP) return;
 
     try {
-      // selectedCP = id_carrera_periodo  -> necesitamos id_carrera
       const cp = carreraPeriodos.find((x) => Number(x.id_carrera_periodo) === Number(selectedCP));
       const carreraId = cp?.id_carrera;
 
@@ -233,7 +154,7 @@ export default function TribunalesPage() {
         page: 1,
         limit: 100,
       });
-      setTribunales(data);
+      setTribunales(data ?? []);
       setPage(1);
     } catch {
       showToast("Error al cargar tribunales", "error");
@@ -246,7 +167,6 @@ export default function TribunalesPage() {
   // ===== FILTRO + PAGINACIÓN =====
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
-
     return tribunales
       .filter((t) => (mostrarInactivos ? true : isActivo(t.estado)))
       .filter((t) => {
@@ -262,86 +182,6 @@ export default function TribunalesPage() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
   const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
-
-  // ===== VALIDACIÓN tribunal =====
-  function validateForm(): Record<string, string> {
-    const e: Record<string, string> = {};
-
-    if (!form.id_carrera_periodo) e.id_carrera_periodo = "Seleccione Carrera–Período.";
-    if (!form.nombre_tribunal.trim()) e.nombre_tribunal = "Nombre del tribunal obligatorio.";
-
-    if (form.caso.trim() && (!/^\d+$/.test(form.caso.trim()) || Number(form.caso) <= 0)) {
-      e.caso = "Caso debe ser un número entero positivo (opcional).";
-    }
-
-    if (!form.presidente) e.presidente = "Seleccione Presidente.";
-    if (!form.integrante1) e.integrante1 = "Seleccione Integrante 1.";
-    if (!form.integrante2) e.integrante2 = "Seleccione Integrante 2.";
-
-    const ids = [form.presidente, form.integrante1, form.integrante2].filter(Boolean) as number[];
-    if (ids.length === 3 && new Set(ids).size !== 3) e.docentes = "No puedes repetir el mismo docente en el tribunal.";
-
-    return e;
-  }
-
-  function buildDocentesPayloadObject() {
-    return {
-      presidente: Number(form.presidente),
-      integrante1: Number(form.integrante1),
-      integrante2: Number(form.integrante2),
-    };
-  }
-
-  async function onSave() {
-    const e = validateForm();
-    setErrors(e);
-
-    if (Object.keys(e).length) {
-      showToast("Revisa los campos obligatorios.", "error");
-      return;
-    }
-
-    try {
-      setLoading(true);
-
-      const payload = {
-        id_carrera_periodo: Number(form.id_carrera_periodo),
-        nombre_tribunal: form.nombre_tribunal.trim(),
-        caso: form.caso.trim() ? Number(form.caso.trim()) : undefined,
-        descripcion_tribunal: form.descripcion_tribunal.trim() ? form.descripcion_tribunal.trim() : undefined,
-        docentes: buildDocentesPayloadObject(),
-      };
-
-      if (editingTribunal) {
-        await tribunalesService.update(editingTribunal.id_tribunal, payload as any);
-        showToast("Tribunal actualizado.", "success");
-      } else {
-        await tribunalesService.create(payload as any);
-        showToast("Tribunal creado.", "success");
-      }
-
-      setShowFormModal(false);
-      await loadAll();
-    } catch (err: any) {
-      showToast(extractBackendError(err), "error");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function onToggleEstado(t: Tribunal) {
-    try {
-      setLoading(true);
-      const current: Estado01Trib = estado01(t.estado) as Estado01Trib;
-      await tribunalesService.toggleEstado(t.id_tribunal, current);
-      showToast(current === 1 ? "Tribunal desactivado." : "Tribunal activado.", "success");
-      await loadAll();
-    } catch {
-      showToast("No se pudo cambiar el estado.", "error");
-    } finally {
-      setLoading(false);
-    }
-  }
 
   // ===== ASIGNACIÓN Tribunal–Estudiante =====
   async function openAsignaciones(t: Tribunal) {
@@ -373,10 +213,9 @@ export default function TribunalesPage() {
         }),
       ]);
 
-      setAsignaciones(a);
-      setEstudiantes(est);
-      setFranjas(fr);
-
+      setAsignaciones(a ?? []);
+      setEstudiantes(est ?? []);
+      setFranjas(fr ?? []);
       setShowAsignModal(true);
     } catch {
       showToast("No se pudo cargar datos para asignación.", "error");
@@ -419,8 +258,7 @@ export default function TribunalesPage() {
         page: 1,
         limit: 100,
       });
-      setAsignaciones(a);
-
+      setAsignaciones(a ?? []);
       setAsignForm({ id_estudiante: "", id_franja_horario: "" });
     } catch (err: any) {
       const msg = err?.response?.data?.message || "No se pudo crear la asignación.";
@@ -433,8 +271,9 @@ export default function TribunalesPage() {
   async function onToggleAsignEstado(row: TribunalEstudiante) {
     try {
       setLoading(true);
-      const current: Estado01TE = estado01(row.estado) as Estado01TE;
-      await tribunalEstudiantesService.toggleEstado(row.id_tribunal_estudiante, current);
+      const current = estado01(row.estado); // 1=activo,0=inactivo
+
+      await tribunalEstudiantesService.toggleEstado(row.id_tribunal_estudiante, current as 0 | 1);
 
       showToast(current === 1 ? "Asignación desactivada." : "Asignación activada.", "success");
 
@@ -445,10 +284,26 @@ export default function TribunalesPage() {
           page: 1,
           limit: 100,
         });
-        setAsignaciones(a);
+        setAsignaciones(a ?? []);
       }
     } catch {
       showToast("No se pudo cambiar el estado de la asignación.", "error");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function onToggleEstado(t: Tribunal) {
+    try {
+      setLoading(true);
+      const current = estado01(t.estado);
+
+      await tribunalesService.toggleEstado(t.id_tribunal, current as 0 | 1);
+
+      showToast(current === 1 ? "Tribunal desactivado." : "Tribunal activado.", "success");
+      await loadAll();
+    } catch {
+      showToast("No se pudo cambiar el estado.", "error");
     } finally {
       setLoading(false);
     }
@@ -464,7 +319,7 @@ export default function TribunalesPage() {
         <div className="headerRow">
           <div>
             <h2 className="title">Tribunales</h2>
-            <p className="subtitle">Crea tribunales por Carrera–Período y asigna docentes (Presidente e Integrantes).</p>
+            <p className="subtitle">Administra tribunales por Carrera–Período y asigna estudiantes a franjas.</p>
             {cpLabel ? (
               <p className="tribunales-sub">
                 Trabajando en: <b>{cpLabel}</b>
@@ -472,7 +327,11 @@ export default function TribunalesPage() {
             ) : null}
           </div>
 
-          <button className="btnPrimary" onClick={openCreate}>
+          {/* Por ahora solo muestra el botón (modal crear/editar se puede agregar luego) */}
+          <button
+            className="btnPrimary"
+            onClick={() => showToast("Formulario de creación pendiente de conectar (modal).", "info")}
+          >
             <Plus size={18} /> Nuevo tribunal
           </button>
         </div>
@@ -496,11 +355,17 @@ export default function TribunalesPage() {
           <div className="summaryActions">
             <div className="field">
               <label className="fieldLabel">Carrera–Período</label>
-              <select className="select" value={selectedCP} onChange={(e) => setSelectedCP(e.target.value ? Number(e.target.value) : "")}>
+              <select
+                className="select"
+                value={selectedCP}
+                onChange={(e) => setSelectedCP(e.target.value ? Number(e.target.value) : "")}
+              >
                 <option value="">Seleccione...</option>
                 {carreraPeriodos.map((cp) => (
                   <option key={cp.id_carrera_periodo} value={cp.id_carrera_periodo}>
-                    {(cp.nombre_carrera ?? "Carrera") + " — " + (cp.codigo_periodo ?? cp.descripcion_periodo ?? "Período")}
+                    {(cp.nombre_carrera ?? "Carrera") +
+                      " — " +
+                      (cp.codigo_periodo ?? cp.descripcion_periodo ?? "Período")}
                   </option>
                 ))}
               </select>
@@ -521,7 +386,11 @@ export default function TribunalesPage() {
             </button>
 
             <label className="toggle">
-              <input type="checkbox" checked={mostrarInactivos} onChange={(e) => setMostrarInactivos(e.target.checked)} />
+              <input
+                type="checkbox"
+                checked={mostrarInactivos}
+                onChange={(e) => setMostrarInactivos(e.target.checked)}
+              />
               <span className="slider" />
               <span className="toggleText">Mostrar inactivos</span>
             </label>
@@ -554,24 +423,36 @@ export default function TribunalesPage() {
                     <tr key={t.id_tribunal}>
                       <td>
                         <div className="tdTitle">{t.nombre_tribunal}</div>
-                        <div className="tdSub">{t.nombre_carrera ? `${t.nombre_carrera} — ${t.codigo_periodo ?? ""}` : "—"}</div>
+                        <div className="tdSub">
+                          {t.nombre_carrera ? `${t.nombre_carrera} — ${t.codigo_periodo ?? ""}` : "—"}
+                        </div>
                       </td>
                       <td>{t.caso == null ? <span className="muted">—</span> : t.caso}</td>
                       <td>
-                        <span className={`badge ${activo ? "badgeActive" : "badgeInactive"}`}>{activo ? "Activo" : "Inactivo"}</span>
+                        <span className={`badge ${activo ? "badgeActive" : "badgeInactive"}`}>
+                          {activo ? "Activo" : "Inactivo"}
+                        </span>
                       </td>
                       <td>
                         <div className="actions">
                           <button className="btnIcon" onClick={() => openView(t)} title="Ver">
                             <Eye size={18} />
                           </button>
-                          <button className="btnIcon" onClick={() => openEdit(t)} title="Editar">
+                          <button
+                            className="btnIcon"
+                            onClick={() => showToast("Edición pendiente de conectar (modal).", "info")}
+                            title="Editar"
+                          >
                             <Pencil size={18} />
                           </button>
                           <button className="btnIcon" onClick={() => onToggleEstado(t)} title="Activar/Desactivar">
                             {activo ? <ToggleRight size={20} /> : <ToggleLeft size={20} />}
                           </button>
-                          <button className="btnIcon primary" onClick={() => openAsignaciones(t)} title="Asignar estudiantes a franjas">
+                          <button
+                            className="btnIcon primary"
+                            onClick={() => openAsignaciones(t)}
+                            title="Asignar estudiantes a franjas"
+                          >
                             <CalendarPlus size={18} />
                           </button>
                         </div>
@@ -587,13 +468,21 @@ export default function TribunalesPage() {
 
       <div className="card paginationCard">
         <div className="paginationCenter">
-          <button className="btnSecondary" disabled={currentPage <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+          <button
+            className="btnSecondary"
+            disabled={currentPage <= 1}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+          >
             Anterior
           </button>
           <span className="muted">
             Página <b>{currentPage}</b> de <b>{totalPages}</b>
           </span>
-          <button className="btnSecondary" disabled={currentPage >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
+          <button
+            className="btnSecondary"
+            disabled={currentPage >= totalPages}
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+          >
             Siguiente
           </button>
         </div>

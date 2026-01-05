@@ -9,7 +9,12 @@ import { carreraPeriodoService } from "../../services/carreraPeriodo.service";
 const PAGE_SIZE = 10;
 
 const toYMD = (v: any) => (v ? String(v).slice(0, 10) : "");
-const isActive = (estado: boolean | number) => (typeof estado === "boolean" ? estado : estado === 1);
+
+// ✅ FIX: aceptar undefined/null para que no reviente TS
+const isActive = (estado?: boolean | number | null) => {
+  if (estado === undefined || estado === null) return false;
+  return typeof estado === "boolean" ? estado : Number(estado) === 1;
+};
 
 function periodoLabel(p: PeriodoResumen) {
   const codigo = p.codigo_periodo ?? "";
@@ -59,7 +64,9 @@ export default function CarreraPeriodoPage() {
   // =========================
   const carrerasSorted = useMemo(() => {
     const arr = [...carreras];
-    arr.sort((a: any, b: any) => String(a.nombre_carrera || "").localeCompare(String(b.nombre_carrera || "")));
+    arr.sort((a: any, b: any) =>
+      String(a.nombre_carrera || "").localeCompare(String(b.nombre_carrera || ""))
+    );
     return arr;
   }, [carreras]);
 
@@ -85,7 +92,10 @@ export default function CarreraPeriodoPage() {
     });
   }, [periodos, qPeriodos]);
 
-  const pageCount = useMemo(() => Math.max(1, Math.ceil(filteredPeriodos.length / PAGE_SIZE)), [filteredPeriodos.length]);
+  const pageCount = useMemo(
+    () => Math.max(1, Math.ceil(filteredPeriodos.length / PAGE_SIZE)),
+    [filteredPeriodos.length]
+  );
 
   const pagedPeriodos = useMemo(() => {
     const start = (page - 1) * PAGE_SIZE;
@@ -124,7 +134,10 @@ export default function CarreraPeriodoPage() {
     }
   };
 
-  const fetchPeriodoItems = async (periodoId: number, opts?: { includeInactive?: boolean; q?: string }) => {
+  const fetchPeriodoItems = async (
+    periodoId: number,
+    opts?: { includeInactive?: boolean; q?: string }
+  ) => {
     setLoading(true);
     try {
       const data = await carreraPeriodoService.listByPeriodo(periodoId, {
@@ -189,9 +202,10 @@ export default function CarreraPeriodoPage() {
     if (mode === "edit") {
       // preselecciona activas actuales
       const activeIds = new Set<number>();
-      // usamos el estado actual de periodoItems (ya cargado)
-      // pero como setState es async, calculamos desde el fetch directo:
-      const items = await carreraPeriodoService.listByPeriodo(p.id_periodo, { includeInactive: true, q: "" });
+      const items = await carreraPeriodoService.listByPeriodo(p.id_periodo, {
+        includeInactive: true,
+        q: "",
+      });
       setPeriodoItems(items ?? []);
       (items ?? []).forEach((x) => {
         if (isActive(x.estado)) activeIds.add(Number(x.id_carrera));
@@ -283,7 +297,11 @@ export default function CarreraPeriodoPage() {
   };
 
   const modalTitle =
-    modalMode === "assign" ? "Asignar carreras" : modalMode === "edit" ? "Editar carreras del período" : "Ver carreras asignadas";
+    modalMode === "assign"
+      ? "Asignar carreras"
+      : modalMode === "edit"
+      ? "Editar carreras del período"
+      : "Ver carreras asignadas";
 
   // =========================
   // Render
@@ -294,9 +312,7 @@ export default function CarreraPeriodoPage() {
         <div className="cp3-panel-top">
           <div>
             <h1 className="cp3-title">Carrera – Período</h1>
-            <p className="cp3-subtitle">
-              Listado de períodos con acciones para asignar, ver y editar carreras.
-            </p>
+            <p className="cp3-subtitle">Listado de períodos con acciones para asignar, ver y editar carreras.</p>
           </div>
         </div>
 
@@ -392,7 +408,11 @@ export default function CarreraPeriodoPage() {
           <span className="page-info">
             Página <b>{page}</b> de <b>{pageCount}</b>
           </span>
-          <button className="btn-page" onClick={() => setPage((x) => Math.min(pageCount, x + 1))} disabled={page >= pageCount}>
+          <button
+            className="btn-page"
+            onClick={() => setPage((x) => Math.min(pageCount, x + 1))}
+            disabled={page >= pageCount}
+          >
             ▶
           </button>
         </div>
@@ -528,7 +548,9 @@ export default function CarreraPeriodoPage() {
                   </button>
 
                   <button type="submit" className="btn-primary" disabled={loading}>
-                    {modalMode === "assign" ? `Asignar (${selectedCarreraIds.size})` : `Guardar (${selectedCarreraIds.size})`}
+                    {modalMode === "assign"
+                      ? `Asignar (${selectedCarreraIds.size})`
+                      : `Guardar (${selectedCarreraIds.size})`}
                   </button>
                 </div>
               </form>

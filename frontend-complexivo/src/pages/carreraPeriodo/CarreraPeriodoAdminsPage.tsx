@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { Search, Users, RefreshCw } from "lucide-react";
 
 import { carreraPeriodoService } from "../../services/carreraPeriodo.service";
-
 import { docentesService } from "../../services/docentes.service";
 
 import type { CarreraPeriodo } from "../../types/carreraPeriodo";
@@ -64,10 +63,25 @@ export default function CarreraPeriodoAdminsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mostrarInactivas]);
 
+  // ✅ si quieres que al escribir busqueda recargue backend, descomenta este effect:
+  useEffect(() => {
+    // debounce simple
+    const t = window.setTimeout(() => {
+      loadAll();
+    }, 350);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
+
   async function loadAll() {
     try {
       setLoading(true);
-      const data = await carreraPeriodoService.listAll({ includeInactive: mostrarInactivas, q: search });
+      const data = await carreraPeriodoService.listAll({
+        includeInactive: mostrarInactivas,
+        q: search,
+        page: 1,
+        limit: 200,
+      });
       setItems(data);
     } catch (err: any) {
       showToast(err?.userMessage || "Error al cargar carreras por período", "error");
@@ -111,7 +125,12 @@ export default function CarreraPeriodoAdminsPage() {
 
     setAdminsMap((prev) => ({
       ...prev,
-      [idCarreraPeriodo]: { loading: true, director: current?.director ?? null, apoyo: current?.apoyo ?? null, error: "" },
+      [idCarreraPeriodo]: {
+        loading: true,
+        director: current?.director ?? null,
+        apoyo: current?.apoyo ?? null,
+        error: "",
+      },
     }));
 
     try {
@@ -123,7 +142,12 @@ export default function CarreraPeriodoAdminsPage() {
     } catch (err: any) {
       setAdminsMap((prev) => ({
         ...prev,
-        [idCarreraPeriodo]: { loading: false, director: null, apoyo: null, error: err?.userMessage || "Error al cargar asignación" },
+        [idCarreraPeriodo]: {
+          loading: false,
+          director: null,
+          apoyo: null,
+          error: err?.userMessage || "Error al cargar asignación",
+        },
       }));
     }
   }
@@ -136,6 +160,7 @@ export default function CarreraPeriodoAdminsPage() {
   async function openAssign(cp: CarreraPeriodo) {
     setSelectedCP(cp);
 
+    // cargar docentes (solo una vez)
     if (!docentes.length) {
       try {
         setLoadingDocentes(true);
@@ -148,11 +173,43 @@ export default function CarreraPeriodoAdminsPage() {
       }
     }
 
-    await ensureAdminsLoaded(cp.id_carrera_periodo);
+    // ✅ IMPORTANTÍSIMO:
+    // No leemos adminsMap inmediatamente porque setState es async.
+    // Pedimos admins directamente y seteamos ids de forma segura.
+    try {
+      setAdminsMap((prev) => ({
+        ...prev,
+        [cp.id_carrera_periodo]: {
+          loading: true,
+          director: prev[cp.id_carrera_periodo]?.director ?? null,
+          apoyo: prev[cp.id_carrera_periodo]?.apoyo ?? null,
+          error: "",
+        },
+      }));
 
-    const st = adminsMap[cp.id_carrera_periodo];
-    setDirId(st?.director?.id_docente ? String(st.director.id_docente) : "");
-    setApoId(st?.apoyo?.id_docente ? String(st.apoyo.id_docente) : "");
+      const data = await carreraPeriodoService.getAdmins(cp.id_carrera_periodo);
+
+      setAdminsMap((prev) => ({
+        ...prev,
+        [cp.id_carrera_periodo]: { loading: false, director: data.director, apoyo: data.apoyo, error: "" },
+      }));
+
+      setDirId(data.director?.id_docente ? String(data.director.id_docente) : "");
+      setApoId(data.apoyo?.id_docente ? String(data.apoyo.id_docente) : "");
+    } catch (err: any) {
+      setAdminsMap((prev) => ({
+        ...prev,
+        [cp.id_carrera_periodo]: {
+          loading: false,
+          director: null,
+          apoyo: null,
+          error: err?.userMessage || "Error al cargar asignación",
+        },
+      }));
+      setDirId("");
+      setApoId("");
+      showToast(err?.userMessage || "No se pudo cargar asignación", "error");
+    }
 
     setShowModal(true);
   }
@@ -304,11 +361,7 @@ export default function CarreraPeriodoAdminsPage() {
                     </td>
 
                     <td className="actions">
-                      <button
-                        className="btnIcon btnEdit"
-                        title="Asignar Director/Apoyo"
-                        onClick={() => openAssign(cp)}
-                      >
+                      <button className="btnIcon btnEdit" title="Asignar Director/Apoyo" onClick={() => openAssign(cp)}>
                         <Users size={16} />
                       </button>
                     </td>
