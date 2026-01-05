@@ -1,19 +1,32 @@
-const db = require("../config/db");
+const scopeRepo = require("../repositories/scope.repo");
 
-async function getAdminScopeByDocenteId(idDocente) {
-  const [rows] = await db.query(
-    `
-    SELECT cd.id_carrera, cd.tipo_admin
-    FROM carrera_docente cd
-    WHERE cd.id_docente = ?
-      AND cd.estado = 1
-      AND cd.tipo_admin IN ('DIRECTOR','APOYO')
-    LIMIT 1
-    `,
-    [idDocente]
-  );
+async function attachScope(req, res, next) {
+  try {
+    if (!req.user) return next();
 
-  return rows[0] || null;
+    // ✅ SOLO cuando el usuario está ENTRANDO como ADMIN (rol efectivo)
+    // Si entró como DOCENTE o SUPER_ADMIN, NO se adjunta scope y NO se bloquea
+    if (req.user.rol !== "ADMIN") return next();
+
+    const scope = await scopeRepo.getAdminScopeByDocenteId(req.user.id);
+
+    if (!scope) {
+      return res.status(403).json({
+        ok: false,
+        message:
+          "Para usar el perfil ADMIN debes estar asignado como DIRECTOR o APOYO activo en una carrera.",
+      });
+    }
+
+    req.user.scope = {
+      id_carrera: scope.id_carrera,
+      tipo_admin: scope.tipo_admin,
+    };
+
+    next();
+  } catch (err) {
+    next(err);
+  }
 }
 
-module.exports = { getAdminScopeByDocenteId };
+module.exports = { attachScope };

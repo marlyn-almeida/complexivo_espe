@@ -16,20 +16,22 @@ export default function RubricasVerPage() {
   const { idPeriodo } = useParams();
   const navigate = useNavigate();
 
+  const pid = Number(idPeriodo);
+
   const [loading, setLoading] = useState(false);
   const [rubrica, setRubrica] = useState<Rubrica | null>(null);
 
   const load = async () => {
+    if (!pid) return;
     setLoading(true);
     try {
-      const res = await axiosClient.get("/rubricas", {
-        params: { periodoId: Number(idPeriodo), includeInactive: true },
-      });
-      const arr: Rubrica[] = res.data ?? [];
-      setRubrica(arr[0] ?? null);
-    } catch (e) {
+      // ✅ endpoint real: obtener por período
+      const res = await axiosClient.get(`/rubricas/periodo/${pid}`);
+      setRubrica(res.data ?? null);
+    } catch (e: any) {
+      // si no existe, backend devuelve 404
       console.error(e);
-      alert("No se pudo cargar la rúbrica del período");
+      setRubrica(null);
     } finally {
       setLoading(false);
     }
@@ -40,17 +42,23 @@ export default function RubricasVerPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idPeriodo]);
 
-  const createAndOpen = async () => {
+  const ensureAndOpen = async () => {
+    if (!pid) return;
     try {
       setLoading(true);
-      const res = await axiosClient.post("/rubricas", {
-        id_periodo: Number(idPeriodo),
+
+      // ✅ endpoint real: crear si no existe (idempotente)
+      const res = await axiosClient.post(`/rubricas/periodo/${pid}`, {
         nombre_rubrica: "Rúbrica Complexivo",
         ponderacion_global: 100,
         descripcion_rubrica: null,
       });
-      const created: Rubrica = res.data;
-      navigate(`/rubricas/editar/${created.id_rubrica}`);
+
+      const out = res.data as { created: boolean; rubrica: Rubrica };
+      const r = out?.rubrica;
+      if (!r?.id_rubrica) throw new Error("Respuesta inválida al crear rúbrica");
+
+      navigate(`/rubricas/editar/${r.id_rubrica}`);
     } catch (e) {
       console.error(e);
       alert("No se pudo crear/abrir la rúbrica");
@@ -92,7 +100,7 @@ export default function RubricasVerPage() {
                 Editar rúbrica
               </button>
             ) : (
-              <button className="rv-btn primary" onClick={createAndOpen}>
+              <button className="rv-btn primary" onClick={ensureAndOpen}>
                 Crear rúbrica
               </button>
             )}

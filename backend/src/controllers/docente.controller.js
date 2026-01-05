@@ -18,10 +18,10 @@ module.exports = {
     }
   },
 
-  // ✅ NUEVO: GET /api/docentes/me
+  // ✅ GET /api/docentes/me
   me: async (req, res, n) => {
     try {
-      // En tu JWT: id = id_docente :contentReference[oaicite:1]{index=1}
+      // En tu JWT: req.user.id = id_docente
       res.json(await s.get(Number(req.user.id), req.user));
     } catch (e) {
       n(e);

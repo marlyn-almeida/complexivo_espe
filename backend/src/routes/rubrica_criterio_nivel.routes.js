@@ -3,7 +3,7 @@ const { body, param, query } = require("express-validator");
 const validate = require("../middlewares/validate.middleware");
 const ctrl = require("../controllers/rubrica_criterio_nivel.controller");
 
-// listar celdas de un criterio (opcional)
+// listar celdas de un criterio
 router.get(
   "/",
   query("includeInactive").optional().isBoolean().toBoolean(),
@@ -11,11 +11,12 @@ router.get(
   ctrl.list
 );
 
-// upsert: si existe (criterio+nivel) actualiza, si no existe crea
+// upsert: crea o actualiza celda (criterio + nivel)
 router.post(
   "/",
   body("id_rubrica_nivel").isInt({ min: 1 }).toInt(),
-  body("descripcion").isString().trim().notEmpty(),
+  // ✅ permitir vacío (editor tipo Excel)
+  body("descripcion").optional().isString().trim(),
   validate,
   ctrl.upsert
 );

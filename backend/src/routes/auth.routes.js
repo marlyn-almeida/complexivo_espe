@@ -5,19 +5,26 @@ const jwt = require("jsonwebtoken");
 const { body } = require("express-validator");
 const validate = require("../middlewares/validate.middleware");
 
-const { auth } = require("../middlewares/auth.middleware"); // ✅ NUEVO
+const { auth } = require("../middlewares/auth.middleware");
 
 const docenteRepo = require("../repositories/docente.repo");
 
 // ===== Helpers =====
-function pickActiveRoleId(roles) {
-  const ids = roles.map((r) => r.id_rol);
+function pickActiveRoleId(roles, desiredActiveRoleId) {
+  if (!Array.isArray(roles) || roles.length === 0) return null;
 
-  // ✅ PARA MÓDULOS DIRECTOR/APOYO (ROL 2): priorizamos ADMIN
-  if (ids.includes(2)) return 2; // ADMIN (Director/Apoyo)
-  if (ids.includes(1)) return 1; // SUPER_ADMIN
-  if (ids.includes(3)) return 3; // DOCENTE
-  return null;
+  const ids = roles.map((r) => Number(r.id_rol)).filter(Boolean);
+
+  // ✅ si el frontend manda un rol deseado y existe, se usa
+  if (desiredActiveRoleId && ids.includes(Number(desiredActiveRoleId))) {
+    return Number(desiredActiveRoleId);
+  }
+
+  // ✅ si solo hay uno, ese
+  if (ids.length === 1) return ids[0];
+
+  // ✅ si hay varios, NO forzamos ADMIN: usamos el primero que venga
+  return ids[0];
 }
 
 function redirectByRole(activeRoleId) {
@@ -27,15 +34,11 @@ function redirectByRole(activeRoleId) {
   return "/login";
 }
 
-// ✅ NUEVO: scope solo para rol 2 (admin/director/apoyo)
-// Requiere que en docente.repo.js exista y esté exportada:
-//   getScopeCarreraForRol2(id_docente) -> devuelve id_carrera (number) o null
+// scope solo para rol 2 (admin/director/apoyo)
 async function buildScopeForRole(activeRoleId, id_docente) {
   if (activeRoleId !== 2) return null;
 
   if (typeof docenteRepo.getScopeCarreraForRol2 !== "function") {
-    // No rompemos el login si aún no implementas esto en el repo.
-    // Pero OJO: si no hay scope, tus servicios rol 2 que filtran por carrera no podrán restringir.
     return null;
   }
 
@@ -50,18 +53,18 @@ router.post(
   "/login",
   body("username").isString().trim().notEmpty(),
   body("password").isString().notEmpty(),
+  // ✅ opcional: permite entrar con un perfil específico
+  body("activeRole").optional().isInt({ min: 1 }).toInt(),
   validate,
   async (req, res) => {
     try {
-      const { username, password } = req.body;
+      const { username, password, activeRole } = req.body;
 
-      // Buscar docente por username
       const user = await docenteRepo.findAuthByUsername(username);
       if (!user || user.estado !== 1) {
         return res.status(401).json({ message: "Credenciales incorrectas" });
       }
 
-      // Validar la contraseña
       const isPasswordValid = await bcrypt.compare(password, user.password);
       if (!isPasswordValid) {
         return res.status(401).json({ message: "Credenciales incorrectas" });
@@ -82,7 +85,6 @@ router.post(
         });
       }
 
-      // ===== Roles =====
       if (typeof docenteRepo.getRolesByDocenteId !== "function") {
         return res.status(500).json({
           message:
@@ -92,7 +94,8 @@ router.post(
       }
 
       const roles = await docenteRepo.getRolesByDocenteId(user.id_docente);
-      const activeRoleId = pickActiveRoleId(roles);
+
+      const activeRoleId = pickActiveRoleId(roles, activeRole);
 
       if (!activeRoleId) {
         return res.status(403).json({
@@ -101,18 +104,20 @@ router.post(
         });
       }
 
-      const activeRole = roles.find((r) => r.id_rol === activeRoleId) || null;
+      const activeRoleObj =
+        roles.find((r) => Number(r.id_rol) === Number(activeRoleId)) || null;
 
-      // ✅ NUEVO: scope (solo rol 2)
+      // ✅ si tiene más de 1 rol y NO envió activeRole, que el frontend elija
+      const mustChooseRole = roles.length > 1 && !activeRole;
+
       const scope = await buildScopeForRole(activeRoleId, user.id_docente);
 
-      // JWT normal con roles + scope
       const accessToken = jwt.sign(
         {
           id: user.id_docente,
-          roles: roles.map((r) => r.id_rol),
-          activeRole: activeRoleId,
-          scope, // ✅ NUEVO
+          roles: roles.map((r) => Number(r.id_rol)),
+          activeRole: Number(activeRoleId),
+          scope,
         },
         process.env.JWT_SECRET,
         { expiresIn: "8h" }
@@ -120,10 +125,11 @@ router.post(
 
       return res.json({
         mustChangePassword: false,
+        mustChooseRole, // ✅ NUEVO
         accessToken,
         roles,
-        activeRole,
-        scope, // ✅ NUEVO
+        activeRole: activeRoleObj,
+        scope,
         redirectTo: redirectByRole(activeRoleId),
         __version: "LOGIN_WITH_ROLES_V2",
       });
@@ -138,9 +144,7 @@ router.post(
   }
 );
 
-// ✅ NUEVO: POST /api/auth/active-role
-// Permite cambiar el perfil actual (rol activo) sin volver a loguearse.
-// Body: { "activeRole": 1|2|3 }
+// POST /api/auth/active-role
 router.post(
   "/active-role",
   auth,
@@ -150,10 +154,14 @@ router.post(
     try {
       const { activeRole } = req.body;
 
-      // Roles permitidos desde el token actual
-      const roleIds = req.user?.roles ?? [];
+      // OJO: en req.user.roles ya llegan strings por tu auth.middleware,
+      // pero el token original trae ids numéricos.
+      // Para no complicar, validamos contra el token decodificado original:
+      // Como tu auth.middleware normaliza a strings, aquí validamos por objeto roles de DB.
+      const roles = await docenteRepo.getRolesByDocenteId(req.user.id);
+      const roleIds = roles.map((r) => Number(r.id_rol));
 
-      if (!roleIds.includes(activeRole)) {
+      if (!roleIds.includes(Number(activeRole))) {
         return res.status(403).json({
           ok: false,
           message: "No tienes permisos para usar ese rol",
@@ -161,19 +169,17 @@ router.post(
         });
       }
 
-      // Traer roles completos (para devolver activeRole object y lista bonita)
-      const roles = await docenteRepo.getRolesByDocenteId(req.user.id);
-      const activeRoleObj = roles.find((r) => r.id_rol === activeRole) || null;
+      const activeRoleObj =
+        roles.find((r) => Number(r.id_rol) === Number(activeRole)) || null;
 
-      // ✅ NUEVO: scope para el rol activo elegido
-      const scope = await buildScopeForRole(activeRole, req.user.id);
+      const scope = await buildScopeForRole(Number(activeRole), req.user.id);
 
       const accessToken = jwt.sign(
         {
           id: req.user.id,
           roles: roleIds,
-          activeRole: activeRole,
-          scope, // ✅ NUEVO
+          activeRole: Number(activeRole),
+          scope,
         },
         process.env.JWT_SECRET,
         { expiresIn: "8h" }
@@ -184,8 +190,8 @@ router.post(
         accessToken,
         roles,
         activeRole: activeRoleObj,
-        scope, // ✅ NUEVO
-        redirectTo: redirectByRole(activeRole),
+        scope,
+        redirectTo: redirectByRole(Number(activeRole)),
         __version: "LOGIN_WITH_ROLES_V2",
       });
     } catch (err) {
@@ -200,7 +206,7 @@ router.post(
   }
 );
 
-// PATCH /api/auth/change-password  ✅ ahora con confirmPassword
+// PATCH /api/auth/change-password
 router.patch(
   "/change-password",
   body("tempToken").isString().notEmpty(),
@@ -218,7 +224,6 @@ router.patch(
         });
       }
 
-      // Verificar token temporal
       let decoded;
       try {
         decoded = jwt.verify(tempToken, process.env.TEMP_JWT_SECRET);
@@ -236,11 +241,9 @@ router.patch(
         });
       }
 
-      // Hashear nueva contraseña + limpiar flag
       const passwordHash = await bcrypt.hash(newPassword, 10);
       await docenteRepo.updatePasswordAndClearFlag(decoded.id, passwordHash);
 
-      // ===== Roles para emitir accessToken completo =====
       if (typeof docenteRepo.getRolesByDocenteId !== "function") {
         return res.status(500).json({
           message:
@@ -250,7 +253,9 @@ router.patch(
       }
 
       const roles = await docenteRepo.getRolesByDocenteId(decoded.id);
-      const activeRoleId = pickActiveRoleId(roles);
+
+      // ✅ NO forzamos ADMIN tampoco aquí
+      const activeRoleId = pickActiveRoleId(roles, null);
 
       if (!activeRoleId) {
         return res.status(403).json({
@@ -259,17 +264,17 @@ router.patch(
         });
       }
 
-      const activeRole = roles.find((r) => r.id_rol === activeRoleId) || null;
+      const activeRoleObj =
+        roles.find((r) => Number(r.id_rol) === Number(activeRoleId)) || null;
 
-      // ✅ NUEVO: scope (solo rol 2)
       const scope = await buildScopeForRole(activeRoleId, decoded.id);
 
       const accessToken = jwt.sign(
         {
           id: decoded.id,
-          roles: roles.map((r) => r.id_rol),
-          activeRole: activeRoleId,
-          scope, // ✅ NUEVO
+          roles: roles.map((r) => Number(r.id_rol)),
+          activeRole: Number(activeRoleId),
+          scope,
         },
         process.env.JWT_SECRET,
         { expiresIn: "8h" }
@@ -278,8 +283,8 @@ router.patch(
       return res.json({
         accessToken,
         roles,
-        activeRole,
-        scope, // ✅ NUEVO
+        activeRole: activeRoleObj,
+        scope,
         redirectTo: redirectByRole(activeRoleId),
         __version: "LOGIN_WITH_ROLES_V2",
       });

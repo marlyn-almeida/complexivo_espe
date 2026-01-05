@@ -1,184 +1,133 @@
-.dashboard-wrap {
+/* Wrapper general (similar a portales académicos) */
+.espeDash {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
 }
 
-/* Header */
-.dashboard-header {
+/* Breadcrumb + título (opcional, como miESPE) */
+.espeDashHead {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 14px;
-  flex-wrap: wrap;
-  padding: 14px 16px;
-  background: rgba(0, 0, 0, 0.02);
-  border: 1px solid var(--border, rgba(0,0,0,0.08));
-  border-radius: 14px;
-}
-
-.dashboard-title-block h2 {
-  margin: 0;
-  font-size: 1.25rem;
-  font-weight: 900;
-  color: var(--text-main);
-  letter-spacing: 0.2px;
-}
-
-.dashboard-title-block p {
-  margin: 6px 0 0;
-  font-size: 0.92rem;
-  color: var(--text-muted);
-  line-height: 1.35;
-}
-
-.dashboard-header-hint {
-  display: flex;
-  align-items: center;
-}
-
-.hint-chip {
-  display: inline-flex;
-  align-items: center;
-  padding: 8px 10px;
-  border-radius: 999px;
-  font-size: 0.88rem;
-  color: var(--text-muted);
-  background: rgba(0,0,0,0.04);
-  border: 1px solid rgba(0,0,0,0.08);
-}
-
-/* Grid */
-.dashboard-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
-}
-
-@media (max-width: 1280px) {
-  .dashboard-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 640px) {
-  .dashboard-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* Card button */
-.dashboard-card {
-  text-align: left;
-  cursor: pointer;
-  border: 1px solid var(--border, rgba(0,0,0,0.08));
-  background: var(--bg-white, #fff);
-  border-radius: 16px;
-  padding: 14px 14px 12px;
-  box-shadow: var(--shadow-soft, 0 8px 26px rgba(0,0,0,0.06));
-  transition: transform 0.08s ease, box-shadow 0.18s ease, border 0.18s ease, background 0.18s ease;
-  display: flex;
-  flex-direction: column;
+  align-items: baseline;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
-.dashboard-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-hover, 0 14px 34px rgba(0,0,0,0.10));
-  border-color: rgba(0,0,0,0.14);
-  background: rgba(255,255,255,0.98);
+.espeDashTitle {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-main);
 }
 
-.dashboard-card:active {
+.espeDashCrumb {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+.espeDashCrumb b {
+  color: var(--text-main);
+}
+
+/* Contenedor de secciones (bloques) */
+.espeDashSection {
+  background: #fff;
+  border: 1px solid var(--border-soft, rgba(0,0,0,0.08));
+  border-radius: 10px;
+  padding: 18px;
+}
+
+.espeDashSectionTitle {
+  margin: 0 0 12px;
+  font-weight: 700;
+  color: var(--text-main);
+  font-size: 1rem;
+}
+
+/* Grid de tiles (iconos grandes) */
+.espeDashGrid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 18px;
+}
+
+@media (max-width: 1400px) {
+  .espeDashGrid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+}
+@media (max-width: 1200px) {
+  .espeDashGrid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (max-width: 900px) {
+  .espeDashGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .espeDashGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* Tile */
+.espeTile {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  padding: 10px 8px;
+  border-radius: 10px;
+  text-align: center;
+
+  transition: background 0.15s ease, transform 0.08s ease;
+}
+
+.espeTile:hover {
+  background: rgba(0,0,0,0.03);
+  transform: translateY(-1px);
+}
+
+.espeTile:active {
   transform: translateY(0);
 }
 
-.dashboard-card:focus {
-  outline: none;
-}
-
-.dashboard-card:focus-visible {
-  outline: 3px solid rgba(20, 140, 60, 0.35);
+.espeTile:focus { outline: none; }
+.espeTile:focus-visible {
+  outline: 3px solid rgba(20, 140, 60, 0.30);
   outline-offset: 2px;
 }
 
-/* Top row */
-.card-top {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+/* Icono grande tipo “miESPE” */
+.espeTileIcon {
+  width: 90px;
+  height: 90px;
+  margin: 0 auto 10px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 14px;
+  background: rgba(0,0,0,0.02);
+  border: 1px solid rgba(0,0,0,0.06);
 }
 
-.card-icon {
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
-  border: 1px solid rgba(0,0,0,0.08);
-  background: rgba(0,0,0,0.03);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.2rem;
+/* Si usas emoji */
+.espeTileEmoji {
+  font-size: 2.4rem;
+  line-height: 1;
 }
 
-.card-top-text {
-  flex: 1;
-  min-width: 0;
+/* Si luego usas imágenes */
+.espeTileImg {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
 }
 
-.card-chevron {
-  font-weight: 900;
+/* Label */
+.espeTileLabel {
+  font-size: 0.95rem;
+  color: #2b62b8; /* estilo portal académico */
+  font-weight: 500;
+}
+
+/* Subtexto opcional */
+.espeTileHint {
+  margin-top: 4px;
+  font-size: 0.8rem;
   color: var(--text-muted);
-  opacity: 0.9;
-}
-
-/* Titles */
-.dashboard-section-title {
-  font-size: 0.72rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-
-.dashboard-card-title {
-  margin-top: 6px;
-  font-size: 1rem;
-  font-weight: 900;
-  color: var(--text-main);
-  line-height: 1.2;
-}
-
-/* Body */
-.dashboard-card-text {
-  margin: 0;
-  font-size: 0.9rem;
-  color: var(--text-muted);
-  line-height: 1.4;
-}
-
-/* Bottom */
-.card-bottom {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding-top: 10px;
-  border-top: 1px solid rgba(0,0,0,0.08);
-}
-
-.dashboard-card-stat {
-  font-size: 0.86rem;
-  font-weight: 800;
-  color: var(--espe-green, #148c3c);
-}
-
-.card-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 6px 10px;
-  border-radius: 999px;
-  font-size: 0.85rem;
-  font-weight: 800;
-  border: 1px solid rgba(20, 140, 60, 0.25);
-  background: rgba(20, 140, 60, 0.10);
 }

@@ -4,8 +4,8 @@ async function attachScope(req, res, next) {
   try {
     if (!req.user) return next();
 
-    // Solo rol 2 (ADMIN director/apoyo)
-    if (Number(req.user.rol) !== 2) return next();
+    // ✅ SOLO si el rol efectivo es ADMIN
+    if (req.user.rol !== "ADMIN") return next();
 
     const scope = await scopeRepo.getAdminScopeByDocenteId(req.user.id);
 
@@ -13,7 +13,7 @@ async function attachScope(req, res, next) {
       return res.status(403).json({
         ok: false,
         message:
-          "No tienes una carrera asignada como Director o Docente de apoyo (activo).",
+          "Para usar el perfil ADMIN debes estar asignado como DIRECTOR o APOYO activo en una carrera.",
       });
     }
 

@@ -21,8 +21,9 @@ router.post(
 router.put(
   "/:id",
   param("id").isInt({ min: 1 }).toInt(),
-  body("nombre_criterio").isString().trim().notEmpty(),
-  body("orden").isInt({ min: 1 }).toInt(),
+  // ✅ edición parcial
+  body("nombre_criterio").optional().isString().trim().notEmpty(),
+  body("orden").optional().isInt({ min: 1 }).toInt(),
   validate,
   ctrl.update
 );

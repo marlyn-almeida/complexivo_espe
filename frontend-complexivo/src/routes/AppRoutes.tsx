@@ -5,6 +5,7 @@ import ChangePasswordPage from "../pages/auth/ChangePasswordPage";
 
 import DashboardSuperAdmin from "../pages/dashboard/DashboardSuperAdmin";
 import DashboardAdmin from "../pages/dashboard/DashboardAdmin";
+import DashboardDocente from "../pages/dashboard/DashboardDocente";
 
 import PeriodosPage from "../pages/periodos/PeriodosPage";
 import CarrerasPage from "../pages/carreras/CarrerasPage";
@@ -22,7 +23,7 @@ import RubricaEditorPage from "../pages/rubrica/RubricaEditorPage";
 import FranjaHorariaPage from "../pages/franja-horaria/FranjaHorariaPage";
 import TribunalesPage from "../pages/tribunales/TribunalesPage";
 
-// ✅ NUEVO: Mis tribunales (Docente)
+// ✅ Mis tribunales (Docente)
 import MisTribunalesPage from "../pages/docentes/MisTribunalesPage";
 
 import ProtectedRoute from "../components/auth/ProtectedRoute";
@@ -65,7 +66,7 @@ export default function AppRoutes() {
           <Route
             path="/admin/dashboard"
             element={
-              <ProtectedRoute allowRoles={[1, 2]}>
+              <ProtectedRoute allowRoles={[2]}>
                 <DashboardAdmin />
               </ProtectedRoute>
             }
@@ -75,7 +76,7 @@ export default function AppRoutes() {
             path="/docente/dashboard"
             element={
               <ProtectedRoute allowRoles={[3]}>
-                <Placeholder title="Dashboard DOCENTE (pendiente)" />
+                <DashboardDocente />
               </ProtectedRoute>
             }
           />
@@ -206,10 +207,6 @@ export default function AppRoutes() {
               </ProtectedRoute>
             }
           />
-
-          {/* ✅ Ya no necesitamos estas pantallas separadas */}
-          {/* <Route path="/mi-agenda" ... /> */}
-          {/* <Route path="/calificar" ... /> */}
 
           <Route
             path="/actas"

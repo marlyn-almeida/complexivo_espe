@@ -1,0 +1,93 @@
+/* Fondo gris claro como portal */
+.miWrap {
+  padding: 18px 18px 28px;
+}
+
+/* título simple */
+.miTitle {
+  margin: 0 0 14px;
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: var(--text-main, #1b1b1b);
+}
+
+/* Caja blanca grande */
+.miBox {
+  background: #fff;
+  border-radius: 10px;
+  border: 1px solid rgba(0,0,0,0.08);
+  padding: 18px;
+}
+
+/* Grid: iconos grandes en filas */
+.miGrid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 18px;
+}
+
+/* Responsive parecido a miESPE */
+@media (max-width: 1200px) {
+  .miGrid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+}
+@media (max-width: 992px) {
+  .miGrid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (max-width: 768px) {
+  .miGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 480px) {
+  .miGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* Tile como accesos de miESPE */
+.miTile {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 10px 8px;
+  text-align: center;
+  border-radius: 10px;
+  transition: background 0.15s ease, transform 0.08s ease;
+}
+
+.miTile:hover {
+  background: rgba(0,0,0,0.03);
+  transform: translateY(-1px);
+}
+
+.miTile:active {
+  transform: translateY(0);
+}
+
+.miTile:focus { outline: none; }
+.miTile:focus-visible {
+  outline: 3px solid rgba(20, 140, 60, 0.25);
+  outline-offset: 2px;
+}
+
+/* Icono grande en cuadro suave */
+.miIcon {
+  width: 110px;
+  height: 110px;
+  margin: 0 auto 10px;
+  display: grid;
+  place-items: center;
+
+  background: rgba(0,0,0,0.02);
+  border: 1px solid rgba(0,0,0,0.06);
+  border-radius: 14px;
+}
+
+/* Emoji grande (temporal) */
+.miEmoji {
+  font-size: 2.8rem;
+  line-height: 1;
+}
+
+/* Texto azul como portal */
+.miLabel {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #2b62b8;
+}

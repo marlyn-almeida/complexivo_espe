@@ -1,7 +1,8 @@
+// src/services/rol.service.js
 const repo = require("../repositories/rol.repo");
 
 async function list(query = {}) {
-  const includeInactive = query.includeInactive === "true";
+  const includeInactive = Boolean(query.includeInactive); // ✅ FIX
   const q = query.q || "";
   const page = query.page || 1;
   const limit = query.limit || 50;

@@ -1,19 +1,17 @@
 const bcrypt = require("bcryptjs");
 const repo = require("../repositories/docente.repo");
 
-function isRol2(user) {
-  return Number(user?.rol) === 2;
+function isAdmin(user) {
+  return user?.rol === "ADMIN";
 }
 
 async function list(query = {}, user) {
-  const includeInactive = query.includeInactive === "true";
+  const includeInactive = Boolean(query.includeInactive);
   const q = query.q || "";
   const page = query.page || 1;
   const limit = query.limit || 50;
 
-  // Si es rol 2, forzamos scope
-  const scopeCarreraId = isRol2(user) ? user?.scope?.id_carrera : null;
-
+  const scopeCarreraId = isAdmin(user) ? user?.scope?.id_carrera : null;
   return repo.findAll({ includeInactive, q, page, limit, scopeCarreraId });
 }
 
@@ -25,9 +23,15 @@ async function get(id, user) {
     throw err;
   }
 
-  // Si es rol 2, validar que el docente pertenezca a SU carrera
-  if (isRol2(user)) {
-    const ok = await repo.isDocenteInCarrera(Number(id), Number(user.scope.id_carrera));
+  if (isAdmin(user)) {
+    const carreraId = Number(user?.scope?.id_carrera);
+    if (!carreraId) {
+      const err = new Error("Scope inválido: no se encontró id_carrera en el token");
+      err.status = 403;
+      throw err;
+    }
+
+    const ok = await repo.isDocenteInCarrera(Number(id), carreraId);
     if (!ok) {
       const err = new Error("Acceso denegado: el docente no pertenece a tu carrera");
       err.status = 403;
@@ -71,7 +75,6 @@ async function create(payload, user) {
 
   const passwordHash = await bcrypt.hash(passwordPlano, 10);
 
-  // 1) Crear el docente
   const created = await repo.create({
     id_institucional_docente: payload.id_institucional_docente,
     cedula: payload.cedula,
@@ -83,17 +86,22 @@ async function create(payload, user) {
     passwordHash,
   });
 
-  // ✅ 1.1) ROL 3 AUTOMÁTICO (DOCENTE)
-  // Crea (o reactiva) el rol 3 en rol_docente
+  // ROL DOCENTE automático (id_rol=3) se mantiene
   await repo.assignRolToDocente({
     id_rol: 3,
     id_docente: Number(created.id_docente),
   });
 
-  // 2) Si es rol 2, asignarlo a SU carrera como DOCENTE
-  if (isRol2(user)) {
+  if (isAdmin(user)) {
+    const carreraId = Number(user?.scope?.id_carrera);
+    if (!carreraId) {
+      const err = new Error("Scope inválido: no se encontró id_carrera en el token");
+      err.status = 403;
+      throw err;
+    }
+
     await repo.assignDocenteToCarrera({
-      id_carrera: Number(user.scope.id_carrera),
+      id_carrera: carreraId,
       id_docente: Number(created.id_docente),
       tipo_admin: "DOCENTE",
     });
@@ -103,7 +111,6 @@ async function create(payload, user) {
 }
 
 async function update(id, payload, user) {
-  // esto ya valida existencia + si rol 2, que sea de su carrera
   await get(id, user);
 
   const byInst = await repo.findByInstitucional(payload.id_institucional_docente);
@@ -139,7 +146,6 @@ async function update(id, payload, user) {
 }
 
 async function changeEstado(id, estado, user) {
-  // valida existencia + pertenencia si rol 2
   await get(id, user);
   return repo.setEstado(id, estado);
 }

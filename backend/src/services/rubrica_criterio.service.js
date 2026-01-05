@@ -31,9 +31,28 @@ async function create(componenteId, d) {
 async function update(componenteId, id, d) {
   await assertComponente(componenteId);
   await repo.mustBelongToComponente(Number(id), Number(componenteId));
+
+  // ✅ obtener estado actual para permitir edición parcial
+  const current = await repo.findById(Number(id));
+  if (!current) {
+    const e = new Error("Criterio no encontrado");
+    e.status = 404;
+    throw e;
+  }
+
+  const nextNombre =
+    d.nombre_criterio !== undefined
+      ? d.nombre_criterio
+      : current.nombre_criterio;
+
+  const nextOrden =
+    d.orden !== undefined
+      ? Number(d.orden)
+      : current.orden;
+
   return repo.update(Number(id), {
-    nombre_criterio: d.nombre_criterio,
-    orden: Number(d.orden),
+    nombre_criterio: nextNombre,
+    orden: nextOrden,
   });
 }
 

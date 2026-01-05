@@ -14,7 +14,8 @@ router.post(
   "/",
   body("nombre_componente").isString().trim().notEmpty(),
   body("tipo_componente").optional().isIn(["ESCRITA", "ORAL", "OTRO"]),
-  body("ponderacion").isDecimal(),
+  // ✅ opcional + convertir a número
+  body("ponderacion").optional().isDecimal().toFloat(),
   body("orden").isInt({ min: 1 }).toInt(),
   validate,
   ctrl.create
@@ -23,10 +24,12 @@ router.post(
 router.put(
   "/:id",
   param("id").isInt({ min: 1 }).toInt(),
-  body("nombre_componente").isString().trim().notEmpty(),
+  body("nombre_componente").optional().isString().trim().notEmpty(),
   body("tipo_componente").optional().isIn(["ESCRITA", "ORAL", "OTRO"]),
-  body("ponderacion").isDecimal(),
-  body("orden").isInt({ min: 1 }).toInt(),
+  // ✅ opcional + convertir a número
+  body("ponderacion").optional().isDecimal().toFloat(),
+  // ✅ opcional (para edición parcial)
+  body("orden").optional().isInt({ min: 1 }).toInt(),
   validate,
   ctrl.update
 );

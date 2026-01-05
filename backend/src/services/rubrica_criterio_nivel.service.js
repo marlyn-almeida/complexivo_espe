@@ -21,7 +21,7 @@ async function list(criterioId, q) {
 }
 
 async function upsert(criterioId, d) {
-  const criterio = await assertCriterio(criterioId);
+  await assertCriterio(criterioId);
 
   const nivel = await nivelRepo.findById(Number(d.id_rubrica_nivel));
   if (!nivel) {
@@ -30,21 +30,20 @@ async function upsert(criterioId, d) {
     throw e;
   }
 
-  // garantizar que el nivel sea de la misma rubrica del componente del criterio
-  // criterio -> componente -> rubrica, pero aquí no tenemos join; lo validamos en repo con SQL join
-  const ok = await repo.nivelPerteneceALaRubricaDelCriterio(Number(criterioId), Number(d.id_rubrica_nivel));
+  // validar que el nivel pertenezca a la misma rúbrica del criterio
+  const ok = await repo.nivelPerteneceALaRubricaDelCriterio(
+    Number(criterioId),
+    Number(d.id_rubrica_nivel)
+  );
   if (!ok) {
     const e = new Error("El nivel no pertenece a la misma rúbrica del criterio");
     e.status = 409;
     throw e;
   }
 
-  const descripcion = String(d.descripcion || "").trim();
-  if (!descripcion) {
-    const e = new Error("descripcion es obligatoria");
-    e.status = 422;
-    throw e;
-  }
+  // ✅ permitir descripción vacía (editor)
+  const descripcion =
+    d.descripcion !== undefined ? String(d.descripcion).trim() : "";
 
   return repo.upsert({
     id_rubrica_criterio: Number(criterioId),

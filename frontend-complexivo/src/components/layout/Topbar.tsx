@@ -51,7 +51,7 @@ export default function Topbar({
         <div className="topbar-brand">
           <div className="topbar-title">Examen Complexivo</div>
           <div className="topbar-subtitle">
-            Universidad de las Fuerzas Armadas ESPE · TI en línea
+            Universidad de las Fuerzas Armadas ESPE 
           </div>
         </div>
       </div>

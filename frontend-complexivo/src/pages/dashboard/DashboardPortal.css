@@ -1,0 +1,106 @@
+/* Fondo tipo portal */
+.portalWrap {
+  padding: 18px 18px 28px;
+}
+
+/* Solo "Dashboard" */
+.portalTitle {
+  margin: 0 0 16px;
+  font-size: 2.2rem;
+  font-weight: 900;
+  color: var(--text-main, #111827);
+}
+
+/* Caja blanca grande (una sola, sin títulos internos) */
+.portalBox {
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.10);
+  border-radius: 12px;
+  padding: 22px 18px;
+}
+
+/* Grid: ocupa mejor el espacio, íconos "fijos" */
+.portalGrid {
+  display: grid;
+  gap: 22px;
+
+  /* Llena el espacio sin quedar sueltos */
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+
+  /* Hace que quede parejo */
+  justify-items: center;
+  align-items: start;
+}
+
+/* Tile */
+.portalTile {
+  width: 100%;
+  max-width: 220px;
+  padding: 14px 10px;
+  border-radius: 12px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: center;
+
+  transition: background 0.15s ease, transform 0.08s ease;
+}
+
+.portalTile:hover {
+  background: rgba(0, 0, 0, 0.03);
+  transform: translateY(-1px);
+}
+
+.portalTile:active {
+  transform: translateY(0);
+}
+
+.portalTile:focus {
+  outline: none;
+}
+
+.portalTile:focus-visible {
+  outline: 3px solid rgba(20, 140, 60, 0.25);
+  outline-offset: 2px;
+}
+
+/* Icono grande como portal */
+.portalIconBox {
+  width: 120px;
+  height: 120px;
+  margin: 0 auto 12px;
+  display: grid;
+  place-items: center;
+
+  background: rgba(0, 0, 0, 0.02);
+  border: 1px solid rgba(0, 0, 0, 0.07);
+  border-radius: 16px;
+}
+
+.portalEmoji {
+  font-size: 3rem;
+  line-height: 1;
+}
+
+/* Texto azul tipo portal */
+.portalLabel {
+  font-size: 1.05rem;
+  font-weight: 500;
+  color: #2b62b8;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .portalWrap {
+    padding: 14px;
+  }
+
+  .portalBox {
+    padding: 16px 12px;
+  }
+
+  .portalIconBox {
+    width: 110px;
+    height: 110px;
+  }
+}

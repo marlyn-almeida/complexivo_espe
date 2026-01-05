@@ -51,20 +51,17 @@ export default function Login() {
       }
 
       if (data.mustChangePassword) {
-        // Guarda el tempToken para usarlo en ChangePasswordPage
         localStorage.setItem("tempToken", data.tempToken);
         navigate("/change-password", { replace: true });
         return;
       }
 
-      // Sesión normal: guardar token + roles + activeRole
       setSession({
         accessToken: data.accessToken,
         roles: data.roles,
         activeRole: data.activeRole,
       });
 
-      // Redirige al dashboard correcto (lo mejor es usar redirectTo que ya te da el backend)
       navigate(data.redirectTo || "/superadmin/dashboard", { replace: true });
     } catch (err: any) {
       setError(err?.message || "No se pudo conectar con el servidor.");
@@ -76,12 +73,13 @@ export default function Login() {
   return (
     <div className="login-page">
       <div className="login-left">
-        <img src={logo} alt="ESPE" className="login-logo" />
+        {/* HEADER CENTRADO */}
+        <div className="login-header">
+          <img src={logo} alt="ESPE" className="login-logo" />
 
-        <h1 className="login-title">Acceso al sistema de examen complexivo</h1>
-        <p className="login-subtitle">
-          Universidad de las Fuerzas Armadas ESPE · Tecnologías de la Información
-        </p>
+          <h1 className="login-title">Acceso al sistema de examen complexivo</h1>
+          <p className="login-subtitle">Universidad de las Fuerzas Armadas ESPE</p>
+        </div>
 
         <form onSubmit={handleSubmit} className="login-form">
           <div>
@@ -113,7 +111,7 @@ export default function Login() {
             </div>
           </div>
 
-          {error && <div style={{ color: "crimson", marginTop: 8 }}>{error}</div>}
+          {error && <div className="login-error">{error}</div>}
 
           <button type="submit" className="btn-primary" disabled={loading}>
             {loading ? "Ingresando..." : "Acceder"}
@@ -121,8 +119,9 @@ export default function Login() {
         </form>
 
         <div className="login-actions">
-          <button className="login-link" type="button">¿Olvidó su contraseña?</button>
-          <button className="login-link" type="button">Entrar como persona invitada</button>
+          <button className="login-link" type="button">
+            ¿Olvidó su contraseña?
+          </button>
         </div>
 
         <div className="login-lang">

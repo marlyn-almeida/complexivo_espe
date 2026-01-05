@@ -68,10 +68,7 @@ async function update(id, { nombre_rol, descripcion_rol }) {
 }
 
 async function setEstado(id, estado) {
-  await pool.query(
-    "UPDATE rol SET estado=? WHERE id_rol=?",
-    [estado ? 1 : 0, id]
-  );
+  await pool.query("UPDATE rol SET estado=? WHERE id_rol=?", [estado ? 1 : 0, id]);
   return findById(id);
 }
 

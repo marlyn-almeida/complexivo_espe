@@ -3,10 +3,11 @@ const router = require("express").Router();
 const { body, param, query } = require("express-validator");
 const validate = require("../middlewares/validate.middleware");
 const ctrl = require("../controllers/docente.controller");
-const { auth, authorize } = require("../middlewares/auth.middleware");
+const { authorize } = require("../middlewares/auth.middleware");
 
-// ✅ NUEVO: /me (antes de /:id para que no choque)
-router.get("/me", auth, authorize([3, 2, 1]), ctrl.me);
+// ✅ /me debe ir antes de /:id para no chocar
+// ✅ authorize usa strings porque req.user.rol es string ("SUPER_ADMIN", "ADMIN", "DOCENTE")
+router.get("/me", authorize(["SUPER_ADMIN", "ADMIN", "DOCENTE"]), ctrl.me);
 
 router.get(
   "/",

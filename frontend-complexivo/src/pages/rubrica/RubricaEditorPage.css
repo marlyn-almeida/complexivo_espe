@@ -125,8 +125,10 @@
 .re-section-title { margin-top:16px; font-weight:900; font-size:16px; }
 
 /* =========================
-   ✅ NIVELES: tabla bonita
+   ✅ NIVELES: horizontal real
    ========================= */
+
+/* contenedor */
 .levels-table {
   display:flex;
   flex-direction:column;
@@ -134,12 +136,15 @@
   margin-bottom: 12px;
 }
 
+/* header y filas: SIEMPRE horizontal en desktop */
 .levels-head, .levels-row {
   display:grid;
-  grid-template-columns: 1.6fr .6fr .4fr;
+  grid-template-columns: 1.6fr .6fr 44px; /* nombre | valor | delete */
   gap:12px;
+  align-items:end;
 }
 
+/* header */
 .levels-head {
   font-size:12px;
   font-weight:900;
@@ -147,18 +152,23 @@
   padding: 0 2px;
 }
 
-.levels-row > div {
-  padding:10px 12px;
+/* ✅ IMPORTANTE:
+   ya NO dependemos de "div".
+   Si tu JSX tiene inputs directos, esto sí aplica. */
+.levels-row .inp{
+  width:100%;
+}
+.levels-row .btn.icon{
+  width:44px;
+  height:38px;
   border-radius:12px;
-  border:1px solid #e5e7eb;
-  font-weight:900;
-  background:#fff;
+  justify-content:center;
 }
 
 /* Form inline reutilizable */
 .inline-form {
   display:grid;
-  grid-template-columns: 1.6fr .6fr .4fr auto;
+  grid-template-columns: 1.6fr .6fr 44px auto;
   gap:12px;
   align-items:end;
 }
@@ -167,7 +177,7 @@
    ✅ GRIDS (formularios)
    ========================= */
 .grid4 { display:grid; grid-template-columns: 1.6fr .7fr .5fr auto; gap:12px; }
-.grid3 { display:grid; grid-template-columns: 1.6fr .7fr .5fr; gap:12px; } /* ✅ NUEVO */
+.grid3 { display:grid; grid-template-columns: 1.6fr .7fr .5fr; gap:12px; }
 .comp-row { display:grid; grid-template-columns: 1.6fr .7fr .5fr; gap:12px; margin-bottom:12px; }
 
 .add-criterio {
@@ -220,5 +230,9 @@
   .add-criterio { flex-direction:column; align-items:stretch; }
   .add-criterio .inp { max-width:none; }
   .inline-form { grid-template-columns: 1fr; }
+}
+
+/* ✅ OJO: SOLO colapsamos niveles en pantallas pequeñas (no en 1100) */
+@media(max-width:720px){
   .levels-head, .levels-row { grid-template-columns: 1fr; }
 }

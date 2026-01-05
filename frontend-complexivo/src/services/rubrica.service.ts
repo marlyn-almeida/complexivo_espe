@@ -1,41 +1,35 @@
 import axiosClient from "../api/axiosClient";
-
-export type TipoRubrica = "ESCRITA" | "ORAL";
-
-export type Rubrica = {
-  id_rubrica: number;
-  id_carrera_periodo: number;
-  tipo_rubrica: TipoRubrica;
-  ponderacion_global?: number;
-  nombre_rubrica: string;
-  descripcion_rubrica?: string;
-  estado?: boolean | number;
-};
+import type { Rubrica } from "../types/rubrica";
 
 export const rubricaService = {
-  list: async (params?: { includeInactive?: boolean; carreraPeriodoId?: number }) => {
-    const res = await axiosClient.get("/rubricas", { params });
-    return res.data as Rubrica[];
-  },
-
-  create: async (payload: {
-    id_carrera_periodo: number;
-    tipo_rubrica: TipoRubrica;
-    ponderacion_global?: number;
-    nombre_rubrica: string;
-    descripcion_rubrica?: string;
-  }) => {
-    const res = await axiosClient.post("/rubricas", payload);
+  getByPeriodo: async (periodoId: number) => {
+    const res = await axiosClient.get(`/rubricas/periodo/${periodoId}`);
     return res.data as Rubrica;
   },
 
-  update: async (id: number, payload: {
-    id_carrera_periodo: number;
-    tipo_rubrica: TipoRubrica;
-    ponderacion_global?: number;
-    nombre_rubrica: string;
-    descripcion_rubrica?: string;
-  }) => {
+  ensureByPeriodo: async (
+    periodoId: number,
+    payload?: {
+      nombre_rubrica?: string;
+      descripcion_rubrica?: string;
+      ponderacion_global?: number;
+    }
+  ) => {
+    const res = await axiosClient.post(
+      `/rubricas/periodo/${periodoId}`,
+      payload ?? {}
+    );
+    return res.data as { created: boolean; rubrica: Rubrica };
+  },
+
+  update: async (
+    id: number,
+    payload: {
+      nombre_rubrica?: string;
+      descripcion_rubrica?: string;
+      ponderacion_global?: number;
+    }
+  ) => {
     const res = await axiosClient.put(`/rubricas/${id}`, payload);
     return res.data as Rubrica;
   },

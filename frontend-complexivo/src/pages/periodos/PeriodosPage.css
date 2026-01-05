@@ -1,16 +1,43 @@
+/* ============================
+   PERIODOS - ESPE STYLE (FULL)
+   ============================ */
+
+/* Paleta ESPE */
+:root {
+  --espe-green: #2e7d32;
+  --espe-green-dark: #1b5e20;
+  --espe-green-soft: #e7f5ea;
+
+  --border: rgba(0, 0, 0, 0.10);
+  --border-soft: rgba(46, 125, 50, 0.16);
+  --row-hover: rgba(46, 125, 50, 0.04);
+
+  --text-main: #1f2937;
+  --text-muted: #64748b;
+
+  /* ✅ Header ESPE */
+  --table-head-bg: #2e7d32;
+  --table-head-border: rgba(0,0,0,0.10);
+  --table-head-text: #ffffff;
+
+  --shadow: 0 10px 26px rgba(0,0,0,0.06);
+}
+
 /* Contenedor general */
 .periodos-wrap {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  font-family: "Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  color: var(--text-main);
 }
 
-/* Panel blanco estilo Carreras */
+/* Panel blanco estilo Carreras (ESPE) */
 .periodos-panel {
   background: #fff;
-  border: 1px solid rgba(0,0,0,0.10);
+  border: 1px solid var(--border-soft);
   border-radius: 18px;
-  box-shadow: 0 10px 26px rgba(0,0,0,0.06);
+  box-shadow: var(--shadow);
   padding: 16px 16px 14px;
 }
 
@@ -27,11 +54,13 @@
   margin: 0;
   font-size: 1.55rem;
   font-weight: 900;
+  letter-spacing: -0.02em;
+  color: var(--text-main);
 }
 
 .panel-subtitle {
   margin: 6px 0 0 0;
-  color: #64748b;
+  color: var(--text-muted);
   font-size: 0.95rem;
 }
 
@@ -54,15 +83,16 @@
 
 .stat-card {
   background: #fff;
-  border: 1px solid rgba(0,0,0,0.10);
+  border: 1px solid var(--border-soft);
   border-radius: 14px;
   padding: 12px 14px;
   min-width: 150px;
+  box-shadow: 0 8px 20px rgba(17, 24, 39, 0.04);
 }
 
 .stat-label {
   font-size: 0.92rem;
-  color: #64748b;
+  color: var(--text-muted);
   font-weight: 800;
 }
 
@@ -72,15 +102,15 @@
   font-weight: 900;
 }
 
-/* ✅ colores métricas */
+/* ✅ colores métricas (más ESPE) */
 .stat-card-success {
-  background: rgba(16, 185, 129, 0.08);
-  border-color: rgba(16, 185, 129, 0.25);
+  background: rgba(46, 125, 50, 0.08);
+  border-color: rgba(46, 125, 50, 0.22);
 }
 
 .stat-card-danger {
-  background: rgba(244, 63, 94, 0.08);
-  border-color: rgba(244, 63, 94, 0.25);
+  background: rgba(185, 28, 28, 0.06);
+  border-color: rgba(185, 28, 28, 0.18);
 }
 
 /* Acciones derecha */
@@ -119,7 +149,7 @@
 }
 
 .date-label {
-  color: #64748b;
+  color: var(--text-muted);
   font-weight: 800;
   font-size: 0.92rem;
 }
@@ -129,26 +159,33 @@
   height: 40px;
   padding: 0 12px;
   border-radius: 14px;
-  border: 1px solid rgba(0,0,0,0.14);
+  border: 1px solid rgba(46, 125, 50, 0.18);
   outline: none;
   background: #fff;
+  color: var(--text-main);
 }
 
 .input-base:focus {
-  border-color: rgba(16, 185, 129, 0.65);
-  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.12);
+  border-color: rgba(46, 125, 50, 0.65);
+  box-shadow: 0 0 0 4px rgba(46, 125, 50, 0.14);
 }
 
-/* Botón verde */
+/* Botón verde (ESPE) */
 .periodos-primary {
-  background: #0f7a55;
-  border: 1px solid rgba(15, 122, 85, 0.65);
+  background: var(--espe-green);
+  border: 1px solid rgba(46, 125, 50, 0.55);
   color: #fff;
-  box-shadow: 0 10px 22px rgba(15, 122, 85, 0.25);
+  box-shadow: 0 12px 26px rgba(46, 125, 50, 0.22);
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 14px;
+  cursor: pointer;
+  font-weight: 900;
 }
 
 .periodos-primary:hover {
   filter: brightness(0.98);
+  background: #2b7a30;
 }
 
 /* Botón secundario */
@@ -156,10 +193,11 @@
   height: 40px;
   padding: 0 14px;
   border-radius: 14px;
-  border: 1px solid rgba(0,0,0,0.14);
+  border: 1px solid rgba(46, 125, 50, 0.18);
   background: #fff;
   cursor: pointer;
   font-weight: 800;
+  color: var(--text-main);
 }
 
 .btn-secondary:disabled {
@@ -203,7 +241,7 @@
 }
 
 .switch input:checked + .switch-slider {
-  background: rgba(16, 185, 129, 0.55);
+  background: rgba(46, 125, 50, 0.55);
 }
 
 .switch input:checked + .switch-slider::after {
@@ -211,16 +249,16 @@
 }
 
 .switch-label {
-  color: #64748b;
+  color: var(--text-muted);
   font-weight: 800;
 }
 
 /* ===== Table card ===== */
 .table-card {
   background: #fff;
-  border: 1px solid rgba(0,0,0,0.10);
+  border: 1px solid var(--border-soft);
   border-radius: 14px;
-  box-shadow: 0 10px 26px rgba(0,0,0,0.06);
+  box-shadow: var(--shadow);
   overflow: hidden;
 }
 
@@ -231,6 +269,8 @@
 .table {
   width: 100%;
   border-collapse: collapse;
+
+  /* ✅ NO TOCO tu tamaño */
   min-width: 980px;
 }
 
@@ -241,18 +281,31 @@
   vertical-align: middle;
 }
 
-.table th {
+/* =========================
+   ✅ HEADER VERDE FUERTE ESPE
+   ========================= */
+.table thead th {
   position: sticky;
   top: 0;
-  background: rgba(0,0,0,0.03);
-  font-weight: 900;
-  font-size: 0.92rem;
+
+  background: var(--table-head-bg);      /* ✅ verde sólido */
+  color: var(--table-head-text);         /* ✅ blanco */
+  font-weight: 800;                      /* ✅ similar a ESPE */
+  font-size: 0.95rem;
+  letter-spacing: 0.01em;
+
   z-index: 2;
-  color: #475569;
+  border-bottom: 1px solid var(--table-head-border);
 }
 
+/* Para que el header se vea “barra” (sin líneas raras) */
+.table thead th + th {
+  box-shadow: inset 1px 0 0 rgba(255,255,255,0.10);
+}
+
+/* Hover verde suave */
 .table tr:hover td {
-  background: rgba(0,0,0,0.02);
+  background: var(--row-hover);
 }
 
 .th-actions {
@@ -266,21 +319,39 @@
 
 .td-center {
   text-align: center;
-  color: #64748b;
+  color: var(--text-muted);
   padding: 18px 12px;
 }
 
-.td-strong {
-  font-weight: 900;
+/* ✅ Texto de filas estilo ESPE (más limpio) */
+.table tbody td {
+  font-size: 0.95rem;
+  color: #334155;
+  font-weight: 500;
 }
 
+/* Fuerte */
+.td-strong {
+  font-weight: 900;
+  color: #0f172a;
+}
+
+/* “Código” / resalte tipo ESPE */
 .td-muted {
   color: #0f172a;
 }
 
+/* Si en tu JSX pones className="code" al código, se verá verde */
+.table .code,
+.table td.code {
+  color: #0f7627;
+  font-weight: 900;
+}
+
+/* Fecha */
 .periodos-date {
   font-size: 0.90rem;
-  color: #64748b;
+  color: var(--text-muted);
   white-space: nowrap;
 }
 
@@ -288,22 +359,24 @@
 .badge {
   display: inline-flex;
   align-items: center;
-  padding: 6px 10px;
+  padding: 6px 12px;
   border-radius: 999px;
   font-size: 0.85rem;
   font-weight: 900;
-  border: 1px solid rgba(0,0,0,0.12);
+  border: 1px solid rgba(46, 125, 50, 0.18);
+  background: rgba(46, 125, 50, 0.06);
+  color: var(--espe-green-dark);
 }
 
 .badge.active {
-  background: rgba(16, 185, 129, 0.14);
-  border-color: rgba(16, 185, 129, 0.25);
-  color: #0f7a55;
+  background: rgba(46, 125, 50, 0.12);
+  border-color: rgba(46, 125, 50, 0.24);
+  color: var(--espe-green-dark);
 }
 
 .badge.inactive {
-  background: rgba(244, 63, 94, 0.10);
-  border-color: rgba(244, 63, 94, 0.22);
+  background: rgba(185, 28, 28, 0.08);
+  border-color: rgba(185, 28, 28, 0.20);
   color: #b91c1c;
 }
 
@@ -321,12 +394,13 @@
   justify-content: center;
   width: 38px;
   height: 36px;
-  border-radius: 12px;
-  border: 1px solid rgba(0,0,0,0.12);
+  border-radius: 14px; /* más redondo ESPE */
+  border: 1px solid rgba(46, 125, 50, 0.12);
   background: #fff;
   color: #334155;
   cursor: pointer;
   transition: transform 0.05s ease, background 0.15s ease;
+  box-shadow: 0 6px 14px rgba(17, 24, 39, 0.04);
 }
 
 .icon-table-btn:hover {
@@ -337,32 +411,27 @@
   transform: scale(0.98);
 }
 
-/* ✅ Colores por acción (como Carreras) */
-.icon-view {
-  border-color: rgba(59, 130, 246, 0.25);
-  background: rgba(59, 130, 246, 0.10);
-  color: #2563eb;
-}
-
+/* ✅ Colores por acción (afinados) */
+.icon-view,
 .icon-edit {
-  border-color: rgba(59, 130, 246, 0.25);
+  border-color: rgba(59, 130, 246, 0.22);
   background: rgba(59, 130, 246, 0.10);
-  color: #2563eb;
+  color: #1d4ed8;
 }
 
 .icon-success {
-  border-color: rgba(16, 185, 129, 0.25);
-  background: rgba(16, 185, 129, 0.10);
-  color: #0f7a55;
+  border-color: rgba(46, 125, 50, 0.22);
+  background: rgba(46, 125, 50, 0.12);
+  color: var(--espe-green-dark);
 }
 
 .icon-danger {
-  border-color: rgba(244, 63, 94, 0.25);
-  background: rgba(244, 63, 94, 0.10);
+  border-color: rgba(185, 28, 28, 0.20);
+  background: rgba(185, 28, 28, 0.10);
   color: #b91c1c;
 }
 
-/* ✅ Paginación centrada */
+/* ✅ Paginación centrada + toque verde */
 .pagination-bar {
   display: flex;
   align-items: center;
@@ -370,12 +439,12 @@
   gap: 12px;
   width: 100%;
   padding: 12px 14px;
-  border-top: 1px solid rgba(0,0,0,0.08);
-  background: rgba(0,0,0,0.01);
+  border-top: 1px solid rgba(46, 125, 50, 0.14);
+  background: rgba(46, 125, 50, 0.04);
 }
 
 .pagination-text {
-  color: #64748b;
+  color: var(--text-muted);
   font-size: 0.92rem;
   font-weight: 700;
 }
@@ -412,23 +481,24 @@
   gap: 10px;
   padding: 14px 16px;
   border-bottom: 1px solid rgba(0,0,0,0.10);
-  background: rgba(0,0,0,0.02);
+  background: rgba(46,125,50,0.06);
 }
 
 .modal-title {
   margin: 0;
   font-size: 1.15rem;
   font-weight: 900;
+  color: var(--text-main);
 }
 
 .modal-subtitle {
   margin: 6px 0 0 0;
-  color: #64748b;
+  color: var(--text-muted);
   font-size: 0.92rem;
 }
 
 .icon-btn {
-  border: 1px solid rgba(0,0,0,0.12);
+  border: 1px solid rgba(46, 125, 50, 0.18);
   background: #fff;
   border-radius: 10px;
   padding: 8px 10px;
@@ -450,7 +520,7 @@
   display: block;
   margin: 0 0 6px 0;
   font-size: 0.9rem;
-  color: #64748b;
+  color: var(--text-muted);
   font-weight: 900;
 }
 
@@ -487,13 +557,13 @@
   display: grid;
   gap: 4px;
   padding: 10px 12px;
-  border: 1px solid rgba(0,0,0,0.08);
+  border: 1px solid rgba(46, 125, 50, 0.14);
   border-radius: 12px;
-  background: rgba(0,0,0,0.02);
+  background: rgba(46, 125, 50, 0.04);
 }
 
 .detail-label {
-  color: #64748b;
+  color: var(--text-muted);
   font-size: 0.88rem;
   font-weight: 900;
 }
