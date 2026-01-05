@@ -34,7 +34,8 @@ export default function TribunalesPage() {
   const [selectedCP, setSelectedCP] = useState<number | "">("");
 
   const [tribunales, setTribunales] = useState<Tribunal[]>([]);
-  const [docentes, setDocentes] = useState<CarreraDocente[]>([]); // se usa para modal crear/editar en el futuro
+  const [_docentes, setDocentes] = useState<CarreraDocente[]>([]);
+
   const [loading, setLoading] = useState(false);
 
   // ===== UI / FILTROS =====
