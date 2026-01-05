@@ -1,3 +1,4 @@
+// src/components/layout/menuByRole.ts
 import type { RolId } from "../../utils/auth";
 
 export type MenuItem = {
@@ -43,10 +44,10 @@ export const MENU_SECTIONS: MenuSection[] = [
       // ✅ Docentes SOLO aquí para SUPER_ADMIN
       { label: "Docentes", to: "/docentes", roles: [1] },
 
-      // ✅ nuevo nombre pro
-      { label: "Asignación de personal por carrera", to: "/asignacion-personal", roles: [1] },
+      // ❌ Quitado por pedido
+      // { label: "Asignación de personal por carrera", to: "/asignacion-personal", roles: [1] },
 
-      // si lo necesitas para tus reglas (a veces es útil)
+      // Si lo necesitas para tus reglas (a veces es útil)
       { label: "Carrera-Período", to: "/carrera-periodo", roles: [1] },
     ],
   },
@@ -55,8 +56,11 @@ export const MENU_SECTIONS: MenuSection[] = [
     title: "Seguridad",
     roles: [1],
     items: [
-      { label: "Roles", to: "/roles", roles: [1] },
-      { label: "Permisos", to: "/permisos", roles: [1] },
+      // ✅ Comentado por si luego lo necesitas
+      // { label: "Roles", to: "/roles", roles: [1] },
+
+      // ❌ Quitado por pedido
+      // { label: "Permisos", to: "/permisos", roles: [1] },
     ],
   },
 
@@ -78,7 +82,9 @@ export const MENU_SECTIONS: MenuSection[] = [
     roles: [2],
     items: [
       { label: "Tribunales", to: "/tribunales", roles: [2] },
-      { label: "Asignación Docente-Tribunal", to: "/tribunal-docentes", roles: [2] },
+
+      // ❌ Quitado por pedido (no quieres esa pantalla)
+      // { label: "Asignación Docente-Tribunal", to: "/tribunal-docentes", roles: [2] },
     ],
   },
 
@@ -86,8 +92,9 @@ export const MENU_SECTIONS: MenuSection[] = [
     title: "Actas y calificaciones",
     roles: [2],
     items: [
-      { label: "Actas", to: "/actas", roles: [2] },
-      { label: "Calificaciones", to: "/calificaciones", roles: [2] },
+      // ✅ Comentado por si luego se necesita para rol 2
+      // { label: "Actas", to: "/actas", roles: [2] },
+      // { label: "Calificaciones", to: "/calificaciones", roles: [2] },
     ],
   },
 
@@ -98,17 +105,12 @@ export const MENU_SECTIONS: MenuSection[] = [
     title: "Tribunales",
     roles: [3],
     items: [
+      // ✅ lo nuevo que dijimos: todo centrado en tribunales
       { label: "Mis tribunales", to: "/mis-tribunales", roles: [3] },
-      { label: "Calificar", to: "/calificar", roles: [3] },
-    ],
-  },
-
-  {
-    title: "Actas y calificaciones",
-    roles: [3],
-    items: [
-      { label: "Actas", to: "/actas", roles: [3] },
-      { label: "Calificaciones", to: "/calificaciones", roles: [3] },
+      { label: "Mi agenda", to: "/mi-agenda", roles: [3] },          // (la creamos luego)
+      { label: "Calificar", to: "/calificar", roles: [3] },          // (la mejoramos luego)
+      { label: "Actas", to: "/actas", roles: [3] },                  // (puede existir o lo creamos)
+      // Si luego quieres: { label: "Historial de calificaciones", to: "/calificaciones", roles: [3] },
     ],
   },
 ];

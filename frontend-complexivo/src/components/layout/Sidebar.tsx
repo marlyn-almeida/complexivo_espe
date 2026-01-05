@@ -1,3 +1,4 @@
+// src/components/layout/Sidebar.tsx
 import { NavLink, useNavigate } from "react-router-dom";
 import "./Sidebar.css";
 import { clearSession, getActiveRole } from "../../utils/auth";
@@ -52,7 +53,7 @@ export default function Sidebar({
   const navigate = useNavigate();
   const role = getActiveRole();
 
-  // ✅ Secciones dinámicas + dedupe de rutas por "to"
+  // ✅ Secciones dinámicas + dedupe por "to"
   const sections = (() => {
     if (!role) return [];
     const seen = new Set<string>();
@@ -62,11 +63,8 @@ export default function Sidebar({
       .map((sec) => {
         const items = sec.items.filter((it) => {
           if (!it.roles.includes(role)) return false;
-
-          // dedupe por ruta
           if (seen.has(it.to)) return false;
           seen.add(it.to);
-
           return true;
         });
 
@@ -110,10 +108,9 @@ export default function Sidebar({
                     <NavLink
                       key={it.to}
                       to={it.to}
-                      className={({ isActive }) =>
-                        `sidebar-link ${isActive ? "active" : ""}`
-                      }
+                      className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}
                       onClick={onClose}
+                      end
                     >
                       <span className="sidebar-dot" />
                       {it.label}

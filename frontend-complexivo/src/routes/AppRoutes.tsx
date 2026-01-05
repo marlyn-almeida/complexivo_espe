@@ -8,31 +8,25 @@ import DashboardAdmin from "../pages/dashboard/DashboardAdmin";
 
 import PeriodosPage from "../pages/periodos/PeriodosPage";
 import CarrerasPage from "../pages/carreras/CarrerasPage";
-import CarreraAdminsPage from "../pages/carreras/CarreraAdminsPage"; // ✅ NUEVO
+import CarreraAdminsPage from "../pages/carreras/CarreraAdminsPage";
 import DocentesPage from "../pages/docentes/DocentesPage";
 import EstudiantesPage from "../pages/estudiantes/EstudiantesPage";
 import CarreraPeriodoPage from "../pages/carreraPeriodo/CarreraPeriodoPage";
 
-// ✅ PERFIL (nuevo)
 import PerfilPage from "../pages/perfil/PerfilPage";
 
-// ✅ Rúbricas (solo estas 3 se usan)
 import RubricasPeriodoPage from "../pages/rubrica/RubricasPeriodoPage";
 import RubricasVerPage from "../pages/rubrica/RubricasVerPage";
 import RubricaEditorPage from "../pages/rubrica/RubricaEditorPage";
 
-// ✅ NUEVO: Franjas Horarias (página real)
 import FranjaHorariaPage from "../pages/franja-horaria/FranjaHorariaPage";
-
-// ✅ NUEVO: Tribunales (página real)
 import TribunalesPage from "../pages/tribunales/TribunalesPage";
+
+// ✅ NUEVO: Mis tribunales (Docente)
+import MisTribunalesPage from "../pages/docentes/MisTribunalesPage";
 
 import ProtectedRoute from "../components/auth/ProtectedRoute";
 import { dashboardByRole, getActiveRole, getToken } from "../utils/auth";
-
-const Placeholder = ({ title }: { title: string }) => (
-  <div className="rounded-lg bg-white p-4 shadow-espeSoft">{title}</div>
-);
 
 // Redirige desde "/" al dashboard del rol activo
 function HomeRedirect() {
@@ -41,6 +35,10 @@ function HomeRedirect() {
   if (!token || !role) return <Navigate to="/login" replace />;
   return <Navigate to={dashboardByRole(role)} replace />;
 }
+
+const Placeholder = ({ title }: { title: string }) => (
+  <div className="rounded-lg bg-white p-4 shadow-espeSoft">{title}</div>
+);
 
 export default function AppRoutes() {
   return (
@@ -76,13 +74,13 @@ export default function AppRoutes() {
           <Route
             path="/docente/dashboard"
             element={
-              <ProtectedRoute allowRoles={[1, 2, 3]}>
+              <ProtectedRoute allowRoles={[3]}>
                 <Placeholder title="Dashboard DOCENTE (pendiente)" />
               </ProtectedRoute>
             }
           />
 
-          {/* ✅ Perfil (todos) */}
+          {/* Perfil (todos) */}
           <Route
             path="/perfil"
             element={
@@ -95,8 +93,6 @@ export default function AppRoutes() {
           {/* =========================
               SUPER_ADMIN (1)
              ========================= */}
-
-          {/* Configuración global */}
           <Route
             path="/carreras"
             element={
@@ -106,7 +102,6 @@ export default function AppRoutes() {
             }
           />
 
-          {/* ✅ NUEVA VISTA: ASIGNAR AUTORIDADES POR CARRERA */}
           <Route
             path="/carreras/:id/admin"
             element={
@@ -125,7 +120,6 @@ export default function AppRoutes() {
             }
           />
 
-          {/* ✅ CARRERA - PERIODO */}
           <Route
             path="/carrera-periodo"
             element={
@@ -135,7 +129,6 @@ export default function AppRoutes() {
             }
           />
 
-          {/* ✅ RÚBRICAS (FLUJO NUEVO: 1 rúbrica por período) */}
           <Route
             path="/rubricas"
             element={
@@ -145,7 +138,6 @@ export default function AppRoutes() {
             }
           />
 
-          {/* ✅ Pantalla por período: crea/abre la rúbrica del período */}
           <Route
             path="/rubricas/periodo/:idPeriodo"
             element={
@@ -155,7 +147,6 @@ export default function AppRoutes() {
             }
           />
 
-          {/* ✅ Editor por id_rubrica */}
           <Route
             path="/rubricas/editar/:idRubrica"
             element={
@@ -165,40 +156,11 @@ export default function AppRoutes() {
             }
           />
 
-          {/* Administración del sistema */}
           <Route
             path="/docentes"
             element={
               <ProtectedRoute allowRoles={[1, 2]}>
                 <DocentesPage />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/asignacion-personal"
-            element={
-              <ProtectedRoute allowRoles={[1]}>
-                <Placeholder title="Asignación de personal por carrera (pendiente)" />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Seguridad */}
-          <Route
-            path="/roles"
-            element={
-              <ProtectedRoute allowRoles={[1]}>
-                <Placeholder title="Roles (pendiente)" />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/permisos"
-            element={
-              <ProtectedRoute allowRoles={[1]}>
-                <Placeholder title="Permisos (pendiente)" />
               </ProtectedRoute>
             }
           />
@@ -215,7 +177,6 @@ export default function AppRoutes() {
             }
           />
 
-          {/* ✅ /franjas ya no es Placeholder */}
           <Route
             path="/franjas"
             element={
@@ -225,40 +186,11 @@ export default function AppRoutes() {
             }
           />
 
-          {/* ✅ /tribunales ya no es Placeholder */}
           <Route
             path="/tribunales"
             element={
               <ProtectedRoute allowRoles={[2]}>
                 <TribunalesPage />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/tribunal-docentes"
-            element={
-              <ProtectedRoute allowRoles={[2]}>
-                <Placeholder title="Asignación Docente-Tribunal (pendiente)" />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* ADMIN (2) y DOCENTE (3) */}
-          <Route
-            path="/actas"
-            element={
-              <ProtectedRoute allowRoles={[2, 3]}>
-                <Placeholder title="Actas (pendiente)" />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/calificaciones"
-            element={
-              <ProtectedRoute allowRoles={[2, 3]}>
-                <Placeholder title="Calificaciones (pendiente)" />
               </ProtectedRoute>
             }
           />
@@ -270,16 +202,20 @@ export default function AppRoutes() {
             path="/mis-tribunales"
             element={
               <ProtectedRoute allowRoles={[3]}>
-                <Placeholder title="Mis tribunales (pendiente)" />
+                <MisTribunalesPage />
               </ProtectedRoute>
             }
           />
 
+          {/* ✅ Ya no necesitamos estas pantallas separadas */}
+          {/* <Route path="/mi-agenda" ... /> */}
+          {/* <Route path="/calificar" ... /> */}
+
           <Route
-            path="/calificar"
+            path="/actas"
             element={
               <ProtectedRoute allowRoles={[3]}>
-                <Placeholder title="Calificar (pendiente)" />
+                <Placeholder title="Actas (pendiente)" />
               </ProtectedRoute>
             }
           />
