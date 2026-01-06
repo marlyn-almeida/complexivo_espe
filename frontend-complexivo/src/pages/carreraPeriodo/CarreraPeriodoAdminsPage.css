@@ -403,3 +403,19 @@
   .searchInline{ max-width: 100%; }
   .table thead th, .table tbody td{ padding: 10px; }
 }
+
+.fieldInput{
+  border: 1px solid rgba(0,0,0,.14);
+  border-radius: 12px;
+  padding: 10px 10px;
+  outline: none;
+  background: #fff;
+  width: 100%;
+  margin-bottom: 10px;
+  font-size: .92rem;
+}
+
+.fieldInput:focus{
+  border-color: rgba(46,125,50,.6);
+  box-shadow: 0 0 0 3px rgba(46,125,50,.14);
+}

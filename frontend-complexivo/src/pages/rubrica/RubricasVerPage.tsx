@@ -1,15 +1,24 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import axiosClient from "../../api/axiosClient";
 import "./RubricasVerPage.css";
 
+import { rubricaService } from "../../services/rubrica.service";
+import {
+  rubricaComponenteService,
+  type RubricaComponente,
+} from "../../services/rubricaComponente.service";
+import axiosClient from "../../api/axiosClient";
+
+/** -----------------------------
+ * Tipos locales (solo para esta vista)
+ * ------------------------------ */
 type Rubrica = {
   id_rubrica: number;
   id_periodo: number;
   ponderacion_global: string | number;
   nombre_rubrica: string;
   descripcion_rubrica?: string | null;
-  estado: number;
+  estado: number | boolean;
 };
 
 type Nivel = {
@@ -17,62 +26,96 @@ type Nivel = {
   id_rubrica: number;
   nombre_nivel: string;
   valor_nivel: number;
-  orden_nivel: number;
-  estado: number;
-};
-
-type Componente = {
-  id_rubrica_componente: number;
-  id_rubrica: number;
-  nombre_componente: string;
-  tipo_componente: "ESCRITA" | "ORAL" | "OTRO";
-  ponderacion: number;
-  orden: number;
-  estado: number;
+  // según tu BD puede venir como "orden" u "orden_nivel"
+  orden?: number;
+  orden_nivel?: number;
+  estado: number | boolean;
 };
 
 type Criterio = {
   id_rubrica_criterio: number;
   id_rubrica_componente: number;
   nombre_criterio: string;
+  descripcion_criterio?: string | null;
   orden: number;
-  estado: number;
+  estado: number | boolean;
 };
 
-// ✅ intenta varias rutas hasta encontrar la correcta
-async function getWithFallback<T>(paths: string[], params?: any): Promise<T> {
-  let lastErr: any = null;
-  for (const p of paths) {
-    try {
-      const res = await axiosClient.get(p, { params });
-      return res.data as T;
-    } catch (e: any) {
-      lastErr = e;
-    }
-  }
-  throw lastErr;
+/** -----------------------------
+ * Helpers
+ * ------------------------------ */
+function isActivo(estado: number | boolean | undefined) {
+  // backend a veces manda 1/0 o true/false
+  if (estado === true) return true;
+  if (estado === false) return false;
+  return Number(estado) === 1;
+}
+
+function toNum(v: any, fallback = 0) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+/** -----------------------------
+ * Service mínimo para criterios (porque dijiste que no lo tenías)
+ * Endpoint REAL según tu server.js:
+ *   /api/componentes/:componenteId/criterios
+ * ------------------------------ */
+async function listCriteriosByComponente(
+  componenteId: number,
+  includeInactive = true
+): Promise<Criterio[]> {
+  const res = await axiosClient.get(`/componentes/${componenteId}/criterios`, {
+    params: { includeInactive: includeInactive ? 1 : 0 },
+  });
+  return (res.data ?? []) as Criterio[];
+}
+
+/** -----------------------------
+ * Service mínimo para niveles (porque dijiste que no lo tenías)
+ * Endpoint REAL según tu server.js:
+ *   /api/rubricas/:rubricaId/niveles
+ * ------------------------------ */
+async function listNivelesByRubrica(
+  rubricaId: number,
+  includeInactive = true
+): Promise<Nivel[]> {
+  const res = await axiosClient.get(`/rubricas/${rubricaId}/niveles`, {
+    params: { includeInactive: includeInactive ? 1 : 0 },
+  });
+  return (res.data ?? []) as Nivel[];
 }
 
 export default function RubricasVerPage() {
   const { idPeriodo } = useParams();
   const navigate = useNavigate();
 
+  const periodoId = useMemo(() => toNum(idPeriodo, 0), [idPeriodo]);
+
   const [loading, setLoading] = useState(false);
   const [rubrica, setRubrica] = useState<Rubrica | null>(null);
 
   const [niveles, setNiveles] = useState<Nivel[]>([]);
-  const [componentes, setComponentes] = useState<Componente[]>([]);
-  const [criteriosByComp, setCriteriosByComp] = useState<Record<number, Criterio[]>>({});
+  const [componentes, setComponentes] = useState<RubricaComponente[]>([]);
+  const [criteriosByComp, setCriteriosByComp] = useState<
+    Record<number, Criterio[]>
+  >({});
 
   const load = async () => {
+    if (!periodoId) return;
+
     setLoading(true);
     try {
-      // 1) rubrica por periodo
-      const res = await axiosClient.get("/rubricas", {
-        params: { periodoId: Number(idPeriodo), includeInactive: true },
-      });
-      const arr: Rubrica[] = res.data ?? [];
-      const r = arr[0] ?? null;
+      // ✅ 1) Rubrica por período (endpoint real)
+      // Si no existe, normalmente el backend puede devolver 404.
+      let r: Rubrica | null = null;
+      try {
+        r = (await rubricaService.getByPeriodo(periodoId)) as unknown as Rubrica;
+      } catch (e: any) {
+        // si no existe, dejamos rubrica en null (y la UI mostrará "No creado")
+        r = null;
+      }
+
       setRubrica(r);
 
       if (!r?.id_rubrica) {
@@ -84,48 +127,20 @@ export default function RubricasVerPage() {
 
       const rid = r.id_rubrica;
 
-      // 2) niveles + componentes (estas rutas deben ser las tuyas reales; si no, me pasas tus routes)
+      // ✅ 2) Niveles + Componentes (endpoints reales)
       const [nivs, comps] = await Promise.all([
-        getWithFallback<Nivel[]>(
-          [
-            `/rubricas/${rid}/niveles`,
-            `/rubrica-niveles?rubricaId=${rid}`,
-            `/rubricas-niveles?rubricaId=${rid}`,
-          ],
-          { includeInactive: true }
-        ).catch(() => []),
-        getWithFallback<Componente[]>(
-          [
-            `/rubricas/${rid}/componentes`,
-            `/rubrica-componentes?rubricaId=${rid}`,
-            `/rubricas-componentes?rubricaId=${rid}`,
-          ],
-          { includeInactive: true }
-        ).catch(() => []),
+        listNivelesByRubrica(rid, true).catch(() => []),
+        rubricaComponenteService.list(rid, { includeInactive: true }).catch(() => []),
       ]);
 
       setNiveles(nivs ?? []);
       setComponentes(comps ?? []);
 
-      // 3) criterios por componenteId (✅ aquí está el fix real)
+      // ✅ 3) Criterios por componenteId (endpoint real)
       const map: Record<number, Criterio[]> = {};
-      for (const c of (comps ?? [])) {
+      for (const c of comps ?? []) {
         const compId = c.id_rubrica_componente;
-
-        const criterios = await getWithFallback<Criterio[]>(
-          [
-            // la más probable en tu caso:
-            `/rubricas-componentes/${compId}/criterios`,
-            `/rubrica-componentes/${compId}/criterios`,
-
-            // otras variantes comunes:
-            `/rubricas-criterios?componenteId=${compId}`,
-            `/rubrica-criterios?componenteId=${compId}`,
-          ],
-          { includeInactive: true }
-        ).catch(() => []);
-
-        map[compId] = criterios ?? [];
+        map[compId] = await listCriteriosByComponente(compId, true).catch(() => []);
       }
       setCriteriosByComp(map);
     } catch (e) {
@@ -139,19 +154,30 @@ export default function RubricasVerPage() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idPeriodo]);
+  }, [periodoId]);
 
   const createAndOpen = async () => {
+    if (!periodoId) return;
+
     try {
       setLoading(true);
-      const res = await axiosClient.post("/rubricas", {
-        id_periodo: Number(idPeriodo),
+
+      // ✅ Crear/asegurar por período (endpoint real)
+      const resp = await rubricaService.ensureByPeriodo(periodoId, {
         nombre_rubrica: "Rúbrica Complexivo",
         ponderacion_global: 100,
-        descripcion_rubrica: null,
+        descripcion_rubrica: null as any,
       });
-      const created: Rubrica = res.data;
-      navigate(`/rubricas/editar/${created.id_rubrica}`);
+
+      const createdRubrica = resp?.rubrica as unknown as Rubrica;
+      if (!createdRubrica?.id_rubrica) {
+        alert("No se pudo crear/abrir la rúbrica (respuesta inválida)");
+        return;
+      }
+
+      navigate(`/rubricas/editar/${createdRubrica.id_rubrica}`, {
+        state: { mode: resp.created ? "create" : "edit" },
+      });
     } catch (e) {
       console.error(e);
       alert("No se pudo crear/abrir la rúbrica");
@@ -160,24 +186,36 @@ export default function RubricasVerPage() {
     }
   };
 
-  const nivelesActivos = useMemo(() => niveles.filter((x) => x.estado === 1), [niveles]);
-  const compsActivos = useMemo(() => componentes.filter((x) => x.estado === 1), [componentes]);
+  const nivelesActivos = useMemo(
+    () => niveles.filter((x) => isActivo(x.estado)),
+    [niveles]
+  );
+
+  const compsActivos = useMemo(
+    () => componentes.filter((x) => isActivo(x.estado)),
+    [componentes]
+  );
 
   const totalPonderacion = useMemo(() => {
-    return compsActivos.reduce((acc, c) => acc + Number(c.ponderacion || 0), 0);
+    return compsActivos.reduce((acc, c) => acc + toNum(c.ponderacion, 0), 0);
   }, [compsActivos]);
 
   const totalCriterios = useMemo(() => {
     let n = 0;
     for (const comp of compsActivos) {
       const arr = criteriosByComp[comp.id_rubrica_componente] ?? [];
-      n += arr.filter((x) => x.estado === 1).length;
+      n += arr.filter((x) => isActivo(x.estado)).length;
     }
     return n;
   }, [criteriosByComp, compsActivos]);
 
   const isLista = useMemo(() => {
-    return !!rubrica && nivelesActivos.length >= 2 && compsActivos.length >= 1 && totalCriterios >= 1;
+    return (
+      !!rubrica &&
+      nivelesActivos.length >= 2 &&
+      compsActivos.length >= 1 &&
+      totalCriterios >= 1
+    );
   }, [rubrica, nivelesActivos.length, compsActivos.length, totalCriterios]);
 
   return (
@@ -199,8 +237,12 @@ export default function RubricasVerPage() {
         <div className="rv-card-head">
           <div>
             <div className="rv-k">Estado</div>
-            <div className={`rv-badge ${!rubrica ? "off" : rubrica.estado === 1 ? "ok" : "off"}`}>
-              {!rubrica ? "No creado" : rubrica.estado === 1 ? "Activa" : "Inactiva"}
+            <div
+              className={`rv-badge ${
+                !rubrica ? "off" : isActivo(rubrica.estado) ? "ok" : "off"
+              }`}
+            >
+              {!rubrica ? "No creado" : isActivo(rubrica.estado) ? "Activa" : "Inactiva"}
             </div>
 
             {rubrica && (
@@ -215,7 +257,14 @@ export default function RubricasVerPage() {
 
           <div className="rv-actions">
             {rubrica ? (
-              <button className="rv-btn primary" onClick={() => navigate(`/rubricas/editar/${rubrica.id_rubrica}`)}>
+              <button
+                className="rv-btn primary"
+                onClick={() =>
+                  navigate(`/rubricas/editar/${rubrica.id_rubrica}`, {
+                    state: { mode: "edit" },
+                  })
+                }
+              >
                 Editar rúbrica
               </button>
             ) : (
@@ -248,13 +297,16 @@ export default function RubricasVerPage() {
 
               <div className="rv-row">
                 <span className="k">Niveles</span>
-                <span className="v">{nivelesActivos.length} activos ({niveles.length} totales)</span>
+                <span className="v">
+                  {nivelesActivos.length} activos ({niveles.length} totales)
+                </span>
               </div>
 
               <div className="rv-row">
                 <span className="k">Componentes</span>
                 <span className="v">
-                  {compsActivos.length} activos ({componentes.length} totales) — {totalPonderacion.toFixed(2)}% sumado
+                  {compsActivos.length} activos ({componentes.length} totales) —{" "}
+                  {totalPonderacion.toFixed(2)}% sumado
                 </span>
               </div>
 
@@ -275,18 +327,21 @@ export default function RubricasVerPage() {
                 <div className="rv-list">
                   {compsActivos
                     .slice()
-                    .sort((a, b) => a.orden - b.orden)
+                    .sort((a, b) => toNum(a.orden, 0) - toNum(b.orden, 0))
                     .map((c) => {
                       const cr = criteriosByComp[c.id_rubrica_componente] ?? [];
-                      const nCr = cr.filter((x) => x.estado === 1).length;
+                      const nCr = cr.filter((x) => isActivo(x.estado)).length;
 
                       return (
                         <div className="rv-item" key={c.id_rubrica_componente}>
                           <div className="rv-item-title">
-                            {c.nombre_componente} <span className="rv-pill">{c.tipo_componente}</span>
+                            {c.nombre_componente}{" "}
+                            <span className="rv-pill">{c.tipo_componente}</span>
                           </div>
                           <div className="rv-item-sub">
-                            Ponderación: <b>{Number(c.ponderacion || 0).toFixed(2)}%</b> — Criterios: <b>{nCr}</b>
+                            Ponderación:{" "}
+                            <b>{toNum(c.ponderacion, 0).toFixed(2)}%</b> — Criterios:{" "}
+                            <b>{nCr}</b>
                           </div>
                         </div>
                       );
@@ -298,7 +353,8 @@ export default function RubricasVerPage() {
 
           {!rubrica && (
             <div className="rv-hint">
-              Primero crea la rúbrica. Luego podrás agregar niveles, componentes y criterios.
+              Primero crea la rúbrica. Luego podrás agregar niveles, componentes y
+              criterios.
             </div>
           )}
         </div>

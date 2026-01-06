@@ -1,29 +1,42 @@
+// src/repositories/carrera_periodo.repo.js
 const pool = require("../config/db");
 
+// =====================================================
+// Helpers
+// =====================================================
 async function periodoExists(periodoId) {
   const [r] = await pool.query(
     `SELECT id_periodo FROM periodo_academico WHERE id_periodo=? LIMIT 1`,
-    [periodoId]
+    [Number(periodoId)]
   );
   return !!r.length;
 }
 
 async function carrerasExistAll(carreraIds = []) {
   if (!carreraIds.length) return { ok: false, missing: carreraIds };
-  const ids = [...new Set(carreraIds.map((x) => Number(x)).filter((x) => Number.isInteger(x) && x > 0))];
+
+  const ids = [
+    ...new Set(
+      carreraIds
+        .map((x) => Number(x))
+        .filter((x) => Number.isInteger(x) && x > 0)
+    ),
+  ];
+
   const [rows] = await pool.query(
     `SELECT id_carrera FROM carrera WHERE id_carrera IN (${ids.map(() => "?").join(",")})`,
     ids
   );
+
   const set = new Set(rows.map((r) => r.id_carrera));
   const missing = ids.filter((id) => !set.has(id));
+
   return { ok: missing.length === 0, missing };
 }
 
-/**
- * ✅ Tabla principal: lista períodos + conteos de carreras asignadas
- * - incluye periodos aunque no tengan asignaciones (LEFT JOIN)
- */
+// =====================================================
+// Resumen de períodos
+// =====================================================
 async function resumen({ q = "", includeInactive = false } = {}) {
   const where = [];
   const params = [];
@@ -64,9 +77,10 @@ async function resumen({ q = "", includeInactive = false } = {}) {
   return rows;
 }
 
-/**
- * Lista de carreras asignadas a un periodo (para Ver / Editar)
- */
+// =====================================================
+// ✅ Lista de carreras asignadas a un período (para Ver / Editar)
+// ✅ FIX IMPORTANTE: ahora devuelve director/apoyo desde carrera_periodo_autoridad
+// =====================================================
 async function listByPeriodo({ periodoId, includeInactive = true, q = "" }) {
   const where = ["cp.id_periodo=?"];
   const params = [Number(periodoId)];
@@ -91,14 +105,51 @@ async function listByPeriodo({ periodoId, includeInactive = true, q = "" }) {
       cp.estado,
       cp.created_at,
       cp.updated_at,
+
       c.nombre_carrera,
       c.codigo_carrera,
       c.sede,
       c.modalidad,
+
       pa.codigo_periodo,
       pa.descripcion_periodo,
       pa.fecha_inicio,
-      pa.fecha_fin
+      pa.fecha_fin,
+
+      -- ✅ Director activo (objeto JSON o NULL)
+      (
+        SELECT JSON_OBJECT(
+          'id_docente', d.id_docente,
+          'nombres_docente', d.nombres_docente,
+          'apellidos_docente', d.apellidos_docente,
+          'nombre_usuario', d.nombre_usuario,
+          'correo_docente', d.correo_docente
+        )
+        FROM carrera_periodo_autoridad cpa
+        JOIN docente d ON d.id_docente = cpa.id_docente
+        WHERE cpa.id_carrera_periodo = cp.id_carrera_periodo
+          AND cpa.estado = 1
+          AND cpa.tipo_admin = 'DIRECTOR'
+        LIMIT 1
+      ) AS director,
+
+      -- ✅ Apoyo activo (objeto JSON o NULL)
+      (
+        SELECT JSON_OBJECT(
+          'id_docente', d.id_docente,
+          'nombres_docente', d.nombres_docente,
+          'apellidos_docente', d.apellidos_docente,
+          'nombre_usuario', d.nombre_usuario,
+          'correo_docente', d.correo_docente
+        )
+        FROM carrera_periodo_autoridad cpa
+        JOIN docente d ON d.id_docente = cpa.id_docente
+        WHERE cpa.id_carrera_periodo = cp.id_carrera_periodo
+          AND cpa.estado = 1
+          AND cpa.tipo_admin = 'APOYO'
+        LIMIT 1
+      ) AS apoyo
+
     FROM carrera_periodo cp
     JOIN carrera c ON c.id_carrera = cp.id_carrera
     JOIN periodo_academico pa ON pa.id_periodo = cp.id_periodo
@@ -108,12 +159,34 @@ async function listByPeriodo({ periodoId, includeInactive = true, q = "" }) {
     params
   );
 
-  return rows;
+  // ✅ Por compatibilidad: si el driver devuelve JSON_OBJECT como string,
+  // lo parseamos para que en React llegue como objeto.
+  // (Si ya viene como objeto, no hace nada)
+  return rows.map((r) => {
+    const out = { ...r };
+
+    if (typeof out.director === "string") {
+      try {
+        out.director = JSON.parse(out.director);
+      } catch {
+        out.director = null;
+      }
+    }
+    if (typeof out.apoyo === "string") {
+      try {
+        out.apoyo = JSON.parse(out.apoyo);
+      } catch {
+        out.apoyo = null;
+      }
+    }
+
+    return out;
+  });
 }
 
-/**
- * ✅ ASIGNAR: activa + inserta
- */
+// =====================================================
+// ✅ ASIGNAR: activa + inserta
+// =====================================================
 async function bulkAssign({ periodoId, carreraIds }) {
   const pid = Number(periodoId);
   if (!(await periodoExists(pid))) {
@@ -122,7 +195,14 @@ async function bulkAssign({ periodoId, carreraIds }) {
     throw e;
   }
 
-  const ids = [...new Set((carreraIds || []).map((x) => Number(x)).filter((x) => Number.isInteger(x) && x > 0))];
+  const ids = [
+    ...new Set(
+      (carreraIds || [])
+        .map((x) => Number(x))
+        .filter((x) => Number.isInteger(x) && x > 0)
+    ),
+  ];
+
   if (!ids.length) {
     const e = new Error("carreraIds vacío o inválido");
     e.status = 422;
@@ -139,7 +219,9 @@ async function bulkAssign({ periodoId, carreraIds }) {
   await pool.query("START TRANSACTION");
   try {
     await pool.query(
-      `UPDATE carrera_periodo SET estado=1 WHERE id_periodo=? AND id_carrera IN (${ids.map(() => "?").join(",")})`,
+      `UPDATE carrera_periodo SET estado=1 WHERE id_periodo=? AND id_carrera IN (${ids
+        .map(() => "?")
+        .join(",")})`,
       [pid, ...ids]
     );
 
@@ -161,9 +243,9 @@ async function bulkAssign({ periodoId, carreraIds }) {
   return { updated: true, items };
 }
 
-/**
- * ✅ SYNC: deja EXACTAMENTE las seleccionadas activas
- */
+// =====================================================
+// ✅ SYNC: deja EXACTAMENTE las seleccionadas activas
+// =====================================================
 async function syncPeriodo({ periodoId, carreraIds }) {
   const pid = Number(periodoId);
   if (!(await periodoExists(pid))) {
@@ -172,7 +254,13 @@ async function syncPeriodo({ periodoId, carreraIds }) {
     throw e;
   }
 
-  const ids = [...new Set((carreraIds || []).map((x) => Number(x)).filter((x) => Number.isInteger(x) && x > 0))];
+  const ids = [
+    ...new Set(
+      (carreraIds || [])
+        .map((x) => Number(x))
+        .filter((x) => Number.isInteger(x) && x > 0)
+    ),
+  ];
 
   if (ids.length) {
     const chk = await carrerasExistAll(ids);
@@ -189,7 +277,9 @@ async function syncPeriodo({ periodoId, carreraIds }) {
 
     if (ids.length) {
       await pool.query(
-        `UPDATE carrera_periodo SET estado=1 WHERE id_periodo=? AND id_carrera IN (${ids.map(() => "?").join(",")})`,
+        `UPDATE carrera_periodo SET estado=1 WHERE id_periodo=? AND id_carrera IN (${ids
+          .map(() => "?")
+          .join(",")})`,
         [pid, ...ids]
       );
 
@@ -212,11 +302,16 @@ async function syncPeriodo({ periodoId, carreraIds }) {
   return { synced: true, items };
 }
 
-/**
- * ✅ LISTA COMPLETA (para /rubricas select)
- * ✅ NUEVO: scopeCarreraId para filtrar por carrera (rol 2)
- */
-async function list({ includeInactive = false, q = "", periodoId = null, scopeCarreraId = null } = {}) {
+// =====================================================
+// ✅ LISTA COMPLETA (para /rubricas select)
+// ✅ scopeCarreraId para filtrar por carrera (rol 2)
+// =====================================================
+async function list({
+  includeInactive = false,
+  q = "",
+  periodoId = null,
+  scopeCarreraId = null,
+} = {}) {
   const params = [];
   let sql = `
     SELECT
@@ -253,7 +348,6 @@ async function list({ includeInactive = false, q = "", periodoId = null, scopeCa
     params.push(Number(periodoId));
   }
 
-  // ✅ filtro por carrera (rol 2)
   if (scopeCarreraId) {
     sql += ` AND cp.id_carrera = ? `;
     params.push(Number(scopeCarreraId));
@@ -284,5 +378,5 @@ module.exports = {
   listByPeriodo,
   bulkAssign,
   syncPeriodo,
-  list, // ✅ IMPORTANTÍSIMO: exportar list
+  list,
 };
