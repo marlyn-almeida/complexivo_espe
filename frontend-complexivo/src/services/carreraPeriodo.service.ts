@@ -1,10 +1,27 @@
-// src/services/carreraPeriodo.service.ts
 import axiosClient from "../api/axiosClient";
 import type { CarreraPeriodo, CarreraPeriodoBulkDTO, PeriodoResumen } from "../types/carreraPeriodo";
-import type {
-  CarreraPeriodoAdminsResponse,
-  CarreraPeriodoAdminsUpdateDTO,
-} from "../types/carreraPeriodoAdmin";
+
+// ✅ types director/apoyo (EXPORTADOS)
+export type TipoAdmin = "DIRECTOR" | "APOYO";
+
+export type AdminDocenteLite = {
+  tipo_admin: TipoAdmin;
+  id_docente: number;
+  nombres_docente: string;
+  apellidos_docente: string;
+  nombre_usuario: string;
+};
+
+export type CarreraPeriodoAdminsResponse = {
+  id_carrera_periodo: number;
+  director: AdminDocenteLite | null;
+  apoyo: AdminDocenteLite | null;
+};
+
+export type CarreraPeriodoAdminsUpdateDTO = {
+  id_docente_director?: number | null;
+  id_docente_apoyo?: number | null;
+};
 
 // ✅ Params avanzados (cuando quieras filtrar)
 export type CarreraPeriodoListParams = {
@@ -77,17 +94,14 @@ export const carreraPeriodoService = {
     periodoId: number,
     params?: { includeInactive?: boolean; q?: string }
   ): Promise<CarreraPeriodo[]> => {
-    const res = await axiosClient.get<CarreraPeriodo[]>(
-      `/carreras-periodos/por-periodo/${periodoId}`,
-      {
-        params: params
-          ? {
-              includeInactive: params.includeInactive ? "true" : "false",
-              q: params.q?.trim() || undefined,
-            }
-          : undefined,
-      }
-    );
+    const res = await axiosClient.get<CarreraPeriodo[]>(`/carreras-periodos/por-periodo/${periodoId}`, {
+      params: params
+        ? {
+            includeInactive: params.includeInactive ? "true" : "false",
+            q: params.q?.trim() || undefined,
+          }
+        : undefined,
+    });
     return res.data ?? [];
   },
 

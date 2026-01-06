@@ -5,7 +5,18 @@ import type { Carrera } from "../../types/carrera";
 import { docentesService } from "../../services/docentes.service";
 import { carrerasService } from "../../services/carreras.service";
 
-import { Plus, Pencil, Eye, ToggleLeft, ToggleRight, Search, Upload, Download, Shield } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Eye,
+  ToggleLeft,
+  ToggleRight,
+  Search,
+  Upload,
+  Download,
+  Shield,
+  Filter,
+} from "lucide-react";
 import "./DocentesPage.css";
 
 const PAGE_SIZE = 10;
@@ -36,7 +47,7 @@ const cleanNameLike = (v: string) =>
 
 const cleanInstitucional = (v: string) =>
   v
-    .replace(/[.]+/g, "")            // quita puntos
+    .replace(/[.]+/g, "") // quita puntos
     .replace(/\s+/g, " ")
     .trim();
 
@@ -48,7 +59,6 @@ function isValidEmail(v: string) {
 }
 
 function getRoleFromTokenBestEffort(): string | null {
-  // intentamos varias claves típicas
   const keys = ["token", "accessToken", "authToken", "jwt", "JWT"];
   let token: string | null = null;
 
@@ -65,18 +75,15 @@ function getRoleFromTokenBestEffort(): string | null {
     const payload = token.split(".")[1];
     const json = JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
 
-    // backend: activeRole / rol / roles
     const role = json.activeRole ?? json.rol ?? null;
     if (typeof role === "string") return role;
 
-    // si viene numérico (1/2/3)
     if (typeof role === "number") {
       if (role === 1) return "SUPER_ADMIN";
       if (role === 2) return "ADMIN";
       if (role === 3) return "DOCENTE";
     }
 
-    // si no, intenta roles array
     const roles = Array.isArray(json.roles) ? json.roles : [];
     if (roles.includes("SUPER_ADMIN") || roles.includes(1)) return "SUPER_ADMIN";
 
@@ -95,6 +102,9 @@ export default function DocentesPage() {
   const [search, setSearch] = useState("");
   const [mostrarInactivos, setMostrarInactivos] = useState(false);
   const [page, setPage] = useState(1);
+
+  // ✅ NUEVO: filtro por carrera (para rol 1 y rol 2)
+  const [filterCarreraId, setFilterCarreraId] = useState<string>(""); // "" = todas
 
   const [showFormModal, setShowFormModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
@@ -118,17 +128,32 @@ export default function DocentesPage() {
   const isSuperAdminUI = useMemo(() => getRoleFromTokenBestEffort() === "SUPER_ADMIN", []);
 
   useEffect(() => {
-    loadAll();
-  }, [mostrarInactivos]);
-
-  useEffect(() => {
     loadCarreras();
   }, []);
+
+  // ✅ recarga cuando cambia includeInactive o filtro carrera
+  useEffect(() => {
+    loadAll();
+    setPage(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mostrarInactivos, filterCarreraId]);
 
   async function loadAll() {
     try {
       setLoading(true);
-      const data = await docentesService.list(mostrarInactivos);
+
+      const idCarrera =
+        filterCarreraId && Number(filterCarreraId) > 0 ? Number(filterCarreraId) : undefined;
+
+      // ✅ ahora pedimos al backend con id_carrera opcional
+      const data = await docentesService.list({
+        includeInactive: mostrarInactivos,
+        id_carrera: idCarrera,
+        // (opcional futuro) q: search,
+        // (opcional futuro) page: 1,
+        // (opcional futuro) limit: 100,
+      });
+
       setDocentes(data);
     } catch {
       showToast("Error al cargar docentes", "error");
@@ -233,7 +258,7 @@ export default function DocentesPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [search, mostrarInactivos]);
+  }, [search]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
 
@@ -256,7 +281,6 @@ export default function DocentesPage() {
     const user = cleanUsername(form.nombre_usuario);
 
     if (!inst) e.id_institucional_docente = "ID institucional obligatorio.";
-    // evita "...." o basura (ya quitamos puntos en onChange igual)
     if (inst && inst.length < 3) e.id_institucional_docente = "ID institucional inválido.";
 
     if (!ced) e.cedula = "La cédula es obligatoria.";
@@ -299,7 +323,9 @@ export default function DocentesPage() {
         nombres_docente: cleanNameLike(form.nombres_docente),
         apellidos_docente: cleanNameLike(form.apellidos_docente),
         correo_docente: form.correo_docente.trim() ? form.correo_docente.trim() : undefined,
-        telefono_docente: onlyDigits(form.telefono_docente) ? onlyDigits(form.telefono_docente) : undefined,
+        telefono_docente: onlyDigits(form.telefono_docente)
+          ? onlyDigits(form.telefono_docente)
+          : undefined,
         nombre_usuario: cleanUsername(form.nombre_usuario),
       };
 
@@ -321,7 +347,6 @@ export default function DocentesPage() {
   }
 
   async function toggleSuperAdmin(d: Docente) {
-    // Requiere que venga d.super_admin del backend
     if (typeof d.super_admin === "undefined") {
       showToast("Falta flag super_admin en el listado (backend).", "error");
       return;
@@ -346,12 +371,12 @@ export default function DocentesPage() {
             <h2 className="title">Docentes</h2>
             <p className="subtitle">Gestión de docentes del sistema</p>
             <p className="docentes-sub">
-              La contraseña inicial será el <b>nombre de usuario</b>. En el primer inicio de sesión el docente deberá cambiarla.
+              La contraseña inicial será el <b>nombre de usuario</b>. En el primer inicio de sesión el
+              docente deberá cambiarla.
             </p>
           </div>
 
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" }}>
-            {/* ✅ Estos quedan como “acciones” y luego los conectamos a DocentesImportPage */}
             <button
               className="btnSecondary"
               onClick={() => showToast("Plantilla: se moverá a Importación.", "info")}
@@ -409,7 +434,7 @@ export default function DocentesPage() {
           </div>
         </div>
 
-        <div className="filtersRow">
+        <div className="filtersRow" style={{ gap: 12, flexWrap: "wrap" as any }}>
           <div className="searchInline">
             <Search size={18} />
             <input
@@ -419,6 +444,41 @@ export default function DocentesPage() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
+
+          {/* ✅ NUEVO: filtro por carrera */}
+          <div className="searchInline" style={{ minWidth: 260 }}>
+            <Filter size={18} />
+            <select
+              value={filterCarreraId}
+              onChange={(e) => setFilterCarreraId(e.target.value)}
+              disabled={loadingCarreras}
+              style={{
+                border: "none",
+                outline: "none",
+                background: "transparent",
+                width: "100%",
+              }}
+              aria-label="Filtrar por carrera"
+              title="Filtrar por carrera"
+            >
+              <option value="">{loadingCarreras ? "Cargando carreras..." : "Todas las carreras"}</option>
+              {carreras
+                .slice()
+                .sort((a, b) => a.nombre_carrera.localeCompare(b.nombre_carrera, "es"))
+                .map((c) => (
+                  <option key={c.id_carrera} value={String(c.id_carrera)}>
+                    {c.nombre_carrera} ({c.codigo_carrera})
+                  </option>
+                ))}
+            </select>
+          </div>
+
+          {/* ✅ botón rápido para limpiar filtro */}
+          {filterCarreraId && (
+            <button className="btnSecondary" onClick={() => setFilterCarreraId("")} title="Quitar filtro">
+              Quitar filtro
+            </button>
+          )}
         </div>
       </div>
 
@@ -525,7 +585,11 @@ export default function DocentesPage() {
             Página {page} de {totalPages}
           </span>
 
-          <button className="btnGhost" disabled={page === totalPages} onClick={() => setPage((p) => p + 1)}>
+          <button
+            className="btnGhost"
+            disabled={page === totalPages}
+            onClick={() => setPage((p) => p + 1)}
+          >
             Siguiente →
           </button>
         </div>
@@ -575,7 +639,9 @@ export default function DocentesPage() {
                   }
                   placeholder="Ej: ESPE-12345"
                 />
-                {errors.id_institucional_docente && <div className="field-error">{errors.id_institucional_docente}</div>}
+                {errors.id_institucional_docente && (
+                  <div className="field-error">{errors.id_institucional_docente}</div>
+                )}
               </div>
 
               <div className="formField">
@@ -628,7 +694,9 @@ export default function DocentesPage() {
                 <input
                   className={`fieldInput ${errors.telefono_docente ? "input-error" : ""}`}
                   value={form.telefono_docente}
-                  onChange={(e) => setForm({ ...form, telefono_docente: onlyDigits(e.target.value).slice(0, 15) })}
+                  onChange={(e) =>
+                    setForm({ ...form, telefono_docente: onlyDigits(e.target.value).slice(0, 15) })
+                  }
                   placeholder="Ej: 0999999999"
                   inputMode="numeric"
                 />

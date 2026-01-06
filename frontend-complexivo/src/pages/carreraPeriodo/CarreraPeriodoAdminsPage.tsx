@@ -370,13 +370,15 @@ export default function CarreraPeriodoAdminsPage() {
                     </td>
 
                     <td className="actions">
-                      <button
-                        className="btnIcon btnEdit"
-                        title="Asignar Director/Apoyo"
-                        onClick={() => openAssign(cp)}
-                      >
-                        <Users size={16} />
-                      </button>
+                      <div className="actionsRow">
+                        <button
+                          className="btnIcon btnEdit"
+                          title="Asignar Director/Apoyo"
+                          onClick={() => openAssign(cp)}
+                        >
+                          <Users size={16} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -418,46 +420,48 @@ export default function CarreraPeriodoAdminsPage() {
               </button>
             </div>
 
-            <div className="modalBody formStack">
+            <div className="modalBody">
               <div className="muted" style={{ marginBottom: 10 }}>
                 {cpLabel(selectedCP)}
               </div>
 
-              <div className="formField">
-                <label className="label">Director de carrera</label>
-                <select
-                  className="fieldSelect"
-                  value={dirId}
-                  onChange={(e) => setDirId(e.target.value)}
-                  disabled={loadingDocentes}
-                >
-                  <option value="">(Sin asignar)</option>
-                  {docentes.map((d) => (
-                    <option key={d.id_docente} value={d.id_docente}>
-                      {d.apellidos_docente} {d.nombres_docente} — {d.nombre_usuario}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <div className="formStack">
+                <div className="formField">
+                  <label className="label">Director de carrera</label>
+                  <select
+                    className="fieldSelect"
+                    value={dirId}
+                    onChange={(e) => setDirId(e.target.value)}
+                    disabled={loadingDocentes}
+                  >
+                    <option value="">(Sin asignar)</option>
+                    {docentes.map((d) => (
+                      <option key={d.id_docente} value={d.id_docente}>
+                        {d.apellidos_docente} {d.nombres_docente} — {d.nombre_usuario}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-              <div className="formField">
-                <label className="label">Docente de apoyo</label>
-                <select
-                  className="fieldSelect"
-                  value={apoId}
-                  onChange={(e) => setApoId(e.target.value)}
-                  disabled={loadingDocentes}
-                >
-                  <option value="">(Sin asignar)</option>
-                  {docentes.map((d) => (
-                    <option key={d.id_docente} value={d.id_docente}>
-                      {d.apellidos_docente} {d.nombres_docente} — {d.nombre_usuario}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                <div className="formField">
+                  <label className="label">Docente de apoyo</label>
+                  <select
+                    className="fieldSelect"
+                    value={apoId}
+                    onChange={(e) => setApoId(e.target.value)}
+                    disabled={loadingDocentes}
+                  >
+                    <option value="">(Sin asignar)</option>
+                    {docentes.map((d) => (
+                      <option key={d.id_docente} value={d.id_docente}>
+                        {d.apellidos_docente} {d.nombres_docente} — {d.nombre_usuario}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-              {loadingDocentes && <div className="muted">Cargando docentes...</div>}
+                {loadingDocentes && <div className="muted">Cargando docentes...</div>}
+              </div>
             </div>
 
             <div className="modalFooter">

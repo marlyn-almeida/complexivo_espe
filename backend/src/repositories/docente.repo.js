@@ -1,13 +1,13 @@
 // src/repositories/docente.repo.js
 const pool = require("../config/db");
 
-// =============== LISTADO (sin scope obligatorio, con filtro opcional por carrera) ===============
+// =============== LISTADO (filtro opcional por carrera) ===============
 async function findAll({
   includeInactive = false,
   q = "",
   page = 1,
   limit = 50,
-  id_carrera = null, // ✅ NUEVO: filtro opcional por carrera
+  id_carrera = null, // ✅ filtro opcional
 } = {}) {
   const safeLimit = Math.min(Math.max(Number(limit) || 50, 1), 100);
   const safePage = Math.max(Number(page) || 1, 1);
@@ -16,8 +16,10 @@ async function findAll({
   const where = [];
   const params = [];
 
+  // Estado docente
   if (!includeInactive) where.push("d.estado=1");
 
+  // Texto búsqueda
   if (q && q.trim()) {
     where.push(`(
       d.cedula LIKE ? OR
@@ -31,10 +33,10 @@ async function findAll({
     params.push(like, like, like, like, like, like);
   }
 
-  // ✅ Filtro opcional por carrera (si llega id_carrera)
-  // ✅ Evita duplicados: subquery con MIN(id_carrera_docente)
+  // ✅ Filtro por carrera (si viene id_carrera)
+  // evita duplicados con subquery MIN(id_carrera_docente)
   let joinSql = "";
-  const hasCarreraFilter = id_carrera !== null && id_carrera !== undefined && String(id_carrera).trim() !== "";
+  const hasCarreraFilter = id_carrera !== null && id_carrera !== undefined;
 
   if (hasCarreraFilter) {
     joinSql = `
@@ -157,7 +159,6 @@ async function getRolesByDocenteId(id_docente) {
   return rows;
 }
 
-// ✅ asigna un rol al docente (upsert seguro)
 async function assignRolToDocente({ id_rol, id_docente }) {
   await pool.query(
     `INSERT INTO rol_docente (id_rol, id_docente, estado)
@@ -168,7 +169,6 @@ async function assignRolToDocente({ id_rol, id_docente }) {
   return true;
 }
 
-// ✅ activar / desactivar un rol (sin borrar histórico)
 async function setRolEstado({ id_rol, id_docente, estado }) {
   const st = estado ? 1 : 0;
 
@@ -191,7 +191,6 @@ async function setRolEstado({ id_rol, id_docente, estado }) {
   return true;
 }
 
-// ✅ saber si un docente tiene un rol activo (útil para UI)
 async function hasRol({ id_rol, id_docente }) {
   const [rows] = await pool.query(
     `SELECT 1
@@ -381,7 +380,7 @@ module.exports = {
   setRolEstado,
   hasRol,
 
-  // carrera (helpers)
+  // carrera
   findCarreraById,
   findCarreraByCodigo,
 

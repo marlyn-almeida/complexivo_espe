@@ -483,3 +483,118 @@
 .toast-success { background: #EAF7EE; border-color: rgba(6,118,71,0.35); }
 .toast-error   { background: #FDECEC; border-color: rgba(180,35,24,0.35); }
 .toast-info    { background: #EEF5FF; border-color: rgba(2,132,199,0.35); }
+/* =========================================================
+   VIEW: bloque Director/Apoyo dentro del modal Ver
+========================================================= */
+.view-admins{
+  margin-top: 10px;
+  display: grid;
+  gap: 6px;
+}
+
+.view-admin{
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+.view-admin .k{
+  font-size: 0.78rem;
+  font-weight: 900;
+  color: var(--text-muted);
+}
+
+.view-admin .v{
+  font-weight: 900;
+  color: var(--text-main);
+}
+
+/* =========================================================
+   VIEW: Director / Apoyo dentro de la tarjeta (bonito)
+   Pegar al FINAL del CarreraPeriodoPage.css
+========================================================= */
+
+.view-item{
+  align-items: flex-start;
+}
+
+.view-left{
+  min-width: 0;
+}
+
+.view-right{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.view-admins{
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(0,0,0,0.10);
+  display: grid;
+  gap: 6px;
+}
+
+.va-row{
+  display:flex;
+  gap: 8px;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+.va-k{
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--text-muted);
+}
+
+.va-v{
+  font-weight: 900;
+  color: var(--text-main);
+}
+
+/* Botón ícono Autoridades */
+.btnAssign{
+  background: rgba(6, 118, 71, 0.12) !important;
+  border: 1px solid rgba(6, 118, 71, 0.30) !important;
+  color: #067647 !important;
+}
+
+.btnAssign:hover{
+  background: rgba(6, 118, 71, 0.18) !important;
+}
+
+/* =========================================================
+   Modal Autoridades: cards resumen
+========================================================= */
+
+.authCurrent{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.authBox{
+  border: 1px solid var(--border-soft);
+  background: var(--bg-soft);
+  border-radius: 14px;
+  padding: 10px 12px;
+}
+
+.authK{
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-weight: 900;
+}
+
+.authV{
+  margin-top: 4px;
+  font-weight: 900;
+}
+
+@media (max-width: 700px){
+  .authCurrent{ grid-template-columns: 1fr; }
+}

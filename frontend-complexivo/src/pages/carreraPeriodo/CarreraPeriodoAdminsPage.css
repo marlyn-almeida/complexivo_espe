@@ -13,7 +13,7 @@
 }
 
 /* =========================================================
-   BASE (tu estilo nuevo con cards)
+   BASE
 ========================================================= */
 .page { display: grid; gap: 14px; }
 
@@ -34,7 +34,7 @@
 }
 
 .title{ margin:0; font-weight:900; font-size: 1.2rem; }
-.subtitle{ margin:6px 0 0; color: var(--text-muted); font-size:.92rem; }
+.subtitle{ margin:6px 0 0; color: var(--text-muted); font-size:.92rem; font-weight: 800; }
 
 /* =========================================================
    RESUMEN
@@ -59,7 +59,7 @@
   text-align:center;
 }
 
-.summaryBox .label{ display:block; font-size:.75rem; color: var(--text-muted); }
+.summaryBox .label{ display:block; font-size:.75rem; color: var(--text-muted); font-weight: 800; }
 .summaryBox .value{ display:block; font-size:1.15rem; font-weight: 900; margin-top: 2px; }
 
 .summaryBox.active{
@@ -96,11 +96,12 @@
   border-radius:50%;
   top:2px; left:2px;
   transition: transform .2s;
+  box-shadow: 0 6px 18px rgba(0,0,0,.12);
 }
 
 .toggle input:checked + .slider{ background: var(--espe-green-2); }
 .toggle input:checked + .slider::after{ transform: translateX(16px); }
-.toggleText{ font-size:.85rem; color: var(--text-muted); }
+.toggleText{ font-size:.85rem; color: var(--text-muted); font-weight: 800; }
 
 /* =========================================================
    FILTROS
@@ -114,7 +115,7 @@
   border: 1px solid var(--border-soft);
   border-radius: 10px;
   padding: 7px 10px;
-  max-width: 340px;
+  max-width: 360px;
   background:#fff;
 }
 
@@ -123,6 +124,7 @@
   outline:none;
   width:100%;
   font-size: .92rem;
+  background: transparent;
 }
 
 /* =========================================================
@@ -134,16 +136,18 @@
   width:100%;
   border-collapse: collapse;
   font-size: .92rem;
+  min-width: 980px; /* ✅ evita que se rompa la tabla */
 }
 
 .table thead th{
-  background: var(--espe-green);
+  background: linear-gradient(135deg, var(--espe-green), #0b5a3a);
   color:#fff;
-  font-weight:800;
+  font-weight:900;
   text-align:left;
   padding: 12px;
   font-size: .85rem;
   letter-spacing: .2px;
+  border-bottom: 1px solid rgba(0,0,0,.08);
 }
 
 .table tbody td{
@@ -152,13 +156,33 @@
   vertical-align: middle;
 }
 
-.table tbody tr:hover{ background: #f6fbf7; }
+.table tbody tr:nth-child(even){
+  background: rgba(27, 94, 32, 0.04);
+}
+
+.table tbody tr:hover{ background: rgba(27, 94, 32, 0.08); }
 
 .tdStrong{ font-weight: 900; }
-.tdCode{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size:.85rem; }
+.tdCode{
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size:.85rem;
+  font-weight: 900;
+  color: #0f766e;
+}
 
-.thActions{ text-align:center; }
-.actions{ text-align:center; }
+.thActions{ width: 120px; text-align:center; }
+.actions{
+  text-align:center;
+  white-space: nowrap;
+}
+
+/* ✅ Acciones como fila (no se rompe) */
+.actionsRow{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap: 10px;
+}
 
 /* =========================================================
    BADGES
@@ -175,26 +199,26 @@
 .badge-danger{ background:#fdecec; color:#a22; }
 
 /* =========================================================
-   BOTONES (alineado a tu estilo CarreraAdminsPage pero verde)
+   BOTONES
 ========================================================= */
 .btnSecondary{
   background: #f3f4f6;
   border: 1px solid var(--border-soft);
-  border-radius: 10px;
-  padding: 9px 12px;
-  font-weight: 800;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-weight: 900;
   cursor:pointer;
   display:inline-flex;
   align-items:center;
-  gap:6px;
+  gap:8px;
 }
 .btnSecondary:hover{ background:#e7eaee; }
 
 .btnPrimary{
-  background: var(--espe-green-2);
+  background: linear-gradient(135deg, var(--espe-green-2), #14532d);
   color:#fff;
   border:none;
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 10px 14px;
   font-weight: 900;
   cursor:pointer;
@@ -202,36 +226,58 @@
   align-items:center;
   gap:8px;
   justify-content:center;
+  box-shadow: 0 14px 32px rgba(15, 118, 110, 0.18);
 }
-.btnPrimary:hover{ background: #256628; }
+.btnPrimary:hover{ filter: brightness(0.98); }
 
 .btnGhost{
   background: rgba(0,0,0,.05);
   border: 1px solid rgba(0,0,0,.06);
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 10px 12px;
   cursor:pointer;
-  font-weight: 800;
+  font-weight: 900;
 }
 .btnGhost:hover{ background: rgba(0,0,0,.08); }
 .btnGhost:disabled{ opacity:.55; cursor:not-allowed; }
 
-.btnIcon{
-  border:none;
-  background: var(--espe-green-soft);
-  color: var(--espe-green-2);
-  padding: 7px;
-  border-radius: 10px;
-  cursor:pointer;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-}
-.btnIcon:hover{ background: #d6f1e2; }
+.muted{ color: var(--text-muted); font-weight: 800; }
 
-.btnEdit{ /* por si ya lo usas */
-  background: var(--espe-green-soft);
-  color: var(--espe-green-2);
+/* =========================================================
+   BOTONES ÍCONOS (como tu estándar)
+========================================================= */
+.btnIcon{
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  border: 1px solid rgba(15, 23, 42, 0.14);
+  background: #ffffff;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.btnIcon:hover{
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(0,0,0,0.14);
+}
+
+/* asegurar iconos lucide visibles */
+.btnIcon svg{
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  color: inherit;
+  opacity: 1;
+}
+
+/* Variante: Asignar (verde) */
+.btnIcon.btnEdit{
+  background: rgba(34, 197, 94, 0.18);
+  border-color: rgba(34, 197, 94, 0.40);
+  color: #15803d;
 }
 
 /* =========================================================
@@ -244,10 +290,9 @@
   align-items:center;
   gap: 12px;
 }
-.muted{ color: var(--text-muted); font-size: .88rem; }
 
 /* =========================================================
-   MODAL (bonito y consistente con tu UI)
+   MODAL
 ========================================================= */
 .modalOverlay{
   position: fixed;
@@ -264,7 +309,7 @@
   background:#fff;
   border-radius: 16px;
   width: 100%;
-  max-width: 520px;
+  max-width: 560px;
   box-shadow: 0 20px 40px rgba(0,0,0,.22);
   overflow:hidden;
   border: 1px solid rgba(255,255,255,.35);
@@ -279,17 +324,20 @@
 }
 
 .modalTitle{ font-weight: 900; }
+
 .modalClose{
-  border:none;
-  background: transparent;
+  border: 1px solid var(--border-soft);
+  background: #fff;
   font-size: 1.2rem;
   cursor:pointer;
-  padding: 4px 8px;
-  border-radius: 10px;
+  padding: 6px 10px;
+  border-radius: 12px;
 }
 .modalClose:hover{ background: rgba(0,0,0,.06); }
 
-.modalBody{ padding: 16px; }
+.modalBody{
+  padding: 16px;
+}
 .formStack{ display:grid; gap: 12px; }
 
 .formField{ display:grid; gap: 6px; }
@@ -297,9 +345,10 @@
 
 .fieldSelect{
   border: 1px solid rgba(0,0,0,.14);
-  border-radius: 10px;
-  padding: 9px 10px;
+  border-radius: 12px;
+  padding: 10px 10px;
   outline:none;
+  background: #fff;
 }
 .fieldSelect:focus{
   border-color: rgba(46,125,50,.6);
@@ -315,7 +364,7 @@
 }
 
 /* =========================================================
-   TOAST (como tu CarreraAdminsPage)
+   TOAST
 ========================================================= */
 .toast{
   position: fixed;

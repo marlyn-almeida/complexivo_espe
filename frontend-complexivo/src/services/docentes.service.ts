@@ -6,6 +6,9 @@ export type DocenteListParams = {
   q?: string;
   page?: number;
   limit?: number;
+
+  // ✅ NUEVO: filtro opcional por carrera
+  id_carrera?: number | null;
 };
 
 export type DocenteCreateDTO = {
@@ -18,7 +21,6 @@ export type DocenteCreateDTO = {
   telefono_docente?: string;
 
   nombre_usuario: string;
-
   password?: string;
 
   id_carrera?: number;
@@ -38,11 +40,25 @@ export type DocenteUpdateDTO = {
 };
 
 export const docentesService = {
+  /**
+   * ✅ LIST
+   * Compatibilidad:
+   * - list(false) / list(true)
+   * - list({ includeInactive, q, page, limit, id_carrera })
+   */
   list: async (arg: boolean | DocenteListParams = false): Promise<Docente[]> => {
     const paramsObj: DocenteListParams =
-      typeof arg === "boolean" ? { includeInactive: arg } : arg;
+      typeof arg === "boolean" ? { includeInactive: arg } : (arg ?? {});
 
     const limit = Math.min(paramsObj.limit ?? 100, 100);
+
+    // ✅ normaliza id_carrera: si no viene o viene vacío => undefined
+    const idCarrera =
+      paramsObj.id_carrera !== null &&
+      paramsObj.id_carrera !== undefined &&
+      Number(paramsObj.id_carrera) > 0
+        ? Number(paramsObj.id_carrera)
+        : undefined;
 
     const res = await axiosClient.get<Docente[]>("/docentes", {
       params: {
@@ -50,6 +66,9 @@ export const docentesService = {
         q: paramsObj.q?.trim() || undefined,
         page: paramsObj.page ?? 1,
         limit,
+
+        // ✅ NUEVO: solo se envía si existe
+        id_carrera: idCarrera,
       },
     });
 

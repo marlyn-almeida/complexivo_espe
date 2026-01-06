@@ -12,7 +12,7 @@ function isSuperAdmin(user) {
 
 // ✅ Resuelve carrera para asignación tipo DOCENTE
 async function resolveCarreraIdForCreate(payload, user) {
-  // ADMIN: siempre por scope (esto se mantiene, porque ADMIN crea docentes para SU carrera)
+  // ADMIN: siempre por scope (cuando crea)
   if (isAdmin(user)) {
     const carreraId = Number(user?.scope?.id_carrera);
     if (!carreraId) {
@@ -43,7 +43,6 @@ async function resolveCarreraIdForCreate(payload, user) {
         throw err;
       }
 
-      // Si también viene código, debe coincidir
       if (codigoCarrera) {
         if (String(c.codigo_carrera).trim() !== codigoCarrera) {
           const err = new Error("id_carrera y codigo_carrera no coinciden");
@@ -55,7 +54,6 @@ async function resolveCarreraIdForCreate(payload, user) {
       return Number(c.id_carrera);
     }
 
-    // Solo código
     if (codigoCarrera) {
       const c = await repo.findCarreraByCodigo(codigoCarrera);
       if (!c) {
@@ -72,25 +70,28 @@ async function resolveCarreraIdForCreate(payload, user) {
     }
   }
 
-  // Otros roles: no asignan carrera aquí
   return null;
 }
 
+/**
+ * ✅ LISTADO:
+ * - SUPER_ADMIN: ve todos
+ * - ADMIN (rol 2): ve todos
+ * - Filtro por carrera SOLO si viene query.id_carrera
+ */
 async function list(query = {}, user) {
   const includeInactive = Boolean(query.includeInactive);
   const q = query.q || "";
   const page = query.page || 1;
   const limit = query.limit || 50;
 
-  // ✅ CAMBIO: YA NO FILTRAMOS POR SCOPE PARA ADMIN
-  // ✅ Ahora el filtro por carrera es OPCIONAL y viene desde la UI:
-  // GET /docentes?id_carrera=5
-  const carreraFilterId = query.id_carrera ? Number(query.id_carrera) : null;
+  // ✅ filtro opcional por carrera (si el front lo manda)
+  const id_carrera =
+    query.id_carrera !== undefined && query.id_carrera !== null && String(query.id_carrera).trim() !== ""
+      ? Number(query.id_carrera)
+      : null;
 
-  // Si viene algo raro (NaN) lo ignoramos
-  const scopeCarreraId = Number.isFinite(carreraFilterId) && carreraFilterId > 0 ? carreraFilterId : null;
-
-  return repo.findAll({ includeInactive, q, page, limit, scopeCarreraId });
+  return repo.findAll({ includeInactive, q, page, limit, id_carrera });
 }
 
 async function get(id, user) {
@@ -101,8 +102,25 @@ async function get(id, user) {
     throw err;
   }
 
-  // ✅ CAMBIO: si ADMIN ya puede ver TODOS, no bloqueamos por carrera aquí.
-  // (Si tú quisieras restringir el detalle, aquí se volvería a poner.)
+  // ✅ aquí sí puedes mantener seguridad por carrera si quieres (opcional)
+  // Si deseas que ADMIN solo pueda VER detalle de docentes de su carrera, déjalo como está.
+  // Si también quieres que ADMIN pueda ver cualquier detalle, borra este bloque.
+  if (isAdmin(user)) {
+    const carreraId = Number(user?.scope?.id_carrera);
+    if (!carreraId) {
+      const err = new Error("Scope inválido: no se encontró id_carrera en el token");
+      err.status = 403;
+      throw err;
+    }
+
+    const ok = await repo.isDocenteInCarrera(Number(id), carreraId);
+    if (!ok) {
+      const err = new Error("Acceso denegado: el docente no pertenece a tu carrera");
+      err.status = 403;
+      throw err;
+    }
+  }
+
   return doc;
 }
 
@@ -211,12 +229,6 @@ async function changeEstado(id, estado, user) {
   return repo.setEstado(id, estado);
 }
 
-/**
- * ✅ NUEVO: asignar / desasignar rol SUPER_ADMIN (id_rol=1)
- * Solo lo puede hacer un SUPER_ADMIN.
- *
- * payload: { enabled: boolean }
- */
 async function setSuperAdmin(id, payload, user) {
   if (!isSuperAdmin(user)) {
     const err = new Error("Acceso denegado: solo SUPER_ADMIN puede asignar/desasignar este rol");
@@ -231,7 +243,6 @@ async function setSuperAdmin(id, payload, user) {
     throw err;
   }
 
-  // Debe existir el docente
   const doc = await repo.findById(targetId);
   if (!doc) {
     const err = new Error("Docente no encontrado");
@@ -241,7 +252,6 @@ async function setSuperAdmin(id, payload, user) {
 
   const enabled = Boolean(payload?.enabled);
 
-  // ✅ Recomendado: evitar que un super admin se quite a sí mismo
   if (!enabled && Number(user?.id) === targetId) {
     const err = new Error("No puedes desasignarte a ti mismo el rol SUPER_ADMIN");
     err.status = 422;
@@ -254,7 +264,6 @@ async function setSuperAdmin(id, payload, user) {
     estado: enabled ? 1 : 0,
   });
 
-  // opcional: devolver flag para UI
   const isNow = await repo.hasRol({ id_rol: 1, id_docente: targetId });
 
   return {

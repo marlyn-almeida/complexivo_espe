@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
-import { UserCog } from "lucide-react";
+import { Users } from "lucide-react";
 import "./CarreraPeriodoPage.css";
 
 import type { Carrera } from "../../types/carrera";
 import type { CarreraPeriodo, PeriodoResumen } from "../../types/carreraPeriodo";
 import { carrerasService } from "../../services/carreras.service";
-import { carreraPeriodoService } from "../../services/carreraPeriodo.service";
+import {
+  carreraPeriodoService,
+  type CarreraPeriodoAdminsResponse,
+  type CarreraPeriodoAdminsUpdateDTO,
+} from "../../services/carreraPeriodo.service";
 
 const PAGE_SIZE = 10;
 
@@ -33,12 +36,18 @@ function carreraMeta(x: any) {
   return parts.join(" · ");
 }
 
-export default function CarreraPeriodoPage() {
-  const nav = useNavigate();
+type ToastType = "success" | "error" | "info";
 
+export default function CarreraPeriodoPage() {
   // base
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const [toast, setToast] = useState<{ msg: string; type: ToastType } | null>(null);
+  function showToast(msg: string, type: ToastType = "info") {
+    setToast({ msg, type });
+    window.setTimeout(() => setToast(null), 3200);
+  }
 
   const [carreras, setCarreras] = useState<Carrera[]>([]);
 
@@ -50,7 +59,7 @@ export default function CarreraPeriodoPage() {
   // paginación
   const [page, setPage] = useState(1);
 
-  // modal general
+  // modal general (assign/view/edit)
   const [modalMode, setModalMode] = useState<null | "assign" | "view" | "edit">(null);
   const [selectedPeriodo, setSelectedPeriodo] = useState<PeriodoResumen | null>(null);
 
@@ -64,14 +73,113 @@ export default function CarreraPeriodoPage() {
   const [selectedCarreraIds, setSelectedCarreraIds] = useState<Set<number>>(new Set());
 
   // =========================
+  // ✅ MODAL Autoridades (director/apoyo) para UNA carrera_periodo
+  // =========================
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authSaving, setAuthSaving] = useState(false);
+
+  const [selectedCP, setSelectedCP] = useState<CarreraPeriodo | null>(null);
+
+  const [admins, setAdmins] = useState<CarreraPeriodoAdminsResponse | null>(null);
+  const [dirId, setDirId] = useState<string>("");
+  const [apoId, setApoId] = useState<string>("");
+
+  // docentes para selects del modal autoridades
+  const [docentes, setDocentes] = useState<any[]>([]);
+  const [loadingDocentes, setLoadingDocentes] = useState(false);
+
+  function formatAdminLite(a?: CarreraPeriodoAdminsResponse["director"] | null) {
+    if (!a) return "— Sin asignar —";
+    const full = `${a.apellidos_docente} ${a.nombres_docente}`.trim();
+    const user = a.nombre_usuario ? ` (${a.nombre_usuario})` : "";
+    return full + user;
+  }
+
+  async function openAutoridadesModal(cp: CarreraPeriodo) {
+    if (!cp?.id_carrera_periodo) return;
+
+    setSelectedCP(cp);
+    setShowAuthModal(true);
+    setAuthLoading(true);
+    setAdmins(null);
+    setDirId("");
+    setApoId("");
+
+    try {
+      // cargar docentes (una vez)
+      if (!docentes.length) {
+        setLoadingDocentes(true);
+        try {
+          const list = await (await import("../../services/docentes.service")).docentesService.list(false);
+          setDocentes((list || []).filter((d: any) => Number(d.estado) === 1));
+        } finally {
+          setLoadingDocentes(false);
+        }
+      }
+
+      // cargar admins del cp
+      const data = await carreraPeriodoService.getAdmins(cp.id_carrera_periodo);
+      setAdmins(data);
+      setDirId(data.director?.id_docente ? String(data.director.id_docente) : "");
+      setApoId(data.apoyo?.id_docente ? String(data.apoyo.id_docente) : "");
+    } catch (err: any) {
+      showToast(err?.userMessage || "No se pudo cargar autoridades", "error");
+      setAdmins(null);
+      setDirId("");
+      setApoId("");
+    } finally {
+      setAuthLoading(false);
+    }
+  }
+
+  function closeAutoridadesModal() {
+    setShowAuthModal(false);
+    setSelectedCP(null);
+    setAdmins(null);
+    setDirId("");
+    setApoId("");
+  }
+
+  async function onSaveAutoridades() {
+    if (!selectedCP) return;
+
+    if (dirId && apoId && dirId === apoId) {
+      showToast("Director y Apoyo no pueden ser el mismo docente.", "error");
+      return;
+    }
+
+    setAuthSaving(true);
+    try {
+      const payload: CarreraPeriodoAdminsUpdateDTO = {
+        id_docente_director: dirId ? Number(dirId) : null,
+        id_docente_apoyo: apoId ? Number(apoId) : null,
+      };
+
+      const saved = await carreraPeriodoService.setAdmins(selectedCP.id_carrera_periodo, payload);
+      setAdmins(saved);
+
+      showToast("Autoridades guardadas.", "success");
+      setShowAuthModal(false);
+
+      // ✅ refrescar la lista "ver" para que se vea reflejado (si sigue abierto)
+      if (selectedPeriodo?.id_periodo) {
+        await fetchPeriodoItems(selectedPeriodo.id_periodo, { includeInactive: true, q: periodoSearch });
+      }
+    } catch (err: any) {
+      showToast(err?.userMessage || "No se pudo guardar autoridades", "error");
+    } finally {
+      setAuthSaving(false);
+    }
+  }
+
+  // =========================
   // Helpers memo
   // =========================
   const carrerasSorted = useMemo(() => {
     const arr = [...carreras];
     arr.sort((a: any, b: any) =>
-      String(a.nombre_carrera || "").localeCompare(String(b.nombre_carrera || ""), "es", {
-        sensitivity: "base",
-      })
+      String(a.nombre_carrera || "").localeCompare(String(b.nombre_carrera || ""))
     );
     return arr;
   }, [carreras]);
@@ -198,7 +306,7 @@ export default function CarreraPeriodoPage() {
     await fetchPeriodoItems(p.id_periodo, { includeInactive: true, q: "" });
 
     if (mode === "assign") {
-      setSelectedCarreraIds(new Set()); // sin preselección
+      setSelectedCarreraIds(new Set());
     }
 
     if (mode === "view") {
@@ -206,7 +314,6 @@ export default function CarreraPeriodoPage() {
     }
 
     if (mode === "edit") {
-      // preselecciona activas actuales
       const activeIds = new Set<number>();
       const items = await carreraPeriodoService.listByPeriodo(p.id_periodo, {
         includeInactive: true,
@@ -283,7 +390,7 @@ export default function CarreraPeriodoPage() {
     e.preventDefault();
     if (!selectedPeriodo) return;
 
-    const ids = Array.from(selectedCarreraIds); // puede ser vacío -> deja todo inactivo
+    const ids = Array.from(selectedCarreraIds);
 
     setLoading(true);
     try {
@@ -318,9 +425,7 @@ export default function CarreraPeriodoPage() {
         <div className="cp3-panel-top">
           <div>
             <h1 className="cp3-title">Carrera – Período</h1>
-            <p className="cp3-subtitle">
-              Listado de períodos con acciones para asignar, ver y editar carreras.
-            </p>
+            <p className="cp3-subtitle">Listado de períodos con acciones para asignar, ver y editar carreras.</p>
           </div>
         </div>
 
@@ -410,11 +515,7 @@ export default function CarreraPeriodoPage() {
         </div>
 
         <div className="cp3-pagination">
-          <button
-            className="btn-page"
-            onClick={() => setPage((x) => Math.max(1, x - 1))}
-            disabled={page <= 1}
-          >
+          <button className="btn-page" onClick={() => setPage((x) => Math.max(1, x - 1))} disabled={page <= 1}>
             ◀
           </button>
           <span className="page-info">
@@ -430,7 +531,7 @@ export default function CarreraPeriodoPage() {
         </div>
       </div>
 
-      {/* MODAL */}
+      {/* MODAL (assign/view/edit) */}
       {modalMode && selectedPeriodo && (
         <div className="modal-backdrop" onClick={closeModal}>
           <div className="modal modal-lg" onClick={(e) => e.stopPropagation()}>
@@ -483,6 +584,22 @@ export default function CarreraPeriodoPage() {
                           <div className="view-left">
                             <div className="view-name">{x.nombre_carrera || "—"}</div>
                             <div className="view-meta">{carreraMeta(x) || "—"}</div>
+
+                            {/* ✅ director/apoyo en la misma tarjeta */}
+                            <div className="view-admins">
+                              <div className="va-row">
+                                <span className="va-k">Director:</span>
+                                <span className="va-v">
+                                  {formatAdminLite((x as any).director || null)}
+                                </span>
+                              </div>
+                              <div className="va-row">
+                                <span className="va-k">Apoyo:</span>
+                                <span className="va-v">
+                                  {formatAdminLite((x as any).apoyo || null)}
+                                </span>
+                              </div>
+                            </div>
                           </div>
 
                           <div className="view-right">
@@ -490,15 +607,27 @@ export default function CarreraPeriodoPage() {
                               {activo ? "ACTIVO" : "INACTIVO"}
                             </span>
 
-                            {/* ✅ NUEVO: Autoridades por carrera_periodo */}
+                            {/* ✅ Botón REAL: abre modal autoridades */}
                             <button
-                              type="button"
                               className="btnIcon btnAssign"
-                              title="Asignar Director / Apoyo"
+                              title="Autoridades (Director / Apoyo)"
+                              onClick={async () => {
+                                if (!activo) return;
+
+                                setAuthLoading(true);
+                                try {
+                                  // cargar admins y “inyectar” en el item (para mostrar sin refrescar)
+                                  const a = await carreraPeriodoService.getAdmins(x.id_carrera_periodo);
+                                  (x as any).director = a.director;
+                                  (x as any).apoyo = a.apoyo;
+                                } catch {}
+                                setAuthLoading(false);
+
+                                openAutoridadesModal(x);
+                              }}
                               disabled={!activo}
-                              onClick={() => nav(`/carreras-periodos/${x.id_carrera_periodo}/admin`)}
                             >
-                              <UserCog size={18} />
+                              <Users size={18} />
                             </button>
                           </div>
                         </div>
@@ -517,10 +646,7 @@ export default function CarreraPeriodoPage() {
 
             {/* ASSIGN / EDIT */}
             {(modalMode === "assign" || modalMode === "edit") && (
-              <form
-                onSubmit={modalMode === "assign" ? onSubmitAssign : onSubmitEdit}
-                className="modal-body"
-              >
+              <form onSubmit={modalMode === "assign" ? onSubmitAssign : onSubmitEdit} className="modal-body">
                 <div className="assign-tools">
                   <input
                     className="input-base"
@@ -547,7 +673,6 @@ export default function CarreraPeriodoPage() {
                     const id = Number(c.id_carrera);
                     const checked = selectedCarreraIds.has(id);
 
-                    // En assign: si ya existe relación, la bloqueamos para no confundir
                     const yaExiste = carreraAsignadaMap.has(id);
                     const disabledAssign = modalMode === "assign" && yaExiste;
 
@@ -588,6 +713,91 @@ export default function CarreraPeriodoPage() {
           </div>
         </div>
       )}
+
+      {/* ✅ MODAL AUTORIDADES */}
+      {showAuthModal && selectedCP && (
+        <div className="modalOverlay" onClick={closeAutoridadesModal}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modalHeader">
+              <div className="modalTitle">Autoridades del período</div>
+              <button className="modalClose" onClick={closeAutoridadesModal}>
+                ✕
+              </button>
+            </div>
+
+            <div className="modalBody formStack">
+              <div className="muted">
+                <b>{selectedCP.nombre_carrera || "Carrera"}</b> — {selectedCP.codigo_periodo || "Período"}
+              </div>
+
+              <div className="authCurrent">
+                <div className="authBox">
+                  <div className="authK">Director actual</div>
+                  <div className="authV">{admins ? formatAdminLite(admins.director) : "—"}</div>
+                </div>
+                <div className="authBox">
+                  <div className="authK">Apoyo actual</div>
+                  <div className="authV">{admins ? formatAdminLite(admins.apoyo) : "—"}</div>
+                </div>
+              </div>
+
+              {authLoading ? (
+                <div className="muted">Cargando autoridades...</div>
+              ) : (
+                <>
+                  <div className="formField">
+                    <label className="label">Director de carrera</label>
+                    <select
+                      className="fieldSelect"
+                      value={dirId}
+                      onChange={(e) => setDirId(e.target.value)}
+                      disabled={loadingDocentes || authSaving}
+                    >
+                      <option value="">(Sin asignar)</option>
+                      {docentes.map((d: any) => (
+                        <option key={d.id_docente} value={d.id_docente}>
+                          {d.apellidos_docente} {d.nombres_docente} — {d.nombre_usuario}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="formField">
+                    <label className="label">Docente de apoyo</label>
+                    <select
+                      className="fieldSelect"
+                      value={apoId}
+                      onChange={(e) => setApoId(e.target.value)}
+                      disabled={loadingDocentes || authSaving}
+                    >
+                      <option value="">(Sin asignar)</option>
+                      {docentes.map((d: any) => (
+                        <option key={d.id_docente} value={d.id_docente}>
+                          {d.apellidos_docente} {d.nombres_docente} — {d.nombre_usuario}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {loadingDocentes && <div className="muted">Cargando docentes...</div>}
+                </>
+              )}
+            </div>
+
+            <div className="modalFooter">
+              <button className="btnGhost" onClick={closeAutoridadesModal} disabled={authSaving}>
+                Cancelar
+              </button>
+
+              <button className="btnPrimary" onClick={onSaveAutoridades} disabled={authSaving || authLoading}>
+                {authSaving ? "Guardando..." : "Guardar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {toast && <div className={`toast toast-${toast.type}`}>{toast.msg}</div>}
     </div>
   );
 }
