@@ -2,7 +2,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { ACTIVE_ROLE_KEY, ROLES_KEY, dashboardByRole } from "../../utils/auth";
 import type { RolId } from "../../utils/auth";
-import { authService } from "../../services/auth.service";
+import { setActiveRole } from "../../services/auth.service";
 
 type RoleItem = { id_rol: number; nombre_rol: string };
 
@@ -29,21 +29,21 @@ export default function RoleSwitcher() {
 
     setLoading(true);
     try {
-      // 1) pedir token nuevo al backend (rol activo nuevo)
-      const data = await authService.changeActiveRole(rid);
+      // ✅ pedir token nuevo al backend
+      const data = await setActiveRole(rid);
 
-      // 2) guardar token nuevo (ajusta la key si usas otra)
+      // ✅ guardar token nuevo
       localStorage.setItem("accessToken", data.accessToken);
 
-      // 3) actualizar rol activo local (para UI)
+      // ✅ actualizar rol activo local
       localStorage.setItem(ACTIVE_ROLE_KEY, String(rid));
 
-      // 4) si backend devuelve roles "bonitos", refrescamos el cache
+      // ✅ refrescar roles cache si vienen
       if (Array.isArray(data.roles)) {
         localStorage.setItem(ROLES_KEY, JSON.stringify(data.roles));
       }
 
-      // 5) navegar
+      // ✅ navegar
       if (data.redirectTo) {
         navigate(data.redirectTo, { replace: true });
       } else {
@@ -51,8 +51,6 @@ export default function RoleSwitcher() {
       }
     } catch (err) {
       console.error("Error cambiando rol activo:", err);
-      // fallback: no cambiamos rol local si falló backend
-      // (si quieres, aquí puedes mostrar un toast)
     } finally {
       setLoading(false);
     }

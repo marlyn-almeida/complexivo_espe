@@ -8,7 +8,7 @@ import campus from "../../assets/campus.jpg";
 import { setSession } from "../../utils/auth";
 
 type ChangePasswordResponse =
-  | { message?: string }
+  | { message?: string; errors?: any }
   | {
       accessToken: string;
       roles: Array<{ id_rol: number; nombre_rol: string }>;
@@ -19,6 +19,8 @@ type ChangePasswordResponse =
 
 export default function ChangePasswordPage() {
   const navigate = useNavigate();
+
+  const MIN_LEN = 8;
 
   const [newPassword, setNewPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -32,7 +34,7 @@ export default function ChangePasswordPage() {
   const strength = useMemo(() => {
     const p = newPassword;
     const checks = {
-      len: p.length >= 8,
+      len: p.length >= MIN_LEN,
       upper: /[A-Z]/.test(p),
       lower: /[a-z]/.test(p),
       num: /\d/.test(p),
@@ -51,7 +53,7 @@ export default function ChangePasswordPage() {
 
   const canSubmit =
     !!tempToken &&
-    newPassword.length >= 6 &&
+    newPassword.length >= MIN_LEN &&
     newPassword === confirm &&
     !loading;
 
@@ -65,8 +67,8 @@ export default function ChangePasswordPage() {
       return;
     }
 
-    if (newPassword.length < 6) {
-      setError("La contraseña debe tener al menos 6 caracteres.");
+    if (newPassword.length < MIN_LEN) {
+      setError(`La contraseña debe tener al menos ${MIN_LEN} caracteres.`);
       return;
     }
 
@@ -77,21 +79,37 @@ export default function ChangePasswordPage() {
 
     setLoading(true);
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/change-password`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tempToken, newPassword }),
-      });
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL}/auth/change-password`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            // ✅ Por si el backend lee el token desde header
+            Authorization: `Bearer ${tempToken}`,
+          },
+          body: JSON.stringify({
+            // ✅ Por si el backend lo lee desde body
+            tempToken,
+            newPassword,
+            // ✅ Por si el backend exige confirmación
+            confirmPassword: confirm,
+          }),
+        }
+      );
 
       const data = (await res.json()) as ChangePasswordResponse;
 
       if (!res.ok) {
+        // 🔎 Esto te dice EXACTAMENTE por qué da 422
+        console.log("CHANGE-PASSWORD ERROR:", res.status, data);
         setError((data as any)?.message || "No se pudo cambiar la contraseña.");
         return;
       }
 
       const ok = data as any;
       if (!ok.accessToken) {
+        console.log("CHANGE-PASSWORD INVALID RESPONSE:", data);
         setError("Respuesta inválida del servidor.");
         return;
       }
@@ -119,7 +137,8 @@ export default function ChangePasswordPage() {
 
         <h1 className="cp-title">Cambiar contraseña</h1>
         <p className="cp-subtitle">
-          Por seguridad, debes definir una nueva contraseña antes de ingresar al sistema.
+          Por seguridad, debes definir una nueva contraseña antes de ingresar al
+          sistema.
         </p>
 
         <div className="cp-card">
@@ -170,16 +189,28 @@ export default function ChangePasswordPage() {
                 />
               </div>
               {confirm && newPassword !== confirm && (
-                <div className="cp-hint cp-hint--danger">Las contraseñas no coinciden.</div>
+                <div className="cp-hint cp-hint--danger">
+                  Las contraseñas no coinciden.
+                </div>
               )}
             </div>
 
             <div className="cp-rules">
-              <div className={`cp-rule ${strength.checks.len ? "ok" : ""}`}>• Mínimo 8 caracteres</div>
-              <div className={`cp-rule ${strength.checks.upper ? "ok" : ""}`}>• Al menos 1 mayúscula</div>
-              <div className={`cp-rule ${strength.checks.lower ? "ok" : ""}`}>• Al menos 1 minúscula</div>
-              <div className={`cp-rule ${strength.checks.num ? "ok" : ""}`}>• Al menos 1 número</div>
-              <div className={`cp-rule ${strength.checks.sym ? "ok" : ""}`}>• Al menos 1 símbolo</div>
+              <div className={`cp-rule ${strength.checks.len ? "ok" : ""}`}>
+                • Mínimo {MIN_LEN} caracteres
+              </div>
+              <div className={`cp-rule ${strength.checks.upper ? "ok" : ""}`}>
+                • Al menos 1 mayúscula
+              </div>
+              <div className={`cp-rule ${strength.checks.lower ? "ok" : ""}`}>
+                • Al menos 1 minúscula
+              </div>
+              <div className={`cp-rule ${strength.checks.num ? "ok" : ""}`}>
+                • Al menos 1 número
+              </div>
+              <div className={`cp-rule ${strength.checks.sym ? "ok" : ""}`}>
+                • Al menos 1 símbolo
+              </div>
             </div>
 
             {error && <div className="cp-alert">{error}</div>}
