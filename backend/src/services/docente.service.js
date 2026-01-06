@@ -12,7 +12,7 @@ function isSuperAdmin(user) {
 
 // ✅ Resuelve carrera para asignación tipo DOCENTE
 async function resolveCarreraIdForCreate(payload, user) {
-  // ADMIN: siempre por scope
+  // ADMIN: siempre por scope (esto se mantiene, porque ADMIN crea docentes para SU carrera)
   if (isAdmin(user)) {
     const carreraId = Number(user?.scope?.id_carrera);
     if (!carreraId) {
@@ -82,7 +82,14 @@ async function list(query = {}, user) {
   const page = query.page || 1;
   const limit = query.limit || 50;
 
-  const scopeCarreraId = isAdmin(user) ? user?.scope?.id_carrera : null;
+  // ✅ CAMBIO: YA NO FILTRAMOS POR SCOPE PARA ADMIN
+  // ✅ Ahora el filtro por carrera es OPCIONAL y viene desde la UI:
+  // GET /docentes?id_carrera=5
+  const carreraFilterId = query.id_carrera ? Number(query.id_carrera) : null;
+
+  // Si viene algo raro (NaN) lo ignoramos
+  const scopeCarreraId = Number.isFinite(carreraFilterId) && carreraFilterId > 0 ? carreraFilterId : null;
+
   return repo.findAll({ includeInactive, q, page, limit, scopeCarreraId });
 }
 
@@ -94,22 +101,8 @@ async function get(id, user) {
     throw err;
   }
 
-  if (isAdmin(user)) {
-    const carreraId = Number(user?.scope?.id_carrera);
-    if (!carreraId) {
-      const err = new Error("Scope inválido: no se encontró id_carrera en el token");
-      err.status = 403;
-      throw err;
-    }
-
-    const ok = await repo.isDocenteInCarrera(Number(id), carreraId);
-    if (!ok) {
-      const err = new Error("Acceso denegado: el docente no pertenece a tu carrera");
-      err.status = 403;
-      throw err;
-    }
-  }
-
+  // ✅ CAMBIO: si ADMIN ya puede ver TODOS, no bloqueamos por carrera aquí.
+  // (Si tú quisieras restringir el detalle, aquí se volvería a poner.)
   return doc;
 }
 
@@ -277,7 +270,5 @@ module.exports = {
   create,
   update,
   changeEstado,
-
-  // ✅ NUEVO
   setSuperAdmin,
 };

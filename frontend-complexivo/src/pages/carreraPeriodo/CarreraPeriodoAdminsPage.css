@@ -1,0 +1,341 @@
+/* =========================================================
+   VARIABLES (si ya las tienes en global, no pasa nada)
+========================================================= */
+:root{
+  --espe-green: #1b5e20;
+  --espe-green-2: #2e7d32;
+  --espe-green-soft: #e9f7ef;
+
+  --border-soft: rgba(0,0,0,.10);
+  --text-muted: rgba(0,0,0,.62);
+  --shadow-soft: 0 10px 25px rgba(0,0,0,.06);
+  --bg-soft: rgba(0,0,0,.03);
+}
+
+/* =========================================================
+   BASE (tu estilo nuevo con cards)
+========================================================= */
+.page { display: grid; gap: 14px; }
+
+.card{
+  background:#fff;
+  border:1px solid var(--border-soft);
+  border-radius:16px;
+  padding:16px;
+  box-shadow: var(--shadow-soft);
+}
+
+.headerRow{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+}
+
+.title{ margin:0; font-weight:900; font-size: 1.2rem; }
+.subtitle{ margin:6px 0 0; color: var(--text-muted); font-size:.92rem; }
+
+/* =========================================================
+   RESUMEN
+========================================================= */
+.summaryRow{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.summaryBoxes{ display:flex; gap:10px; flex-wrap:wrap; }
+
+.summaryBox{
+  border:1px solid var(--border-soft);
+  background: #fff;
+  border-radius: 12px;
+  padding:10px 14px;
+  min-width: 96px;
+  text-align:center;
+}
+
+.summaryBox .label{ display:block; font-size:.75rem; color: var(--text-muted); }
+.summaryBox .value{ display:block; font-size:1.15rem; font-weight: 900; margin-top: 2px; }
+
+.summaryBox.active{
+  background: var(--espe-green-soft);
+  border-color: rgba(46,125,50,.35);
+  color: var(--espe-green-2);
+}
+
+.summaryBox.inactive{
+  background:#fdecec;
+  border-color:#f1a9a9;
+  color:#a22;
+}
+
+/* =========================================================
+   TOGGLE
+========================================================= */
+.toggle{ display:inline-flex; align-items:center; gap:8px; cursor:pointer; user-select:none; }
+.toggle input{ display:none; }
+
+.toggle .slider{
+  width: 36px;
+  height: 20px;
+  background: #cfcfcf;
+  border-radius: 999px;
+  position: relative;
+  transition: background .2s;
+}
+.toggle .slider::after{
+  content:"";
+  position:absolute;
+  width:16px; height:16px;
+  background:#fff;
+  border-radius:50%;
+  top:2px; left:2px;
+  transition: transform .2s;
+}
+
+.toggle input:checked + .slider{ background: var(--espe-green-2); }
+.toggle input:checked + .slider::after{ transform: translateX(16px); }
+.toggleText{ font-size:.85rem; color: var(--text-muted); }
+
+/* =========================================================
+   FILTROS
+========================================================= */
+.filtersRow{ margin-top: 12px; }
+
+.searchInline{
+  display:flex;
+  align-items:center;
+  gap: 8px;
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  padding: 7px 10px;
+  max-width: 340px;
+  background:#fff;
+}
+
+.searchInline input{
+  border:none;
+  outline:none;
+  width:100%;
+  font-size: .92rem;
+}
+
+/* =========================================================
+   TABLA ESTILO ESPE
+========================================================= */
+.tableWrap{ padding:0; overflow-x:auto; }
+
+.table{
+  width:100%;
+  border-collapse: collapse;
+  font-size: .92rem;
+}
+
+.table thead th{
+  background: var(--espe-green);
+  color:#fff;
+  font-weight:800;
+  text-align:left;
+  padding: 12px;
+  font-size: .85rem;
+  letter-spacing: .2px;
+}
+
+.table tbody td{
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(0,0,0,.08);
+  vertical-align: middle;
+}
+
+.table tbody tr:hover{ background: #f6fbf7; }
+
+.tdStrong{ font-weight: 900; }
+.tdCode{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size:.85rem; }
+
+.thActions{ text-align:center; }
+.actions{ text-align:center; }
+
+/* =========================================================
+   BADGES
+========================================================= */
+.badge{
+  display:inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: .75rem;
+  font-weight: 900;
+}
+
+.badge-success{ background: var(--espe-green-soft); color: var(--espe-green-2); }
+.badge-danger{ background:#fdecec; color:#a22; }
+
+/* =========================================================
+   BOTONES (alineado a tu estilo CarreraAdminsPage pero verde)
+========================================================= */
+.btnSecondary{
+  background: #f3f4f6;
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-weight: 800;
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+}
+.btnSecondary:hover{ background:#e7eaee; }
+
+.btnPrimary{
+  background: var(--espe-green-2);
+  color:#fff;
+  border:none;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-weight: 900;
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  justify-content:center;
+}
+.btnPrimary:hover{ background: #256628; }
+
+.btnGhost{
+  background: rgba(0,0,0,.05);
+  border: 1px solid rgba(0,0,0,.06);
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor:pointer;
+  font-weight: 800;
+}
+.btnGhost:hover{ background: rgba(0,0,0,.08); }
+.btnGhost:disabled{ opacity:.55; cursor:not-allowed; }
+
+.btnIcon{
+  border:none;
+  background: var(--espe-green-soft);
+  color: var(--espe-green-2);
+  padding: 7px;
+  border-radius: 10px;
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+}
+.btnIcon:hover{ background: #d6f1e2; }
+
+.btnEdit{ /* por si ya lo usas */
+  background: var(--espe-green-soft);
+  color: var(--espe-green-2);
+}
+
+/* =========================================================
+   PAGINACIÓN
+========================================================= */
+.paginationCard{ text-align:center; }
+.paginationCenter{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap: 12px;
+}
+.muted{ color: var(--text-muted); font-size: .88rem; }
+
+/* =========================================================
+   MODAL (bonito y consistente con tu UI)
+========================================================= */
+.modalOverlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.42);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index: 1000;
+  padding: 14px;
+}
+
+.modal{
+  background:#fff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 520px;
+  box-shadow: 0 20px 40px rgba(0,0,0,.22);
+  overflow:hidden;
+  border: 1px solid rgba(255,255,255,.35);
+}
+
+.modalHeader{
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(0,0,0,.08);
+  display:flex;
+  justify-content: space-between;
+  align-items:center;
+}
+
+.modalTitle{ font-weight: 900; }
+.modalClose{
+  border:none;
+  background: transparent;
+  font-size: 1.2rem;
+  cursor:pointer;
+  padding: 4px 8px;
+  border-radius: 10px;
+}
+.modalClose:hover{ background: rgba(0,0,0,.06); }
+
+.modalBody{ padding: 16px; }
+.formStack{ display:grid; gap: 12px; }
+
+.formField{ display:grid; gap: 6px; }
+.label{ font-size: .82rem; font-weight: 900; }
+
+.fieldSelect{
+  border: 1px solid rgba(0,0,0,.14);
+  border-radius: 10px;
+  padding: 9px 10px;
+  outline:none;
+}
+.fieldSelect:focus{
+  border-color: rgba(46,125,50,.6);
+  box-shadow: 0 0 0 3px rgba(46,125,50,.14);
+}
+
+.modalFooter{
+  padding: 14px 16px;
+  border-top: 1px solid rgba(0,0,0,.08);
+  display:flex;
+  justify-content:flex-end;
+  gap: 10px;
+}
+
+/* =========================================================
+   TOAST (como tu CarreraAdminsPage)
+========================================================= */
+.toast{
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  color:#fff;
+  font-weight: 900;
+  box-shadow: 0 10px 25px rgba(0,0,0,.2);
+  z-index: 2000;
+}
+.toast-success{ background: #16a34a; }
+.toast-error{ background: #dc2626; }
+.toast-info{ background: #2563eb; }
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+@media (max-width: 900px){
+  .searchInline{ max-width: 100%; }
+  .table thead th, .table tbody td{ padding: 10px; }
+}

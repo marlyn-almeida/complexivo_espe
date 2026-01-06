@@ -1,13 +1,13 @@
 // src/repositories/docente.repo.js
 const pool = require("../config/db");
 
-// =============== LISTADO (con scope rol 2) ===============
+// =============== LISTADO (sin scope obligatorio, con filtro opcional por carrera) ===============
 async function findAll({
   includeInactive = false,
   q = "",
   page = 1,
   limit = 50,
-  scopeCarreraId = null,
+  id_carrera = null, // ✅ NUEVO: filtro opcional por carrera
 } = {}) {
   const safeLimit = Math.min(Math.max(Number(limit) || 50, 1), 100);
   const safePage = Math.max(Number(page) || 1, 1);
@@ -31,10 +31,12 @@ async function findAll({
     params.push(like, like, like, like, like, like);
   }
 
-  // ✅ Scope rol 2: solo docentes asignados a esa carrera
-  // ✅ Evitar duplicados: subquery con MIN(id_carrera_docente)
+  // ✅ Filtro opcional por carrera (si llega id_carrera)
+  // ✅ Evita duplicados: subquery con MIN(id_carrera_docente)
   let joinSql = "";
-  if (scopeCarreraId !== null && scopeCarreraId !== undefined) {
+  const hasCarreraFilter = id_carrera !== null && id_carrera !== undefined && String(id_carrera).trim() !== "";
+
+  if (hasCarreraFilter) {
     joinSql = `
       JOIN (
         SELECT id_docente, MIN(id_carrera_docente) AS id_carrera_docente
@@ -44,18 +46,14 @@ async function findAll({
         GROUP BY id_docente
       ) cd ON cd.id_docente = d.id_docente
     `;
-    params.unshift(Number(scopeCarreraId));
+    params.unshift(Number(id_carrera));
   }
 
   const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
 
   const sql = `
     SELECT
-      ${
-        scopeCarreraId !== null && scopeCarreraId !== undefined
-          ? "cd.id_carrera_docente"
-          : "NULL"
-      } AS id_carrera_docente,
+      ${hasCarreraFilter ? "cd.id_carrera_docente" : "NULL"} AS id_carrera_docente,
       d.id_docente,
       d.id_institucional_docente,
       d.cedula,
@@ -174,7 +172,6 @@ async function assignRolToDocente({ id_rol, id_docente }) {
 async function setRolEstado({ id_rol, id_docente, estado }) {
   const st = estado ? 1 : 0;
 
-  // Si estado=1 => upsert (crea o activa)
   if (st === 1) {
     await pool.query(
       `INSERT INTO rol_docente (id_rol, id_docente, estado)
@@ -185,7 +182,6 @@ async function setRolEstado({ id_rol, id_docente, estado }) {
     return true;
   }
 
-  // Si estado=0 => solo desactiva si existe
   await pool.query(
     `UPDATE rol_docente
      SET estado=0
@@ -262,11 +258,7 @@ async function getScopeCarreraForRol2(id_docente) {
   return rows[0] || null;
 }
 
-async function assignDocenteToCarrera({
-  id_carrera,
-  id_docente,
-  tipo_admin = "DOCENTE",
-}) {
+async function assignDocenteToCarrera({ id_carrera, id_docente, tipo_admin = "DOCENTE" }) {
   await pool.query(
     `INSERT INTO carrera_docente (id_docente, id_carrera, tipo_admin, estado)
      VALUES (?, ?, ?, 1)

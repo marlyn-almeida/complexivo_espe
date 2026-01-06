@@ -6,7 +6,7 @@ import { docentesService } from "../../services/docentes.service";
 
 import type { CarreraPeriodo } from "../../types/carreraPeriodo";
 import type { Docente } from "../../types/docente";
-import type { CarreraPeriodoAdminsResponse } from "../../services/carreraPeriodo.service";
+import type { CarreraPeriodoAdminsResponse } from "../../types/carreraPeriodoAdmin";
 
 import "./CarreraPeriodoAdminsPage.css";
 
@@ -63,9 +63,7 @@ export default function CarreraPeriodoAdminsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mostrarInactivas]);
 
-  // ✅ si quieres que al escribir busqueda recargue backend, descomenta este effect:
   useEffect(() => {
-    // debounce simple
     const t = window.setTimeout(() => {
       loadAll();
     }, 350);
@@ -137,7 +135,12 @@ export default function CarreraPeriodoAdminsPage() {
       const data = await carreraPeriodoService.getAdmins(idCarreraPeriodo);
       setAdminsMap((prev) => ({
         ...prev,
-        [idCarreraPeriodo]: { loading: false, director: data.director, apoyo: data.apoyo, error: "" },
+        [idCarreraPeriodo]: {
+          loading: false,
+          director: data.director,
+          apoyo: data.apoyo,
+          error: "",
+        },
       }));
     } catch (err: any) {
       setAdminsMap((prev) => ({
@@ -160,7 +163,6 @@ export default function CarreraPeriodoAdminsPage() {
   async function openAssign(cp: CarreraPeriodo) {
     setSelectedCP(cp);
 
-    // cargar docentes (solo una vez)
     if (!docentes.length) {
       try {
         setLoadingDocentes(true);
@@ -173,9 +175,6 @@ export default function CarreraPeriodoAdminsPage() {
       }
     }
 
-    // ✅ IMPORTANTÍSIMO:
-    // No leemos adminsMap inmediatamente porque setState es async.
-    // Pedimos admins directamente y seteamos ids de forma segura.
     try {
       setAdminsMap((prev) => ({
         ...prev,
@@ -191,7 +190,12 @@ export default function CarreraPeriodoAdminsPage() {
 
       setAdminsMap((prev) => ({
         ...prev,
-        [cp.id_carrera_periodo]: { loading: false, director: data.director, apoyo: data.apoyo, error: "" },
+        [cp.id_carrera_periodo]: {
+          loading: false,
+          director: data.director,
+          apoyo: data.apoyo,
+          error: "",
+        },
       }));
 
       setDirId(data.director?.id_docente ? String(data.director.id_docente) : "");
@@ -232,7 +236,12 @@ export default function CarreraPeriodoAdminsPage() {
 
       setAdminsMap((prev) => ({
         ...prev,
-        [selectedCP.id_carrera_periodo]: { loading: false, director: saved.director, apoyo: saved.apoyo, error: "" },
+        [selectedCP.id_carrera_periodo]: {
+          loading: false,
+          director: saved.director,
+          apoyo: saved.apoyo,
+          error: "",
+        },
       }));
 
       showToast("Asignación guardada.", "success");
@@ -361,7 +370,11 @@ export default function CarreraPeriodoAdminsPage() {
                     </td>
 
                     <td className="actions">
-                      <button className="btnIcon btnEdit" title="Asignar Director/Apoyo" onClick={() => openAssign(cp)}>
+                      <button
+                        className="btnIcon btnEdit"
+                        title="Asignar Director/Apoyo"
+                        onClick={() => openAssign(cp)}
+                      >
                         <Users size={16} />
                       </button>
                     </td>

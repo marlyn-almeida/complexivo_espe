@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
+import { UserCog } from "lucide-react";
 import "./CarreraPeriodoPage.css";
 
 import type { Carrera } from "../../types/carrera";
@@ -32,6 +34,8 @@ function carreraMeta(x: any) {
 }
 
 export default function CarreraPeriodoPage() {
+  const nav = useNavigate();
+
   // base
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -65,7 +69,9 @@ export default function CarreraPeriodoPage() {
   const carrerasSorted = useMemo(() => {
     const arr = [...carreras];
     arr.sort((a: any, b: any) =>
-      String(a.nombre_carrera || "").localeCompare(String(b.nombre_carrera || ""))
+      String(a.nombre_carrera || "").localeCompare(String(b.nombre_carrera || ""), "es", {
+        sensitivity: "base",
+      })
     );
     return arr;
   }, [carreras]);
@@ -312,7 +318,9 @@ export default function CarreraPeriodoPage() {
         <div className="cp3-panel-top">
           <div>
             <h1 className="cp3-title">Carrera – Período</h1>
-            <p className="cp3-subtitle">Listado de períodos con acciones para asignar, ver y editar carreras.</p>
+            <p className="cp3-subtitle">
+              Listado de períodos con acciones para asignar, ver y editar carreras.
+            </p>
           </div>
         </div>
 
@@ -402,7 +410,11 @@ export default function CarreraPeriodoPage() {
         </div>
 
         <div className="cp3-pagination">
-          <button className="btn-page" onClick={() => setPage((x) => Math.max(1, x - 1))} disabled={page <= 1}>
+          <button
+            className="btn-page"
+            onClick={() => setPage((x) => Math.max(1, x - 1))}
+            disabled={page <= 1}
+          >
             ◀
           </button>
           <span className="page-info">
@@ -465,15 +477,30 @@ export default function CarreraPeriodoPage() {
                   <div className="view-list">
                     {periodoItems.map((x) => {
                       const activo = isActive(x.estado);
+
                       return (
                         <div className="view-item" key={x.id_carrera_periodo}>
-                          <div>
+                          <div className="view-left">
                             <div className="view-name">{x.nombre_carrera || "—"}</div>
                             <div className="view-meta">{carreraMeta(x) || "—"}</div>
                           </div>
-                          <span className={`badge ${activo ? "active" : "inactive"}`}>
-                            {activo ? "ACTIVO" : "INACTIVO"}
-                          </span>
+
+                          <div className="view-right">
+                            <span className={`badge ${activo ? "active" : "inactive"}`}>
+                              {activo ? "ACTIVO" : "INACTIVO"}
+                            </span>
+
+                            {/* ✅ NUEVO: Autoridades por carrera_periodo */}
+                            <button
+                              type="button"
+                              className="btnIcon btnAssign"
+                              title="Asignar Director / Apoyo"
+                              disabled={!activo}
+                              onClick={() => nav(`/carreras-periodos/${x.id_carrera_periodo}/admin`)}
+                            >
+                              <UserCog size={18} />
+                            </button>
+                          </div>
                         </div>
                       );
                     })}
@@ -490,7 +517,10 @@ export default function CarreraPeriodoPage() {
 
             {/* ASSIGN / EDIT */}
             {(modalMode === "assign" || modalMode === "edit") && (
-              <form onSubmit={modalMode === "assign" ? onSubmitAssign : onSubmitEdit} className="modal-body">
+              <form
+                onSubmit={modalMode === "assign" ? onSubmitAssign : onSubmitEdit}
+                className="modal-body"
+              >
                 <div className="assign-tools">
                   <input
                     className="input-base"

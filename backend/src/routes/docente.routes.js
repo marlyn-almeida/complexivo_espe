@@ -12,6 +12,10 @@ router.get(
   "/",
   query("includeInactive").optional().isBoolean().toBoolean(),
   query("q").optional().isString(),
+
+  // ✅ NUEVO: filtro opcional por carrera (para el select del front)
+  query("id_carrera").optional().isInt({ min: 1 }).toInt(),
+
   query("page").optional().isInt({ min: 1 }).toInt(),
   query("limit").optional().isInt({ min: 1, max: 100 }).toInt(),
   validate,

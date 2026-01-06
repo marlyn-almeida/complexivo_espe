@@ -1,27 +1,10 @@
+// src/services/carreraPeriodo.service.ts
 import axiosClient from "../api/axiosClient";
 import type { CarreraPeriodo, CarreraPeriodoBulkDTO, PeriodoResumen } from "../types/carreraPeriodo";
-
-// ✅ types director/apoyo
-export type TipoAdmin = "DIRECTOR" | "APOYO";
-
-export type AdminDocenteLite = {
-  tipo_admin: TipoAdmin;
-  id_docente: number;
-  nombres_docente: string;
-  apellidos_docente: string;
-  nombre_usuario: string;
-};
-
-export type CarreraPeriodoAdminsResponse = {
-  id_carrera_periodo: number;
-  director: AdminDocenteLite | null;
-  apoyo: AdminDocenteLite | null;
-};
-
-export type CarreraPeriodoAdminsUpdateDTO = {
-  id_docente_director?: number | null;
-  id_docente_apoyo?: number | null;
-};
+import type {
+  CarreraPeriodoAdminsResponse,
+  CarreraPeriodoAdminsUpdateDTO,
+} from "../types/carreraPeriodoAdmin";
 
 // ✅ Params avanzados (cuando quieras filtrar)
 export type CarreraPeriodoListParams = {
@@ -128,8 +111,14 @@ export const carreraPeriodoService = {
     return res.data;
   },
 
-  setAdmins: async (idCarreraPeriodo: number, payload: CarreraPeriodoAdminsUpdateDTO) => {
-    const res = await axiosClient.put(`/carreras-periodos/${idCarreraPeriodo}/admin`, payload);
-    return res.data as CarreraPeriodoAdminsResponse;
+  setAdmins: async (
+    idCarreraPeriodo: number,
+    payload: CarreraPeriodoAdminsUpdateDTO
+  ): Promise<CarreraPeriodoAdminsResponse> => {
+    const res = await axiosClient.put<CarreraPeriodoAdminsResponse>(
+      `/carreras-periodos/${idCarreraPeriodo}/admin`,
+      payload
+    );
+    return res.data;
   },
 };

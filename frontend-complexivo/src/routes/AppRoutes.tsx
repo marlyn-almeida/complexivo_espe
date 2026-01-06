@@ -14,6 +14,9 @@ import DocentesPage from "../pages/docentes/DocentesPage";
 import EstudiantesPage from "../pages/estudiantes/EstudiantesPage";
 import CarreraPeriodoPage from "../pages/carreraPeriodo/CarreraPeriodoPage";
 
+// ✅ NUEVO: pantalla estilo CarreraAdmins pero para Carrera-Periodo
+import CarreraPeriodoAutoridadesPage from "../pages/carreraPeriodo/CarreraPeriodoAutoridadesPage";
+
 import PerfilPage from "../pages/perfil/PerfilPage";
 
 import RubricasPeriodoPage from "../pages/rubrica/RubricasPeriodoPage";
@@ -126,6 +129,16 @@ export default function AppRoutes() {
             element={
               <ProtectedRoute allowRoles={[1]}>
                 <CarreraPeriodoPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* ✅ NUEVO: autoridades por Carrera-Periodo (histórico por período) */}
+          <Route
+            path="/carreras-periodos/:id/admin"
+            element={
+              <ProtectedRoute allowRoles={[1]}>
+                <CarreraPeriodoAutoridadesPage />
               </ProtectedRoute>
             }
           />
