@@ -355,6 +355,21 @@
   box-shadow: 0 0 0 3px rgba(46,125,50,.14);
 }
 
+/* ✅ NUEVO: input de búsqueda dentro del modal (estilo ESPE) */
+.fieldInput{
+  width: 100%;
+  padding: 10px 10px;
+  border: 1px solid rgba(0,0,0,.14);
+  border-radius: 12px;
+  outline: none;
+  background: #fff;
+  font-size: .92rem;
+}
+.fieldInput:focus{
+  border-color: rgba(46,125,50,.6);
+  box-shadow: 0 0 0 3px rgba(46,125,50,.14);
+}
+
 .modalFooter{
   padding: 14px 16px;
   border-top: 1px solid rgba(0,0,0,.08);

@@ -5,7 +5,9 @@ function isRol2(user) {
 }
 
 async function list(query = {}, user) {
-  const includeInactive = query.includeInactive === "true";
+  // ✅ FIX: en routes ya hacemos .toBoolean(), entonces aquí viene boolean real
+  const includeInactive = Boolean(query.includeInactive);
+
   const q = query.q || "";
   const page = query.page || 1;
   const limit = query.limit || 50;
@@ -14,7 +16,14 @@ async function list(query = {}, user) {
   // ✅ scope rol 2
   const scopeCarreraId = isRol2(user) ? user?.scope?.id_carrera : null;
 
-  return repo.findAll({ includeInactive, q, page, limit, carreraPeriodoId, scopeCarreraId });
+  return repo.findAll({
+    includeInactive,
+    q,
+    page,
+    limit,
+    carreraPeriodoId,
+    scopeCarreraId,
+  });
 }
 
 async function get(id, user) {

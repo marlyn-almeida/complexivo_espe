@@ -1,17 +1,18 @@
 // src/repositories/carrera_admin.repo.js
 const pool = require("../config/db");
+
 const ADMIN_ROLE_ID = 2;
 
-// ✅ ahora es por CARRERA (no carrera_periodo)
-async function carreraExists(idCarrera) {
+/** ✅ valida carrera_periodo existente */
+async function carreraPeriodoExists(idCarreraPeriodo) {
   const [r] = await pool.query(
-    `SELECT id_carrera FROM carrera WHERE id_carrera=? LIMIT 1`,
-    [Number(idCarrera)]
+    `SELECT id_carrera_periodo FROM carrera_periodo WHERE id_carrera_periodo=? LIMIT 1`,
+    [Number(idCarreraPeriodo)]
   );
   return !!r.length;
 }
 
-// ✅ valida docente existente y ACTIVO
+/** ✅ valida docente existente y ACTIVO */
 async function docenteActivoExists(idDocente) {
   const [r] = await pool.query(
     `SELECT id_docente, estado FROM docente WHERE id_docente=? LIMIT 1`,
@@ -22,31 +23,35 @@ async function docenteActivoExists(idDocente) {
   return { ok: true };
 }
 
-// ✅ devuelve director/apoyo activos por carrera (incluye datos del docente)
-async function getAdmins(idCarrera) {
+/** ✅ devuelve director/apoyo activos por carrera_periodo (incluye datos del docente) */
+async function getAdmins(idCarreraPeriodo) {
+  const cpId = Number(idCarreraPeriodo);
+
   const [rows] = await pool.query(
     `
     SELECT
-      cd.tipo_admin,
+      cpa.tipo_admin,
       d.id_docente,
       d.nombres_docente,
       d.apellidos_docente,
-      d.nombre_usuario
-    FROM carrera_docente cd
-    JOIN docente d ON d.id_docente = cd.id_docente
-    WHERE cd.id_carrera = ?
-      AND cd.estado = 1
-      AND cd.tipo_admin IN ('DIRECTOR','APOYO')
+      d.nombre_usuario,
+      d.correo_docente
+    FROM carrera_periodo_autoridad cpa
+    JOIN docente d ON d.id_docente = cpa.id_docente
+    WHERE cpa.id_carrera_periodo = ?
+      AND cpa.estado = 1
+      AND cpa.tipo_admin IN ('DIRECTOR','APOYO')
     `,
-    [Number(idCarrera)]
+    [cpId]
   );
 
   const director = rows.find((x) => x.tipo_admin === "DIRECTOR") || null;
   const apoyo = rows.find((x) => x.tipo_admin === "APOYO") || null;
 
-  return { id_carrera: Number(idCarrera), director, apoyo };
+  return { id_carrera_periodo: cpId, director, apoyo };
 }
 
+/** ✅ asegura rol ADMIN (2) activo */
 async function ensureAdminRole(idDocente, conn) {
   const [r] = await conn.query(
     `SELECT id_rol_docente, estado FROM rol_docente WHERE id_rol=? AND id_docente=? LIMIT 1`,
@@ -69,42 +74,75 @@ async function ensureAdminRole(idDocente, conn) {
   );
 }
 
-async function deactivateCurrent(idCarrera, tipoAdmin, conn) {
+/**
+ * ✅ desactiva rol ADMIN(2) SI el docente ya no tiene NINGUNA autoridad activa
+ * en carrera_periodo_autoridad.
+ */
+async function deactivateAdminRoleIfNoActiveAuthority(idDocente, conn) {
+  const docenteId = Number(idDocente);
+  if (!docenteId) return;
+
+  const [rows] = await conn.query(
+    `
+    SELECT EXISTS(
+      SELECT 1
+      FROM carrera_periodo_autoridad
+      WHERE id_docente = ?
+        AND estado = 1
+        AND tipo_admin IN ('DIRECTOR','APOYO')
+    ) AS tiene_admin
+    `,
+    [docenteId]
+  );
+
+  const tieneAdmin = Number(rows?.[0]?.tiene_admin || 0) === 1;
+  if (!tieneAdmin) {
+    await conn.query(
+      `UPDATE rol_docente
+       SET estado=0, updated_at=CURRENT_TIMESTAMP
+       WHERE id_rol=? AND id_docente=?`,
+      [ADMIN_ROLE_ID, docenteId]
+    );
+  }
+}
+
+async function deactivateCurrent(idCarreraPeriodo, tipoAdmin, conn) {
   await conn.query(
     `
-    UPDATE carrera_docente
+    UPDATE carrera_periodo_autoridad
     SET estado=0, updated_at=CURRENT_TIMESTAMP
-    WHERE id_carrera=? AND tipo_admin=? AND estado=1
+    WHERE id_carrera_periodo=? AND tipo_admin=? AND estado=1
     `,
-    [Number(idCarrera), tipoAdmin]
+    [Number(idCarreraPeriodo), tipoAdmin]
   );
 }
 
 /**
- * ✅ FIX: UPSERT para evitar "Duplicate entry ... uq_carrera_docente"
- * Si ya existe la relación (según el UNIQUE), se reactiva y actualiza timestamp.
+ * ✅ UPSERT (por si ya existía el mismo docente+tipo en el mismo cp)
+ * (tu UNIQUE es (id_carrera_periodo,id_docente,tipo_admin))
  */
-async function assign(idCarrera, idDocente, tipoAdmin, conn) {
+async function assign(idCarreraPeriodo, idDocente, tipoAdmin, conn) {
   await conn.query(
     `
-    INSERT INTO carrera_docente (id_docente, id_carrera, tipo_admin, estado)
+    INSERT INTO carrera_periodo_autoridad (id_carrera_periodo, id_docente, tipo_admin, estado)
     VALUES (?, ?, ?, 1)
     ON DUPLICATE KEY UPDATE
       estado = 1,
       updated_at = CURRENT_TIMESTAMP
     `,
-    [Number(idDocente), Number(idCarrera), tipoAdmin]
+    [Number(idCarreraPeriodo), Number(idDocente), tipoAdmin]
   );
 }
 
-async function setAdmins(idCarrera, { id_docente_director, id_docente_apoyo }) {
-  const cOk = await carreraExists(idCarrera);
-  if (!cOk) {
-    const e = new Error("Carrera no existe");
+async function setAdmins(idCarreraPeriodo, { id_docente_director, id_docente_apoyo }) {
+  const cpOk = await carreraPeriodoExists(idCarreraPeriodo);
+  if (!cpOk) {
+    const e = new Error("Carrera-Período no existe");
     e.status = 404;
     throw e;
   }
 
+  // Nota: tu validator deja optional int; aquí permitimos null/undefined/""
   const idDir =
     id_docente_director === null || id_docente_director === undefined || id_docente_director === ""
       ? null
@@ -115,12 +153,13 @@ async function setAdmins(idCarrera, { id_docente_director, id_docente_apoyo }) {
       ? null
       : Number(id_docente_apoyo);
 
-  // ✅ regla: no pueden ser el mismo
-  if (idDir && idApo && Number(idDir) === Number(idApo)) {
-    const e = new Error("Director y apoyo no pueden ser el mismo docente");
-    e.status = 422;
-    throw e;
-  }
+  // ✅ (OPCIONAL) regla: evitar mismo docente en ambos.
+  // Tú dijiste que aún no están seguros: lo dejo desactivado por ahora.
+  // if (idDir && idApo && Number(idDir) === Number(idApo)) {
+  //   const e = new Error("Director y apoyo no pueden ser el mismo docente");
+  //   e.status = 422;
+  //   throw e;
+  // }
 
   // ✅ validar docentes si vienen
   if (idDir) {
@@ -144,26 +183,45 @@ async function setAdmins(idCarrera, { id_docente_director, id_docente_apoyo }) {
   try {
     await conn.beginTransaction();
 
+    // Guardar actuales para luego ajustar roles (si los quitamos)
+    const [current] = await conn.query(
+      `
+      SELECT tipo_admin, id_docente
+      FROM carrera_periodo_autoridad
+      WHERE id_carrera_periodo = ?
+        AND estado = 1
+        AND tipo_admin IN ('DIRECTOR','APOYO')
+      `,
+      [Number(idCarreraPeriodo)]
+    );
+
+    const oldDir = (current.find((r) => r.tipo_admin === "DIRECTOR") || {}).id_docente || null;
+    const oldApo = (current.find((r) => r.tipo_admin === "APOYO") || {}).id_docente || null;
+
     // ✅ Director: si viene null => desactiva el actual y listo
     if (idDir !== null) {
-      await deactivateCurrent(idCarrera, "DIRECTOR", conn);
+      await deactivateCurrent(idCarreraPeriodo, "DIRECTOR", conn);
       if (idDir) {
-        await assign(idCarrera, idDir, "DIRECTOR", conn);
+        await assign(idCarreraPeriodo, idDir, "DIRECTOR", conn);
         await ensureAdminRole(idDir, conn);
       }
     }
 
     // ✅ Apoyo: si viene null => desactiva el actual y listo
     if (idApo !== null) {
-      await deactivateCurrent(idCarrera, "APOYO", conn);
+      await deactivateCurrent(idCarreraPeriodo, "APOYO", conn);
       if (idApo) {
-        await assign(idCarrera, idApo, "APOYO", conn);
+        await assign(idCarreraPeriodo, idApo, "APOYO", conn);
         await ensureAdminRole(idApo, conn);
       }
     }
 
+    // ✅ si se removieron autoridades, desactivar rol 2 solo si ya no tiene ninguna activa en ningún periodo
+    if (oldDir) await deactivateAdminRoleIfNoActiveAuthority(oldDir, conn);
+    if (oldApo) await deactivateAdminRoleIfNoActiveAuthority(oldApo, conn);
+
     await conn.commit();
-    return await getAdmins(idCarrera);
+    return await getAdmins(idCarreraPeriodo);
   } catch (err) {
     await conn.rollback();
     throw err;

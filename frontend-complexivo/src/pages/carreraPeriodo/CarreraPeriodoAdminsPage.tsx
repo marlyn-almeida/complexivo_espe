@@ -42,6 +42,10 @@ export default function CarreraPeriodoAdminsPage() {
   const [dirId, setDirId] = useState<string>("");
   const [apoId, setApoId] = useState<string>("");
 
+  // ✅ NUEVO: buscadores para filtrar docentes en el modal
+  const [dirQuery, setDirQuery] = useState<string>("");
+  const [apoQuery, setApoQuery] = useState<string>("");
+
   function showToast(msg: string, type: ToastType = "info") {
     setToast({ msg, type });
     window.setTimeout(() => setToast(null), 3200);
@@ -57,6 +61,27 @@ export default function CarreraPeriodoAdminsPage() {
     if (!d) return "-";
     return `${d.nombres_docente} ${d.apellidos_docente}`;
   }
+
+  // ✅ helper para buscar por varios campos
+  function docenteSearchText(d: Docente) {
+    return `${d.apellidos_docente ?? ""} ${d.nombres_docente ?? ""} ${d.nombre_usuario ?? ""} ${(
+      d as any
+    ).cedula ?? ""} ${d.correo_docente ?? ""}`
+      .toLowerCase()
+      .trim();
+  }
+
+  const docentesFiltradosDirector = useMemo(() => {
+    const q = dirQuery.toLowerCase().trim();
+    if (!q) return docentes;
+    return docentes.filter((d) => docenteSearchText(d).includes(q));
+  }, [docentes, dirQuery]);
+
+  const docentesFiltradosApoyo = useMemo(() => {
+    const q = apoQuery.toLowerCase().trim();
+    if (!q) return docentes;
+    return docentes.filter((d) => docenteSearchText(d).includes(q));
+  }, [docentes, apoQuery]);
 
   useEffect(() => {
     loadAll();
@@ -162,6 +187,10 @@ export default function CarreraPeriodoAdminsPage() {
 
   async function openAssign(cp: CarreraPeriodo) {
     setSelectedCP(cp);
+
+    // ✅ limpiar buscadores cada vez que abres
+    setDirQuery("");
+    setApoQuery("");
 
     if (!docentes.length) {
       try {
@@ -428,6 +457,17 @@ export default function CarreraPeriodoAdminsPage() {
               <div className="formStack">
                 <div className="formField">
                   <label className="label">Director de carrera</label>
+
+                  {/* ✅ NUEVO: buscador director */}
+                  <input
+                    className="fieldInput"
+                    type="text"
+                    placeholder="Buscar docente (apellido, nombre, usuario, cédula, correo)..."
+                    value={dirQuery}
+                    onChange={(e) => setDirQuery(e.target.value)}
+                    disabled={loadingDocentes}
+                  />
+
                   <select
                     className="fieldSelect"
                     value={dirId}
@@ -435,16 +475,33 @@ export default function CarreraPeriodoAdminsPage() {
                     disabled={loadingDocentes}
                   >
                     <option value="">(Sin asignar)</option>
-                    {docentes.map((d) => (
+                    {docentesFiltradosDirector.map((d) => (
                       <option key={d.id_docente} value={d.id_docente}>
                         {d.apellidos_docente} {d.nombres_docente} — {d.nombre_usuario}
                       </option>
                     ))}
                   </select>
+
+                  {!!dirQuery && (
+                    <div className="muted" style={{ marginTop: 6 }}>
+                      Mostrando {docentesFiltradosDirector.length} de {docentes.length}
+                    </div>
+                  )}
                 </div>
 
                 <div className="formField">
                   <label className="label">Docente de apoyo</label>
+
+                  {/* ✅ NUEVO: buscador apoyo */}
+                  <input
+                    className="fieldInput"
+                    type="text"
+                    placeholder="Buscar docente (apellido, nombre, usuario, cédula, correo)..."
+                    value={apoQuery}
+                    onChange={(e) => setApoQuery(e.target.value)}
+                    disabled={loadingDocentes}
+                  />
+
                   <select
                     className="fieldSelect"
                     value={apoId}
@@ -452,12 +509,18 @@ export default function CarreraPeriodoAdminsPage() {
                     disabled={loadingDocentes}
                   >
                     <option value="">(Sin asignar)</option>
-                    {docentes.map((d) => (
+                    {docentesFiltradosApoyo.map((d) => (
                       <option key={d.id_docente} value={d.id_docente}>
                         {d.apellidos_docente} {d.nombres_docente} — {d.nombre_usuario}
                       </option>
                     ))}
                   </select>
+
+                  {!!apoQuery && (
+                    <div className="muted" style={{ marginTop: 6 }}>
+                      Mostrando {docentesFiltradosApoyo.length} de {docentes.length}
+                    </div>
+                  )}
                 </div>
 
                 {loadingDocentes && <div className="muted">Cargando docentes...</div>}

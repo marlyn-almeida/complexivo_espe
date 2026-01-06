@@ -8,7 +8,7 @@ async function carreraPeriodoExists(id_carrera_periodo) {
   return r.length > 0;
 }
 
-// ✅ NUEVO: valida que un carrera_periodo pertenezca a una carrera (para scope rol 2)
+// ✅ valida que un carrera_periodo pertenezca a una carrera (para scope rol 2)
 async function carreraPeriodoBelongsToCarrera(id_carrera_periodo, id_carrera) {
   const [r] = await pool.query(
     `SELECT 1
@@ -27,7 +27,7 @@ async function findAll({
   page = 1,
   limit = 50,
   carreraPeriodoId = null,
-  scopeCarreraId = null, // ✅ NUEVO
+  scopeCarreraId = null, // ✅ scope rol 2 por carrera
 } = {}) {
   const safeLimit = Math.min(Math.max(+limit || 50, 1), 100);
   const safePage = Math.max(+page || 1, 1);
@@ -55,7 +55,6 @@ async function findAll({
   }
 
   // ✅ Scope rol 2: solo estudiantes de la carrera del usuario
-  // Como ya tienes JOIN carrera c, filtramos por c.id_carrera
   if (scopeCarreraId) {
     where.push("c.id_carrera=?");
     params.push(+scopeCarreraId);
@@ -162,7 +161,7 @@ async function setEstado(id, estado) {
 
 module.exports = {
   carreraPeriodoExists,
-  carreraPeriodoBelongsToCarrera, // ✅ NUEVO
+  carreraPeriodoBelongsToCarrera,
   findAll,
   findById,
   findByInstitucional,

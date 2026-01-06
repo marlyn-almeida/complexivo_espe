@@ -1,11 +1,17 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Estudiante, Estado01 } from "../../types/estudiante";
 import type { CarreraPeriodo } from "../../types/carreraPeriodo";
 
 import { estudiantesService } from "../../services/estudiantes.service";
 import { carreraPeriodoService } from "../../services/carreraPeriodo.service";
 
-import { Plus, Pencil, Eye, ToggleLeft, ToggleRight, Search } from "lucide-react";
+import {
+  downloadPlantillaEstudiantesCSV,
+  parseExcelEstudiantes,
+  resolveCarreraPeriodoIdByNombreCarreraCodigoPeriodo,
+} from "../../services/estudiantesImport.service";
+
+import { Plus, Pencil, Eye, ToggleLeft, ToggleRight, Search, Upload, Download } from "lucide-react";
 import "./EstudiantesPage.css";
 
 const PAGE_SIZE = 10;
@@ -50,6 +56,11 @@ export default function EstudiantesPage() {
 
   const [editingEstudiante, setEditingEstudiante] = useState<Estudiante | null>(null);
   const [viewEstudiante, setViewEstudiante] = useState<Estudiante | null>(null);
+
+  // ===========================
+  // IMPORT
+  // ===========================
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // ===========================
   // FORM
@@ -159,8 +170,8 @@ export default function EstudiantesPage() {
       setCarreraPeriodos(cps);
 
       // auto-seleccionar el primero activo (o el primero)
-      const first = cps.find((x) => Boolean(x.estado)) ?? cps[0];
-      if (first) setSelectedCP(first.id_carrera_periodo);
+      const first = cps.find((x) => Boolean((x as any).estado)) ?? cps[0];
+      if (first) setSelectedCP((first as any).id_carrera_periodo);
     } catch {
       showToast("Error al cargar Carrera–Período", "error");
       setCarreraPeriodos([]);
@@ -186,6 +197,77 @@ export default function EstudiantesPage() {
     } catch {
       showToast("Error al cargar estudiantes", "error");
       setEstudiantes([]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // ===========================
+  // IMPORTACIÓN EXCEL
+  // ===========================
+  function onClickImport() {
+    if (!carreraPeriodos.length) {
+      showToast("Primero carga Carrera–Período.", "error");
+      return;
+    }
+    fileInputRef.current?.click();
+  }
+
+  async function onFileSelected(ev: React.ChangeEvent<HTMLInputElement>) {
+    const file = ev.target.files?.[0];
+    // reset para permitir importar el mismo archivo de nuevo
+    ev.target.value = "";
+
+    if (!file) return;
+
+    try {
+      setLoading(true);
+
+      const rows = await parseExcelEstudiantes(file);
+
+      // resolver id_carrera_periodo por (nombre_carrera + codigo_periodo)
+      const payloads = rows.map((r) => {
+        const idCP = resolveCarreraPeriodoIdByNombreCarreraCodigoPeriodo(
+          r.__nombre_carrera,
+          r.__codigo_periodo,
+          carreraPeriodos
+        );
+
+        if (!idCP) {
+          throw new Error(
+            `Fila ${r.__rowNumber}: No existe Carrera–Período para (Carrera="${r.__nombre_carrera}", Periodo="${r.__codigo_periodo}").`
+          );
+        }
+
+        return {
+          id_carrera_periodo: idCP,
+          id_institucional_estudiante: r.id_institucional_estudiante,
+          nombres_estudiante: r.nombres_estudiante,
+          apellidos_estudiante: r.apellidos_estudiante,
+          correo_estudiante: r.correo_estudiante,
+          telefono_estudiante: r.telefono_estudiante,
+        };
+      });
+
+      if (!payloads.length) {
+        showToast("No hay filas válidas para importar.", "error");
+        return;
+      }
+
+      // Crear 1x1 (simple y robusto)
+      let ok = 0;
+      for (const p of payloads) {
+        await estudiantesService.create(p);
+        ok++;
+      }
+
+      showToast(`Importación completada: ${ok} estudiante(s) creados.`, "success");
+
+      // si estás parado en algún CP, recarga lista
+      if (selectedCP) await loadAll();
+    } catch (err: any) {
+      const msg = err?.message || "Error al importar estudiantes";
+      showToast(msg, "error");
     } finally {
       setLoading(false);
     }
@@ -233,10 +315,10 @@ export default function EstudiantesPage() {
   const inactivos = total - activos;
 
   const selectedCPLabel = useMemo(() => {
-    const cp = carreraPeriodos.find((x) => x.id_carrera_periodo === selectedCP);
+    const cp = carreraPeriodos.find((x: any) => x.id_carrera_periodo === selectedCP);
     if (!cp) return "";
-    const carrera = cp.nombre_carrera ?? "Carrera";
-    const periodo = cp.codigo_periodo ?? cp.descripcion_periodo ?? "Período";
+    const carrera = (cp as any).nombre_carrera ?? "Carrera";
+    const periodo = (cp as any).codigo_periodo ?? (cp as any).descripcion_periodo ?? "Período";
     return `${carrera} — ${periodo}`;
   }, [carreraPeriodos, selectedCP]);
 
@@ -344,9 +426,27 @@ export default function EstudiantesPage() {
             ) : null}
           </div>
 
-          <button className="btnPrimary" onClick={openCreate}>
-            <Plus size={18} /> Nuevo estudiante
-          </button>
+          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+            <button className="btnSecondary" onClick={downloadPlantillaEstudiantesCSV} disabled={loading}>
+              <Download size={18} /> Plantilla
+            </button>
+
+            <button className="btnSecondary" onClick={onClickImport} disabled={loading}>
+              <Upload size={18} /> Importar
+            </button>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              style={{ display: "none" }}
+              onChange={onFileSelected}
+            />
+
+            <button className="btnPrimary" onClick={openCreate} disabled={loading}>
+              <Plus size={18} /> Nuevo estudiante
+            </button>
+          </div>
         </div>
 
         {/* RESUMEN + ACCIONES */}
@@ -379,7 +479,7 @@ export default function EstudiantesPage() {
               <span className="toggleText">Mostrar inactivos</span>
             </label>
 
-            <button className="btnSecondary" onClick={loadAll} title="Actualizar">
+            <button className="btnSecondary" onClick={loadAll} title="Actualizar" disabled={loading}>
               ⟳ Actualizar
             </button>
           </div>
@@ -396,7 +496,7 @@ export default function EstudiantesPage() {
               title="Seleccione Carrera–Período"
             >
               <option value="">Seleccione Carrera–Período</option>
-              {carreraPeriodos.map((cp) => {
+              {carreraPeriodos.map((cp: any) => {
                 const carrera = cp.nombre_carrera ?? `Carrera ${cp.id_carrera}`;
                 const periodo = cp.codigo_periodo ?? cp.descripcion_periodo ?? `Período ${cp.id_periodo}`;
                 return (
@@ -528,7 +628,7 @@ export default function EstudiantesPage() {
                   }
                 >
                   <option value="">Seleccione Carrera–Período</option>
-                  {carreraPeriodos.map((cp) => {
+                  {carreraPeriodos.map((cp: any) => {
                     const carrera = cp.nombre_carrera ?? `Carrera ${cp.id_carrera}`;
                     const periodo = cp.codigo_periodo ?? cp.descripcion_periodo ?? `Período ${cp.id_periodo}`;
                     return (
@@ -603,7 +703,7 @@ export default function EstudiantesPage() {
                 Cancelar
               </button>
 
-              <button className="btnPrimary" onClick={onSave}>
+              <button className="btnPrimary" onClick={onSave} disabled={loading}>
                 Guardar
               </button>
             </div>

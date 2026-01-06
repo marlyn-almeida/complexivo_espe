@@ -1,9 +1,16 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Docente } from "../../types/docente";
 import type { Carrera } from "../../types/carrera";
 
 import { docentesService } from "../../services/docentes.service";
 import { carrerasService } from "../../services/carreras.service";
+
+// ✅ IMPORTACIÓN (NO QUITA NADA)
+import {
+  downloadPlantillaDocentesCSV,
+  parseExcelDocentes,
+  resolveCarreraIdByNombre,
+} from "../../services/docentesImport.service";
 
 import {
   Plus,
@@ -103,7 +110,7 @@ export default function DocentesPage() {
   const [mostrarInactivos, setMostrarInactivos] = useState(false);
   const [page, setPage] = useState(1);
 
-  // ✅ NUEVO: filtro por carrera (para rol 1 y rol 2)
+  // ✅ filtro por carrera (rol 1 y rol 2)
   const [filterCarreraId, setFilterCarreraId] = useState<string>(""); // "" = todas
 
   const [showFormModal, setShowFormModal] = useState(false);
@@ -127,6 +134,10 @@ export default function DocentesPage() {
 
   const isSuperAdminUI = useMemo(() => getRoleFromTokenBestEffort() === "SUPER_ADMIN", []);
 
+  // ✅ Importación Excel
+  const fileRef = useRef<HTMLInputElement | null>(null);
+  const [importing, setImporting] = useState(false);
+
   useEffect(() => {
     loadCarreras();
   }, []);
@@ -145,13 +156,10 @@ export default function DocentesPage() {
       const idCarrera =
         filterCarreraId && Number(filterCarreraId) > 0 ? Number(filterCarreraId) : undefined;
 
-      // ✅ ahora pedimos al backend con id_carrera opcional
+      // ✅ pide al backend con id_carrera opcional
       const data = await docentesService.list({
         includeInactive: mostrarInactivos,
         id_carrera: idCarrera,
-        // (opcional futuro) q: search,
-        // (opcional futuro) page: 1,
-        // (opcional futuro) limit: 100,
       });
 
       setDocentes(data);
@@ -230,6 +238,93 @@ export default function DocentesPage() {
     }
     if (typeof msg === "string" && msg.trim()) return msg;
     return "Error al guardar docente";
+  }
+
+  // ===============================
+  // ✅ PLANTILLA / IMPORT REAL
+  // ===============================
+  function onDownloadPlantilla() {
+    downloadPlantillaDocentesCSV();
+    showToast("Plantilla descargada.", "success");
+  }
+
+  function onClickImport() {
+    if (loadingCarreras) {
+      showToast("Espera a que carguen las carreras.", "info");
+      return;
+    }
+    if (!carreras.length) {
+      showToast("No hay carreras activas para importar.", "error");
+      return;
+    }
+    fileRef.current?.click();
+  }
+
+  async function onFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // permite re-seleccionar el mismo archivo
+    if (!file) return;
+
+    try {
+      setImporting(true);
+
+      const { rows, errors: parseErrors } = await parseExcelDocentes(file);
+
+      if (parseErrors.length) {
+        showToast(parseErrors[0], "error");
+        return;
+      }
+      if (!rows.length) {
+        showToast("El archivo no tiene filas válidas.", "info");
+        return;
+      }
+
+      // ✅ validar carrera por nombre antes de importar
+      const resolved = rows.map((r, idx) => {
+        const idCarrera = resolveCarreraIdByNombre(r.nombre_carrera, carreras);
+        return { r, idx, idCarrera };
+      });
+
+      const firstMissing = resolved.find((x) => !x.idCarrera);
+      if (firstMissing) {
+        showToast(
+          `Fila ${firstMissing.idx + 2}: carrera no encontrada: "${firstMissing.r.nombre_carrera}"`,
+          "error"
+        );
+        return;
+      }
+
+      // ✅ IMPORT REAL: crear docentes uno a uno
+      let ok = 0;
+      let fail = 0;
+
+      for (const item of resolved) {
+        try {
+          await docentesService.create({
+            id_institucional_docente: item.r.id_institucional_docente,
+            cedula: item.r.cedula,
+            nombres_docente: item.r.nombres_docente,
+            apellidos_docente: item.r.apellidos_docente,
+            correo_docente: item.r.correo_docente,
+            telefono_docente: item.r.telefono_docente,
+            nombre_usuario: item.r.nombre_usuario,
+            id_carrera: item.idCarrera!,
+          });
+          ok++;
+        } catch {
+          fail++;
+        }
+      }
+
+      await loadAll();
+
+      if (fail === 0) showToast(`Importación completa: ${ok} creados.`, "success");
+      else showToast(`Importación parcial: ${ok} ok, ${fail} fallaron.`, "info");
+    } catch (err: any) {
+      showToast(extractBackendError(err), "error");
+    } finally {
+      setImporting(false);
+    }
   }
 
   const filtered = useMemo(() => {
@@ -365,6 +460,15 @@ export default function DocentesPage() {
 
   return (
     <div className="page">
+      {/* ✅ Input oculto para seleccionar Excel (NO ROMPE NADA) */}
+      <input
+        ref={fileRef}
+        type="file"
+        accept=".xlsx,.xls"
+        style={{ display: "none" }}
+        onChange={onFileSelected}
+      />
+
       <div className="card">
         <div className="headerRow">
           <div>
@@ -377,23 +481,27 @@ export default function DocentesPage() {
           </div>
 
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" }}>
+            {/* ✅ YA NO ES TOAST: DESCARGA REAL */}
             <button
               className="btnSecondary"
-              onClick={() => showToast("Plantilla: se moverá a Importación.", "info")}
+              onClick={onDownloadPlantilla}
               title="Descargar plantilla"
+              disabled={importing}
             >
               <Download size={18} /> Plantilla
             </button>
 
+            {/* ✅ YA NO ES TOAST: IMPORT REAL */}
             <button
               className="btnSecondary"
-              onClick={() => showToast("Importación: se moverá a una pantalla separada.", "info")}
+              onClick={onClickImport}
               title="Importar Excel"
+              disabled={importing}
             >
-              <Upload size={18} /> Importar
+              <Upload size={18} /> {importing ? "Importando..." : "Importar"}
             </button>
 
-            <button className="btnPrimary" onClick={openCreate}>
+            <button className="btnPrimary" onClick={openCreate} disabled={importing}>
               <Plus size={18} /> Nuevo docente
             </button>
           </div>
@@ -428,7 +536,7 @@ export default function DocentesPage() {
               <span className="toggleText">Mostrar inactivos</span>
             </label>
 
-            <button className="btnSecondary" onClick={loadAll} title="Actualizar">
+            <button className="btnSecondary" onClick={loadAll} title="Actualizar" disabled={importing}>
               ⟳ Actualizar
             </button>
           </div>
@@ -445,13 +553,13 @@ export default function DocentesPage() {
             />
           </div>
 
-          {/* ✅ NUEVO: filtro por carrera */}
+          {/* ✅ filtro por carrera */}
           <div className="searchInline" style={{ minWidth: 260 }}>
             <Filter size={18} />
             <select
               value={filterCarreraId}
               onChange={(e) => setFilterCarreraId(e.target.value)}
-              disabled={loadingCarreras}
+              disabled={loadingCarreras || importing}
               style={{
                 border: "none",
                 outline: "none",
@@ -473,9 +581,13 @@ export default function DocentesPage() {
             </select>
           </div>
 
-          {/* ✅ botón rápido para limpiar filtro */}
           {filterCarreraId && (
-            <button className="btnSecondary" onClick={() => setFilterCarreraId("")} title="Quitar filtro">
+            <button
+              className="btnSecondary"
+              onClick={() => setFilterCarreraId("")}
+              title="Quitar filtro"
+              disabled={importing}
+            >
               Quitar filtro
             </button>
           )}
@@ -533,22 +645,24 @@ export default function DocentesPage() {
                         className={`btnIcon btnSuperAdmin ${d.super_admin === 1 ? "isOn" : ""}`}
                         title={d.super_admin === 1 ? "Quitar SUPER_ADMIN" : "Hacer SUPER_ADMIN"}
                         onClick={() => toggleSuperAdmin(d)}
+                        disabled={importing}
                       >
                         <Shield size={16} />
                       </button>
                     )}
 
-                    <button className="btnIcon btnView" title="Ver" onClick={() => openView(d)}>
+                    <button className="btnIcon btnView" title="Ver" onClick={() => openView(d)} disabled={importing}>
                       <Eye size={16} />
                     </button>
 
-                    <button className="btnIcon btnEdit" title="Editar" onClick={() => openEdit(d)}>
+                    <button className="btnIcon btnEdit" title="Editar" onClick={() => openEdit(d)} disabled={importing}>
                       <Pencil size={16} />
                     </button>
 
                     <button
                       className={`btnIcon ${d.estado ? "btnDeactivate" : "btnActivate"}`}
                       title={d.estado ? "Desactivar" : "Activar"}
+                      disabled={importing}
                       onClick={async () => {
                         try {
                           await docentesService.toggleEstado(d.id_docente, d.estado);
@@ -577,7 +691,7 @@ export default function DocentesPage() {
 
       <div className="card paginationCard">
         <div className="paginationCenter">
-          <button className="btnGhost" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>
+          <button className="btnGhost" disabled={page === 1 || importing} onClick={() => setPage((p) => p - 1)}>
             ← Anterior
           </button>
 
@@ -587,7 +701,7 @@ export default function DocentesPage() {
 
           <button
             className="btnGhost"
-            disabled={page === totalPages}
+            disabled={page === totalPages || importing}
             onClick={() => setPage((p) => p + 1)}
           >
             Siguiente →
@@ -613,7 +727,7 @@ export default function DocentesPage() {
                     className={`fieldSelect ${errors.id_carrera ? "input-error" : ""}`}
                     value={form.id_carrera}
                     onChange={(e) => setForm({ ...form, id_carrera: e.target.value })}
-                    disabled={loadingCarreras}
+                    disabled={loadingCarreras || importing}
                   >
                     <option value="">{loadingCarreras ? "Cargando..." : "Seleccione una carrera"}</option>
                     {carreras
@@ -637,7 +751,8 @@ export default function DocentesPage() {
                   onChange={(e) =>
                     setForm({ ...form, id_institucional_docente: cleanInstitucional(e.target.value) })
                   }
-                  placeholder="Ej: ESPE-12345"
+                  placeholder="Ej: L00"
+                  disabled={importing}
                 />
                 {errors.id_institucional_docente && (
                   <div className="field-error">{errors.id_institucional_docente}</div>
@@ -650,8 +765,9 @@ export default function DocentesPage() {
                   className={`fieldInput ${errors.cedula ? "input-error" : ""}`}
                   value={form.cedula}
                   onChange={(e) => setForm({ ...form, cedula: onlyDigits(e.target.value).slice(0, 10) })}
-                  placeholder="Ej: 1712345678"
+                  placeholder="Ej: 1700000000"
                   inputMode="numeric"
+                  disabled={importing}
                 />
                 {errors.cedula && <div className="field-error">{errors.cedula}</div>}
               </div>
@@ -663,6 +779,7 @@ export default function DocentesPage() {
                   value={form.nombres_docente}
                   onChange={(e) => setForm({ ...form, nombres_docente: cleanNameLike(e.target.value) })}
                   placeholder="Ej: Juan Carlos"
+                  disabled={importing}
                 />
                 {errors.nombres_docente && <div className="field-error">{errors.nombres_docente}</div>}
               </div>
@@ -674,6 +791,7 @@ export default function DocentesPage() {
                   value={form.apellidos_docente}
                   onChange={(e) => setForm({ ...form, apellidos_docente: cleanNameLike(e.target.value) })}
                   placeholder="Ej: Pérez Gómez"
+                  disabled={importing}
                 />
                 {errors.apellidos_docente && <div className="field-error">{errors.apellidos_docente}</div>}
               </div>
@@ -685,6 +803,7 @@ export default function DocentesPage() {
                   value={form.correo_docente}
                   onChange={(e) => setForm({ ...form, correo_docente: e.target.value })}
                   placeholder="Ej: correo@espe.edu.ec"
+                  disabled={importing}
                 />
                 {errors.correo_docente && <div className="field-error">{errors.correo_docente}</div>}
               </div>
@@ -699,6 +818,7 @@ export default function DocentesPage() {
                   }
                   placeholder="Ej: 0999999999"
                   inputMode="numeric"
+                  disabled={importing}
                 />
                 {errors.telefono_docente && <div className="field-error">{errors.telefono_docente}</div>}
               </div>
@@ -710,6 +830,7 @@ export default function DocentesPage() {
                   value={form.nombre_usuario}
                   onChange={(e) => setForm({ ...form, nombre_usuario: cleanUsername(e.target.value) })}
                   placeholder="Ej: jperez"
+                  disabled={importing}
                 />
                 <div className="helperText">
                   La contraseña inicial será este nombre de usuario. En el primer login deberá cambiarla.
@@ -719,11 +840,11 @@ export default function DocentesPage() {
             </div>
 
             <div className="modalFooter">
-              <button className="btnGhost" onClick={() => setShowFormModal(false)}>
+              <button className="btnGhost" onClick={() => setShowFormModal(false)} disabled={importing}>
                 Cancelar
               </button>
 
-              <button className="btnPrimary" onClick={onSave}>
+              <button className="btnPrimary" onClick={onSave} disabled={importing}>
                 Guardar
               </button>
             </div>

@@ -11,7 +11,6 @@ router.get(
     .isIn(["true", "false", "1", "0"])
     .withMessage("includeInactive debe ser true/false/1/0")
     .toBoolean(),
-
   query("q").optional().isString(),
   query("carreraPeriodoId").optional().isInt({ min: 1 }).toInt(),
   query("page").optional().isInt({ min: 1 }).toInt(),
