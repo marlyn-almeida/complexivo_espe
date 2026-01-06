@@ -147,8 +147,7 @@ async function getRolesByDocenteId(id_docente) {
   return rows;
 }
 
-// ✅ asigna un rol al docente (ej: rol 3)
-// Usa UNIQUE (id_rol, id_docente) => upsert seguro
+// ✅ asigna un rol al docente (upsert seguro)
 async function assignRolToDocente({ id_rol, id_docente }) {
   await pool.query(
     `INSERT INTO rol_docente (id_rol, id_docente, estado)
@@ -157,6 +156,31 @@ async function assignRolToDocente({ id_rol, id_docente }) {
     [Number(id_rol), Number(id_docente)]
   );
   return true;
+}
+
+// =============== CARRERA (helpers para Formato B) ===============
+// ✅ Validar carrera por id
+async function findCarreraById(id_carrera) {
+  const [rows] = await pool.query(
+    `SELECT id_carrera, codigo_carrera, nombre_carrera, estado
+     FROM carrera
+     WHERE id_carrera = ?
+     LIMIT 1`,
+    [Number(id_carrera)]
+  );
+  return rows[0] || null;
+}
+
+// ✅ Validar carrera por codigo
+async function findCarreraByCodigo(codigo_carrera) {
+  const [rows] = await pool.query(
+    `SELECT id_carrera, codigo_carrera, nombre_carrera, estado
+     FROM carrera
+     WHERE codigo_carrera = ?
+     LIMIT 1`,
+    [String(codigo_carrera).trim()]
+  );
+  return rows[0] || null;
 }
 
 // =============== CARRERA_DOCENTE (scope y asignaciones) ===============
@@ -173,8 +197,7 @@ async function isDocenteInCarrera(id_docente, id_carrera) {
   return rows.length > 0;
 }
 
-// ✅ NUEVO: scope carrera para rol 2 (DIRECTOR/APOYO)
-// Devuelve el id_carrera donde el docente es DIRECTOR o APOYO (estado=1)
+// ✅ scope carrera para rol 2 (DIRECTOR/APOYO)
 async function getScopeCarreraForRol2(id_docente) {
   const [rows] = await pool.query(
     `SELECT id_carrera
@@ -190,7 +213,6 @@ async function getScopeCarreraForRol2(id_docente) {
 }
 
 // ✅ asignar docente a carrera como DOCENTE (upsert seguro)
-// UNIQUE (id_carrera, id_docente, tipo_admin)
 async function assignDocenteToCarrera({ id_carrera, id_docente, tipo_admin = "DOCENTE" }) {
   await pool.query(
     `INSERT INTO carrera_docente (id_docente, id_carrera, tipo_admin, estado)
@@ -306,9 +328,13 @@ module.exports = {
   getRolesByDocenteId,
   assignRolToDocente,
 
+  // carrera (helpers)
+  findCarreraById,
+  findCarreraByCodigo,
+
   // carrera_docente
   isDocenteInCarrera,
-  getScopeCarreraForRol2, // ✅ NUEVO
+  getScopeCarreraForRol2,
   assignDocenteToCarrera,
 
   // crud

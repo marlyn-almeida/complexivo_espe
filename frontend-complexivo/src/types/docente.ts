@@ -1,3 +1,4 @@
+// src/types/docente.ts
 export type Estado01 = 0 | 1;
 
 export interface Docente {
@@ -20,6 +21,6 @@ export interface Docente {
   created_at?: string;
   updated_at?: string | null;
 
-  // ✅ NUEVO (solo se llena cuando viene del JOIN con carrera_docente)
+  // ✅ Solo se llena cuando viene del JOIN con carrera_docente (scope ADMIN)
   id_carrera_docente?: number | null;
 }

@@ -6,7 +6,6 @@ const ctrl = require("../controllers/docente.controller");
 const { authorize } = require("../middlewares/auth.middleware");
 
 // ✅ /me debe ir antes de /:id para no chocar
-// ✅ authorize usa strings porque req.user.rol es string ("SUPER_ADMIN", "ADMIN", "DOCENTE")
 router.get("/me", authorize(["SUPER_ADMIN", "ADMIN", "DOCENTE"]), ctrl.me);
 
 router.get(
@@ -36,6 +35,12 @@ router.post(
   body("telefono_docente").optional().isString(),
   body("nombre_usuario").isString().trim().notEmpty(),
   body("password").optional().isString(),
+
+  // ✅ NUEVO: Asignación por carrera 
+  // SUPER_ADMIN puede enviar id_carrera o codigo_carrera (opcional)
+  body("id_carrera").optional({ nullable: true }).isInt({ min: 1 }).toInt(),
+  body("codigo_carrera").optional({ nullable: true }).isString().trim().notEmpty(),
+
   validate,
   ctrl.create
 );

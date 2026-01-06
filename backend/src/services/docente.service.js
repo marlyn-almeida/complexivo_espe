@@ -1,8 +1,79 @@
+// src/services/docente.service.js
 const bcrypt = require("bcryptjs");
 const repo = require("../repositories/docente.repo");
 
 function isAdmin(user) {
   return user?.rol === "ADMIN";
+}
+
+function isSuperAdmin(user) {
+  return user?.rol === "SUPER_ADMIN";
+}
+
+// ✅ Resuelve carrera para asignación tipo DOCENTE
+async function resolveCarreraIdForCreate(payload, user) {
+  // ADMIN: siempre por scope
+  if (isAdmin(user)) {
+    const carreraId = Number(user?.scope?.id_carrera);
+    if (!carreraId) {
+      const err = new Error("Scope inválido: no se encontró id_carrera en el token");
+      err.status = 403;
+      throw err;
+    }
+    return carreraId;
+  }
+
+  // SUPER_ADMIN: puede venir por payload (Formato B)
+  if (isSuperAdmin(user)) {
+    const idCarrera = payload.id_carrera ? Number(payload.id_carrera) : null;
+    const codigoCarrera = payload.codigo_carrera ? String(payload.codigo_carrera).trim() : null;
+
+    if (!idCarrera && !codigoCarrera) return null; // no asigna carrera
+
+    if (idCarrera) {
+      const c = await repo.findCarreraById(idCarrera);
+      if (!c) {
+        const err = new Error("Carrera no encontrada (id_carrera inválido)");
+        err.status = 422;
+        throw err;
+      }
+      if (Number(c.estado) !== 1) {
+        const err = new Error("Carrera inactiva: no se puede asignar docentes a una carrera desactivada");
+        err.status = 422;
+        throw err;
+      }
+
+      // Si también viene código, debe coincidir
+      if (codigoCarrera) {
+        if (String(c.codigo_carrera).trim() !== codigoCarrera) {
+          const err = new Error("id_carrera y codigo_carrera no coinciden");
+          err.status = 422;
+          throw err;
+        }
+      }
+
+      return Number(c.id_carrera);
+    }
+
+    // Solo código
+    if (codigoCarrera) {
+      const c = await repo.findCarreraByCodigo(codigoCarrera);
+      if (!c) {
+        const err = new Error("Carrera no encontrada (codigo_carrera inválido)");
+        err.status = 422;
+        throw err;
+      }
+      if (Number(c.estado) !== 1) {
+        const err = new Error("Carrera inactiva: no se puede asignar docentes a una carrera desactivada");
+        err.status = 422;
+        throw err;
+      }
+      return Number(c.id_carrera);
+    }
+  }
+
+  // Otros roles: no asignan carrera aquí
+  return null;
 }
 
 async function list(query = {}, user) {
@@ -73,6 +144,9 @@ async function create(payload, user) {
     throw err;
   }
 
+  // ✅ Resolver carrera para asignación (Formato B)
+  const carreraIdToAssign = await resolveCarreraIdForCreate(payload, user);
+
   const passwordHash = await bcrypt.hash(passwordPlano, 10);
 
   const created = await repo.create({
@@ -86,22 +160,18 @@ async function create(payload, user) {
     passwordHash,
   });
 
-  // ROL DOCENTE automático (id_rol=3) se mantiene
+  // ✅ ROL DOCENTE automático (id_rol=3) se mantiene
   await repo.assignRolToDocente({
     id_rol: 3,
     id_docente: Number(created.id_docente),
   });
 
-  if (isAdmin(user)) {
-    const carreraId = Number(user?.scope?.id_carrera);
-    if (!carreraId) {
-      const err = new Error("Scope inválido: no se encontró id_carrera en el token");
-      err.status = 403;
-      throw err;
-    }
-
+  // ✅ Asignación carrera_docente como DOCENTE
+  // ADMIN: asigna por scope (ya lo hacía)
+  // SUPER_ADMIN: asigna si payload trajo id_carrera/codigo_carrera
+  if (carreraIdToAssign) {
     await repo.assignDocenteToCarrera({
-      id_carrera: carreraId,
+      id_carrera: Number(carreraIdToAssign),
       id_docente: Number(created.id_docente),
       tipo_admin: "DOCENTE",
     });

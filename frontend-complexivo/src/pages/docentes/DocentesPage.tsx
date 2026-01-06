@@ -1,3 +1,4 @@
+// src/pages/docentes/DocentesPage.tsx
 import { useEffect, useMemo, useState } from "react";
 import type { Docente } from "../../types/docente";
 import { docentesService } from "../../services/docentes.service";
@@ -17,37 +18,26 @@ type DocenteFormState = {
   correo_docente: string;
   telefono_docente: string;
   nombre_usuario: string;
+
+  // ✅ NUEVO (Formato B)
+  id_carrera: string;        // lo guardamos string para input
+  codigo_carrera: string;
 };
 
 export default function DocentesPage() {
-  // ===========================
-  // ESTADOS PRINCIPALES
-  // ===========================
   const [docentes, setDocentes] = useState<Docente[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // ===========================
-  // FILTROS
-  // ===========================
   const [search, setSearch] = useState("");
   const [mostrarInactivos, setMostrarInactivos] = useState(false);
 
-  // ===========================
-  // PAGINACIÓN
-  // ===========================
   const [page, setPage] = useState(1);
 
-  // ===========================
-  // MODALES
-  // ===========================
   const [showFormModal, setShowFormModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [editingDocente, setEditingDocente] = useState<Docente | null>(null);
   const [viewDocente, setViewDocente] = useState<Docente | null>(null);
 
-  // ===========================
-  // FORM
-  // ===========================
   const [form, setForm] = useState<DocenteFormState>({
     id_institucional_docente: "",
     cedula: "",
@@ -56,14 +46,15 @@ export default function DocentesPage() {
     correo_docente: "",
     telefono_docente: "",
     nombre_usuario: "",
+
+    // ✅ NUEVO
+    id_carrera: "",
+    codigo_carrera: "",
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [toast, setToast] = useState<{ msg: string; type: ToastType } | null>(null);
 
-  // ===========================
-  // CARGA INICIAL
-  // ===========================
   useEffect(() => {
     loadAll();
   }, [mostrarInactivos]);
@@ -80,9 +71,6 @@ export default function DocentesPage() {
     }
   }
 
-  // ===========================
-  // HELPERS
-  // ===========================
   function showToast(msg: string, type: ToastType = "info") {
     setToast({ msg, type });
     window.setTimeout(() => setToast(null), 3200);
@@ -98,6 +86,9 @@ export default function DocentesPage() {
       correo_docente: "",
       telefono_docente: "",
       nombre_usuario: "",
+
+      id_carrera: "",
+      codigo_carrera: "",
     });
     setErrors({});
   }
@@ -117,6 +108,10 @@ export default function DocentesPage() {
       correo_docente: d.correo_docente ?? "",
       telefono_docente: d.telefono_docente ?? "",
       nombre_usuario: d.nombre_usuario ?? "",
+
+      // En editar NO tocamos asignación de carrera aquí
+      id_carrera: "",
+      codigo_carrera: "",
     });
     setErrors({});
     setShowFormModal(true);
@@ -127,7 +122,6 @@ export default function DocentesPage() {
     setShowViewModal(true);
   }
 
-  // Traer errores reales del backend (422/409)
   function extractBackendError(err: any): string {
     const msg = err?.response?.data?.message;
     const list = err?.response?.data?.errors;
@@ -140,9 +134,6 @@ export default function DocentesPage() {
     return "Error al guardar docente";
   }
 
-  // ===========================
-  // FILTRADO + ORDEN + PAGINACIÓN (igual a Carreras)
-  // ===========================
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
 
@@ -178,14 +169,10 @@ export default function DocentesPage() {
     return filtered.slice(start, start + PAGE_SIZE);
   }, [filtered, page]);
 
-  // resumen
   const totalDocentes = docentes.length;
   const activos = docentes.filter((d) => d.estado === 1).length;
   const inactivos = docentes.filter((d) => d.estado === 0).length;
 
-  // ===========================
-  // VALIDACIONES FRONT (UX)
-  // ===========================
   function validateForm(): Record<string, string> {
     const e: Record<string, string> = {};
 
@@ -205,6 +192,18 @@ export default function DocentesPage() {
     if (!form.nombre_usuario.trim()) e.nombre_usuario = "Nombre de usuario obligatorio.";
     if (form.nombre_usuario.trim().length < 3) e.nombre_usuario = "Mínimo 3 caracteres.";
 
+    // ✅ NUEVO (Formato B) - opcional, pero si se llena, validamos formato
+    if (!editingDocente) {
+      const idCarr = form.id_carrera.trim();
+      if (idCarr) {
+        const n = Number(idCarr);
+        if (!Number.isFinite(n) || n < 1) e.id_carrera = "id_carrera debe ser un número mayor a 0.";
+      }
+
+      const cod = form.codigo_carrera.trim();
+      if (cod && cod.length < 2) e.codigo_carrera = "Código de carrera muy corto.";
+    }
+
     return e;
   }
 
@@ -217,7 +216,7 @@ export default function DocentesPage() {
     }
 
     try {
-      const payload = {
+      const payloadBase: any = {
         id_institucional_docente: form.id_institucional_docente.trim(),
         cedula: form.cedula.trim(),
         nombres_docente: form.nombres_docente.trim(),
@@ -228,11 +227,20 @@ export default function DocentesPage() {
         // ✅ NO mandamos password: backend usará username como password inicial
       };
 
+      // ✅ NUEVO (Formato B): solo en CREAR
+      if (!editingDocente) {
+        const idCarr = form.id_carrera.trim();
+        const cod = form.codigo_carrera.trim();
+
+        if (idCarr) payloadBase.id_carrera = Number(idCarr);
+        if (cod) payloadBase.codigo_carrera = cod;
+      }
+
       if (editingDocente) {
-        await docentesService.update(editingDocente.id_docente, payload);
+        await docentesService.update(editingDocente.id_docente, payloadBase);
         showToast("Docente actualizado.", "success");
       } else {
-        await docentesService.create(payload as any);
+        await docentesService.create(payloadBase);
         showToast("Docente creado. Password inicial = nombre de usuario.", "success");
       }
 
@@ -253,12 +261,8 @@ export default function DocentesPage() {
     }
   }
 
-  // ===========================
-  // RENDER
-  // ===========================
   return (
     <div className="page">
-      {/* HEADER */}
       <div className="card">
         <div className="headerRow">
           <div>
@@ -274,7 +278,6 @@ export default function DocentesPage() {
           </button>
         </div>
 
-        {/* RESUMEN + ACCIONES */}
         <div className="summaryRow">
           <div className="summaryBoxes">
             <div className="summaryBox">
@@ -310,7 +313,6 @@ export default function DocentesPage() {
           </div>
         </div>
 
-        {/* FILTROS */}
         <div className="filtersRow">
           <div className="searchInline">
             <Search size={18} />
@@ -324,7 +326,6 @@ export default function DocentesPage() {
         </div>
       </div>
 
-      {/* TABLA */}
       <div className="card tableWrap">
         <table className="table">
           <thead>
@@ -400,7 +401,6 @@ export default function DocentesPage() {
         </table>
       </div>
 
-      {/* PAGINACIÓN */}
       <div className="card paginationCard">
         <div className="paginationCenter">
           <button className="btnGhost" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>
@@ -507,6 +507,40 @@ export default function DocentesPage() {
                 </div>
                 {errors.nombre_usuario && <div className="field-error">{errors.nombre_usuario}</div>}
               </div>
+
+              {/* ✅ NUEVO: Asignación de carrera (solo CREAR) */}
+              {!editingDocente && (
+                <>
+                  <div className="formField">
+                    <label className="label">id_carrera (opcional)</label>
+                    <input
+                      className={`fieldInput ${errors.id_carrera ? "input-error" : ""}`}
+                      value={form.id_carrera}
+                      onChange={(e) => setForm({ ...form, id_carrera: e.target.value })}
+                      placeholder="Ej: 12"
+                      inputMode="numeric"
+                    />
+                    {errors.id_carrera && <div className="field-error">{errors.id_carrera}</div>}
+                    <div className="helperText">
+                      Solo aplica si tu backend lo permite (por ejemplo SUPER_ADMIN). Si no envías, no se asigna carrera.
+                    </div>
+                  </div>
+
+                  <div className="formField">
+                    <label className="label">codigo_carrera (opcional)</label>
+                    <input
+                      className={`fieldInput ${errors.codigo_carrera ? "input-error" : ""}`}
+                      value={form.codigo_carrera}
+                      onChange={(e) => setForm({ ...form, codigo_carrera: e.target.value })}
+                      placeholder="Ej: TI-ONLINE"
+                    />
+                    {errors.codigo_carrera && <div className="field-error">{errors.codigo_carrera}</div>}
+                    <div className="helperText">
+                      Puedes enviar código en vez de id. Si envías ambos, deben coincidir.
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="modalFooter">
@@ -597,7 +631,6 @@ export default function DocentesPage() {
         </div>
       )}
 
-      {/* TOAST */}
       {toast && <div className={`toast toast-${toast.type}`}>{toast.msg}</div>}
     </div>
   );

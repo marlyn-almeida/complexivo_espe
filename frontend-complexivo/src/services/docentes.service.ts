@@ -1,3 +1,4 @@
+// src/services/docentes.service.ts
 import axiosClient from "../api/axiosClient";
 import type { Docente, Estado01 } from "../types/docente";
 
@@ -21,6 +22,10 @@ export type DocenteCreateDTO = {
 
   // opcional: si NO mandas, backend usa username como password inicial
   password?: string;
+
+  // ✅ NUEVO (Formato B): asignación de carrera al crear
+  id_carrera?: number;
+  codigo_carrera?: string;
 };
 
 export type DocenteUpdateDTO = {
