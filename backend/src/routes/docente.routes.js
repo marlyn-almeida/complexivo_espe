@@ -36,8 +36,7 @@ router.post(
   body("nombre_usuario").isString().trim().notEmpty(),
   body("password").optional().isString(),
 
-  // ✅ NUEVO: Asignación por carrera 
-  // SUPER_ADMIN puede enviar id_carrera o codigo_carrera (opcional)
+  // ✅ Asignación por carrera (Formato B)
   body("id_carrera").optional({ nullable: true }).isInt({ min: 1 }).toInt(),
   body("codigo_carrera").optional({ nullable: true }).isString().trim().notEmpty(),
 
@@ -65,6 +64,17 @@ router.patch(
   body("estado").isBoolean().toBoolean(),
   validate,
   ctrl.changeEstado
+);
+
+// ✅ NUEVO: Asignar / Desasignar rol SUPER_ADMIN (rol 1)
+// Body: { enabled: true | false }
+router.patch(
+  "/:id/super-admin",
+  authorize(["SUPER_ADMIN"]),
+  param("id").isInt({ min: 1 }).toInt(),
+  body("enabled").isBoolean().toBoolean(),
+  validate,
+  ctrl.setSuperAdmin
 );
 
 module.exports = router;

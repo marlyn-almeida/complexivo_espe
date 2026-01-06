@@ -1,18 +1,11 @@
-// src/pages/docentes/DocentesPage.tsx
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Docente } from "../../types/docente";
 import type { Carrera } from "../../types/carrera";
 
 import { docentesService } from "../../services/docentes.service";
 import { carrerasService } from "../../services/carreras.service";
 
-import {
-  downloadPlantillaDocentesCSV,
-  parseExcelDocentes,
-  resolveCarreraIdByNombre,
-} from "../../services/docentesImport.service";
-
-import { Plus, Pencil, Eye, ToggleLeft, ToggleRight, Search, Upload, Download } from "lucide-react";
+import { Plus, Pencil, Eye, ToggleLeft, ToggleRight, Search, Upload, Download, Shield } from "lucide-react";
 import "./DocentesPage.css";
 
 const PAGE_SIZE = 10;
@@ -27,9 +20,71 @@ type DocenteFormState = {
   correo_docente: string;
   telefono_docente: string;
   nombre_usuario: string;
-
-  id_carrera: string; // selector
+  id_carrera: string; // selector (solo create)
 };
+
+// ---------- Helpers validación / sanitizado ----------
+const onlyDigits = (v: string) => v.replace(/\D+/g, "");
+const normalizeSpaces = (v: string) => v.replace(/\s+/g, " ").trim();
+
+// Letras (incluye tildes/ñ), espacios y guion. (sin puntos, sin números)
+const cleanNameLike = (v: string) =>
+  v
+    .replace(/[^A-Za-zÁÉÍÓÚÜáéíóúüÑñ\s-]+/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const cleanInstitucional = (v: string) =>
+  v
+    .replace(/[.]+/g, "")            // quita puntos
+    .replace(/\s+/g, " ")
+    .trim();
+
+// Usuario: letras/números/._- (sin espacios)
+const cleanUsername = (v: string) => v.replace(/[^a-zA-Z0-9._-]+/g, "").trim();
+
+function isValidEmail(v: string) {
+  return /^\S+@\S+\.\S+$/.test(v);
+}
+
+function getRoleFromTokenBestEffort(): string | null {
+  // intentamos varias claves típicas
+  const keys = ["token", "accessToken", "authToken", "jwt", "JWT"];
+  let token: string | null = null;
+
+  for (const k of keys) {
+    const v = localStorage.getItem(k);
+    if (v && v.split(".").length === 3) {
+      token = v;
+      break;
+    }
+  }
+  if (!token) return null;
+
+  try {
+    const payload = token.split(".")[1];
+    const json = JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
+
+    // backend: activeRole / rol / roles
+    const role = json.activeRole ?? json.rol ?? null;
+    if (typeof role === "string") return role;
+
+    // si viene numérico (1/2/3)
+    if (typeof role === "number") {
+      if (role === 1) return "SUPER_ADMIN";
+      if (role === 2) return "ADMIN";
+      if (role === 3) return "DOCENTE";
+    }
+
+    // si no, intenta roles array
+    const roles = Array.isArray(json.roles) ? json.roles : [];
+    if (roles.includes("SUPER_ADMIN") || roles.includes(1)) return "SUPER_ADMIN";
+
+    return null;
+  } catch {
+    return null;
+  }
+}
 
 export default function DocentesPage() {
   const [docentes, setDocentes] = useState<Docente[]>([]);
@@ -39,7 +94,6 @@ export default function DocentesPage() {
 
   const [search, setSearch] = useState("");
   const [mostrarInactivos, setMostrarInactivos] = useState(false);
-
   const [page, setPage] = useState(1);
 
   const [showFormModal, setShowFormModal] = useState(false);
@@ -61,8 +115,7 @@ export default function DocentesPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [toast, setToast] = useState<{ msg: string; type: ToastType } | null>(null);
 
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [importing, setImporting] = useState(false);
+  const isSuperAdminUI = useMemo(() => getRoleFromTokenBestEffort() === "SUPER_ADMIN", []);
 
   useEffect(() => {
     loadAll();
@@ -131,7 +184,7 @@ export default function DocentesPage() {
       correo_docente: d.correo_docente ?? "",
       telefono_docente: d.telefono_docente ?? "",
       nombre_usuario: d.nombre_usuario ?? "",
-      id_carrera: "",
+      id_carrera: "", // no editar carrera aquí por ahora
     });
     setErrors({});
     setShowFormModal(true);
@@ -196,21 +249,35 @@ export default function DocentesPage() {
   function validateForm(): Record<string, string> {
     const e: Record<string, string> = {};
 
-    if (!form.id_institucional_docente.trim()) e.id_institucional_docente = "ID institucional obligatorio.";
-    if (!form.cedula.trim()) e.cedula = "La cédula es obligatoria.";
+    const inst = normalizeSpaces(form.id_institucional_docente);
+    const ced = onlyDigits(form.cedula);
+    const nom = cleanNameLike(form.nombres_docente);
+    const ape = cleanNameLike(form.apellidos_docente);
+    const user = cleanUsername(form.nombre_usuario);
 
-    if (!form.nombres_docente.trim()) e.nombres_docente = "Nombres obligatorios.";
-    if (form.nombres_docente.trim().length < 3) e.nombres_docente = "Mínimo 3 caracteres.";
+    if (!inst) e.id_institucional_docente = "ID institucional obligatorio.";
+    // evita "...." o basura (ya quitamos puntos en onChange igual)
+    if (inst && inst.length < 3) e.id_institucional_docente = "ID institucional inválido.";
 
-    if (!form.apellidos_docente.trim()) e.apellidos_docente = "Apellidos obligatorios.";
-    if (form.apellidos_docente.trim().length < 3) e.apellidos_docente = "Mínimo 3 caracteres.";
+    if (!ced) e.cedula = "La cédula es obligatoria.";
+    if (ced && ced.length !== 10) e.cedula = "La cédula debe tener 10 dígitos.";
 
-    if (form.correo_docente.trim() && !/^\S+@\S+\.\S+$/.test(form.correo_docente.trim())) {
-      e.correo_docente = "Correo no válido.";
+    if (!nom) e.nombres_docente = "Nombres obligatorios.";
+    if (nom && nom.length < 3) e.nombres_docente = "Mínimo 3 caracteres.";
+
+    if (!ape) e.apellidos_docente = "Apellidos obligatorios.";
+    if (ape && ape.length < 3) e.apellidos_docente = "Mínimo 3 caracteres.";
+
+    const email = form.correo_docente.trim();
+    if (email && !isValidEmail(email)) e.correo_docente = "Correo no válido.";
+
+    const tel = onlyDigits(form.telefono_docente);
+    if (tel && (tel.length < 7 || tel.length > 15)) {
+      e.telefono_docente = "Teléfono inválido (7–15 dígitos).";
     }
 
-    if (!form.nombre_usuario.trim()) e.nombre_usuario = "Nombre de usuario obligatorio.";
-    if (form.nombre_usuario.trim().length < 3) e.nombre_usuario = "Mínimo 3 caracteres.";
+    if (!user) e.nombre_usuario = "Nombre de usuario obligatorio.";
+    if (user && user.length < 3) e.nombre_usuario = "Mínimo 3 caracteres.";
 
     if (!editingDocente && !form.id_carrera.trim()) e.id_carrera = "Selecciona una carrera.";
 
@@ -227,13 +294,13 @@ export default function DocentesPage() {
 
     try {
       const payloadBase: any = {
-        id_institucional_docente: form.id_institucional_docente.trim(),
-        cedula: form.cedula.trim(),
-        nombres_docente: form.nombres_docente.trim(),
-        apellidos_docente: form.apellidos_docente.trim(),
+        id_institucional_docente: cleanInstitucional(form.id_institucional_docente),
+        cedula: onlyDigits(form.cedula),
+        nombres_docente: cleanNameLike(form.nombres_docente),
+        apellidos_docente: cleanNameLike(form.apellidos_docente),
         correo_docente: form.correo_docente.trim() ? form.correo_docente.trim() : undefined,
-        telefono_docente: form.telefono_docente.trim() ? form.telefono_docente.trim() : undefined,
-        nombre_usuario: form.nombre_usuario.trim(),
+        telefono_docente: onlyDigits(form.telefono_docente) ? onlyDigits(form.telefono_docente) : undefined,
+        nombre_usuario: cleanUsername(form.nombre_usuario),
       };
 
       if (!editingDocente) payloadBase.id_carrera = Number(form.id_carrera);
@@ -253,54 +320,21 @@ export default function DocentesPage() {
     }
   }
 
-  function openImportExcel() {
-    fileInputRef.current?.click();
-  }
+  async function toggleSuperAdmin(d: Docente) {
+    // Requiere que venga d.super_admin del backend
+    if (typeof d.super_admin === "undefined") {
+      showToast("Falta flag super_admin en el listado (backend).", "error");
+      return;
+    }
 
-  async function handleExcel(file: File) {
+    const enabled = d.super_admin === 0;
+
     try {
-      setImporting(true);
-
-      if (!carreras.length) await loadCarreras();
-
-      const parsed = await parseExcelDocentes(file);
-      if (parsed.errors.length) {
-        showToast(parsed.errors[0], "error");
-        return;
-      }
-
-      let ok = 0;
-
-      for (const r of parsed.rows) {
-        const id_carrera = resolveCarreraIdByNombre(r.nombre_carrera, carreras);
-        if (!id_carrera) {
-          showToast(`Carrera no encontrada: "${r.nombre_carrera}"`, "error");
-          continue;
-        }
-
-        try {
-          await docentesService.create({
-            id_institucional_docente: r.id_institucional_docente,
-            cedula: r.cedula,
-            nombres_docente: r.nombres_docente,
-            apellidos_docente: r.apellidos_docente,
-            correo_docente: r.correo_docente,
-            telefono_docente: r.telefono_docente,
-            nombre_usuario: r.nombre_usuario,
-            id_carrera,
-          } as any);
-          ok++;
-        } catch (e: any) {
-          showToast(extractBackendError(e), "error");
-        }
-      }
-
-      showToast(`Importación lista: ${ok} docentes creados.`, "success");
+      await docentesService.setSuperAdmin(d.id_docente, enabled);
+      showToast(enabled ? "Rol SUPER_ADMIN asignado." : "Rol SUPER_ADMIN removido.", "success");
       await loadAll();
-    } catch {
-      showToast("No se pudo importar el Excel.", "error");
-    } finally {
-      setImporting(false);
+    } catch (err: any) {
+      showToast(extractBackendError(err), "error");
     }
   }
 
@@ -317,29 +351,26 @@ export default function DocentesPage() {
           </div>
 
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" }}>
-            <button className="btnSecondary" onClick={downloadPlantillaDocentesCSV} title="Descargar plantilla">
+            {/* ✅ Estos quedan como “acciones” y luego los conectamos a DocentesImportPage */}
+            <button
+              className="btnSecondary"
+              onClick={() => showToast("Plantilla: se moverá a Importación.", "info")}
+              title="Descargar plantilla"
+            >
               <Download size={18} /> Plantilla
             </button>
 
-            <button className="btnSecondary" onClick={openImportExcel} disabled={importing} title="Importar Excel">
-              <Upload size={18} /> {importing ? "Importando..." : "Importar Excel"}
+            <button
+              className="btnSecondary"
+              onClick={() => showToast("Importación: se moverá a una pantalla separada.", "info")}
+              title="Importar Excel"
+            >
+              <Upload size={18} /> Importar
             </button>
 
             <button className="btnPrimary" onClick={openCreate}>
               <Plus size={18} /> Nuevo docente
             </button>
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".xlsx,.xls"
-              style={{ display: "none" }}
-              onChange={async (e) => {
-                const f = e.target.files?.[0];
-                e.target.value = "";
-                if (f) await handleExcel(f);
-              }}
-            />
           </div>
         </div>
 
@@ -416,8 +447,16 @@ export default function DocentesPage() {
               pageData.map((d) => (
                 <tr key={d.id_docente}>
                   <td className="tdStrong">
-                    <div className="docentes-name">{d.apellidos_docente} {d.nombres_docente}</div>
+                    <div className="docentes-name">
+                      {d.apellidos_docente} {d.nombres_docente}
+                      {d.super_admin === 1 && (
+                        <span className="badge badge-info" style={{ marginLeft: 8 }}>
+                          SUPER_ADMIN
+                        </span>
+                      )}
+                    </div>
                   </td>
+
                   <td>{d.cedula}</td>
                   <td className="tdCode">{d.id_institucional_docente}</td>
                   <td className="tdCode">{d.nombre_usuario}</td>
@@ -429,6 +468,16 @@ export default function DocentesPage() {
                   </td>
 
                   <td className="actions">
+                    {isSuperAdminUI && (
+                      <button
+                        className={`btnIcon btnSuperAdmin ${d.super_admin === 1 ? "isOn" : ""}`}
+                        title={d.super_admin === 1 ? "Quitar SUPER_ADMIN" : "Hacer SUPER_ADMIN"}
+                        onClick={() => toggleSuperAdmin(d)}
+                      >
+                        <Shield size={16} />
+                      </button>
+                    )}
+
                     <button className="btnIcon btnView" title="Ver" onClick={() => openView(d)}>
                       <Eye size={16} />
                     </button>
@@ -508,7 +557,7 @@ export default function DocentesPage() {
                       .sort((a, b) => a.nombre_carrera.localeCompare(b.nombre_carrera, "es"))
                       .map((c) => (
                         <option key={c.id_carrera} value={String(c.id_carrera)}>
-                          {c.nombre_carrera}
+                          {c.nombre_carrera} ({c.codigo_carrera})
                         </option>
                       ))}
                   </select>
@@ -521,7 +570,9 @@ export default function DocentesPage() {
                 <input
                   className={`fieldInput ${errors.id_institucional_docente ? "input-error" : ""}`}
                   value={form.id_institucional_docente}
-                  onChange={(e) => setForm({ ...form, id_institucional_docente: e.target.value })}
+                  onChange={(e) =>
+                    setForm({ ...form, id_institucional_docente: cleanInstitucional(e.target.value) })
+                  }
                   placeholder="Ej: ESPE-12345"
                 />
                 {errors.id_institucional_docente && <div className="field-error">{errors.id_institucional_docente}</div>}
@@ -532,8 +583,9 @@ export default function DocentesPage() {
                 <input
                   className={`fieldInput ${errors.cedula ? "input-error" : ""}`}
                   value={form.cedula}
-                  onChange={(e) => setForm({ ...form, cedula: e.target.value })}
+                  onChange={(e) => setForm({ ...form, cedula: onlyDigits(e.target.value).slice(0, 10) })}
                   placeholder="Ej: 1712345678"
+                  inputMode="numeric"
                 />
                 {errors.cedula && <div className="field-error">{errors.cedula}</div>}
               </div>
@@ -543,7 +595,7 @@ export default function DocentesPage() {
                 <input
                   className={`fieldInput ${errors.nombres_docente ? "input-error" : ""}`}
                   value={form.nombres_docente}
-                  onChange={(e) => setForm({ ...form, nombres_docente: e.target.value })}
+                  onChange={(e) => setForm({ ...form, nombres_docente: cleanNameLike(e.target.value) })}
                   placeholder="Ej: Juan Carlos"
                 />
                 {errors.nombres_docente && <div className="field-error">{errors.nombres_docente}</div>}
@@ -554,7 +606,7 @@ export default function DocentesPage() {
                 <input
                   className={`fieldInput ${errors.apellidos_docente ? "input-error" : ""}`}
                   value={form.apellidos_docente}
-                  onChange={(e) => setForm({ ...form, apellidos_docente: e.target.value })}
+                  onChange={(e) => setForm({ ...form, apellidos_docente: cleanNameLike(e.target.value) })}
                   placeholder="Ej: Pérez Gómez"
                 />
                 {errors.apellidos_docente && <div className="field-error">{errors.apellidos_docente}</div>}
@@ -574,11 +626,13 @@ export default function DocentesPage() {
               <div className="formField">
                 <label className="label">Teléfono</label>
                 <input
-                  className="fieldInput"
+                  className={`fieldInput ${errors.telefono_docente ? "input-error" : ""}`}
                   value={form.telefono_docente}
-                  onChange={(e) => setForm({ ...form, telefono_docente: e.target.value })}
+                  onChange={(e) => setForm({ ...form, telefono_docente: onlyDigits(e.target.value).slice(0, 15) })}
                   placeholder="Ej: 0999999999"
+                  inputMode="numeric"
                 />
+                {errors.telefono_docente && <div className="field-error">{errors.telefono_docente}</div>}
               </div>
 
               <div className="formField">
@@ -586,7 +640,7 @@ export default function DocentesPage() {
                 <input
                   className={`fieldInput ${errors.nombre_usuario ? "input-error" : ""}`}
                   value={form.nombre_usuario}
-                  onChange={(e) => setForm({ ...form, nombre_usuario: e.target.value })}
+                  onChange={(e) => setForm({ ...form, nombre_usuario: cleanUsername(e.target.value) })}
                   placeholder="Ej: jperez"
                 />
                 <div className="helperText">
@@ -654,9 +708,7 @@ export default function DocentesPage() {
 
               <div className="viewItem">
                 <div className="viewKey">Debe cambiar password</div>
-                <div className="viewVal">
-                  {viewDocente.debe_cambiar_password === 1 ? "Sí" : "No"}
-                </div>
+                <div className="viewVal">{viewDocente.debe_cambiar_password === 1 ? "Sí" : "No"}</div>
               </div>
 
               <div className="viewItem">

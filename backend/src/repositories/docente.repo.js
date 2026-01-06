@@ -2,7 +2,13 @@
 const pool = require("../config/db");
 
 // =============== LISTADO (con scope rol 2) ===============
-async function findAll({ includeInactive = false, q = "", page = 1, limit = 50, scopeCarreraId = null } = {}) {
+async function findAll({
+  includeInactive = false,
+  q = "",
+  page = 1,
+  limit = 50,
+  scopeCarreraId = null,
+} = {}) {
   const safeLimit = Math.min(Math.max(Number(limit) || 50, 1), 100);
   const safePage = Math.max(Number(page) || 1, 1);
   const offset = (safePage - 1) * safeLimit;
@@ -28,7 +34,7 @@ async function findAll({ includeInactive = false, q = "", page = 1, limit = 50, 
   // ✅ Scope rol 2: solo docentes asignados a esa carrera
   // ✅ Evitar duplicados: subquery con MIN(id_carrera_docente)
   let joinSql = "";
-  if (scopeCarreraId) {
+  if (scopeCarreraId !== null && scopeCarreraId !== undefined) {
     joinSql = `
       JOIN (
         SELECT id_docente, MIN(id_carrera_docente) AS id_carrera_docente
@@ -45,7 +51,11 @@ async function findAll({ includeInactive = false, q = "", page = 1, limit = 50, 
 
   const sql = `
     SELECT
-      ${scopeCarreraId ? "cd.id_carrera_docente" : "NULL"} AS id_carrera_docente,
+      ${
+        scopeCarreraId !== null && scopeCarreraId !== undefined
+          ? "cd.id_carrera_docente"
+          : "NULL"
+      } AS id_carrera_docente,
       d.id_docente,
       d.id_institucional_docente,
       d.cedula,
@@ -89,7 +99,7 @@ async function findById(id) {
       updated_at
      FROM docente
      WHERE id_docente=?`,
-    [id]
+    [Number(id)]
   );
   return rows[0] || null;
 }
@@ -101,7 +111,7 @@ async function findProfileById(id) {
 async function findByCedula(cedula) {
   const [rows] = await pool.query(
     `SELECT id_docente, cedula FROM docente WHERE cedula=? LIMIT 1`,
-    [cedula]
+    [String(cedula).trim()]
   );
   return rows[0] || null;
 }
@@ -109,15 +119,17 @@ async function findByCedula(cedula) {
 async function findByUsername(nombre_usuario) {
   const [rows] = await pool.query(
     `SELECT id_docente, nombre_usuario FROM docente WHERE nombre_usuario=? LIMIT 1`,
-    [nombre_usuario]
+    [String(nombre_usuario).trim()]
   );
   return rows[0] || null;
 }
 
 async function findByInstitucional(id_institucional_docente) {
   const [rows] = await pool.query(
-    `SELECT id_docente, id_institucional_docente FROM docente WHERE id_institucional_docente=? LIMIT 1`,
-    [id_institucional_docente]
+    `SELECT id_docente, id_institucional_docente
+     FROM docente
+     WHERE id_institucional_docente=? LIMIT 1`,
+    [String(id_institucional_docente).trim()]
   );
   return rows[0] || null;
 }
@@ -128,7 +140,7 @@ async function findAuthByUsername(nombre_usuario) {
     `SELECT id_docente, nombre_usuario, password, debe_cambiar_password, estado
      FROM docente
      WHERE nombre_usuario=? LIMIT 1`,
-    [nombre_usuario]
+    [String(nombre_usuario).trim()]
   );
   return rows[0] || null;
 }
@@ -142,7 +154,7 @@ async function getRolesByDocenteId(id_docente) {
      WHERE rd.id_docente = ?
        AND rd.estado = 1
      ORDER BY r.id_rol ASC`,
-    [id_docente]
+    [Number(id_docente)]
   );
   return rows;
 }
@@ -158,8 +170,44 @@ async function assignRolToDocente({ id_rol, id_docente }) {
   return true;
 }
 
+// ✅ activar / desactivar un rol (sin borrar histórico)
+async function setRolEstado({ id_rol, id_docente, estado }) {
+  const st = estado ? 1 : 0;
+
+  // Si estado=1 => upsert (crea o activa)
+  if (st === 1) {
+    await pool.query(
+      `INSERT INTO rol_docente (id_rol, id_docente, estado)
+       VALUES (?, ?, 1)
+       ON DUPLICATE KEY UPDATE estado=1`,
+      [Number(id_rol), Number(id_docente)]
+    );
+    return true;
+  }
+
+  // Si estado=0 => solo desactiva si existe
+  await pool.query(
+    `UPDATE rol_docente
+     SET estado=0
+     WHERE id_rol=? AND id_docente=?`,
+    [Number(id_rol), Number(id_docente)]
+  );
+  return true;
+}
+
+// ✅ saber si un docente tiene un rol activo (útil para UI)
+async function hasRol({ id_rol, id_docente }) {
+  const [rows] = await pool.query(
+    `SELECT 1
+     FROM rol_docente
+     WHERE id_rol=? AND id_docente=? AND estado=1
+     LIMIT 1`,
+    [Number(id_rol), Number(id_docente)]
+  );
+  return rows.length > 0;
+}
+
 // =============== CARRERA (helpers para Formato B) ===============
-// ✅ Validar carrera por id
 async function findCarreraById(id_carrera) {
   const [rows] = await pool.query(
     `SELECT id_carrera, codigo_carrera, nombre_carrera, estado
@@ -171,7 +219,6 @@ async function findCarreraById(id_carrera) {
   return rows[0] || null;
 }
 
-// ✅ Validar carrera por codigo
 async function findCarreraByCodigo(codigo_carrera) {
   const [rows] = await pool.query(
     `SELECT id_carrera, codigo_carrera, nombre_carrera, estado
@@ -197,10 +244,13 @@ async function isDocenteInCarrera(id_docente, id_carrera) {
   return rows.length > 0;
 }
 
-// ✅ scope carrera para rol 2 (DIRECTOR/APOYO)
+/**
+ * ✅ SCOPE para rol ADMIN (rol 2)
+ * Devuelve { id_carrera, tipo_admin } o null
+ */
 async function getScopeCarreraForRol2(id_docente) {
   const [rows] = await pool.query(
-    `SELECT id_carrera
+    `SELECT id_carrera, tipo_admin
      FROM carrera_docente
      WHERE id_docente = ?
        AND estado = 1
@@ -209,11 +259,14 @@ async function getScopeCarreraForRol2(id_docente) {
      LIMIT 1`,
     [Number(id_docente)]
   );
-  return rows[0]?.id_carrera ?? null;
+  return rows[0] || null;
 }
 
-// ✅ asignar docente a carrera como DOCENTE (upsert seguro)
-async function assignDocenteToCarrera({ id_carrera, id_docente, tipo_admin = "DOCENTE" }) {
+async function assignDocenteToCarrera({
+  id_carrera,
+  id_docente,
+  tipo_admin = "DOCENTE",
+}) {
   await pool.query(
     `INSERT INTO carrera_docente (id_docente, id_carrera, tipo_admin, estado)
      VALUES (?, ?, ?, 1)
@@ -294,21 +347,27 @@ async function update(id, data) {
 }
 
 async function setEstado(id, estado) {
-  await pool.query(`UPDATE docente SET estado=? WHERE id_docente=?`, [estado ? 1 : 0, Number(id)]);
-  return findById(id);
-}
-
-// =============== PASSWORDS ===============
-async function updatePasswordAndClearFlag(id, passwordHash) {
-  await pool.query(`UPDATE docente SET password=?, debe_cambiar_password=0 WHERE id_docente=?`, [
-    passwordHash,
+  await pool.query(`UPDATE docente SET estado=? WHERE id_docente=?`, [
+    estado ? 1 : 0,
     Number(id),
   ]);
   return findById(id);
 }
 
+// =============== PASSWORDS ===============
+async function updatePasswordAndClearFlag(id, passwordHash) {
+  await pool.query(
+    `UPDATE docente SET password=?, debe_cambiar_password=0 WHERE id_docente=?`,
+    [passwordHash, Number(id)]
+  );
+  return findById(id);
+}
+
 async function updatePassword(id, passwordHash) {
-  await pool.query(`UPDATE docente SET password=? WHERE id_docente=?`, [passwordHash, Number(id)]);
+  await pool.query(`UPDATE docente SET password=? WHERE id_docente=?`, [
+    passwordHash,
+    Number(id),
+  ]);
   return findById(id);
 }
 
@@ -327,6 +386,8 @@ module.exports = {
   // roles
   getRolesByDocenteId,
   assignRolToDocente,
+  setRolEstado,
+  hasRol,
 
   // carrera (helpers)
   findCarreraById,

@@ -1,4 +1,3 @@
-// src/types/docente.ts
 export type Estado01 = 0 | 1;
 
 export interface Docente {
@@ -23,4 +22,9 @@ export interface Docente {
 
   // ✅ Solo se llena cuando viene del JOIN con carrera_docente (scope ADMIN)
   id_carrera_docente?: number | null;
+
+  // ✅ NUEVO: flag para mostrar/usar el botón SUPER_ADMIN en la tabla
+  // 1 = tiene rol SUPER_ADMIN activo, 0 = no
+  // (si el backend aún no lo devuelve, puede venir undefined)
+  super_admin?: Estado01;
 }

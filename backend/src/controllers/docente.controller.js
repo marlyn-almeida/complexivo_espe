@@ -50,4 +50,13 @@ module.exports = {
       next(e);
     }
   },
+
+  // ✅ PATCH /api/docentes/:id/super-admin
+  setSuperAdmin: async (req, res, next) => {
+    try {
+      res.json(await s.setSuperAdmin(req.params.id, req.body, req.user));
+    } catch (e) {
+      next(e);
+    }
+  },
 };

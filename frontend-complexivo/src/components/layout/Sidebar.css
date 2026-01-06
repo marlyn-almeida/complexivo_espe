@@ -15,7 +15,7 @@
   z-index: 30;
 
   color: white;
-  background: linear-gradient(180deg, #064e3b, #065f46, #047857);
+  background: linear-gradient(180deg, #064e2c, #065f46, #047830);
   box-shadow: var(--shadow-soft);
 
   /* oculto por defecto */

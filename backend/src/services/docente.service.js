@@ -160,15 +160,13 @@ async function create(payload, user) {
     passwordHash,
   });
 
-  // ✅ ROL DOCENTE automático (id_rol=3) se mantiene
+  // ✅ ROL DOCENTE automático (id_rol=3)
   await repo.assignRolToDocente({
     id_rol: 3,
     id_docente: Number(created.id_docente),
   });
 
   // ✅ Asignación carrera_docente como DOCENTE
-  // ADMIN: asigna por scope (ya lo hacía)
-  // SUPER_ADMIN: asigna si payload trajo id_carrera/codigo_carrera
   if (carreraIdToAssign) {
     await repo.assignDocenteToCarrera({
       id_carrera: Number(carreraIdToAssign),
@@ -220,4 +218,66 @@ async function changeEstado(id, estado, user) {
   return repo.setEstado(id, estado);
 }
 
-module.exports = { list, get, create, update, changeEstado };
+/**
+ * ✅ NUEVO: asignar / desasignar rol SUPER_ADMIN (id_rol=1)
+ * Solo lo puede hacer un SUPER_ADMIN.
+ *
+ * payload: { enabled: boolean }
+ */
+async function setSuperAdmin(id, payload, user) {
+  if (!isSuperAdmin(user)) {
+    const err = new Error("Acceso denegado: solo SUPER_ADMIN puede asignar/desasignar este rol");
+    err.status = 403;
+    throw err;
+  }
+
+  const targetId = Number(id);
+  if (!Number.isFinite(targetId) || targetId < 1) {
+    const err = new Error("id_docente inválido");
+    err.status = 422;
+    throw err;
+  }
+
+  // Debe existir el docente
+  const doc = await repo.findById(targetId);
+  if (!doc) {
+    const err = new Error("Docente no encontrado");
+    err.status = 404;
+    throw err;
+  }
+
+  const enabled = Boolean(payload?.enabled);
+
+  // ✅ Recomendado: evitar que un super admin se quite a sí mismo
+  if (!enabled && Number(user?.id) === targetId) {
+    const err = new Error("No puedes desasignarte a ti mismo el rol SUPER_ADMIN");
+    err.status = 422;
+    throw err;
+  }
+
+  await repo.setRolEstado({
+    id_rol: 1,
+    id_docente: targetId,
+    estado: enabled ? 1 : 0,
+  });
+
+  // opcional: devolver flag para UI
+  const isNow = await repo.hasRol({ id_rol: 1, id_docente: targetId });
+
+  return {
+    ok: true,
+    id_docente: targetId,
+    super_admin: isNow ? 1 : 0,
+  };
+}
+
+module.exports = {
+  list,
+  get,
+  create,
+  update,
+  changeEstado,
+
+  // ✅ NUEVO
+  setSuperAdmin,
+};

@@ -1,4 +1,5 @@
-const scopeRepo = require("../repositories/scope.repo");
+// src/middlewares/scope.middleware.js
+const docenteRepo = require("../repositories/docente.repo");
 
 async function attachScope(req, res, next) {
   try {
@@ -7,7 +8,7 @@ async function attachScope(req, res, next) {
     // ✅ SOLO si el rol efectivo es ADMIN
     if (req.user.rol !== "ADMIN") return next();
 
-    const scope = await scopeRepo.getAdminScopeByDocenteId(req.user.id);
+    const scope = await docenteRepo.getScopeCarreraForRol2(req.user.id);
 
     if (!scope) {
       return res.status(403).json({

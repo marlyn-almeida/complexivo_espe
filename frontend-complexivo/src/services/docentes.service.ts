@@ -1,4 +1,3 @@
-// src/services/docentes.service.ts
 import axiosClient from "../api/axiosClient";
 import type { Docente, Estado01 } from "../types/docente";
 
@@ -20,10 +19,8 @@ export type DocenteCreateDTO = {
 
   nombre_usuario: string;
 
-  // opcional: si NO mandas, backend usa username como password inicial
   password?: string;
 
-  // ✅ NUEVO (Formato B): asignación de carrera al crear
   id_carrera?: number;
   codigo_carrera?: string;
 };
@@ -41,10 +38,6 @@ export type DocenteUpdateDTO = {
 };
 
 export const docentesService = {
-  // ✅ compatible con tu versión vieja:
-  // docentesService.list(false)
-  // y también con params:
-  // docentesService.list({ includeInactive:false, q:"", page:1, limit:100 })
   list: async (arg: boolean | DocenteListParams = false): Promise<Docente[]> => {
     const paramsObj: DocenteListParams =
       typeof arg === "boolean" ? { includeInactive: arg } : arg;
@@ -81,6 +74,12 @@ export const docentesService = {
   toggleEstado: async (id: number, currentEstado: Estado01) => {
     const nuevo: Estado01 = currentEstado === 1 ? 0 : 1;
     const res = await axiosClient.patch(`/docentes/${id}/estado`, { estado: nuevo });
+    return res.data;
+  },
+
+  // ✅ NUEVO: Asignar / quitar SUPER_ADMIN
+  setSuperAdmin: async (id: number, enabled: boolean) => {
+    const res = await axiosClient.patch(`/docentes/${id}/super-admin`, { enabled });
     return res.data;
   },
 };
