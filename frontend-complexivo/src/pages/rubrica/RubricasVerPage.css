@@ -1,25 +1,228 @@
-.rv-page { padding: 18px; }
-.rv-panel { display:flex; justify-content:space-between; align-items:flex-end; margin-bottom: 12px; }
-.rv-title { margin:0; font-size:22px; font-weight:900; }
-.rv-subtitle { margin:6px 0 0; color:#6b7280; font-weight:700; }
+/* =========================================================
+   RubricasVerPage (alineado al diseño base del sistema)
+   Mantiene clases rv-* para no tocar el TSX
+========================================================= */
 
-.rv-card { background:#fff; border-radius:16px; box-shadow:0 8px 24px rgba(0,0,0,.06); overflow:hidden; }
-.rv-card-head { padding:12px 16px; background:#fafafa; border-bottom:1px solid #eee; display:flex; align-items:center; justify-content:space-between; gap:16px; }
-.rv-body { padding:14px 16px; }
+.rv-page{
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+}
 
-.rv-k { font-size:12px; font-weight:900; color:#6b7280; }
-.rv-badge{ display:inline-block; margin-top:6px; padding:6px 10px; border-radius:999px; font-weight:900; font-size:12px; background:rgba(107,114,128,.10); border:1px solid rgba(107,114,128,.30); color:#374151; }
-.rv-badge.ok{ background:rgba(16,185,129,.12); border-color:rgba(16,185,129,.35); color:#065f46; }
-.rv-badge.off{ background:rgba(239,68,68,.10); border-color:rgba(239,68,68,.30); color:#991b1b; }
+/* Header */
+.rv-panel{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
 
-.rv-actions { display:flex; gap:10px; }
+.rv-title{
+  margin:0;
+  font-weight: 900;
+  font-size: 1.35rem;
+  color: var(--text-main, #111827);
+}
 
-.rv-btn { height:38px; padding:0 14px; border-radius:12px; border:1px solid #e5e7eb; background:#fff; font-weight:900; cursor:pointer; }
-.rv-btn.primary { background:rgba(37,99,235,.12); border-color:rgba(37,99,235,.30); color:#1e3a8a; }
-.rv-btn.ghost { background:#fff; }
+.rv-subtitle{
+  margin: 6px 0 0;
+  color: var(--text-muted, #6b7280);
+  font-weight: 800;
+}
 
-.rv-row { display:flex; gap:10px; padding:10px 0; border-bottom:1px dashed #e5e7eb; }
-.rv-row .k { width:180px; color:#6b7280; font-weight:900; font-size:12px; }
-.rv-row .v { font-weight:900; }
-.rv-hint { margin-top:12px; color:#6b7280; font-weight:800; }
-.rv-muted { margin-top:10px; color:#6b7280; font-weight:800; }
+/* Card principal */
+.rv-card{
+  background: white;
+  border: 1px solid var(--border-soft, rgba(15, 23, 42, 0.10));
+  border-radius: 16px;
+  box-shadow: var(--shadow-soft, 0 10px 30px rgba(0,0,0,0.08));
+  overflow: hidden;
+}
+
+/* Header de card (verde ESPE suave) */
+.rv-card-head{
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-soft, rgba(15, 23, 42, 0.10));
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+
+  /* ✅ Verde más “ESPE” */
+  background: linear-gradient(135deg, rgba(6, 118, 71, 0.10), rgba(6, 118, 71, 0.06));
+}
+
+/* Cuerpo */
+.rv-body{
+  padding: 14px 16px;
+}
+
+/* Labels y badges */
+.rv-k{
+  font-size: 0.78rem;
+  font-weight: 900;
+  color: var(--text-muted, #6b7280);
+}
+
+/* Badge estilo del sistema */
+.rv-badge{
+  display:inline-flex;
+  align-items:center;
+  gap: 8px;
+  margin-top: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-weight: 900;
+  font-size: 0.78rem;
+
+  color: #111;
+  background: #fff;
+  border: 1px solid var(--border-soft, rgba(15, 23, 42, 0.10));
+}
+
+.rv-badge.ok{
+  color: #067647;
+  background: rgba(6, 118, 71, 0.10);
+  border-color: rgba(6, 118, 71, 0.25);
+}
+
+.rv-badge.off{
+  color: #b42318;
+  background: rgba(180, 35, 24, 0.10);
+  border-color: rgba(180, 35, 24, 0.22);
+}
+
+/* Acciones */
+.rv-actions{
+  display:flex;
+  gap: 10px;
+  align-items:center;
+  flex-wrap: wrap;
+}
+
+/* Botones: reutilizando tu estilo del sistema */
+.rv-btn{
+  border: 1px solid var(--border-soft, rgba(15, 23, 42, 0.12));
+  background: white;
+  border-radius: 12px;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-weight: 900;
+  display: inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap: 8px;
+  height: 44px;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.rv-btn:hover{
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(0,0,0,0.10);
+}
+
+.rv-btn.primary{
+  border: none;
+  color: white;
+  background: linear-gradient(135deg, #0f766e, #14532d);
+  box-shadow: 0 14px 32px rgba(15, 118, 110, 0.22);
+}
+
+.rv-btn.ghost{
+  background: transparent;
+}
+
+/* Rows estilo "viewGrid" pero sin cambiar HTML */
+.rv-row{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-soft, rgba(15, 23, 42, 0.10));
+}
+
+.rv-row .k{
+  width: 190px;
+  color: var(--text-muted, #6b7280);
+  font-weight: 900;
+  font-size: 0.78rem;
+}
+
+.rv-row .v{
+  flex: 1;
+  font-weight: 900;
+  color: var(--text-main, #111827);
+  text-align: left;
+}
+
+/* Separadores */
+.rv-divider{
+  height: 1px;
+  background: var(--border-soft, rgba(15, 23, 42, 0.10));
+  margin: 12px 0;
+}
+
+/* Listado por componente */
+.rv-list{
+  display:grid;
+  gap: 10px;
+}
+
+.rv-item{
+  border: 1px solid var(--border-soft, rgba(15, 23, 42, 0.10));
+  background: var(--bg-soft, rgba(2, 6, 23, 0.02));
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.rv-item-title{
+  font-weight: 900;
+  color: var(--text-main, #111827);
+  display:flex;
+  gap: 10px;
+  align-items:center;
+  flex-wrap: wrap;
+}
+
+.rv-item-sub{
+  margin-top: 6px;
+  font-weight: 800;
+  color: var(--text-muted, #6b7280);
+}
+
+/* Pill para tipo_componente */
+.rv-pill{
+  display:inline-flex;
+  align-items:center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 900;
+
+  /* Verde suave */
+  color: #067647;
+  background: rgba(6, 118, 71, 0.10);
+  border: 1px solid rgba(6, 118, 71, 0.25);
+}
+
+/* Mensajes */
+.rv-hint,
+.rv-muted{
+  margin-top: 10px;
+  color: var(--text-muted, #6b7280);
+  font-weight: 800;
+}
+
+/* Responsive */
+@media (max-width: 640px){
+  .rv-row{
+    flex-direction: column;
+    gap: 6px;
+  }
+  .rv-row .k{
+    width: 100%;
+  }
+}

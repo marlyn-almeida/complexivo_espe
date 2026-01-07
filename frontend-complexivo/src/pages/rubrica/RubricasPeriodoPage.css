@@ -1,24 +1,20 @@
-.rp-page { padding: 18px; }
-.rp-header { display:flex; justify-content:space-between; align-items:flex-end; margin-bottom: 12px; }
-.rp-title { margin:0; font-size:22px; font-weight:900; }
-.rp-subtitle { margin:6px 0 0; color:#6b7280; font-weight:700; }
+/* RubricasPeriodoPage.css
+   Este módulo ya usa el CSS global (page/card/table/buttons).
+   Aquí solo dejamos micro-ajustes propios.
+*/
 
-.rp-card { background:#fff; border-radius:16px; box-shadow:0 8px 24px rgba(0,0,0,.06); overflow:hidden; }
-.rp-toolbar { display:flex; gap:10px; padding:12px 12px; border-bottom:1px solid #eee; background:#fafafa; }
-.rp-input { flex:1; height:38px; border-radius:12px; border:1px solid #e5e7eb; padding:0 12px; font-weight:800; }
+.thActions {
+  width: 220px;
+}
 
-.rp-btn { height:38px; padding:0 14px; border-radius:12px; border:1px solid #e5e7eb; background:#fff; font-weight:900; cursor:pointer; }
-.rp-btn:disabled { opacity:.55; cursor:not-allowed; }
-.rp-btn.rp-primary { background:rgba(37,99,235,.12); border-color:rgba(37,99,235,.30); color:#1e3a8a; }
-.rp-btn.rp-ghost { background:#fff; }
+/* Asegura que el botón "Abrir rúbrica" no se vea gigante en pantallas grandes */
+.actions .btnPrimary {
+  padding: 10px 14px;
+  height: 44px;
+  border-radius: 12px;
+}
 
-.rp-table { width:100%; border-collapse:collapse; }
-.rp-table th { background:#fafafa; border-bottom:1px solid #eee; padding:10px 12px; font-size:12px; font-weight:900; color:#6b7280; text-align:left; }
-.rp-table td { border-bottom:1px solid #f1f5f9; padding:12px; vertical-align:top; }
-.rp-actions { display:flex; gap:10px; }
-
-.rp-muted { color:#6b7280; font-weight:800; }
-.rp-strong { font-weight:900; }
-
-.rp-pill{ display:inline-block; padding:6px 10px; border-radius:999px; font-weight:900; font-size:12px; background:rgba(107,114,128,.10); border:1px solid rgba(107,114,128,.30); color:#374151; }
-.rp-pill.ok{ background:rgba(16,185,129,.12); border-color:rgba(16,185,129,.35); color:#065f46; }
+/* Si quieres que la columna de rango no se rompa raro */
+.table td {
+  vertical-align: top;
+}

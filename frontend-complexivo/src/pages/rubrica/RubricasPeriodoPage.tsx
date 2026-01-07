@@ -1,6 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axiosClient from "../../api/axiosClient";
+
+import { Search } from "lucide-react";
 import "./RubricasPeriodoPage.css";
 
 type PeriodoResumen = {
@@ -14,6 +16,7 @@ type PeriodoResumen = {
 
 export default function RubricasPeriodoPage() {
   const navigate = useNavigate();
+
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<PeriodoResumen[]>([]);
   const [q, setQ] = useState("");
@@ -38,80 +41,113 @@ export default function RubricasPeriodoPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return (
-    <div className="rp-page">
-      <div className="rp-header">
-        <div>
-          <h1 className="rp-title">Rúbricas</h1>
-          <p className="rp-subtitle">
-            Selecciona un período y crea/edita la rúbrica general de ese período.
-          </p>
-        </div>
-      </div>
+  // Para mostrar rango amigable (si más adelante quieres formatear fechas)
+  const rows = useMemo(() => data ?? [], [data]);
 
-      <div className="rp-card">
-        <div className="rp-toolbar">
-          <input
-            className="rp-input"
-            placeholder="Buscar por código o descripción…"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-          />
-          <button className="rp-btn rp-ghost" onClick={load}>
+  return (
+    <div className="page">
+      {/* HEADER en CARD (como Estudiantes) */}
+      <div className="card">
+        <div className="headerRow">
+          <div>
+            <h2 className="title">Rúbricas</h2>
+            <p className="subtitle">
+              Selecciona un período y crea/edita la rúbrica general de ese período.
+            </p>
+          </div>
+
+          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+            <button className="btnSecondary" onClick={load} disabled={loading} title="Actualizar">
+              ⟳ Actualizar
+            </button>
+          </div>
+        </div>
+
+        {/* FILTROS (igual estilo) */}
+        <div className="filtersRow">
+          <div className="searchInline">
+            <Search size={18} />
+            <input
+              type="text"
+              placeholder="Buscar por código o descripción…"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") load();
+              }}
+            />
+          </div>
+
+          <button className="btnPrimary" onClick={load} disabled={loading}>
             Buscar
           </button>
         </div>
+      </div>
 
-        {loading && <div className="rp-muted">Cargando…</div>}
+      {/* TABLA */}
+      <div className="card tableWrap">
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Período</th>
+              <th>Rango</th>
+              <th># Carreras</th>
+              <th className="thActions">Acciones</th>
+            </tr>
+          </thead>
 
-        {!loading && (
-          <table className="rp-table">
-            <thead>
+          <tbody>
+            {loading ? (
               <tr>
-                <th>Período</th>
-                <th>Rango</th>
-                <th>#Carreras</th>
-                <th>Acciones</th>
+                <td colSpan={4} className="muted" style={{ padding: 16 }}>
+                  Cargando...
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {data.map((row) => (
-                <tr key={row.id_periodo}>
-                  <td>
-                    <div className="rp-strong">{row.codigo_periodo}</div>
-                    <div className="rp-muted">{row.descripcion_periodo}</div>
-                  </td>
-                  <td>
-                    {row.fecha_inicio} → {row.fecha_fin}
-                  </td>
-                  <td>
-                    <span className={`rp-pill ${row.total_asignadas > 0 ? "ok" : ""}`}>
-                      {row.total_asignadas}
-                    </span>
-                  </td>
-                  <td className="rp-actions">
-                    <button
-                      className="rp-btn rp-primary"
-                      disabled={row.total_asignadas === 0}
-                      onClick={() => navigate(`/rubricas/periodo/${row.id_periodo}`)}
-                      title={row.total_asignadas === 0 ? "Asigna carreras al período primero" : ""}
-                    >
-                      Abrir rúbrica
-                    </button>
-                  </td>
-                </tr>
-              ))}
+            ) : rows.length ? (
+              rows.map((row) => {
+                const tieneCarreras = Number(row.total_asignadas || 0) > 0;
 
-              {data.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="rp-muted">
-                    No existen períodos registrados
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        )}
+                return (
+                  <tr key={row.id_periodo}>
+                    <td>
+                      <div className="tdStrong">{row.codigo_periodo}</div>
+                      <div className="muted" style={{ marginTop: 6, fontWeight: 800 }}>
+                        {row.descripcion_periodo}
+                      </div>
+                    </td>
+
+                    <td className="tdStrong">
+                      {row.fecha_inicio} → {row.fecha_fin}
+                    </td>
+
+                    <td>
+                      <span className={`badge ${tieneCarreras ? "badge-success" : "badge-danger"}`}>
+                        {row.total_asignadas}
+                      </span>
+                    </td>
+
+                    <td className="actions">
+                      <button
+                        className="btnPrimary"
+                        disabled={!tieneCarreras}
+                        onClick={() => navigate(`/rubricas/periodo/${row.id_periodo}`)}
+                        title={!tieneCarreras ? "Asigna carreras al período primero" : "Abrir rúbrica"}
+                      >
+                        Abrir rúbrica
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })
+            ) : (
+              <tr>
+                <td colSpan={4} className="muted" style={{ padding: 16 }}>
+                  No existen períodos registrados.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   );
