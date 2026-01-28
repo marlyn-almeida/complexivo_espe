@@ -6,15 +6,31 @@ const ctrl = require("../controllers/plantillaActaWord.controller");
 
 const router = express.Router();
 
-// uploads/plantillas-acta (desde la raíz donde está app.js)
-const uploadDir = path.join(process.cwd(), "uploads", "plantillas-acta");
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+/**
+ * ✅ Upload dir seguro:
+ * - Render: /tmp/uploads/plantillas-acta  (escribible)
+ * - Local:  <carpeta backend>/uploads/plantillas-acta
+ *
+ * process.cwd() en tu caso normalmente es backend (porque tu app.js está en backend/)
+ */
+const baseUploads =
+  process.env.UPLOADS_DIR ||
+  (process.env.RENDER ? "/tmp/uploads" : path.join(process.cwd(), "uploads"));
+
+const uploadDir = path.join(baseUploads, "plantillas-acta");
+
+// Crear carpetas si no existen
+fs.mkdirSync(uploadDir, { recursive: true });
 
 const storage = multer.diskStorage({
   destination: (_, __, cb) => cb(null, uploadDir),
   filename: (_, file, cb) => {
-    const ext = path.extname(file.originalname || ".docx");
-    const base = path.basename(file.originalname || "plantilla", ext).replace(/\s+/g, "_");
+    const original = file.originalname || "plantilla.docx";
+    const ext = path.extname(original) || ".docx";
+    const base = path
+      .basename(original, ext)
+      .replace(/\s+/g, "_")
+      .replace(/[^a-zA-Z0-9_-]/g, ""); // ✅ evita caracteres raros
     cb(null, `${Date.now()}_${base}${ext}`);
   },
 });
