@@ -17,7 +17,7 @@ type LoginResponse =
       __version?: string;
     };
 
-export default function Login() {
+export default function LoginPage() {
   const navigate = useNavigate();
 
   const [username, setUsername] = useState("");
@@ -50,7 +50,7 @@ export default function Login() {
         return;
       }
 
-      if (data.mustChangePassword) {
+      if ("mustChangePassword" in data && data.mustChangePassword) {
         localStorage.setItem("tempToken", data.tempToken);
         navigate("/change-password", { replace: true });
         return;
@@ -71,65 +71,67 @@ export default function Login() {
   };
 
   return (
-    <div className="login-page">
-      <div className="login-left">
-        {/* HEADER CENTRADO */}
-        <div className="login-header">
+    <div className="login-shell">
+      {/* Imagen izquierda */}
+      <div
+        className="login-leftImage"
+        style={{ backgroundImage: `url(${campus})` }}
+      />
+
+      {/* Panel derecho */}
+      <div className="login-rightPanel">
+        <div className="login-card">
           <img src={logo} alt="ESPE" className="login-logo" />
 
-          <h1 className="login-title">Acceso al sistema de examen complexivo</h1>
+          <h1 className="login-title">Acceso al sistema de examen complejo</h1>
           <p className="login-subtitle">Universidad de las Fuerzas Armadas ESPE</p>
-        </div>
 
-        <form onSubmit={handleSubmit} className="login-form">
-          <div>
-            <label className="login-field-label">Usuario</label>
-            <div className="login-input-wrap">
-              <span className="login-icon">👤</span>
-              <input
-                className="login-input"
-                placeholder="usuario"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                autoComplete="username"
-              />
+          <form onSubmit={handleSubmit} className="login-form">
+            <div className="field">
+              <label className="field-label">Usuario</label>
+              <div className="pill">
+                <span className="pill-icon" aria-hidden="true">👤</span>
+                <input
+                  className="pill-input"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  autoComplete="username"
+                  placeholder=""
+                />
+              </div>
             </div>
-          </div>
 
-          <div>
-            <label className="login-field-label">Contraseña</label>
-            <div className="login-input-wrap">
-              <span className="login-icon">🔒</span>
-              <input
-                type="password"
-                className="login-input"
-                placeholder="Ingresa tu contraseña"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="current-password"
-              />
+            <div className="field">
+              <label className="field-label">Contraseña</label>
+              <div className="pill">
+                <span className="pill-icon" aria-hidden="true">🔒</span>
+                <input
+                  type="password"
+                  className="pill-input"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                  placeholder=""
+                />
+              </div>
             </div>
-          </div>
 
-          {error && <div className="login-error">{error}</div>}
+            {error && <div className="login-error">{error}</div>}
 
-          <button type="submit" className="btn-primary" disabled={loading}>
-            {loading ? "Ingresando..." : "Acceder"}
-          </button>
-        </form>
+            <button type="submit" className="btn-login" disabled={loading}>
+              {loading ? "Ingresando..." : "Acceder"}
+            </button>
 
-        <div className="login-actions">
-          <button className="login-link" type="button">
-            ¿Olvidó su contraseña?
-          </button>
-        </div>
+            <button type="button" className="forgot">
+              ¿Olvidó su contraseña?
+            </button>
 
-        <div className="login-lang">
-          Idioma: <b>Español - Internacional (es)</b>
+            <div className="lang">
+              Idioma: <b>Español - Internacional (es)</b>
+            </div>
+          </form>
         </div>
       </div>
-
-      <div className="login-right" style={{ backgroundImage: `url(${campus})` }} />
     </div>
   );
 }

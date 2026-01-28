@@ -1,3 +1,7 @@
+/* =========================
+   TOPBAR (COMPLETO)
+   ========================= */
+
 .topbar {
   display: flex;
   align-items: center;
@@ -9,16 +13,17 @@
   box-shadow: var(--shadow-soft);
 }
 
-.topbar-left {
+/* IZQUIERDA */
+.topbarLeft {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
 /* botón hamburguesa */
-.topbar-burger {
-  width: 36px;
-  height: 36px;
+.topbarBurger {
+  width: 40px;
+  height: 40px;
   border-radius: 999px;
   border: 1px solid var(--border-soft);
   background: transparent;
@@ -26,95 +31,171 @@
 
   display: grid;
   place-items: center;
-
   transition: background var(--transition-fast);
 }
 
-.topbar-burger:hover {
+.topbarBurger:hover {
   background: var(--bg-soft);
 }
 
-.topbar-burger span {
+.topbarBurger span {
   display: block;
-  width: 16px;
+  width: 18px;
   height: 2px;
   background: var(--text-main);
   margin: 2px 0;
 }
 
-.topbar-title {
-  font-size: 0.95rem;
-  font-weight: 800;
+/* Brand */
+.topbarBrand {
+  line-height: 1.15;
+}
+
+.topbarTitle {
+  font-size: 1.05rem;
+  font-weight: 900;
   color: var(--espe-green);
 }
 
-.topbar-subtitle {
-  font-size: 0.75rem;
+.topbarSubtitle {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 3px;
+}
+
+/* DERECHA */
+.topbarRight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.topbarUser {
+  text-align: right;
+}
+
+.topbarUserName {
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.topbarUserDesc {
+  font-size: 0.74rem;
   color: var(--text-muted);
   margin-top: 2px;
 }
 
-.topbar-right {
+/* Avatar + botón */
+.topbarMenu {
+  position: relative;
+}
+
+.topbarAvatarBtn {
   display: flex;
   align-items: center;
-  gap: 10px;
-}
+  gap: 8px;
 
-.topbar-user {
-  text-align: right;
-}
-
-.topbar-user-name {
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--text-main);
-}
-
-.topbar-user-desc {
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  margin-top: 1px;
-}
-
-.topbar-avatar {
-  width: 34px;
-  height: 34px;
-  border-radius: 999px;
-  background: var(--espe-green);
-  color: white;
-
-  display: grid;
-  place-items: center;
-
-  font-weight: 800;
-  font-size: 0.75rem;
-}
-
-/* --- extras Topbar (roles + logout) --- */
-
-.topbar-logout {
   border: 1px solid var(--border-soft);
-  background: transparent;
-  border-radius: 8px;
-  padding: 6px 10px;
+  background: #fff;
+  border-radius: 999px;
+  padding: 4px 10px 4px 4px;
+
   cursor: pointer;
-  font-weight: 700;
-  font-size: 0.7rem;
-  color: var(--text-main);
   transition: background var(--transition-fast), border-color var(--transition-fast);
 }
 
-.topbar-logout:hover {
+.topbarAvatarBtn:hover {
   background: var(--bg-soft);
   border-color: var(--espe-green-soft);
 }
 
-/* Ajuste del selector de rol para que encaje */
-.topbar-right select {
-  height: 30px;
-  border-radius: 8px;
-  border: 1px solid var(--border-soft);
-  padding: 0 8px;
-  font-size: 0.7rem;
-  background: white;
+.topbarAvatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: var(--espe-green);
+  color: #fff;
+
+  display: grid;
+  place-items: center;
+
+  font-weight: 900;
+  font-size: 0.8rem;
+}
+
+.topbarChevron {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+/* =========================
+   DROPDOWN
+   ========================= */
+
+.topbarDropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+
+  width: 260px;
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.10);
+  border-radius: 14px;
+  box-shadow: var(--shadow-soft);
+  overflow: hidden;
+  z-index: 50;
+}
+
+.ddHeader {
+  padding: 14px;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+}
+
+.ddSmall {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.ddUser {
+  margin-top: 4px;
+  font-size: 0.95rem;
+  font-weight: 900;
+}
+
+/* Items */
+.ddItem {
+  width: 100%;
+  border: none;
+  background: #fff;
+  cursor: pointer;
+
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-main);
+
+  transition: background var(--transition-fast);
+}
+
+.ddItem:hover {
+  background: rgba(0,0,0,0.05);
+}
+
+/* Iconos GRANDES y visibles */
+.ddIcon {
+  font-size: 22px;           /* ⬅️ aquí el tamaño */
+  line-height: 1;
+  color: var(--espe-green); /* contraste */
+}
+
+.ddItem.danger {
+  color: #d11a2a;
+}
+
+.ddItem.danger .ddIcon {
+  color: #d11a2a;
 }

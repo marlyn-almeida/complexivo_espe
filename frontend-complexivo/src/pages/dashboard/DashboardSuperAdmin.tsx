@@ -3,12 +3,12 @@ import type { DashItem } from "./DashboardBase";
 
 export default function DashboardSuperAdmin() {
   const items: DashItem[] = [
-    { label: "Carreras", to: "/carreras", icon: "🎓" },
-    { label: "Períodos", to: "/periodos", icon: "📅" },
-    { label: "Carrera-Período", to: "/carrera-periodo", icon: "🧩" },
-    { label: "Rúbricas", to: "/rubricas", icon: "📝" },
-    { label: "Docentes", to: "/docentes", icon: "👩‍🏫" },
+    { label: "Carreras", to: "/carreras", icon: "carreras" },
+    { label: "Períodos", to: "/periodos", icon: "periodos" },
+    { label: "Rúbricas", to: "/rubricas", icon: "rubricas" },
+    { label: "Docentes", to: "/docentes", icon: "docentes" },
+    { label: "Plantillas Acta Word", to: "/plantillas-acta", icon: "acta" }, // ✅
   ];
 
-  return <DashboardBase items={items} />;
+  return <DashboardBase items={items} role="SUPER_ADMIN" />;
 }

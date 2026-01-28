@@ -1,3 +1,7 @@
+/* =========================
+   Sidebar.css (COMPLETO)
+   ========================= */
+
 .sidebar-overlay {
   position: fixed;
   inset: 0;
@@ -11,14 +15,13 @@
   top: 0;
   left: 0;
   height: 100vh;
-  width: 260px;
+  width: 280px;
   z-index: 30;
 
   color: white;
-  background: linear-gradient(180deg, #064e2c, #065f46, #047830);
+  background: linear-gradient(180deg, #053a22, #064e2c, #066b36);
   box-shadow: var(--shadow-soft);
 
-  /* oculto por defecto */
   transform: translateX(-105%);
   transition: transform var(--transition-base);
   will-change: transform;
@@ -28,10 +31,7 @@
   transform: translateX(0);
 }
 
-/* ===== Desktop: sigue siendo dinámico =====
-   En desktop NO lo forzamos a translateX(0).
-   Solo escondemos el overlay.
-*/
+/* Desktop: oculta overlay */
 @media (min-width: 768px) {
   .sidebar-overlay {
     display: none;
@@ -48,95 +48,188 @@
 }
 
 .sidebar-badge {
-  width: 40px;
-  height: 40px;
+  width: 42px;
+  height: 42px;
   border-radius: 999px;
   display: grid;
   place-items: center;
-  background: rgba(255, 255, 255, 0.12);
-  font-weight: 800;
+  background: rgba(255, 255, 255, 0.14);
+  font-weight: 900;
+  letter-spacing: 0.02em;
 }
 
 .sidebar-title {
-  font-size: 0.95rem;
-  font-weight: 800;
+  font-size: 1rem;
+  font-weight: 900;
 }
 
 .sidebar-subtitle {
-  font-size: 0.72rem;
-  opacity: 0.85;
-  margin-top: 1px;
+  font-size: 0.78rem;
+  opacity: 0.9;
+  margin-top: 2px;
+}
+
+/* Pin */
+.sidebar-pin {
+  margin-left: auto; /* empuja pin y luego la X queda a la derecha */
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.10);
+  color: rgba(255, 255, 255, 0.95);
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  transition: background var(--transition-fast), transform var(--transition-fast);
+}
+
+.sidebar-pin:hover {
+  background: rgba(255, 255, 255, 0.16);
+  transform: translateY(-1px);
+}
+
+.sidebar-pin.on {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.sidebar-pin-ico {
+  width: 18px;
+  height: 18px;
+  display: block;
+  fill: currentColor;
+}
+
+/* Close button */
+.sidebar-close {
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.95);
+  cursor: pointer;
+  font-size: 18px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  transition: background var(--transition-fast);
+}
+
+.sidebar-close:hover {
+  background: rgba(255, 255, 255, 0.12);
 }
 
 /* Body */
 .sidebar-body {
-  height: calc(100vh - 72px);
+  height: calc(100vh - 74px);
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
   padding: 12px 14px;
+  overflow: hidden;
+}
+
+/* Nav scroll */
+.sidebar-nav {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+/* scrollbar discreto */
+.sidebar-nav::-webkit-scrollbar {
+  width: 8px;
+}
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+}
+.sidebar-nav::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+/* Secciones */
+.sidebar-section + .sidebar-section {
+  margin-top: 10px;
 }
 
 .sidebar-section-title {
   margin: 14px 0 10px;
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   opacity: 0.9;
 }
 
-.sidebar-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
+/* Links */
 .sidebar-link {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 999px;
+  gap: 12px;
+
+  padding: 12px 14px;
+  border-radius: 14px;
+
   text-decoration: none;
-  color: rgba(255, 255, 255, 0.92);
-  font-size: 0.86rem;
+  color: rgba(255, 255, 255, 0.95);
+
+  font-size: 0.95rem;
+  font-weight: 600;
 
   transition: background var(--transition-fast), transform var(--transition-fast),
     color var(--transition-fast);
 }
 
 .sidebar-link:hover {
-  background: rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.12);
   transform: translateY(-1px);
 }
 
 .sidebar-link.active {
-  background: white;
-  color: var(--espe-green);
-  font-weight: 800;
+  background: rgba(255, 255, 255, 0.92);
+  color: #0b5f33;
+  font-weight: 900;
   box-shadow: var(--shadow-soft);
 }
 
-.sidebar-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.55);
+/* =========================
+   ICONOS: visibles (blancos)
+   ========================= */
+.sidebar-ico {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+
+  color: rgba(255, 255, 255, 0.98);
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.65));
+  opacity: 0.98;
 }
 
-.sidebar-link.active .sidebar-dot {
-  background: var(--espe-green);
+/* ✅ FIX: SVG hereda el color del contenedor */
+.sidebar-ico svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  fill: currentColor;
+}
+.sidebar-ico svg path {
+  fill: currentColor;
+}
+.sidebar-ico svg * {
+  stroke: currentColor;
 }
 
-/* Profile */
+.sidebar-link.active .sidebar-ico {
+  color: #0b5f33;
+  filter: none;
+}
+
+/* Footer / perfil */
 .sidebar-profile {
+  margin-top: 12px;
   border-top: 1px solid rgba(255, 255, 255, 0.15);
   padding-top: 12px;
+  flex-shrink: 0;
 }
 
 .sidebar-profile-card {
-  border-radius: 999px;
-  padding: 10px 12px;
+  border-radius: 16px;
+  padding: 12px;
   background: rgba(2, 6, 23, 0.25);
 }
 
@@ -147,25 +240,25 @@
 }
 
 .sidebar-avatar {
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   border-radius: 999px;
   display: grid;
   place-items: center;
-  background: rgba(255, 255, 255, 0.12);
-  font-size: 0.75rem;
-  font-weight: 800;
+  background: rgba(255, 255, 255, 0.14);
+  font-size: 0.8rem;
+  font-weight: 900;
 }
 
 .sidebar-profile-name {
-  font-size: 0.76rem;
-  font-weight: 700;
+  font-size: 0.86rem;
+  font-weight: 900;
 }
 
 .sidebar-profile-role {
-  font-size: 0.7rem;
-  opacity: 0.85;
-  margin-top: 1px;
+  font-size: 0.76rem;
+  opacity: 0.9;
+  margin-top: 2px;
 }
 
 .sidebar-actions {
@@ -181,80 +274,22 @@
   padding: 10px 12px;
   cursor: pointer;
 
-  font-size: 0.78rem;
-  font-weight: 700;
+  font-size: 0.82rem;
+  font-weight: 900;
   color: #fff;
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.14);
 
   transition: transform var(--transition-fast), background var(--transition-fast);
 }
 
 .sidebar-btn:hover {
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.20);
   transform: translateY(-1px);
 }
 
 .sidebar-btn.danger {
-  background: rgba(239, 68, 68, 0.22);
+  background: rgba(239, 68, 68, 0.26);
 }
-
 .sidebar-btn.danger:hover {
-  background: rgba(239, 68, 68, 0.32);
-}
-
-/* Mejor separación entre secciones */
-.sidebar-section + .sidebar-section {
-  margin-top: 8px;
-}
-
-/* El botón close no tenía estilo en tu CSS */
-.sidebar-close {
-  margin-left: auto;
-  border: none;
-  background: transparent;
-  color: rgba(255,255,255,0.9);
-  cursor: pointer;
-  font-size: 18px;
-  padding: 6px 8px;
-  border-radius: 10px;
-  transition: background var(--transition-fast);
-}
-
-.sidebar-close:hover {
-  background: rgba(255,255,255,0.12);
-}
-/* ===== Fix: Sidebar con scroll pro ===== */
-
-/* el body sigue ocupando la altura disponible */
-.sidebar-body {
-  height: calc(100vh - 72px);
-  display: flex;
-  flex-direction: column;
-  padding: 12px 14px;
-  overflow: hidden; /* importante: el scroll solo en el nav */
-}
-
-/* el nav ocupa el espacio y scrollea */
-.sidebar-nav {
-  flex: 1;
-  overflow-y: auto;
-  padding-right: 6px; /* espacio para el scrollbar */
-}
-
-/* scrollbar más discreto */
-.sidebar-nav::-webkit-scrollbar {
-  width: 8px;
-}
-.sidebar-nav::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.22);
-  border-radius: 999px;
-}
-.sidebar-nav::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.28);
-}
-
-/* el footer siempre abajo */
-.sidebar-profile {
-  margin-top: 12px;
-  flex-shrink: 0;
+  background: rgba(239, 68, 68, 0.36);
 }

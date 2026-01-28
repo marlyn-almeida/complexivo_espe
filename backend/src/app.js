@@ -68,6 +68,8 @@ protectedApi.use("/tribunales-estudiantes", require("./routes/tribunal_estudiant
 
 protectedApi.use("/calificaciones", require("./routes/calificacion.routes"));
 protectedApi.use("/actas", require("./routes/acta.routes"));
+// ✅ PLANTILLAS ACTA WORD
+protectedApi.use("/plantillas-acta", require("./routes/plantillaActaWord.routes"));
 
 // =========================
 // RÚBRICAS (nuevo flujo: 1 rubrica por período)

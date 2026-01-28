@@ -1,10 +1,21 @@
 // src/components/layout/menuByRole.ts
 import type { RolId } from "../../utils/auth";
 
+export type IconName =
+  | "principal"
+  | "perfil"
+  | "carreras"
+  | "periodos"
+  | "rubricas"
+  | "docentes"
+  | "carrera_periodo"
+  | "acta";
+
 export type MenuItem = {
   label: string;
   to: string;
   roles: RolId[];
+  icon: IconName; // ✅ requerido
 };
 
 export type MenuSection = {
@@ -19,8 +30,8 @@ export const MENU_SECTIONS: MenuSection[] = [
     title: "Inicio",
     roles: [1, 2, 3],
     items: [
-      { label: "Dashboard", to: "/", roles: [1, 2, 3] },
-      { label: "Mi perfil", to: "/perfil", roles: [1, 2, 3] },
+      { label: "Principal", to: "/", roles: [1, 2, 3], icon: "principal" },
+      { label: "Mi perfil", to: "/perfil", roles: [1, 2, 3], icon: "perfil" },
     ],
   },
 
@@ -31,9 +42,9 @@ export const MENU_SECTIONS: MenuSection[] = [
     title: "Configuración global",
     roles: [1],
     items: [
-      { label: "Carreras", to: "/carreras", roles: [1] },
-      { label: "Períodos académicos", to: "/periodos", roles: [1] },
-      { label: "Rúbricas", to: "/rubricas", roles: [1] },
+      { label: "Carreras", to: "/carreras", roles: [1], icon: "carreras" },
+      { label: "Períodos académicos", to: "/periodos", roles: [1], icon: "periodos" },
+      { label: "Rúbricas", to: "/rubricas", roles: [1], icon: "rubricas" },
     ],
   },
 
@@ -41,39 +52,22 @@ export const MENU_SECTIONS: MenuSection[] = [
     title: "Administración del sistema",
     roles: [1],
     items: [
-      // ✅ Docentes SOLO aquí para SUPER_ADMIN
-      { label: "Docentes", to: "/docentes", roles: [1] },
-
-      // ❌ Quitado por pedido
-      // { label: "Asignación de personal por carrera", to: "/asignacion-personal", roles: [1] },
-
-      // Si lo necesitas para tus reglas (a veces es útil)
-      { label: "Carrera-Período", to: "/carrera-periodo", roles: [1] },
-    ],
-  },
-
-  {
-    title: "Seguridad",
-    roles: [1],
-    items: [
-      // ✅ Comentado por si luego lo necesitas
-      // { label: "Roles", to: "/roles", roles: [1] },
-
-      // ❌ Quitado por pedido
-      // { label: "Permisos", to: "/permisos", roles: [1] },
+      { label: "Docentes", to: "/docentes", roles: [1], icon: "docentes" },
+      { label: "Carrera-Período", to: "/carrera-periodo", roles: [1], icon: "carrera_periodo" },
+      { label: "Plantillas Acta Word", to: "/plantillas-acta", roles: [1], icon: "acta" },
     ],
   },
 
   /* =========================
-     ADMIN (2) - por carrera
+     ADMIN (2)
      ========================= */
   {
     title: "Gestión por carrera",
     roles: [2],
     items: [
-      { label: "Docentes", to: "/docentes", roles: [2] },
-      { label: "Estudiantes", to: "/estudiantes", roles: [2] },
-      { label: "Franjas horarias", to: "/franjas", roles: [2] },
+      { label: "Docentes", to: "/docentes", roles: [2], icon: "docentes" },
+      { label: "Estudiantes", to: "/estudiantes", roles: [2], icon: "docentes" }, // si luego tienes icon estudiante lo cambiamos
+      { label: "Franjas horarias", to: "/franjas", roles: [2], icon: "periodos" }, // luego lo mejoramos
     ],
   },
 
@@ -81,20 +75,7 @@ export const MENU_SECTIONS: MenuSection[] = [
     title: "Tribunales",
     roles: [2],
     items: [
-      { label: "Tribunales", to: "/tribunales", roles: [2] },
-
-      // ❌ Quitado por pedido (no quieres esa pantalla)
-      // { label: "Asignación Docente-Tribunal", to: "/tribunal-docentes", roles: [2] },
-    ],
-  },
-
-  {
-    title: "Actas y calificaciones",
-    roles: [2],
-    items: [
-      // ✅ Comentado por si luego se necesita para rol 2
-      // { label: "Actas", to: "/actas", roles: [2] },
-      // { label: "Calificaciones", to: "/calificaciones", roles: [2] },
+      { label: "Tribunales", to: "/tribunales", roles: [2], icon: "carrera_periodo" },
     ],
   },
 
@@ -105,12 +86,8 @@ export const MENU_SECTIONS: MenuSection[] = [
     title: "Tribunales",
     roles: [3],
     items: [
-      // ✅ lo nuevo que dijimos: todo centrado en tribunales
-      { label: "Mis tribunales", to: "/mis-tribunales", roles: [3] },
-      { label: "Mi agenda", to: "/mi-agenda", roles: [3] },          // (la creamos luego)
-      { label: "Calificar", to: "/calificar", roles: [3] },          // (la mejoramos luego)
-      { label: "Actas", to: "/actas", roles: [3] },                  // (puede existir o lo creamos)
-      // Si luego quieres: { label: "Historial de calificaciones", to: "/calificaciones", roles: [3] },
+      { label: "Mis tribunales", to: "/mis-tribunales", roles: [3], icon: "carrera_periodo" },
+      { label: "Actas", to: "/actas", roles: [3], icon: "acta" },
     ],
   },
 ];

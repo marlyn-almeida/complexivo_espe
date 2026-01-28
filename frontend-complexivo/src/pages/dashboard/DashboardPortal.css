@@ -1,106 +1,286 @@
-/* Fondo tipo portal */
+/* Base */
 .portalWrap {
   padding: 18px 18px 28px;
 }
 
-/* Solo "Dashboard" */
-.portalTitle {
-  margin: 0 0 16px;
-  font-size: 2.2rem;
+/* Contenedor para evitar que se estire feo en pantallas grandes */
+.portalContainer {
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+/* HERO */
+.portalHero {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  background: #0a4f28; /* más oscuro, combina con sidebar */
+  border-radius: 14px;
+  padding: 14px 16px;
+  border: 1px solid rgba(255,255,255,0.14);
+  box-shadow: 0 10px 24px rgba(0,0,0,0.12);
+}
+
+.portalHeroLogo {
+  height: 54px;
+  width: auto;
+  filter: drop-shadow(0 4px 10px rgba(0,0,0,0.20));
+}
+
+.portalHeroText { min-width: 0; }
+
+.portalHeroTitle {
+  margin: 0;
+  color: #fff;
   font-weight: 900;
-  color: var(--text-main, #111827);
+  font-size: 24px;
+  line-height: 1.1;
+  letter-spacing: 0.2px;
 }
 
-/* Caja blanca grande (una sola, sin títulos internos) */
-.portalBox {
-  background: #fff;
-  border: 1px solid rgba(0, 0, 0, 0.10);
+.portalHeroSubtitle {
+  margin: 6px 0 0;
+  color: rgba(255,255,255,0.86);
+  font-size: 13.5px;
+}
+
+/* ALERTA: más pro, sin verse mini */
+.portalAlert {
+  margin-top: 12px;
+  background: #dfeee7;
+  border: 1px solid rgba(10, 79, 40, 0.22);
+  border-radius: 14px;
+  padding: 14px 14px;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.portalAlertLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.portalAlertIcon {
+  width: 42px;
+  height: 42px;
   border-radius: 12px;
-  padding: 22px 18px;
-}
-
-/* Grid: ocupa mejor el espacio, íconos "fijos" */
-.portalGrid {
+  background: rgba(10, 79, 40, 0.14);
+  color: #0a4f28;
   display: grid;
-  gap: 22px;
-
-  /* Llena el espacio sin quedar sueltos */
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-
-  /* Hace que quede parejo */
-  justify-items: center;
-  align-items: start;
+  place-items: center;
+  flex: 0 0 auto;
 }
 
-/* Tile */
-.portalTile {
-  width: 100%;
-  max-width: 220px;
-  padding: 14px 10px;
-  border-radius: 12px;
+.portalAlertText {
+  color: rgba(0,0,0,0.78);
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.portalAlertText b {
+  font-weight: 900;
+  color: rgba(0,0,0,0.82);
+}
+
+.portalAlertLink {
+  border: none;
+  background: transparent;
+  color: #0a4f28;
+  font-weight: 900;
+  cursor: pointer;
+  padding: 0;
+}
+.portalAlertLink:hover { text-decoration: underline; }
+
+.portalAlertClose {
   border: none;
   background: transparent;
   cursor: pointer;
-  text-align: center;
+  color: rgba(0,0,0,0.55);
+  padding: 6px;
+  border-radius: 10px;
+}
+.portalAlertClose:hover { background: rgba(0,0,0,0.04); }
 
-  transition: background 0.15s ease, transform 0.08s ease;
+/* CAJAS: un poquito de sombra para que no quede “plano” */
+.portalBox {
+  margin-top: 14px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.09);
+  border-radius: 14px;
+  padding: 16px 16px 18px;
+  box-shadow: 0 8px 18px rgba(0,0,0,0.05);
+}
+
+.portalBoxHead { margin-bottom: 10px; }
+
+.portalSectionTitle {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 900;
+  color: rgba(0,0,0,0.78);
+}
+
+/* Accesos: menos aire, más compacto */
+.portalGrid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  align-items: start;
+}
+
+.portalTile {
+  width: 100%;
+  padding: 12px 10px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.15s ease, transform 0.08s ease, border-color 0.15s ease;
 }
 
 .portalTile:hover {
-  background: rgba(0, 0, 0, 0.03);
+  background: rgba(0, 0, 0, 0.025);
+  border-color: rgba(10, 79, 40, 0.18);
   transform: translateY(-1px);
 }
-
-.portalTile:active {
-  transform: translateY(0);
-}
-
-.portalTile:focus {
-  outline: none;
-}
-
+.portalTile:active { transform: translateY(0); }
+.portalTile:focus { outline: none; }
 .portalTile:focus-visible {
-  outline: 3px solid rgba(20, 140, 60, 0.25);
+  outline: 3px solid rgba(10, 79, 40, 0.20);
   outline-offset: 2px;
 }
 
-/* Icono grande como portal */
+/* ICONOS: serios, con color suave, pero que “respiren” */
 .portalIconBox {
-  width: 120px;
-  height: 120px;
-  margin: 0 auto 12px;
+  width: 98px;
+  height: 98px;
+  margin: 0 auto 10px;
   display: grid;
   place-items: center;
-
-  background: rgba(0, 0, 0, 0.02);
-  border: 1px solid rgba(0, 0, 0, 0.07);
-  border-radius: 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(0,0,0,0.08);
+  background: #f6f7f9;
+  color: rgba(0,0,0,0.68);
 }
 
-.portalEmoji {
-  font-size: 3rem;
-  line-height: 1;
+.portalTile--carreras .portalIconBox {
+  background: #e8f1ff; border-color: rgba(10, 79, 40, 0.10);
+}
+.portalTile--periodos .portalIconBox {
+  background: #e7f6ef; border-color: rgba(10, 79, 40, 0.16);
+}
+.portalTile--carrera_periodo .portalIconBox {
+  background: #f3ecff; border-color: rgba(10, 79, 40, 0.10);
+}
+.portalTile--rubricas .portalIconBox {
+  background: #fff0dc; border-color: rgba(10, 79, 40, 0.10);
+}
+.portalTile--docentes .portalIconBox {
+  background: #e9fbfb; border-color: rgba(10, 79, 40, 0.10);
 }
 
-/* Texto azul tipo portal */
+.portalSvg {
+  width: 48px;
+  height: 48px;
+  color: rgba(0,0,0,0.66);
+}
+
+.portalSvgSm {
+  width: 18px;
+  height: 18px;
+}
+
+/* ✅ Aquí estaba el desentono: azul. Lo cambiamos a verde/neutral */
 .portalLabel {
-  font-size: 1.05rem;
-  font-weight: 500;
-  color: #2b62b8;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #0a4f28;
 }
 
-/* Responsive */
+/* ESTADÍSTICAS */
+.portalStatsHead { padding: 2px 2px 12px; }
+
+.portalStatsTitle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 900;
+  color: rgba(0,0,0,0.70);
+  font-size: 15.5px;
+}
+
+.portalStatsTitleIcon {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  background: rgba(10, 79, 40, 0.12);
+  color: #0a4f28;
+  display: grid;
+  place-items: center;
+}
+
+.portalStatsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.portalStat {
+  border-radius: 14px;
+  border: 1px solid rgba(0,0,0,0.08);
+  padding: 16px 10px;
+  text-align: center;
+  background: #f7f7f7;
+}
+
+.portalStatValue {
+  font-size: 48px;
+  font-weight: 900;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.portalStatLabel {
+  font-size: 15px;
+  color: rgba(0,0,0,0.62);
+  font-weight: 800;
+}
+
+.portalStat--neutral .portalStatValue { color: #2b86d1; }
+.portalStat--success { background: #d7f0da; }
+.portalStat--success .portalStatValue { color: #1e9c4a; }
+.portalStat--info { background: #d8eef6; }
+.portalStat--info .portalStatValue { color: #1aa0b8; }
+.portalStat--warn { background: #fff0d9; }
+.portalStat--warn .portalStatValue { color: #c98200; }
+
+/* RESPONSIVE */
+@media (max-width: 1100px) {
+  .portalStatsGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 820px) {
+  .portalHero {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .portalHeroTitle { font-size: 19px; }
+  .portalAlertText { font-size: 14.5px; }
+}
+
 @media (max-width: 640px) {
-  .portalWrap {
-    padding: 14px;
-  }
-
-  .portalBox {
-    padding: 16px 12px;
-  }
-
-  .portalIconBox {
-    width: 110px;
-    height: 110px;
-  }
+  .portalWrap { padding: 14px; }
+  .portalBox { padding: 14px 12px; }
+  .portalIconBox { width: 92px; height: 92px; }
+  .portalSvg { width: 44px; height: 44px; }
+  .portalSectionTitle { font-size: 19px; }
+  .portalStatsGrid { grid-template-columns: 1fr; }
 }

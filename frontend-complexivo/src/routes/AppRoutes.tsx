@@ -1,4 +1,6 @@
+// src/routes/AppRoutes.tsx
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+
 import Layout from "../components/layout/Layout";
 import Login from "../pages/auth/Login";
 import ChangePasswordPage from "../pages/auth/ChangePasswordPage";
@@ -13,8 +15,6 @@ import CarreraAdminsPage from "../pages/carreras/CarreraAdminsPage";
 import DocentesPage from "../pages/docentes/DocentesPage";
 import EstudiantesPage from "../pages/estudiantes/EstudiantesPage";
 import CarreraPeriodoPage from "../pages/carreraPeriodo/CarreraPeriodoPage";
-
-// ✅ NUEVO: pantalla estilo CarreraAdmins pero para Carrera-Periodo
 import CarreraPeriodoAutoridadesPage from "../pages/carreraPeriodo/CarreraPeriodoAutoridadesPage";
 
 import PerfilPage from "../pages/perfil/PerfilPage";
@@ -26,8 +26,10 @@ import RubricaEditorPage from "../pages/rubrica/RubricaEditorPage";
 import FranjaHorariaPage from "../pages/franja-horaria/FranjaHorariaPage";
 import TribunalesPage from "../pages/tribunales/TribunalesPage";
 
-// ✅ Mis tribunales (Docente)
 import MisTribunalesPage from "../pages/docentes/MisTribunalesPage";
+
+// ✅ NUEVO: Plantillas Acta Word (Super Admin)
+import PlantillasActaWordPage from "../pages/plantillasActa/PlantillasActaWordPage";
 
 import ProtectedRoute from "../components/auth/ProtectedRoute";
 import { dashboardByRole, getActiveRole, getToken } from "../utils/auth";
@@ -48,12 +50,17 @@ export default function AppRoutes() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Público */}
+        {/* =========================
+            PÚBLICO
+           ========================= */}
         <Route path="/login" element={<Login />} />
         <Route path="/change-password" element={<ChangePasswordPage />} />
 
-        {/* Privado (Layout) */}
+        {/* =========================
+            PRIVADO (Layout)
+           ========================= */}
         <Route element={<Layout />}>
+          {/* Home: decide dashboard según rol */}
           <Route path="/" element={<HomeRedirect />} />
 
           {/* Dashboards por rol */}
@@ -65,7 +72,6 @@ export default function AppRoutes() {
               </ProtectedRoute>
             }
           />
-
           <Route
             path="/admin/dashboard"
             element={
@@ -74,7 +80,6 @@ export default function AppRoutes() {
               </ProtectedRoute>
             }
           />
-
           <Route
             path="/docente/dashboard"
             element={
@@ -105,7 +110,6 @@ export default function AppRoutes() {
               </ProtectedRoute>
             }
           />
-
           <Route
             path="/carreras/:id/admin"
             element={
@@ -133,7 +137,7 @@ export default function AppRoutes() {
             }
           />
 
-          {/* ✅ NUEVO: autoridades por Carrera-Periodo (histórico por período) */}
+          {/* Autoridades por Carrera-Periodo */}
           <Route
             path="/carreras-periodos/:id/admin"
             element={
@@ -151,7 +155,6 @@ export default function AppRoutes() {
               </ProtectedRoute>
             }
           />
-
           <Route
             path="/rubricas/periodo/:idPeriodo"
             element={
@@ -160,7 +163,6 @@ export default function AppRoutes() {
               </ProtectedRoute>
             }
           />
-
           <Route
             path="/rubricas/editar/:idRubrica"
             element={
@@ -170,11 +172,22 @@ export default function AppRoutes() {
             }
           />
 
+          {/* Docentes: SUPER_ADMIN y ADMIN */}
           <Route
             path="/docentes"
             element={
               <ProtectedRoute allowRoles={[1, 2]}>
                 <DocentesPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* ✅ Plantillas Acta Word: SOLO SUPER_ADMIN */}
+          <Route
+            path="/plantillas-acta"
+            element={
+              <ProtectedRoute allowRoles={[1]}>
+                <PlantillasActaWordPage />
               </ProtectedRoute>
             }
           />
@@ -190,7 +203,6 @@ export default function AppRoutes() {
               </ProtectedRoute>
             }
           />
-
           <Route
             path="/franjas"
             element={
@@ -199,7 +211,6 @@ export default function AppRoutes() {
               </ProtectedRoute>
             }
           />
-
           <Route
             path="/tribunales"
             element={

@@ -1,20 +1,54 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
 import "./Layout.css";
 
+const PIN_KEY = "sidebar_pinned";
+
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [pinned, setPinned] = useState(false);
 
-  const toggleSidebar = () => setSidebarOpen((p) => !p);
-  const closeSidebar = () => setSidebarOpen(false);
+  useEffect(() => {
+    const saved = localStorage.getItem(PIN_KEY);
+    if (saved === "1") {
+      setPinned(true);
+      setSidebarOpen(true);
+    }
+  }, []);
+
+  const toggleSidebar = () => {
+    // si está anclado, no lo cierres con el burger
+    if (pinned) return;
+    setSidebarOpen((p) => !p);
+  };
+
+  const closeSidebar = () => {
+    // si está anclado, no cierres por overlay
+    if (pinned) return;
+    setSidebarOpen(false);
+  };
+
+  const togglePinned = () => {
+    setPinned((p) => {
+      const next = !p;
+      localStorage.setItem(PIN_KEY, next ? "1" : "0");
+      if (next) setSidebarOpen(true); // al anclar, se queda abierto
+      return next;
+    });
+  };
 
   return (
     <div className="app-shell">
-      <Sidebar isOpen={sidebarOpen} onClose={closeSidebar} />
+      <Sidebar
+        isOpen={sidebarOpen}
+        pinned={pinned}
+        onTogglePinned={togglePinned}
+        onClose={closeSidebar}
+      />
 
-      <div className={`app-main ${sidebarOpen ? "with-sidebar" : ""}`}>
+      <div className={`app-main ${(sidebarOpen || pinned) ? "with-sidebar" : ""}`}>
         <Topbar onToggleSidebar={toggleSidebar} />
         <main className="app-content">
           <Outlet />

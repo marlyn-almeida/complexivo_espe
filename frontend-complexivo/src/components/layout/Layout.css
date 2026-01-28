@@ -1,3 +1,4 @@
+/* Layout.css */
 .app-shell {
   min-height: 100vh;
   background: var(--bg-main);
@@ -11,13 +12,7 @@
   transition: margin-left var(--transition-base);
 }
 
-/* En pantallas grandes, cuando el sidebar está abierto, empuja el contenido */
-@media (min-width: 768px) {
-  .app-main.with-sidebar {
-    margin-left: 260px;
-  }
-}
-
+/* padding del contenido */
 .app-content {
   flex: 1;
   overflow: auto;
@@ -27,5 +22,17 @@
 @media (min-width: 768px) {
   .app-content {
     padding: 22px 28px;
+  }
+
+  /* En desktop, si sidebar está abierto (o pinned) empuja el contenido */
+  .app-main.with-sidebar {
+    margin-left: 280px; /* debe coincidir con el width del sidebar */
+  }
+}
+
+/* En móvil NO empujes el contenido (sidebar va overlay) */
+@media (max-width: 767px) {
+  .app-main.with-sidebar {
+    margin-left: 0;
   }
 }
