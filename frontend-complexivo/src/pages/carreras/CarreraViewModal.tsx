@@ -11,72 +11,66 @@ export default function CarreraViewModal(props: {
   if (!open || !carrera) return null;
 
   return (
-    <div className="modalOverlay">
-      <div className="modal modalPro">
-        <div className="modalHeader">
+    <div className="modalOverlay" role="dialog" aria-modal="true">
+      <div className="modalCard">
+        <div className="modalHead">
           <div className="modalTitle">Detalle de carrera</div>
           <button className="modalClose" onClick={onClose} aria-label="Cerrar">
             ✕
           </button>
         </div>
 
+        <div className="modalDivider" />
+
         <div className="modalBody">
           <div className="viewGrid">
-            <div className="viewCard">
-              <div className="viewLabel">Nombre</div>
-              <div className="viewValue">{carrera.nombre_carrera}</div>
+            <div className="viewItem">
+              <div className="viewKey">Carrera</div>
+              <div className="viewVal">{carrera.nombre_carrera}</div>
             </div>
 
-            <div className="viewCard">
-              <div className="viewLabel">Código</div>
-              <div className="viewValue tdCode">{carrera.codigo_carrera}</div>
+            <div className="viewItem">
+              <div className="viewKey">Código</div>
+              <div className="viewVal mono">{carrera.codigo_carrera}</div>
             </div>
 
-            <div className="viewCard">
-              <div className="viewLabel">Departamento</div>
-              <div className="viewValue">
-                {getDepartamentoNombre(carrera.id_departamento)}
-              </div>
+            <div className="viewItem">
+              <div className="viewKey">Departamento</div>
+              <div className="viewVal">{getDepartamentoNombre(carrera.id_departamento)}</div>
             </div>
 
-            <div className="viewCard">
-              <div className="viewLabel">Estado</div>
-              <div className="viewValue">
-                <span
-                  className={`badge ${
-                    carrera.estado ? "badge-success" : "badge-danger"
-                  }`}
-                >
+            <div className="viewItem">
+              <div className="viewKey">Estado</div>
+              <div className="viewVal">
+                <span className={`pill ${carrera.estado ? "pillOk" : "pillBad"}`}>
                   {carrera.estado ? "ACTIVA" : "INACTIVA"}
                 </span>
               </div>
             </div>
 
-            <div className="viewCard">
-              <div className="viewLabel">Modalidad</div>
-              <div className="viewValue">{carrera.modalidad || "-"}</div>
+            <div className="viewItem">
+              <div className="viewKey">Modalidad</div>
+              <div className="viewVal">{carrera.modalidad || "-"}</div>
             </div>
 
-            <div className="viewCard">
-              <div className="viewLabel">Sede</div>
-              <div className="viewValue">{carrera.sede || "-"}</div>
+            <div className="viewItem">
+              <div className="viewKey">Sede</div>
+              <div className="viewVal">{carrera.sede || "-"}</div>
             </div>
 
-            <div className="viewCard viewCardFull">
-              <div className="viewLabel">Descripción</div>
-              <div className="viewValue">
-                <div className="viewDescription">
-                  {carrera.descripcion_carrera || "No se registró descripción."}
-                </div>
+            <div className="viewItem viewItemFull">
+              <div className="viewKey">Descripción</div>
+              <div className="viewVal">
+                {carrera.descripcion_carrera?.trim() ? carrera.descripcion_carrera : "No se registró descripción."}
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="modalFooter">
-          <button className="btnPrimary" onClick={onClose}>
-            Cerrar
-          </button>
+          <div className="modalActions">
+            <button className="btnPrimary" onClick={onClose}>
+              Cerrar
+            </button>
+          </div>
         </div>
       </div>
     </div>

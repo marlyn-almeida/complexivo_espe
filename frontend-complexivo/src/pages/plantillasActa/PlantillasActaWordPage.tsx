@@ -1,12 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import axiosClient from "../../api/axiosClient"; // ✅ ajusta si tu ruta es otra
+import axiosClient from "../../api/axiosClient";
 import styles from "./PlantillasActaWordPage.module.css";
-
-// ✅ Escudo (RECOMENDADO con alias @)
-// Si NO tienes alias "@", cambia a: ../../assets/escudo.png (dos niveles arriba)
-// import escudoESPE from "../../assets/escudo.png";
 import escudoESPE from "../../assets/escudo.png";
-
 
 type EstadoPlantilla = "ACTIVA" | "INACTIVA";
 
@@ -16,7 +11,7 @@ type PlantillaActa = {
   descripcion?: string | null;
   archivoNombre: string;
   estado: EstadoPlantilla;
-  createdAt: string; // "2026-01-28" o ISO
+  createdAt: string;
 };
 
 function formatFechaEC(iso: string) {
@@ -77,12 +72,7 @@ function IconFile(props: React.SVGProps<SVGSVGElement>) {
 function IconToggle(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 24 24" fill="none" {...props}>
-      <path
-        d="M7 17h10a4 4 0 0 0 0-8H7a4 4 0 0 0 0 8Z"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinejoin="round"
-      />
+      <path d="M7 17h10a4 4 0 0 0 0-8H7a4 4 0 0 0 0 8Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
       <path d="M9 13a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" fill="currentColor" />
     </svg>
   );
@@ -109,6 +99,67 @@ function IconBoxEmpty(props: React.SVGProps<SVGSVGElement>) {
       <path d="M4 8.5h16" stroke="currentColor" strokeWidth="2" />
       <path d="M9.5 12h5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
+  );
+}
+
+/** ✅ Íconos para acciones */
+function IconDownload(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" {...props}>
+      <path d="M12 3v10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M8.5 10.5 12 14l3.5-3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M4 17.5V20a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-2.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconPower(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" {...props}>
+      <path d="M12 2v10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M7 4.8A9 9 0 1 0 17 4.8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconTrash(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" {...props}>
+      <path d="M4 7h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M10 11v7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M14 11v7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M6 7l1 14h10l1-14" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <path d="M9 7V4h6v3" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+/** ✅ Botón icono + tooltip */
+function ActionIconButton({
+  title,
+  variant,
+  onClick,
+  disabled,
+  children,
+}: {
+  title: string;
+  variant: "neutral" | "primary" | "danger";
+  onClick: () => void;
+  disabled?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      className={`${styles.iconBtn} ${styles[`iconBtn_${variant}`]}`}
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={title}
+    >
+      {children}
+      {/* ✅ tooltip visible (sale ARRIBA, no abajo) */}
+      <span className={styles.tooltip}>{title}</span>
+    </button>
   );
 }
 
@@ -151,18 +202,9 @@ function UploadModal({ open, onClose, onSubmit }: ModalProps) {
     e.preventDefault();
     setErrorMsg(null);
 
-    if (!nombre.trim()) {
-      setErrorMsg("El nombre de la plantilla es obligatorio.");
-      return;
-    }
-    if (!file) {
-      setErrorMsg("Debe seleccionar un archivo Word (.docx).");
-      return;
-    }
-    if (!file.name.toLowerCase().endsWith(".docx")) {
-      setErrorMsg("Formato no válido. Solo se admite .docx");
-      return;
-    }
+    if (!nombre.trim()) return setErrorMsg("El nombre de la plantilla es obligatorio.");
+    if (!file) return setErrorMsg("Debe seleccionar un archivo Word (.docx).");
+    if (!file.name.toLowerCase().endsWith(".docx")) return setErrorMsg("Formato no válido. Solo se admite .docx");
 
     try {
       setSubmitting(true);
@@ -217,12 +259,7 @@ function UploadModal({ open, onClose, onSubmit }: ModalProps) {
 
           <div className={styles.formRow}>
             <label className={styles.label}>Descripción (Opcional)</label>
-            <textarea
-              className={styles.textarea}
-              value={descripcion}
-              onChange={(e) => setDescripcion(e.target.value)}
-              rows={3}
-            />
+            <textarea className={styles.textarea} value={descripcion} onChange={(e) => setDescripcion(e.target.value)} rows={3} />
           </div>
 
           <div className={styles.formRow}>
@@ -233,12 +270,7 @@ function UploadModal({ open, onClose, onSubmit }: ModalProps) {
             <div className={styles.fileRow}>
               <label className={styles.fileBtn}>
                 Seleccionar archivo
-                <input
-                  type="file"
-                  accept=".docx"
-                  className={styles.fileInput}
-                  onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                />
+                <input type="file" accept=".docx" className={styles.fileInput} onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
               </label>
 
               <div className={styles.fileName}>{file ? file.name : "Ningún archivo seleccionado"}</div>
@@ -279,19 +311,17 @@ export default function PlantillasActaWordPage() {
       setErrorTop(null);
       setLoading(true);
 
-      // ✅ tu backend debe devolver { ok:true, data:[...] }
       const { data } = await axiosClient.get("/plantillas-acta");
 
       const list: PlantillaActa[] = (data?.data ?? []).map((x: any) => ({
-        id: x.id_plantilla ?? x.id ?? x.idPlantilla,
+        id: Number(x.id),
         nombre: x.nombre,
         descripcion: x.descripcion ?? null,
-        archivoNombre: x.archivo_nombre ?? x.archivoNombre,
-        estado: (x.estado_activa ?? x.estadoActiva) ? "ACTIVA" : "INACTIVA",
-        createdAt: x.created_at ?? x.createdAt ?? new Date().toISOString(),
+        archivoNombre: x.archivoNombre,
+        estado: x.estadoActiva === "ACTIVA" ? "ACTIVA" : "INACTIVA",
+        createdAt: x.createdAt,
       }));
 
-      // ✅ orden: activa primero, luego por fecha desc
       list.sort((a, b) => {
         if (a.estado !== b.estado) return a.estado === "ACTIVA" ? -1 : 1;
         return String(b.createdAt).localeCompare(String(a.createdAt));
@@ -315,7 +345,6 @@ export default function PlantillasActaWordPage() {
     form.append("descripcion", payload.descripcion);
     form.append("file", payload.file);
 
-    // ✅ multipart (NO JSON)
     await axiosClient.post("/plantillas-acta", form, {
       headers: { "Content-Type": "multipart/form-data" },
     });
@@ -340,10 +369,7 @@ export default function PlantillasActaWordPage() {
   }
 
   async function handleDownload(p: PlantillaActa) {
-    // ✅ descarga binaria
-    const res = await axiosClient.get(`/plantillas-acta/${p.id}/download`, {
-      responseType: "blob",
-    });
+    const res = await axiosClient.get(`/plantillas-acta/${p.id}/download`, { responseType: "blob" });
 
     const blob = new Blob([res.data], {
       type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -361,10 +387,7 @@ export default function PlantillasActaWordPage() {
 
   return (
     <div className={styles.wrap}>
-      {/* ✅ para que NO quede “en medio” con espacio gigante:
-          tu layout padre probablemente centra. Esto fuerza ancho completo. */}
       <div className={styles.containerFull}>
-        {/* HERO */}
         <div className={styles.hero}>
           <div className={styles.heroLeft}>
             <img src={escudoESPE} alt="ESPE" className={styles.heroLogo} />
@@ -380,7 +403,6 @@ export default function PlantillasActaWordPage() {
           </button>
         </div>
 
-        {/* BOX */}
         <div className={styles.box}>
           <div className={styles.boxHead}>
             <div className={styles.sectionTitle}>
@@ -392,12 +414,7 @@ export default function PlantillasActaWordPage() {
 
             <div className={styles.searchWrap}>
               <IconSearch className={styles.searchIcon} />
-              <input
-                className={styles.search}
-                placeholder="Buscar por nombre..."
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-              />
+              <input className={styles.search} placeholder="Buscar por nombre..." value={q} onChange={(e) => setQ(e.target.value)} />
             </div>
           </div>
 
@@ -458,29 +475,29 @@ export default function PlantillasActaWordPage() {
                       <td className={styles.tdFile}>{p.archivoNombre}</td>
 
                       <td className={styles.tdState}>
-                        <span className={p.estado === "ACTIVA" ? styles.badgeActive : styles.badgeInactive}>
-                          {p.estado}
-                        </span>
+                        <span className={p.estado === "ACTIVA" ? styles.badgeActive : styles.badgeInactive}>{p.estado}</span>
                       </td>
 
                       <td className={styles.tdActions}>
-                        <button className={styles.btnSoft} onClick={() => handleDownload(p)}>
-                          Descargar
-                        </button>
+                        <div className={styles.actions}>
+                          <ActionIconButton title="Descargar" variant="neutral" onClick={() => handleDownload(p)}>
+                            <IconDownload className={styles.iconAction} />
+                          </ActionIconButton>
 
-                        {p.estado === "ACTIVA" ? (
-                          <button className={styles.btnGhost} onClick={() => handleDesactivar(p)}>
-                            Desactivar
-                          </button>
-                        ) : (
-                          <button className={styles.btnPrimary} onClick={() => handleActivar(p)}>
-                            Activar
-                          </button>
-                        )}
+                          {p.estado === "ACTIVA" ? (
+                            <ActionIconButton title="Desactivar" variant="neutral" onClick={() => handleDesactivar(p)}>
+                              <IconPower className={styles.iconAction} />
+                            </ActionIconButton>
+                          ) : (
+                            <ActionIconButton title="Activar" variant="primary" onClick={() => handleActivar(p)}>
+                              <IconPower className={styles.iconAction} />
+                            </ActionIconButton>
+                          )}
 
-                        <button className={styles.btnDanger} onClick={() => handleDelete(p)}>
-                          Eliminar
-                        </button>
+                          <ActionIconButton title="Eliminar" variant="danger" onClick={() => handleDelete(p)}>
+                            <IconTrash className={styles.iconAction} />
+                          </ActionIconButton>
+                        </div>
                       </td>
                     </tr>
                   ))

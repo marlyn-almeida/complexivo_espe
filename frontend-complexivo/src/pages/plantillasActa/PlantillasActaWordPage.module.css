@@ -1,25 +1,30 @@
-/* Base */
+/* ===============================
+   BASE
+   =============================== */
 .wrap {
-  padding: 18px 18px 28px;
+  padding: 16px 18px 28px;
 }
 
-.container {
-  max-width: 1180px;
-  margin: 0 auto;
+/* ✅ Full width para que no quede “en medio” */
+.containerFull {
+  width: 100%;
+  max-width: 100%;
 }
 
-/* HERO (verde institucional menos saturado) */
+/* ===============================
+   HERO
+   =============================== */
 .hero {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
 
-  background: #0a4f28;
+  background: linear-gradient(90deg, #0b6034 0%, #147a4a 100%);
   border-radius: 14px;
   padding: 14px 16px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.10);
 }
 
 .heroLeft {
@@ -30,9 +35,9 @@
 }
 
 .heroLogo {
-  height: 54px;
+  height: 42px;
   width: auto;
-  filter: drop-shadow(0 4px 10px rgba(0,0,0,0.20));
+  filter: drop-shadow(0 3px 10px rgba(0,0,0,0.18));
 }
 
 .heroText { min-width: 0; }
@@ -41,7 +46,7 @@
   margin: 0;
   color: #fff;
   font-weight: 900;
-  font-size: 24px;
+  font-size: 22px;
   line-height: 1.1;
   letter-spacing: 0.2px;
 }
@@ -49,15 +54,13 @@
 .heroSubtitle {
   margin: 6px 0 0;
   color: rgba(255,255,255,0.86);
-  font-size: 13.5px;
+  font-size: 13px;
 }
 
-/* Botón hero: sobrio */
 .heroBtn {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-
   border: 1px solid rgba(255,255,255,0.45);
   background: rgba(255,255,255,0.06);
   color: #fff;
@@ -66,6 +69,7 @@
   border-radius: 12px;
   cursor: pointer;
   transition: background 0.15s ease, transform 0.08s ease, border-color 0.15s ease;
+  white-space: nowrap;
 }
 
 .heroBtn:hover {
@@ -73,9 +77,12 @@
   border-color: rgba(255,255,255,0.60);
   transform: translateY(-1px);
 }
+
 .heroBtn:active { transform: translateY(0); }
 
-/* Caja principal */
+/* ===============================
+   BOX
+   =============================== */
 .box {
   margin-top: 14px;
   background: #fff;
@@ -100,6 +107,7 @@
   font-size: 20px;
   font-weight: 900;
   color: rgba(0,0,0,0.78);
+  white-space: nowrap;
 }
 
 .sectionTitleIcon {
@@ -112,7 +120,9 @@
   place-items: center;
 }
 
-/* Search */
+/* ===============================
+   SEARCH
+   =============================== */
 .searchWrap {
   position: relative;
   width: min(520px, 100%);
@@ -142,18 +152,21 @@
   box-shadow: 0 0 0 4px rgba(10,79,40,0.12);
 }
 
-/* Table */
+/* ===============================
+   TABLE WRAP
+   =============================== */
 .tableWrap {
   overflow: auto;
   border-radius: 12px;
   border: 1px solid rgba(0,0,0,0.08);
 }
 
+/* tabla grande para que no se apachurre */
 .table {
   width: 100%;
   border-collapse: collapse;
   background: #fff;
-  min-width: 860px; /* para que no se “apachurre” en pantallas medianas */
+  min-width: 980px; /* ✅ un poquito más para acciones */
 }
 
 .table thead th {
@@ -180,11 +193,16 @@
   color: rgba(0,0,0,0.72);
 }
 
+/* columnas */
 .thNum, .tdNum { width: 56px; }
 .thState { width: 160px; }
-.thActions { width: 220px; }
+.thActions { width: 220px; } /* ✅ más ancho para que se lean */
+.thFile { width: 300px; }    /* ✅ para el nombre del archivo */
+.thName { width: 380px; }
 
-/* Nombre */
+/* ===============================
+   NOMBRE
+   =============================== */
 .nameMain {
   font-weight: 900;
   color: rgba(0,0,0,0.80);
@@ -196,20 +214,18 @@
   color: rgba(0,0,0,0.52);
 }
 
-/* Badges */
-.badgeActive {
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
-  min-width: 108px;
-  padding: 8px 12px;
-  border-radius: 999px;
-  background: #dfeee7;
-  color: #0a4f28;
-  font-weight: 900;
-  border: 1px solid rgba(10,79,40,0.18);
+/* Archivo con ellipsis */
+.tdFile {
+  max-width: 340px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
+/* ===============================
+   BADGES
+   =============================== */
+.badgeActive,
 .badgeInactive {
   display: inline-flex;
   justify-content: center;
@@ -217,62 +233,160 @@
   min-width: 108px;
   padding: 8px 12px;
   border-radius: 999px;
-  background: #f0f0f0;
-  color: rgba(0,0,0,0.65);
   font-weight: 900;
   border: 1px solid rgba(0,0,0,0.10);
+  white-space: nowrap;
 }
 
-/* Botones acciones */
-.btnSoft {
-  border: 1px solid rgba(0,0,0,0.14);
+.badgeActive {
+  background: #dfeee7;
+  color: #0a4f28;
+  border-color: rgba(10,79,40,0.18);
+}
+
+.badgeInactive {
+  background: #f0f0f0;
+  color: rgba(0,0,0,0.65);
+}
+
+/* ===============================
+   ✅ ACCIONES (ICONOS + TOOLTIP)
+   =============================== */
+.tdActions {
+  text-align: right;
+  padding-right: 14px;
+}
+
+.actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: nowrap;
+}
+
+/* Botón icono */
+.iconBtn {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid rgba(0,0,0,0.12);
   background: #fff;
-  color: rgba(0,0,0,0.78);
-  font-weight: 900;
-  padding: 8px 12px;
-  border-radius: 10px;
+  display: grid;
+  place-items: center;
   cursor: pointer;
-  margin-right: 10px;
-}
-.btnSoft:hover { background: rgba(0,0,0,0.03); }
 
-.btnDanger {
-  border: 1px solid rgba(180, 20, 20, 0.35);
-  background: rgba(180, 20, 20, 0.06);
-  color: rgba(180, 20, 20, 0.95);
-  font-weight: 900;
-  padding: 8px 12px;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.08s ease;
+}
+
+.iconBtn:hover {
+  background: rgba(0,0,0,0.04);
+  transform: translateY(-1px);
+}
+
+.iconBtn:active { transform: translateY(0); }
+
+.iconBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* variantes */
+.iconBtn_neutral {
+  color: rgba(0,0,0,0.70);
+}
+
+.iconBtn_primary {
+  color: #0a4f28;
+  background: rgba(10,79,40,0.10);
+  border-color: rgba(10,79,40,0.30);
+}
+
+.iconBtn_danger {
+  color: rgba(180,20,20,0.95);
+  background: rgba(180,20,20,0.08);
+  border-color: rgba(180,20,20,0.30);
+}
+
+.iconAction {
+  width: 18px;
+  height: 18px;
+}
+
+/* ✅ TOOLTIP ARRIBA (para que NO se corte) */
+.tooltip {
+  position: absolute;
+  top: -46px;
+  left: 50%;
+  transform: translateX(-50%) translateY(6px);
+
+  background: rgba(20,20,20,0.94);
+  color: #fff;
+  font-weight: 800;
+  font-size: 12px;
+  padding: 6px 10px;
   border-radius: 10px;
-  cursor: pointer;
-}
-.btnDanger:hover { background: rgba(180, 20, 20, 0.10); }
+  white-space: nowrap;
 
-/* Empty state */
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease, transform 0.12s ease;
+
+  z-index: 50;
+}
+
+/* Flechita */
+.tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 6px 6px 0 6px;
+  border-style: solid;
+  border-color: rgba(20,20,20,0.94) transparent transparent transparent;
+}
+
+.iconBtn:hover .tooltip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ===============================
+   EMPTY STATE
+   =============================== */
 .emptyCell { padding: 34px 16px !important; }
+
 .empty {
   display: grid;
   place-items: center;
   gap: 10px;
   color: rgba(0,0,0,0.60);
 }
+
 .emptyIcon {
   width: 42px;
   height: 42px;
   color: rgba(0,0,0,0.55);
 }
-.emptyText {
-  font-size: 14.5px;
-}
+
+.emptyText { font-size: 14.5px; }
 
 /* ICON sizes */
 .iconSm { width: 18px; height: 18px; }
 
-/* MODAL (si “no responde”, esto es lo más importante) */
+/* ===============================
+   MODAL
+   =============================== */
 .modalOverlay {
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,0.52);
-  z-index: 9999; /* debe quedar por encima de topbar/sidebar */
+  z-index: 9999;
   display: grid;
   place-items: center;
   padding: 18px;
@@ -324,10 +438,10 @@
   font-size: 22px;
   line-height: 1;
 }
+
 .modalClose:hover { background: rgba(0,0,0,0.03); }
 
 .modalDivider { height: 1px; background: rgba(0,0,0,0.10); }
-
 .modalBody { padding: 14px 16px 16px; }
 
 .formRow { margin-top: 12px; }
@@ -349,6 +463,7 @@
   padding: 0 12px;
   outline: none;
 }
+
 .input:focus {
   border-color: rgba(10,79,40,0.35);
   box-shadow: 0 0 0 4px rgba(10,79,40,0.12);
@@ -362,6 +477,7 @@
   outline: none;
   resize: vertical;
 }
+
 .textarea:focus {
   border-color: rgba(10,79,40,0.35);
   box-shadow: 0 0 0 4px rgba(10,79,40,0.12);
@@ -387,7 +503,6 @@
 }
 
 .fileBtn:hover { background: rgba(0,0,0,0.03); }
-
 .fileInput { display: none; }
 
 .fileName {
@@ -410,6 +525,7 @@
   padding: 10px 12px;
   border-radius: 10px;
   font-weight: 800;
+  margin-bottom: 10px;
 }
 
 .modalActions {
@@ -442,82 +558,12 @@
 
 .btnPrimary:hover { filter: brightness(1.03); }
 
-/* Responsive */
+/* ===============================
+   RESPONSIVE
+   =============================== */
 @media (max-width: 820px) {
   .hero { flex-direction: column; align-items: flex-start; }
   .heroTitle { font-size: 19px; }
   .fileRow { grid-template-columns: 1fr; }
-}
-/* HERO: menos oscuro + menos saturación */
-.hero {
-  background: linear-gradient(90deg, #0b5f33 0%, #187a4a 100%);
-  border: 1px solid rgba(255,255,255,0.18);
-}
-
-/* Logo: un poco más pequeño para que no “descuadre” */
-.heroLogo {
-  height: 50px;
-}
-
-/* Tabla: que no se “apachurre” */
-.table {
-  min-width: 860px;
-}
-
-/* Acciones con iconos (como tu foto) */
-.tdActions button {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-/* icono pequeño para botones */
-.iconXs {
-  width: 16px;
-  height: 16px;
-}
-
-/* Botón descargar: más parecido al mock */
-.btnSoft {
-  background: #fff;
-  border: 1px solid rgba(0,0,0,0.14);
-}
-
-/* Botón eliminar: borde y fondo suave */
-.btnDanger {
-  background: rgba(180, 20, 20, 0.06);
-  border: 1px solid rgba(180, 20, 20, 0.35);
-}
-/* Botón principal (verde) */
-.btnPrimary {
-  height: 36px;
-  padding: 0 14px;
-  border-radius: 10px;
-  border: 1px solid rgba(10, 79, 40, 0.28);
-  background: #0a4f28;
-  color: #fff;
-  font-weight: 900;
-  cursor: pointer;
-}
-.btnPrimary:hover { filter: brightness(1.03); }
-
-/* Botón ghost (neutral) */
-.btnGhost {
-  height: 36px;
-  padding: 0 14px;
-  border-radius: 10px;
-  border: 1px solid rgba(0,0,0,0.14);
-  background: #fff;
-  font-weight: 900;
-  cursor: pointer;
-  color: rgba(0,0,0,0.78);
-}
-.btnGhost:hover { background: rgba(0,0,0,0.03); }
-
-/* Para que acciones se alineen bonito */
-.tdActions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  flex-wrap: wrap;
+  .actions { gap: 8px; }
 }
