@@ -488,3 +488,36 @@
   background: rgba(180, 20, 20, 0.06);
   border: 1px solid rgba(180, 20, 20, 0.35);
 }
+/* Botón principal (verde) */
+.btnPrimary {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(10, 79, 40, 0.28);
+  background: #0a4f28;
+  color: #fff;
+  font-weight: 900;
+  cursor: pointer;
+}
+.btnPrimary:hover { filter: brightness(1.03); }
+
+/* Botón ghost (neutral) */
+.btnGhost {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(0,0,0,0.14);
+  background: #fff;
+  font-weight: 900;
+  cursor: pointer;
+  color: rgba(0,0,0,0.78);
+}
+.btnGhost:hover { background: rgba(0,0,0,0.03); }
+
+/* Para que acciones se alineen bonito */
+.tdActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}

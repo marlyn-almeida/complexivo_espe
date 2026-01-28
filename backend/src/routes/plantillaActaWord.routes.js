@@ -52,5 +52,7 @@ router.post("/", upload.single("file"), ctrl.create);
 router.patch("/:id/activar", ctrl.activar);
 router.delete("/:id", ctrl.remove);
 router.get("/:id/download", ctrl.download);
+router.patch("/:id/desactivar", ctrl.desactivar);
+
 
 module.exports = router;
