@@ -34,7 +34,9 @@ async function resolveCarreraIdForCreate(payload, user) {
         throw err;
       }
       if (Number(c.estado) !== 1) {
-        const err = new Error("Carrera inactiva: no se puede asignar docentes a una carrera desactivada");
+        const err = new Error(
+          "Carrera inactiva: no se puede asignar docentes a una carrera desactivada"
+        );
         err.status = 422;
         throw err;
       }
@@ -54,7 +56,9 @@ async function resolveCarreraIdForCreate(payload, user) {
         throw err;
       }
       if (Number(c.estado) !== 1) {
-        const err = new Error("Carrera inactiva: no se puede asignar docentes a una carrera desactivada");
+        const err = new Error(
+          "Carrera inactiva: no se puede asignar docentes a una carrera desactivada"
+        );
         err.status = 422;
         throw err;
       }
@@ -99,12 +103,16 @@ async function list(query = {}, user) {
   const limit = query.limit || 50;
 
   const id_carrera =
-    query.id_carrera !== undefined && query.id_carrera !== null && String(query.id_carrera).trim() !== ""
+    query.id_carrera !== undefined &&
+    query.id_carrera !== null &&
+    String(query.id_carrera).trim() !== ""
       ? Number(query.id_carrera)
       : null;
 
   const id_departamento =
-    query.id_departamento !== undefined && query.id_departamento !== null && String(query.id_departamento).trim() !== ""
+    query.id_departamento !== undefined &&
+    query.id_departamento !== null &&
+    String(query.id_departamento).trim() !== ""
       ? Number(query.id_departamento)
       : null;
 
@@ -164,6 +172,14 @@ async function create(payload, user) {
   // correo obligatorio + .ec/.com
   const correo = ensureCorreoFlexible(payload.correo_docente);
 
+  // opcional: unicidad de correo antes de insert (para evitar error por UNIQUE)
+  const byCorreo = await repo.findByCorreo(correo);
+  if (byCorreo) {
+    const err = new Error("Ya existe un docente con ese correo");
+    err.status = 409;
+    throw err;
+  }
+
   // departamento obligatorio
   const depId = Number(payload.id_departamento);
   if (!Number.isFinite(depId) || depId < 1) {
@@ -195,7 +211,6 @@ async function create(payload, user) {
     nombre_usuario: payload.nombre_usuario,
 
     passwordPlano: cedulaPlano, // ✅ SE GUARDA EN PLANO (primera vez)
-    debe_cambiar_password: 1, // ✅ fuerza cambio (si tu repo lo usa internamente)
   });
 
   // rol DOCENTE automático
@@ -357,7 +372,7 @@ async function importBulk({ id_departamento, rows }, user) {
   }
 
   for (let i = 0; i < rows.length; i++) {
-    const fila = i + 1;
+    const fila = i + 2; // ✅ Excel/CSV: fila real (1=headers)
     const r = rows[i] || {};
 
     try {
@@ -392,7 +407,7 @@ async function importBulk({ id_departamento, rows }, user) {
       // correo obligatorio + .ec/.com
       const correo = ensureCorreoFlexible(correo_docente_raw);
 
-      // ✅ no re-importar duplicados (NO rompes la importación completa)
+      // ✅ no re-importar duplicados (no rompe la importación completa)
       if (await repo.findByInstitucional(id_institucional_docente)) {
         resultado.resumen.omitidos++;
         resultado.detalles.omitidos.push({
@@ -422,6 +437,18 @@ async function importBulk({ id_departamento, rows }, user) {
         resultado.detalles.omitidos.push({
           fila,
           motivo: `Ya existe (usuario) → ${nombrePersona(r)}`,
+          id_institucional_docente,
+          cedula,
+          nombre_usuario,
+        });
+        continue;
+      }
+
+      if (await repo.findByCorreo(correo)) {
+        resultado.resumen.omitidos++;
+        resultado.detalles.omitidos.push({
+          fila,
+          motivo: `Ya existe (correo) → ${nombrePersona(r)}`,
           id_institucional_docente,
           cedula,
           nombre_usuario,
