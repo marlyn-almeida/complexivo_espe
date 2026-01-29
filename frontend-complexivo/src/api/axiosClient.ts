@@ -1,7 +1,22 @@
+// src/api/axiosClient.ts
 import axios from "axios";
+import { clearSession, getToken } from "../utils/auth";
+
+function normalizeBaseURL() {
+  const raw = (import.meta.env.VITE_API_URL || "https://complexivo-espe.onrender.com/api").trim();
+
+  // si viene "https://.../api" lo dejamos
+  if (raw.endsWith("/api")) return raw;
+
+  // si viene "https://.../api/" lo dejamos sin el slash final
+  if (raw.endsWith("/api/")) return raw.slice(0, -1);
+
+  // si viene "https://..." lo convertimos a "https://.../api"
+  return raw.replace(/\/$/, "") + "/api";
+}
 
 const axiosClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "https://complexivo-espe.onrender.com/api",
+  baseURL: normalizeBaseURL(),
   headers: {
     "Content-Type": "application/json",
   },
@@ -10,8 +25,7 @@ const axiosClient = axios.create({
 // ✅ Interceptor REQUEST: adjunta token si existe
 axiosClient.interceptors.request.use(
   (config) => {
-    // 🔥 Ajusta la key si tú guardas con otro nombre
-    const token = localStorage.getItem("accessToken");
+    const token = getToken(); // usa tu utils/auth.ts
 
     if (token) {
       config.headers = config.headers ?? {};
@@ -23,7 +37,7 @@ axiosClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// ✅ Interceptor RESPONSE: tu debug tal cual
+// ✅ Interceptor RESPONSE: manejo unificado de errores + 401 cleanup
 axiosClient.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -33,8 +47,14 @@ axiosClient.interceptors.response.use(
     console.log("AXIOS ERROR STATUS:", status);
     console.log("AXIOS ERROR DATA:", data);
 
+    // ✅ si backend manda { message }, úsalo
     const message = data?.message || error?.message || "Error inesperado en el servidor";
     console.error("AXIOS ERROR MESSAGE:", message);
+
+    // ✅ Si token inválido/expirado
+    if (status === 401) {
+      clearSession();
+    }
 
     return Promise.reject({
       ...error,

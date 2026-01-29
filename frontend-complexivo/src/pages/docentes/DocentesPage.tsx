@@ -217,8 +217,8 @@ export default function DocentesPage() {
             <div className="heroText">
               <h1 className="heroTitle">Docentes</h1>
               <p className="heroSubtitle">
-                Gestión de docentes del sistema. La contraseña inicial será el <b>nombre de usuario</b> y en
-                el primer inicio de sesión deberá cambiarla.
+                Gestión de docentes del sistema. La contraseña inicial será la <b>cédula</b> y en el primer
+                inicio de sesión deberá cambiarla.
               </p>
             </div>
           </div>

@@ -22,6 +22,39 @@ router.get(
   ctrl.list
 );
 
+/**
+ * ✅ IMPORT MASIVO
+ * POST /api/docentes/import
+ * Body:
+ *  - id_departamento: number (obligatorio)
+ *  - rows: DocenteImportRow[]
+ *
+ * OJO: esta ruta va ANTES de "/:id" para evitar choque.
+ */
+router.post(
+  "/import",
+  authorize(["SUPER_ADMIN", "ADMIN"]),
+  body("id_departamento").isInt({ min: 1 }).toInt(),
+
+  body("rows").isArray({ min: 1 }).withMessage("Debes enviar filas para importar."),
+  body("rows.*.id_institucional_docente").isString().trim().notEmpty(),
+  body("rows.*.cedula").isString().trim().notEmpty(),
+  body("rows.*.apellidos_docente").isString().trim().notEmpty(),
+  body("rows.*.nombres_docente").isString().trim().notEmpty(),
+  body("rows.*.correo_docente")
+    .isString()
+    .trim()
+    .notEmpty()
+    .isEmail()
+    .custom((v) => /\.(ec|com)$/i.test(String(v).trim().toLowerCase()))
+    .withMessage("El correo del docente debe terminar en .ec o .com"),
+  body("rows.*.telefono_docente").optional({ nullable: true }).isString(),
+  body("rows.*.nombre_usuario").isString().trim().notEmpty(),
+
+  validate,
+  ctrl.importBulk
+);
+
 router.get(
   "/:id",
   param("id").isInt({ min: 1 }).toInt(),
@@ -38,21 +71,21 @@ router.post(
   body("nombres_docente").isString().trim().notEmpty(),
   body("apellidos_docente").isString().trim().notEmpty(),
 
-  // ✅ correo obligatorio y valida formato
+  // ✅ correo obligatorio y valida formato + .ec/.com
   body("correo_docente")
     .isString()
     .trim()
     .notEmpty()
     .isEmail()
-    .custom((v) => String(v).toLowerCase().endsWith(".com"))
-    .withMessage("El correo del docente debe terminar en .com"),
+    .custom((v) => /\.(ec|com)$/i.test(String(v).trim().toLowerCase()))
+    .withMessage("El correo del docente debe terminar en .ec o .com"),
 
   // ✅ teléfono opcional
   body("telefono_docente").optional({ nullable: true }).isString(),
 
   body("nombre_usuario").isString().trim().notEmpty(),
 
-  // ✅ asignación por carrera opcional (Formato B)
+  // ✅ asignación por carrera opcional (tu backend lo soporta)
   body("id_carrera").optional({ nullable: true }).isInt({ min: 1 }).toInt(),
   body("codigo_carrera").optional({ nullable: true }).isString().trim().notEmpty(),
 
@@ -74,8 +107,8 @@ router.put(
     .trim()
     .notEmpty()
     .isEmail()
-    .custom((v) => String(v).toLowerCase().endsWith(".com"))
-    .withMessage("El correo del docente debe terminar en .com"),
+    .custom((v) => /\.(ec|com)$/i.test(String(v).trim().toLowerCase()))
+    .withMessage("El correo del docente debe terminar en .ec o .com"),
 
   body("telefono_docente").optional({ nullable: true }).isString(),
   body("nombre_usuario").isString().trim().notEmpty(),

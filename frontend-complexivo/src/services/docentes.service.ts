@@ -1,3 +1,4 @@
+// src/services/docentes.service.ts
 import axiosClient from "../api/axiosClient";
 import type { Docente, Estado01 } from "../types/docente";
 
@@ -6,58 +7,57 @@ export type DocenteListParams = {
   q?: string;
   page?: number;
   limit?: number;
-
-  // ✅ NUEVO: filtro opcional por carrera
   id_carrera?: number | null;
+
+  // ✅ NUEVO: filtro por departamento
+  id_departamento?: number | null;
 };
 
 export type DocenteCreateDTO = {
   id_institucional_docente: string;
+  id_departamento: number; // ✅ OBLIGATORIO
   cedula: string;
   nombres_docente: string;
   apellidos_docente: string;
 
-  correo_docente?: string;
-  telefono_docente?: string;
+  correo_docente: string; // ✅ obligatorio en tu BD + triggers
+  telefono_docente?: string | null;
 
   nombre_usuario: string;
-  password?: string;
 
+  // ✅ si quieres asignar carrera al crear (opcional)
   id_carrera?: number;
   codigo_carrera?: string;
 };
 
 export type DocenteUpdateDTO = {
   id_institucional_docente: string;
+  id_departamento: number; // ✅ OBLIGATORIO
   cedula: string;
   nombres_docente: string;
   apellidos_docente: string;
 
-  correo_docente?: string;
-  telefono_docente?: string;
+  correo_docente: string; // ✅ obligatorio
+  telefono_docente?: string | null;
 
   nombre_usuario: string;
 };
 
 export const docentesService = {
-  /**
-   * ✅ LIST
-   * Compatibilidad:
-   * - list(false) / list(true)
-   * - list({ includeInactive, q, page, limit, id_carrera })
-   */
   list: async (arg: boolean | DocenteListParams = false): Promise<Docente[]> => {
     const paramsObj: DocenteListParams =
       typeof arg === "boolean" ? { includeInactive: arg } : (arg ?? {});
 
     const limit = Math.min(paramsObj.limit ?? 100, 100);
 
-    // ✅ normaliza id_carrera: si no viene o viene vacío => undefined
     const idCarrera =
-      paramsObj.id_carrera !== null &&
-      paramsObj.id_carrera !== undefined &&
-      Number(paramsObj.id_carrera) > 0
+      paramsObj.id_carrera != null && Number(paramsObj.id_carrera) > 0
         ? Number(paramsObj.id_carrera)
+        : undefined;
+
+    const idDepartamento =
+      paramsObj.id_departamento != null && Number(paramsObj.id_departamento) > 0
+        ? Number(paramsObj.id_departamento)
         : undefined;
 
     const res = await axiosClient.get<Docente[]>("/docentes", {
@@ -66,9 +66,8 @@ export const docentesService = {
         q: paramsObj.q?.trim() || undefined,
         page: paramsObj.page ?? 1,
         limit,
-
-        // ✅ NUEVO: solo se envía si existe
         id_carrera: idCarrera,
+        id_departamento: idDepartamento, // ✅ NUEVO
       },
     });
 
@@ -96,7 +95,6 @@ export const docentesService = {
     return res.data;
   },
 
-  // ✅ NUEVO: Asignar / quitar SUPER_ADMIN
   setSuperAdmin: async (id: number, enabled: boolean) => {
     const res = await axiosClient.patch(`/docentes/${id}/super-admin`, { enabled });
     return res.data;

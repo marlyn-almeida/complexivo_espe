@@ -1,7 +1,9 @@
-// src/controllers/docente.controller.js
 const s = require("../services/docente.service");
 
 module.exports = {
+  // =========================
+  // LIST
+  // =========================
   list: async (req, res, next) => {
     try {
       res.json(await s.list(req.query, req.user));
@@ -10,6 +12,9 @@ module.exports = {
     }
   },
 
+  // =========================
+  // GET BY ID
+  // =========================
   get: async (req, res, next) => {
     try {
       res.json(await s.get(req.params.id, req.user));
@@ -18,7 +23,9 @@ module.exports = {
     }
   },
 
-  // ✅ GET /api/docentes/me
+  // =========================
+  // GET /me
+  // =========================
   me: async (req, res, next) => {
     try {
       res.json(await s.get(Number(req.user.id), req.user));
@@ -27,6 +34,9 @@ module.exports = {
     }
   },
 
+  // =========================
+  // CREATE (manual)
+  // =========================
   create: async (req, res, next) => {
     try {
       res.status(201).json(await s.create(req.body, req.user));
@@ -35,6 +45,9 @@ module.exports = {
     }
   },
 
+  // =========================
+  // UPDATE (SIN PASSWORD)
+  // =========================
   update: async (req, res, next) => {
     try {
       res.json(await s.update(req.params.id, req.body, req.user));
@@ -43,6 +56,9 @@ module.exports = {
     }
   },
 
+  // =========================
+  // CHANGE ESTADO
+  // =========================
   changeEstado: async (req, res, next) => {
     try {
       res.json(await s.changeEstado(req.params.id, req.body.estado, req.user));
@@ -51,10 +67,40 @@ module.exports = {
     }
   },
 
-  // ✅ PATCH /api/docentes/:id/super-admin
+  // =========================
+  // SUPER ADMIN
+  // =========================
   setSuperAdmin: async (req, res, next) => {
     try {
       res.json(await s.setSuperAdmin(req.params.id, req.body, req.user));
+    } catch (e) {
+      next(e);
+    }
+  },
+
+  // =========================
+  // IMPORT MASIVO
+  // =========================
+  importBulk: async (req, res, next) => {
+    try {
+      /**
+       * Body esperado:
+       * {
+       *   id_departamento: number,
+       *   rows: DocenteImportRow[]
+       * }
+       */
+      const { id_departamento, rows } = req.body;
+
+      const result = await s.importBulk(
+        {
+          id_departamento,
+          rows,
+        },
+        req.user
+      );
+
+      res.status(200).json(result);
     } catch (e) {
       next(e);
     }

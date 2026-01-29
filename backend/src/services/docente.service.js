@@ -4,7 +4,6 @@ const repo = require("../repositories/docente.repo");
 function isAdmin(user) {
   return user?.rol === "ADMIN";
 }
-
 function isSuperAdmin(user) {
   return user?.rol === "SUPER_ADMIN";
 }
@@ -66,6 +65,33 @@ async function resolveCarreraIdForCreate(payload, user) {
   return null;
 }
 
+// ✅ CORREO flexible: .ec o .com
+function ensureCorreoFlexible(correo) {
+  const mail = String(correo || "").trim().toLowerCase();
+
+  if (!mail) {
+    const err = new Error("El correo es obligatorio");
+    err.status = 422;
+    throw err;
+  }
+
+  // formato básico
+  if (!/^\S+@\S+\.\S+$/.test(mail)) {
+    const err = new Error("Correo no válido");
+    err.status = 422;
+    throw err;
+  }
+
+  // solo .ec o .com
+  if (!/\.(ec|com)$/i.test(mail)) {
+    const err = new Error("El correo debe terminar en .ec o .com");
+    err.status = 422;
+    throw err;
+  }
+
+  return mail;
+}
+
 async function list(query = {}, user) {
   const includeInactive = Boolean(query.includeInactive);
   const q = query.q || "";
@@ -93,7 +119,6 @@ async function get(id, user) {
     throw err;
   }
 
-  // ✅ opcional: restringir ADMIN a su carrera (si quieres mantenerlo)
   if (isAdmin(user)) {
     const carreraId = Number(user?.scope?.id_carrera);
     if (!carreraId) {
@@ -111,21 +136,6 @@ async function get(id, user) {
   }
 
   return doc;
-}
-
-function ensureCorreoCom(correo) {
-  const mail = String(correo || "").trim().toLowerCase();
-  if (!mail) {
-    const err = new Error("correo_docente es obligatorio");
-    err.status = 422;
-    throw err;
-  }
-  if (!mail.endsWith(".com")) {
-    const err = new Error("El correo del docente debe terminar en .com");
-    err.status = 422;
-    throw err;
-  }
-  return mail;
 }
 
 async function create(payload, user) {
@@ -151,8 +161,8 @@ async function create(payload, user) {
     throw err;
   }
 
-  // correo obligatorio + .com
-  const correo = ensureCorreoCom(payload.correo_docente);
+  // correo obligatorio + .ec/.com
+  const correo = ensureCorreoFlexible(payload.correo_docente);
 
   // departamento obligatorio
   const depId = Number(payload.id_departamento);
@@ -173,6 +183,7 @@ async function create(payload, user) {
   // ✅ carrera opcional
   const carreraIdToAssign = await resolveCarreraIdForCreate(payload, user);
 
+  // ✅ IMPORTANTE: aquí se manda passwordPlano (PLANO)
   const created = await repo.create({
     id_institucional_docente: payload.id_institucional_docente,
     id_departamento: depId,
@@ -180,18 +191,20 @@ async function create(payload, user) {
     nombres_docente: payload.nombres_docente,
     apellidos_docente: payload.apellidos_docente,
     correo_docente: correo,
-    telefono_docente: payload.telefono_docente ?? null, // ✅ opcional
+    telefono_docente: payload.telefono_docente ?? null,
     nombre_usuario: payload.nombre_usuario,
-    passwordPlano: cedulaPlano, // ✅ PLANO
+
+    passwordPlano: cedulaPlano, // ✅ SE GUARDA EN PLANO (primera vez)
+    debe_cambiar_password: 1, // ✅ fuerza cambio (si tu repo lo usa internamente)
   });
 
-  // ✅ rol DOCENTE automático
+  // rol DOCENTE automático
   await repo.assignRolToDocente({
     id_rol: 3,
     id_docente: Number(created.id_docente),
   });
 
-  // ✅ carrera_docente solo si se decide asignar
+  // carrera_docente si se decide asignar
   if (carreraIdToAssign) {
     await repo.assignDocenteToCarrera({
       id_carrera: Number(carreraIdToAssign),
@@ -227,8 +240,7 @@ async function update(id, payload, user) {
     throw err;
   }
 
-  // correo obligatorio + .com
-  const correo = ensureCorreoCom(payload.correo_docente);
+  const correo = ensureCorreoFlexible(payload.correo_docente);
 
   const depId = Number(payload.id_departamento);
   if (!Number.isFinite(depId) || depId < 1) {
@@ -237,7 +249,6 @@ async function update(id, payload, user) {
     throw err;
   }
 
-  // opcional: validar unicidad de correo si cambió
   const byCorreo = await repo.findByCorreo(correo);
   if (byCorreo && Number(byCorreo.id_docente) !== Number(id)) {
     const err = new Error("Ya existe un docente con ese correo");
@@ -245,6 +256,7 @@ async function update(id, payload, user) {
     throw err;
   }
 
+  // ✅ NO se actualiza password aquí
   return repo.update(id, {
     id_institucional_docente: payload.id_institucional_docente,
     id_departamento: depId,
@@ -306,6 +318,171 @@ async function setSuperAdmin(id, payload, user) {
   };
 }
 
+// =========================
+// IMPORT MASIVO DOCENTES
+// =========================
+async function importBulk({ id_departamento, rows }, user) {
+  const depId = Number(id_departamento);
+
+  if (!Number.isFinite(depId) || depId < 1) {
+    const err = new Error("Departamento inválido");
+    err.status = 422;
+    throw err;
+  }
+
+  if (!Array.isArray(rows) || rows.length === 0) {
+    const err = new Error("Debes enviar filas para importar.");
+    err.status = 422;
+    throw err;
+  }
+
+  const resultado = {
+    ok: true,
+    resumen: {
+      total: rows.length,
+      importados: 0,
+      omitidos: 0,
+    },
+    detalles: {
+      importados: [], // [{ fila, id_institucional_docente, cedula, nombre_usuario }]
+      omitidos: [], // [{ fila, motivo, id_institucional_docente, cedula, nombre_usuario }]
+    },
+  };
+
+  function nombrePersona(r) {
+    const ap = String(r?.apellidos_docente || "").trim();
+    const no = String(r?.nombres_docente || "").trim();
+    const id = String(r?.id_institucional_docente || "").trim();
+    return `${ap} ${no}`.trim() || id || "(sin nombre)";
+  }
+
+  for (let i = 0; i < rows.length; i++) {
+    const fila = i + 1;
+    const r = rows[i] || {};
+
+    try {
+      const id_institucional_docente = String(r.id_institucional_docente || "").trim();
+      const cedula = String(r.cedula || "").trim();
+      const apellidos_docente = String(r.apellidos_docente || "").trim();
+      const nombres_docente = String(r.nombres_docente || "").trim();
+      const correo_docente_raw = String(r.correo_docente || "").trim();
+      const telefono_docente = String(r.telefono_docente || "").trim();
+      const nombre_usuario = String(r.nombre_usuario || "").trim();
+
+      // ✅ mensaje humano (no “campos de base”)
+      if (
+        !id_institucional_docente ||
+        !cedula ||
+        !apellidos_docente ||
+        !nombres_docente ||
+        !correo_docente_raw ||
+        !nombre_usuario
+      ) {
+        resultado.resumen.omitidos++;
+        resultado.detalles.omitidos.push({
+          fila,
+          motivo: `Campos incompletos en ${nombrePersona(r)}`,
+          id_institucional_docente,
+          cedula,
+          nombre_usuario,
+        });
+        continue;
+      }
+
+      // correo obligatorio + .ec/.com
+      const correo = ensureCorreoFlexible(correo_docente_raw);
+
+      // ✅ no re-importar duplicados (NO rompes la importación completa)
+      if (await repo.findByInstitucional(id_institucional_docente)) {
+        resultado.resumen.omitidos++;
+        resultado.detalles.omitidos.push({
+          fila,
+          motivo: `Ya existe (ID institucional) → ${nombrePersona(r)}`,
+          id_institucional_docente,
+          cedula,
+          nombre_usuario,
+        });
+        continue;
+      }
+
+      if (await repo.findByCedula(cedula)) {
+        resultado.resumen.omitidos++;
+        resultado.detalles.omitidos.push({
+          fila,
+          motivo: `Ya existe (cédula) → ${nombrePersona(r)}`,
+          id_institucional_docente,
+          cedula,
+          nombre_usuario,
+        });
+        continue;
+      }
+
+      if (await repo.findByUsername(nombre_usuario)) {
+        resultado.resumen.omitidos++;
+        resultado.detalles.omitidos.push({
+          fila,
+          motivo: `Ya existe (usuario) → ${nombrePersona(r)}`,
+          id_institucional_docente,
+          cedula,
+          nombre_usuario,
+        });
+        continue;
+      }
+
+      // ✅ password inicial = cédula (PLANO)
+      const cedulaPlano = cedula;
+      if (cedulaPlano.length < 6) {
+        resultado.resumen.omitidos++;
+        resultado.detalles.omitidos.push({
+          fila,
+          motivo: `Cédula inválida para clave inicial → ${nombrePersona(r)}`,
+          id_institucional_docente,
+          cedula,
+          nombre_usuario,
+        });
+        continue;
+      }
+
+      const created = await repo.create({
+        id_institucional_docente,
+        id_departamento: depId,
+        cedula,
+        nombres_docente,
+        apellidos_docente,
+        correo_docente: correo,
+        telefono_docente: telefono_docente || null,
+        nombre_usuario,
+        passwordPlano: cedulaPlano, // ✅ se guarda plano primera vez
+      });
+
+      // rol DOCENTE automático
+      await repo.assignRolToDocente({
+        id_rol: 3,
+        id_docente: Number(created.id_docente),
+      });
+
+      resultado.resumen.importados++;
+      resultado.detalles.importados.push({
+        fila,
+        id_institucional_docente,
+        cedula,
+        nombre_usuario,
+      });
+    } catch (e) {
+      resultado.resumen.omitidos++;
+      resultado.detalles.omitidos.push({
+        fila,
+        motivo: `${e?.message ? e.message : "Error desconocido"} → ${nombrePersona(r)}`,
+        id_institucional_docente: String(r.id_institucional_docente || "").trim(),
+        cedula: String(r.cedula || "").trim(),
+        nombre_usuario: String(r.nombre_usuario || "").trim(),
+      });
+    }
+  }
+
+  return resultado;
+}
+
 module.exports = {
   list,
   get,
@@ -313,4 +490,5 @@ module.exports = {
   update,
   changeEstado,
   setSuperAdmin,
+  importBulk, // ✅ exportado
 };
