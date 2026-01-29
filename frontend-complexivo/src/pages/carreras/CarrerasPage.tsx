@@ -20,6 +20,11 @@ import {
   Laptop,
   MapPin,
   Hash,
+  X,
+  Save,
+  AlignLeft,
+  BadgeCheck,
+  BadgeX,
 } from "lucide-react";
 
 import escudoESPE from "../../assets/escudo.png";
@@ -27,7 +32,6 @@ import "./CarrerasPage.css";
 
 const MODALIDADES = ["EN_LÍNEA", "PRESENCIAL"];
 const SEDES = ["Sangolquí (Matriz)", "Latacunga", "Santo Domingo", "IASA Sangolquí"];
-
 const PAGE_SIZE = 10;
 
 type ToastType = "success" | "error" | "info";
@@ -42,38 +46,27 @@ type CarreraFormState = {
 };
 
 export default function CarrerasPage() {
-  // ===========================
-  // ESTADOS PRINCIPALES
-  // ===========================
   const [carreras, setCarreras] = useState<Carrera[]>([]);
   const [departamentos, setDepartamentos] = useState<Departamento[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // ===========================
-  // FILTROS
-  // ===========================
+  // filtros
   const [search, setSearch] = useState("");
   const [filtroDepartamento, setFiltroDepartamento] = useState("");
   const [filtroModalidad, setFiltroModalidad] = useState("");
   const [filtroSede, setFiltroSede] = useState("");
   const [mostrarInactivas, setMostrarInactivas] = useState(false);
 
-  // ===========================
-  // PAGINACIÓN
-  // ===========================
+  // paginación
   const [page, setPage] = useState(1);
 
-  // ===========================
-  // MODALES
-  // ===========================
+  // modales
   const [showFormModal, setShowFormModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [editingCarrera, setEditingCarrera] = useState<Carrera | null>(null);
   const [viewCarrera, setViewCarrera] = useState<Carrera | null>(null);
 
-  // ===========================
-  // FORM
-  // ===========================
+  // form
   const [form, setForm] = useState<CarreraFormState>({
     nombre_carrera: "",
     codigo_carrera: "",
@@ -86,9 +79,6 @@ export default function CarrerasPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [toast, setToast] = useState<{ msg: string; type: ToastType } | null>(null);
 
-  // ===========================
-  // CARGA INICIAL
-  // ===========================
   useEffect(() => {
     loadAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -110,9 +100,6 @@ export default function CarrerasPage() {
     }
   }
 
-  // ===========================
-  // HELPERS
-  // ===========================
   function showToast(msg: string, type: ToastType = "info") {
     setToast({ msg, type });
     window.setTimeout(() => setToast(null), 3200);
@@ -159,13 +146,12 @@ export default function CarrerasPage() {
     setShowViewModal(true);
   }
 
-  // Normaliza código
   function normalizeCodigo(input: string) {
     let s = input.trim();
     s = s.replace(/\s+/g, "_");
     s = s.replace(/[^a-zA-Z0-9_]/g, "");
     s = s.toUpperCase();
-    return s;
+    return s.slice(0, 30);
   }
 
   function extractBackendError(err: any): string {
@@ -189,9 +175,6 @@ export default function CarrerasPage() {
     return s.replaceAll("_", " ");
   }
 
-  // ===========================
-  // FILTRADO + ORDEN + PAGINACIÓN
-  // ===========================
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
 
@@ -231,9 +214,6 @@ export default function CarrerasPage() {
   const activas = carreras.filter((c) => c.estado === 1).length;
   const inactivas = carreras.filter((c) => c.estado === 0).length;
 
-  // ===========================
-  // VALIDACIONES FRONT (UX)
-  // ===========================
   function validateForm(): Record<string, string> {
     const e: Record<string, string> = {};
 
@@ -297,11 +277,10 @@ export default function CarrerasPage() {
   // RENDER
   // ===========================
   return (
-    <div className="wrap">
+    // ✅ scoping para que el CSS de los modales NO rompa otras cosas
+    <div className="wrap carrerasPage">
       <div className="containerFull">
-        {/* ===============================
-           HERO
-           =============================== */}
+        {/* HERO */}
         <div className="hero">
           <div className="heroLeft">
             <img className="heroLogo" src={escudoESPE} alt="ESPE" />
@@ -316,11 +295,8 @@ export default function CarrerasPage() {
           </button>
         </div>
 
-        {/* ===============================
-           BOX
-           =============================== */}
+        {/* BOX */}
         <div className="box">
-          {/* header de caja: título + buscar */}
           <div className="boxHead">
             <div className="sectionTitle">
               <span className="sectionTitleIcon">
@@ -340,22 +316,22 @@ export default function CarrerasPage() {
             </div>
           </div>
 
-          {/* resumen + acciones */}
+          {/* resumen */}
           <div className="summaryRow">
             <div className="summaryBoxes">
               <div className="summaryBox">
-                <span className="label">Total</span>
-                <span className="value">{totalCarreras}</span>
+                <span className="summaryLabel">Total</span>
+                <span className="summaryValue">{totalCarreras}</span>
               </div>
 
               <div className="summaryBox active">
-                <span className="label">Activas</span>
-                <span className="value">{activas}</span>
+                <span className="summaryLabel">Activas</span>
+                <span className="summaryValue">{activas}</span>
               </div>
 
               <div className="summaryBox inactive">
-                <span className="label">Inactivas</span>
-                <span className="value">{inactivas}</span>
+                <span className="summaryLabel">Inactivas</span>
+                <span className="summaryValue">{inactivas}</span>
               </div>
             </div>
 
@@ -478,9 +454,7 @@ export default function CarrerasPage() {
 
                       <td>
                         <div className="nameMain">{c.nombre_carrera || "-"}</div>
-                        {c.descripcion_carrera?.trim() ? (
-                          <div className="nameSub">{c.descripcion_carrera}</div>
-                        ) : null}
+                        {c.descripcion_carrera?.trim() ? <div className="nameSub">{c.descripcion_carrera}</div> : null}
                       </td>
 
                       <td>
@@ -491,9 +465,7 @@ export default function CarrerasPage() {
                       </td>
 
                       <td>
-                        <span className="chipMod">
-                          {modalidadLabel(c.modalidad ?? null)}
-                        </span>
+                        <span className="chipMod">{modalidadLabel(c.modalidad ?? null)}</span>
                       </td>
 
                       <td>
@@ -504,11 +476,7 @@ export default function CarrerasPage() {
                       </td>
 
                       <td>
-                        {c.estado ? (
-                          <span className="badgeActive">Activo</span>
-                        ) : (
-                          <span className="badgeInactive">Inactivo</span>
-                        )}
+                        {c.estado ? <span className="badgeActive">Activo</span> : <span className="badgeInactive">Inactivo</span>}
                       </td>
 
                       <td className="tdActions">
@@ -573,138 +541,144 @@ export default function CarrerasPage() {
         </div>
 
         {/* ===============================
-           MODAL CREAR / EDITAR
+           MODAL FORM (PRO) — ARREGLADO
+           ✅ OJO: ahora usa modalCard + modalPro (contenedor real)
            =============================== */}
         {showFormModal && (
-          <div className="modalOverlay">
-            <div className="modalCard">
-              <div className="modalHead">
-                <div className="modalTitle">
-                  <span className="modalTitleIcon">
+          <div className="modalOverlay" role="dialog" aria-modal="true">
+            <div className="modalCard modalPro">
+              <div className="modalHeader">
+                <div className="modalHeaderLeft">
+                  <span className="modalHeaderIcon">
                     <GraduationCap className="iconSm" />
                   </span>
-                  {editingCarrera ? "Editar carrera" : "Nueva carrera"}
+                  <div className="modalHeaderTexts">
+                    <div className="modalHeaderTitle">{editingCarrera ? "Editar carrera" : "Nueva carrera"}</div>
+                    <div className="modalHeaderSub">Completa los campos obligatorios para guardar.</div>
+                  </div>
                 </div>
 
                 <button className="modalClose" onClick={() => setShowFormModal(false)} aria-label="Cerrar">
-                  ✕
+                  <X className="iconAction" />
                 </button>
               </div>
 
               <div className="modalDivider" />
 
               <div className="modalBody">
-                <div className="formRow">
-                  <label className="label">
-                    Nombre de la carrera <span className="req">*</span>
-                  </label>
-                  <input
-                    className="input"
-                    value={form.nombre_carrera}
-                    placeholder="Ej: Tecnologías de la Información"
-                    onChange={(e) => setForm({ ...form, nombre_carrera: e.target.value })}
-                    style={errors.nombre_carrera ? { borderColor: "rgba(180,20,20,0.35)" } : undefined}
-                  />
-                  {errors.nombre_carrera && <div className="fieldError">{errors.nombre_carrera}</div>}
+                <div className="formGrid">
+                  <div className="field">
+                    <label className="label">
+                      Nombre de la carrera <span className="req">*</span>
+                    </label>
+                    <input
+                      className="input"
+                      value={form.nombre_carrera}
+                      placeholder="Ej: Tecnologías de la Información"
+                      onChange={(e) => setForm({ ...form, nombre_carrera: e.target.value })}
+                      style={errors.nombre_carrera ? { borderColor: "rgba(180,20,20,0.35)" } : undefined}
+                    />
+                    {errors.nombre_carrera && <div className="fieldError">{errors.nombre_carrera}</div>}
+                  </div>
+
+                  <div className="field">
+                    <label className="label">
+                      Código <span className="req">*</span>
+                    </label>
+                    <input
+                      className="input"
+                      value={form.codigo_carrera}
+                      placeholder="Ej: TI_EN_LINEA"
+                      onChange={(e) => setForm({ ...form, codigo_carrera: e.target.value })}
+                      onBlur={() => setForm((p) => ({ ...p, codigo_carrera: normalizeCodigo(p.codigo_carrera) }))}
+                      style={errors.codigo_carrera ? { borderColor: "rgba(180,20,20,0.35)" } : undefined}
+                    />
+
+                    {/* ✅ MÁS GRANDE y sin tanta negrita (lo controla CSS .helperTextBig) */}
+                    <div className="helperText helperTextBig">
+                      
+                    </div>
+
+                    {errors.codigo_carrera && <div className="fieldError">{errors.codigo_carrera}</div>}
+                  </div>
+
+                  <div className="field">
+                    <label className="label">
+                      Departamento <span className="req">*</span>
+                    </label>
+                    <select
+                      className="input"
+                      value={form.id_departamento}
+                      onChange={(e) => setForm({ ...form, id_departamento: e.target.value })}
+                      style={errors.id_departamento ? { borderColor: "rgba(180,20,20,0.35)" } : undefined}
+                    >
+                      <option value="">Seleccionar</option>
+                      {departamentos.map((d) => (
+                        <option key={d.id_departamento} value={d.id_departamento}>
+                          {d.nombre_departamento}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.id_departamento && <div className="fieldError">{errors.id_departamento}</div>}
+                  </div>
+
+                  <div className="field">
+                    <label className="label">
+                      Modalidad <span className="req">*</span>
+                    </label>
+                    <select
+                      className="input"
+                      value={form.modalidad}
+                      onChange={(e) => setForm({ ...form, modalidad: e.target.value })}
+                      style={errors.modalidad ? { borderColor: "rgba(180,20,20,0.35)" } : undefined}
+                    >
+                      <option value="">Seleccionar</option>
+                      {MODALIDADES.map((m) => (
+                        <option key={m} value={m}>
+                          {modalidadLabel(m)}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.modalidad && <div className="fieldError">{errors.modalidad}</div>}
+                  </div>
+
+                  <div className="field">
+                    <label className="label">
+                      Sede <span className="req">*</span>
+                    </label>
+                    <select
+                      className="input"
+                      value={form.sede}
+                      onChange={(e) => setForm({ ...form, sede: e.target.value })}
+                      style={errors.sede ? { borderColor: "rgba(180,20,20,0.35)" } : undefined}
+                    >
+                      <option value="">Seleccionar</option>
+                      {SEDES.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.sede && <div className="fieldError">{errors.sede}</div>}
+                  </div>
+
+                  <div className="field fieldFull">
+                    <label className="label">Descripción</label>
+                    <textarea
+                      className="textarea"
+                      value={form.descripcion_carrera}
+                      placeholder="Breve descripción (opcional)"
+                      onChange={(e) => setForm({ ...form, descripcion_carrera: e.target.value })}
+                    />
+                  </div>
                 </div>
 
-                <div className="formRow">
-                  <label className="label">
-                    Código <span className="req">*</span>
-                  </label>
-                  <input
-                    className="input"
-                    value={form.codigo_carrera}
-                    placeholder="Ej: TI_EN_LINEA"
-                    onChange={(e) => setForm({ ...form, codigo_carrera: e.target.value })}
-                    onBlur={() =>
-                      setForm((p) => ({
-                        ...p,
-                        codigo_carrera: normalizeCodigo(p.codigo_carrera),
-                      }))
-                    }
-                    style={errors.codigo_carrera ? { borderColor: "rgba(180,20,20,0.35)" } : undefined}
-                  />
-                  <div className="helperText">Tip: se normaliza automáticamente (mayúsculas y “_”).</div>
-                  {errors.codigo_carrera && <div className="fieldError">{errors.codigo_carrera}</div>}
-                </div>
-
-                <div className="formRow">
-                  <label className="label">
-                    Departamento <span className="req">*</span>
-                  </label>
-                  <select
-                    className="input"
-                    value={form.id_departamento}
-                    onChange={(e) => setForm({ ...form, id_departamento: e.target.value })}
-                    style={errors.id_departamento ? { borderColor: "rgba(180,20,20,0.35)" } : undefined}
-                  >
-                    <option value="">Seleccione</option>
-                    {departamentos.map((d) => (
-                      <option key={d.id_departamento} value={d.id_departamento}>
-                        {d.nombre_departamento}
-                      </option>
-                    ))}
-                  </select>
-                  {errors.id_departamento && <div className="fieldError">{errors.id_departamento}</div>}
-                </div>
-
-                <div className="formRow">
-                  <label className="label">
-                    Modalidad <span className="req">*</span>
-                  </label>
-                  <select
-                    className="input"
-                    value={form.modalidad}
-                    onChange={(e) => setForm({ ...form, modalidad: e.target.value })}
-                    style={errors.modalidad ? { borderColor: "rgba(180,20,20,0.35)" } : undefined}
-                  >
-                    <option value="">Seleccione</option>
-                    {MODALIDADES.map((m) => (
-                      <option key={m} value={m}>
-                        {modalidadLabel(m)}
-                      </option>
-                    ))}
-                  </select>
-                  {errors.modalidad && <div className="fieldError">{errors.modalidad}</div>}
-                </div>
-
-                <div className="formRow">
-                  <label className="label">
-                    Sede <span className="req">*</span>
-                  </label>
-                  <select
-                    className="input"
-                    value={form.sede}
-                    onChange={(e) => setForm({ ...form, sede: e.target.value })}
-                    style={errors.sede ? { borderColor: "rgba(180,20,20,0.35)" } : undefined}
-                  >
-                    <option value="">Seleccione</option>
-                    {SEDES.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </select>
-                  {errors.sede && <div className="fieldError">{errors.sede}</div>}
-                </div>
-
-                <div className="formRow">
-                  <label className="label">Descripción</label>
-                  <textarea
-                    className="textarea"
-                    value={form.descripcion_carrera}
-                    placeholder="Breve descripción (opcional)"
-                    onChange={(e) => setForm({ ...form, descripcion_carrera: e.target.value })}
-                  />
-                </div>
-
-                <div className="modalActions">
+                <div className="modalFooter">
                   <button className="btnGhost" onClick={() => setShowFormModal(false)}>
                     Cancelar
                   </button>
                   <button className="btnPrimary" onClick={onSave}>
-                    Guardar
+                    <Save className="iconSm" /> Guardar
                   </button>
                 </div>
               </div>
@@ -713,61 +687,85 @@ export default function CarrerasPage() {
         )}
 
         {/* ===============================
-           MODAL VER
+           MODAL VIEW (PRO) — ARREGLADO
+           ✅ Ahora títulos (vLabel) en negrita y valores (vValue) normal (CSS)
            =============================== */}
         {showViewModal && viewCarrera && (
-          <div className="modalOverlay">
-            <div className="modalCard">
-              <div className="modalHead">
-                <div className="modalTitle">
-                  <span className="modalTitleIcon">
+          <div className="modalOverlay" role="dialog" aria-modal="true">
+            <div className="modalCard modalPro">
+              <div className="modalHeader">
+                <div className="modalHeaderLeft">
+                  <span className="modalHeaderIcon">
                     <Eye className="iconSm" />
                   </span>
-                  Detalle de carrera
+                  <div className="modalHeaderTexts">
+                    <div className="modalHeaderTitle">Detalle de carrera</div>
+                    <div className="modalHeaderSub">Información registrada en el sistema.</div>
+                  </div>
                 </div>
 
                 <button className="modalClose" onClick={() => setShowViewModal(false)} aria-label="Cerrar">
-                  ✕
+                  <X className="iconAction" />
                 </button>
               </div>
 
               <div className="modalDivider" />
 
               <div className="modalBody">
-                <div className="viewGrid">
-                  <div className="viewItem">
-                    <div className="viewKey">Carrera</div>
-                    <div className="viewVal">{viewCarrera.nombre_carrera || "-"}</div>
+                <div className="viewCards">
+                  <div className="vCard">
+                    <div className="vLabel">
+                      <GraduationCap className="vIcon" /> Carrera
+                    </div>
+                    <div className="vValue">{viewCarrera.nombre_carrera || "-"}</div>
                   </div>
 
-                  <div className="viewItem">
-                    <div className="viewKey">Código</div>
-                    <div className="viewVal">{viewCarrera.codigo_carrera || "-"}</div>
+                  <div className="vCard">
+                    <div className="vLabel">
+                      <Hash className="vIcon" /> Código
+                    </div>
+                    <div className="vValue">
+                      <span className="chipCode">{viewCarrera.codigo_carrera || "-"}</span>
+                    </div>
                   </div>
 
-                  <div className="viewItem">
-                    <div className="viewKey">Departamento</div>
-                    <div className="viewVal">{getDepartamentoNombre(viewCarrera.id_departamento)}</div>
+                  <div className="vCard">
+                    <div className="vLabel">
+                      <Building2 className="vIcon" /> Departamento
+                    </div>
+                    <div className="vValue">{getDepartamentoNombre(viewCarrera.id_departamento)}</div>
                   </div>
 
-                  <div className="viewItem">
-                    <div className="viewKey">Modalidad</div>
-                    <div className="viewVal">{modalidadLabel(viewCarrera.modalidad ?? null)}</div>
+                  <div className="vCard">
+                    <div className="vLabel">
+                      <Laptop className="vIcon" /> Modalidad
+                    </div>
+                    <div className="vValue">
+                      <span className="chipMod">{modalidadLabel(viewCarrera.modalidad ?? null)}</span>
+                    </div>
                   </div>
 
-                  <div className="viewItem">
-                    <div className="viewKey">Sede</div>
-                    <div className="viewVal">{viewCarrera.sede || "-"}</div>
+                  <div className="vCard">
+                    <div className="vLabel">
+                      <MapPin className="vIcon" /> Sede
+                    </div>
+                    <div className="vValue">{viewCarrera.sede || "-"}</div>
                   </div>
 
-                  <div className="viewItem">
-                    <div className="viewKey">Estado</div>
-                    <div className="viewVal">{viewCarrera.estado ? "Activo" : "Inactivo"}</div>
+                  <div className="vCard">
+                    <div className="vLabel">
+                      {viewCarrera.estado ? <BadgeCheck className="vIcon" /> : <BadgeX className="vIcon" />} Estado
+                    </div>
+                    <div className="vValue">
+                      {viewCarrera.estado ? <span className="badgeActive">Activo</span> : <span className="badgeInactive">Inactivo</span>}
+                    </div>
                   </div>
 
-                  <div className="viewItem viewItemFull">
-                    <div className="viewKey">Descripción</div>
-                    <div className="viewVal">
+                  <div className="vCard vCardFull">
+                    <div className="vLabel">
+                      <AlignLeft className="vIcon" /> Descripción
+                    </div>
+                    <div className="vValue">
                       {viewCarrera.descripcion_carrera?.trim()
                         ? viewCarrera.descripcion_carrera
                         : "No se registró descripción."}
@@ -775,7 +773,7 @@ export default function CarrerasPage() {
                   </div>
                 </div>
 
-                <div className="modalActions">
+                <div className="modalFooter">
                   <button className="btnGhost" onClick={() => setShowViewModal(false)}>
                     Cerrar
                   </button>
@@ -785,7 +783,6 @@ export default function CarrerasPage() {
           </div>
         )}
 
-        {/* TOAST */}
         {toast && <div className={`toast toast-${toast.type}`}>{toast.msg}</div>}
       </div>
     </div>

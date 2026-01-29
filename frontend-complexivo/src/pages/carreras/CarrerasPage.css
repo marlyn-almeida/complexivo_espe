@@ -146,6 +146,7 @@
   border: 1px solid rgba(0,0,0,0.12);
   padding: 0 12px 0 40px;
   outline: none;
+  font-weight: 400;
 }
 
 .search:focus {
@@ -182,13 +183,14 @@
   gap: 2px;
 }
 
-.summaryBox .label {
+/* OJO: en TSX usas summaryLabel/summaryValue */
+.summaryLabel {
   font-size: 12px;
   color: rgba(0,0,0,0.55);
-  font-weight: 800;
+  font-weight: 700;
 }
 
-.summaryBox .value {
+.summaryValue {
   font-size: 16px;
   font-weight: 900;
   color: rgba(0,0,0,0.82);
@@ -217,7 +219,7 @@
   align-items: center;
   gap: 10px;
   user-select: none;
-  font-weight: 800;
+  font-weight: 700;
   color: rgba(0,0,0,0.72);
 }
 
@@ -257,7 +259,7 @@
 .toggleText {
   font-size: 13px;
   color: rgba(0,0,0,0.55);
-  font-weight: 800;
+  font-weight: 700;
 }
 
 /* ===============================
@@ -277,6 +279,7 @@
   outline: none;
   background: white;
   min-width: 180px;
+  font-weight: 400;
 }
 
 /* ===============================
@@ -288,7 +291,7 @@
   border: 1px solid rgba(0,0,0,0.08);
 }
 
-/* tabla grande */
+/* tabla */
 .table {
   width: 100%;
   border-collapse: collapse;
@@ -299,7 +302,7 @@
 .table thead th {
   text-align: left;
   font-size: 14px;
-  font-weight: 900;
+  font-weight: 800;
   color: rgba(0,0,0,0.72);
   background: #f6f7f9;
   border-bottom: 1px solid rgba(0,0,0,0.08);
@@ -318,15 +321,7 @@
   vertical-align: middle;
   font-size: 14px;
   color: rgba(0,0,0,0.72);
-}
-
-/* ✅ SOLO BLANCO */
-.table tbody tr {
-  background: #fff;
-}
-
-.table tbody tr:hover {
-  background: rgba(0,0,0,0.03);
+  font-weight: 400;
 }
 
 /* columns */
@@ -337,11 +332,9 @@
 
 .tdNum { color: rgba(0,0,0,0.58); }
 
-/* ===============================
-   NAME
-   =============================== */
+/* NAME */
 .nameMain {
-  font-weight: 800;
+  font-weight: 600;
   color: rgba(0,0,0,0.82);
 }
 
@@ -349,11 +342,10 @@
   margin-top: 4px;
   font-size: 12.5px;
   color: rgba(0,0,0,0.52);
+  font-weight: 400;
 }
 
-/* ===============================
-   CHIPS
-   =============================== */
+/* CHIPS */
 .chipCode {
   display: inline-flex;
   align-items: center;
@@ -363,7 +355,7 @@
   border: 1px solid rgba(59,130,246,0.25);
   background: rgba(59,130,246,0.10);
   color: rgba(0,0,0,0.78);
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: 0.02em;
   white-space: nowrap;
 }
@@ -377,11 +369,11 @@
   border: 1px solid rgba(10,79,40,0.22);
   background: rgba(10,79,40,0.08);
   color: #0a4f28;
-  font-weight: 900;
+  font-weight: 600;
   white-space: nowrap;
 }
 
-/* cell with icon (dept/sede) */
+/* cell with icon */
 .cellWithIcon {
   display: inline-flex;
   align-items: center;
@@ -394,9 +386,7 @@
   color: rgba(0,0,0,0.45);
 }
 
-/* ===============================
-   BADGES
-   =============================== */
+/* BADGES */
 .badgeActive,
 .badgeInactive {
   display: inline-flex;
@@ -405,7 +395,7 @@
   min-width: 108px;
   padding: 8px 12px;
   border-radius: 999px;
-  font-weight: 900;
+  font-weight: 600;
   border: 1px solid rgba(0,0,0,0.10);
   white-space: nowrap;
 }
@@ -421,9 +411,7 @@
   color: rgba(0,0,0,0.65);
 }
 
-/* ===============================
-   ACTIONS + TOOLTIP
-   =============================== */
+/* ACTIONS + TOOLTIP */
 .tdActions {
   text-align: right;
   padding-right: 14px;
@@ -480,7 +468,7 @@
   transform: translateX(-50%) translateY(6px);
   background: rgba(20,20,20,0.94);
   color: #fff;
-  font-weight: 800;
+  font-weight: 700;
   font-size: 12px;
   padding: 6px 10px;
   border-radius: 10px;
@@ -507,9 +495,7 @@
   transform: translateX(-50%) translateY(0);
 }
 
-/* ===============================
-   EMPTY
-   =============================== */
+/* EMPTY */
 .emptyCell { padding: 34px 16px !important; }
 
 .empty {
@@ -521,9 +507,7 @@
 
 .emptyText { font-size: 14.5px; }
 
-/* ===============================
-   PAGINATION
-   =============================== */
+/* PAGINATION */
 .paginationRow {
   display: flex;
   justify-content: center;
@@ -534,7 +518,7 @@
 }
 
 .paginationText {
-  font-weight: 800;
+  font-weight: 700;
   color: rgba(0,0,0,0.55);
 }
 
@@ -544,7 +528,7 @@
   border-radius: 10px;
   border: 1px solid rgba(0,0,0,0.14);
   background: #fff;
-  font-weight: 900;
+  font-weight: 700;
   cursor: pointer;
 }
 
@@ -560,7 +544,7 @@
   border: 1px solid rgba(10,79,40,0.28);
   background: #0a4f28;
   color: #fff;
-  font-weight: 900;
+  font-weight: 800;
   cursor: pointer;
 }
 
@@ -568,22 +552,30 @@
 
 /* helper + error */
 .helperText {
-  margin-top: 6px;
-  font-size: 12.5px;
-  font-weight: 800;
-  color: rgba(10,79,40,0.92);
+  margin-top: 8px;
+  font-size: 14.5px;
+  font-weight: 500;
+  color: #0a4f28;
+}
+
+.helperTextBig {
+  margin-top: 8px;
+  font-size: 14.5px;
+  font-weight: 500;
+  color: #0a4f28;
 }
 
 .fieldError {
   margin-top: 6px;
   font-size: 12.5px;
-  font-weight: 800;
+  font-weight: 700;
   color: rgba(180, 20, 20, 0.95);
 }
 
 /* ===============================
-   MODAL
+   MODALES (SCOPED)
    =============================== */
+
 .modalOverlay {
   position: fixed;
   inset: 0;
@@ -594,42 +586,63 @@
   padding: 18px;
 }
 
-.modalCard {
-  width: min(820px, 100%);
+/* Contenedor modal (tu TSX usa modalCard modalPro) */
+.carrerasPage .modalCard.modalPro,
+.carrerasPage .modalPro {
+  width: min(880px, 100%);
   background: #fff;
-  border-radius: 12px;
+  border-radius: 14px;
   border: 1px solid rgba(0,0,0,0.12);
   box-shadow: 0 22px 60px rgba(0,0,0,0.22);
   overflow: hidden;
 }
 
-.modalHead {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+/* header */
+.carrerasPage .modalHeader {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 14px;
   padding: 14px 16px;
+  background: linear-gradient(90deg, rgba(10,79,40,0.08), rgba(10,79,40,0.02));
 }
 
-.modalTitle {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  font-weight: 900;
-  font-size: 18px;
-  color: rgba(0,0,0,0.82);
+.carrerasPage .modalHeaderLeft{
+  display:flex;
+  align-items:center;
+  gap: 12px;
+  min-width: 0;
 }
 
-.modalTitleIcon {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
+.carrerasPage .modalHeaderIcon{
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
   background: rgba(10,79,40,0.12);
   color: #0a4f28;
-  display: grid;
-  place-items: center;
+  display:grid;
+  place-items:center;
+  flex: 0 0 auto;
 }
 
-.modalClose {
+.carrerasPage .modalHeaderTitle{
+  font-size: 16px;
+  font-weight: 900;
+  color: rgba(0,0,0,0.82);
+  line-height: 1.1;
+}
+
+.carrerasPage .modalHeaderSub{
+  margin-top: 4px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: rgba(0,0,0,0.60);
+}
+
+.modalDivider { height: 1px; background: rgba(0,0,0,0.10); }
+.modalBody { padding: 14px 16px 16px; }
+
+.carrerasPage .modalClose{
   width: 38px;
   height: 38px;
   border-radius: 10px;
@@ -637,112 +650,153 @@
   background: #fff;
   cursor: pointer;
   color: rgba(0,0,0,0.65);
-  font-size: 22px;
-  line-height: 1;
+  display: grid;
+  place-items: center;
 }
 
-.modalClose:hover { background: rgba(0,0,0,0.03); }
+.carrerasPage .modalClose:hover { background: rgba(0,0,0,0.03); }
 
-.modalDivider { height: 1px; background: rgba(0,0,0,0.10); }
-.modalBody { padding: 14px 16px 16px; }
+/* form grid */
+.carrerasPage .formGrid{
+  display:grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
 
-.label {
+.carrerasPage .field{ display:block; }
+.carrerasPage .fieldFull{ grid-column: 1 / -1; }
+
+/* ✅ LABELS (títulos) en MAYÚSCULAS */
+.carrerasPage .modalPro .label{
   display: block;
-  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 800;
+  font-size: 12.5px;
   color: rgba(0,0,0,0.70);
   margin-bottom: 6px;
 }
 
 .req { color: rgba(180, 20, 20, 0.95); }
 
-.input {
+/* ✅ Inputs normales */
+.carrerasPage .modalPro .input{
   width: 100%;
   height: 40px;
   border-radius: 10px;
   border: 1px solid rgba(0,0,0,0.12);
   padding: 0 12px;
   outline: none;
+  font-weight: 400;
+  font-size: 14.5px;
+  color: rgba(0,0,0,0.82);
+  background: #fff;
+  text-transform: none;
+  letter-spacing: normal;
 }
 
-.input:focus {
+.carrerasPage .modalPro .input:focus{
   border-color: rgba(10,79,40,0.35);
   box-shadow: 0 0 0 4px rgba(10,79,40,0.12);
 }
 
-.textarea {
+.carrerasPage .modalPro .textarea{
   width: 100%;
   border-radius: 10px;
   border: 1px solid rgba(0,0,0,0.12);
   padding: 10px 12px;
   outline: none;
   resize: vertical;
+  font-weight: 400;
+  font-size: 14.5px;
+  color: rgba(0,0,0,0.82);
+  background: #fff;
+  text-transform: none;
+  letter-spacing: normal;
 }
 
-.textarea:focus {
+.carrerasPage .modalPro .textarea:focus{
   border-color: rgba(10,79,40,0.35);
   box-shadow: 0 0 0 4px rgba(10,79,40,0.12);
 }
 
-.modalActions {
-  display: flex;
-  justify-content: flex-end;
+/* footer modal */
+.carrerasPage .modalFooter{
+  display:flex;
+  justify-content:flex-end;
   gap: 10px;
   margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0,0,0,0.08);
 }
 
-/* view grid */
-.viewGrid{
+/* VIEW cards */
+.carrerasPage .viewCards{
   display:grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
-  margin-top: 6px;
 }
 
-.viewItem{
+.carrerasPage .vCard{
   border: 1px solid rgba(0,0,0,0.10);
   border-radius: 14px;
   padding: 12px;
-  background: white;
+  background: #fff;
 }
 
-.viewItemFull{ grid-column: 1 / -1; }
+.carrerasPage .vCardFull{ grid-column: 1 / -1; }
 
-.viewKey{
-  font-size: 12px;
-  font-weight: 900;
+/* ✅ títulos view en MAYÚSCULAS */
+.carrerasPage .modalPro .vLabel{
+  display:flex;
+  align-items:center;
+  gap: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 12.5px;
+  font-weight: 800;
   color: rgba(0,0,0,0.55);
 }
 
-.viewVal{
+.carrerasPage .vIcon{
+  width: 16px;
+  height: 16px;
+  color: rgba(0,0,0,0.50);
+}
+
+/* ✅ valores view normales */
+.carrerasPage .modalPro .vValue{
   margin-top: 8px;
-  font-weight: 800;
+  font-size: 14.5px;
+  font-weight: 400;
   color: rgba(0,0,0,0.82);
   word-break: break-word;
+  text-transform: none;
+  letter-spacing: normal;
 }
 
 /* ===============================
-   TOAST
+   MAYÚSCULAS SOLO DONDE QUIERES
+   (TABLA + CHIPS + ESTADO)
    =============================== */
-.toast {
-  position: fixed;
-  right: 16px;
-  bottom: 16px;
-  z-index: 1000;
-  padding: 12px 14px;
-  border-radius: 12px;
-  box-shadow: 0 10px 24px rgba(0,0,0,0.12);
-  border: 1px solid rgba(0,0,0,0.10);
-  background: white;
-  font-weight: 900;
-  max-width: 420px;
+
+/* Tabla: Código / Modalidad / Estado en MAYÚSCULAS */
+.carrerasPage .table .chipCode,
+.carrerasPage .table .chipMod,
+.carrerasPage .table .badgeActive,
+.carrerasPage .table .badgeInactive {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
-.toast-success { border-color: rgba(6,118,71,0.35); }
-.toast-error { border-color: rgba(180,35,24,0.35); }
-.toast-info { border-color: rgba(2, 132, 199, 0.35); }
-
-/* icons */
-.iconSm { width: 18px; height: 18px; }
+/* Modal: chips/badges también en MAYÚSCULAS */
+.carrerasPage .modalPro .chipCode,
+.carrerasPage .modalPro .chipMod,
+.carrerasPage .modalPro .badgeActive,
+.carrerasPage .modalPro .badgeInactive {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
 
 /* ===============================
    RESPONSIVE
@@ -751,8 +805,11 @@
   .hero { flex-direction: column; align-items: flex-start; }
   .heroTitle { font-size: 19px; }
   .actions { gap: 8px; }
-  .viewGrid{ grid-template-columns: 1fr; }
+
+  .carrerasPage .formGrid { grid-template-columns: 1fr; }
+  .carrerasPage .viewCards { grid-template-columns: 1fr; }
 }
+
 /* ✅ FORZAR TABLA SIN ZEBRA (OVERRIDE GLOBAL) */
 .table tbody tr,
 .table tbody tr:nth-child(odd),
@@ -765,7 +822,3 @@
 .table tbody tr:nth-child(even):hover {
   background: rgba(0,0,0,0.03) !important;
 }
-
-
-
-

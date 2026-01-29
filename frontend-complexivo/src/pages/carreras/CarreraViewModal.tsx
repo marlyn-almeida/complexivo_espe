@@ -1,22 +1,31 @@
+// src/components/carreras/CarreraViewModal.tsx
 import type { Carrera } from "../../types/carrera";
+import { Eye, X } from "lucide-react";
 
 export default function CarreraViewModal(props: {
   open: boolean;
   carrera: Carrera | null;
   onClose: () => void;
   getDepartamentoNombre: (id: number) => string;
+  modalidadLabel: (m?: string | null) => string;
 }) {
-  const { open, carrera, onClose, getDepartamentoNombre } = props;
+  const { open, carrera, onClose, getDepartamentoNombre, modalidadLabel } = props;
 
   if (!open || !carrera) return null;
 
   return (
-    <div className="modalOverlay" role="dialog" aria-modal="true">
+    <div className="modalOverlay">
       <div className="modalCard">
         <div className="modalHead">
-          <div className="modalTitle">Detalle de carrera</div>
+          <div className="modalTitle">
+            <span className="modalTitleIcon">
+              <Eye className="iconSm" />
+            </span>
+            Detalle de carrera
+          </div>
+
           <button className="modalClose" onClick={onClose} aria-label="Cerrar">
-            ✕
+            <X className="iconSm" />
           </button>
         </div>
 
@@ -26,12 +35,12 @@ export default function CarreraViewModal(props: {
           <div className="viewGrid">
             <div className="viewItem">
               <div className="viewKey">Carrera</div>
-              <div className="viewVal">{carrera.nombre_carrera}</div>
+              <div className="viewVal">{carrera.nombre_carrera || "-"}</div>
             </div>
 
             <div className="viewItem">
               <div className="viewKey">Código</div>
-              <div className="viewVal mono">{carrera.codigo_carrera}</div>
+              <div className="viewVal">{carrera.codigo_carrera || "-"}</div>
             </div>
 
             <div className="viewItem">
@@ -40,22 +49,18 @@ export default function CarreraViewModal(props: {
             </div>
 
             <div className="viewItem">
-              <div className="viewKey">Estado</div>
-              <div className="viewVal">
-                <span className={`pill ${carrera.estado ? "pillOk" : "pillBad"}`}>
-                  {carrera.estado ? "ACTIVA" : "INACTIVA"}
-                </span>
-              </div>
-            </div>
-
-            <div className="viewItem">
               <div className="viewKey">Modalidad</div>
-              <div className="viewVal">{carrera.modalidad || "-"}</div>
+              <div className="viewVal">{modalidadLabel(carrera.modalidad ?? null)}</div>
             </div>
 
             <div className="viewItem">
               <div className="viewKey">Sede</div>
               <div className="viewVal">{carrera.sede || "-"}</div>
+            </div>
+
+            <div className="viewItem">
+              <div className="viewKey">Estado</div>
+              <div className="viewVal">{carrera.estado ? "Activo" : "Inactivo"}</div>
             </div>
 
             <div className="viewItem viewItemFull">
@@ -67,7 +72,7 @@ export default function CarreraViewModal(props: {
           </div>
 
           <div className="modalActions">
-            <button className="btnPrimary" onClick={onClose}>
+            <button className="btnGhost" onClick={onClose}>
               Cerrar
             </button>
           </div>

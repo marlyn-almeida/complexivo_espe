@@ -2,6 +2,17 @@ import { useEffect, useMemo, useState } from "react";
 import { perfilService } from "../../services/perfil.service";
 import type { PerfilMeResponse } from "../../types/perfil";
 import "./PerfilPage.css";
+import {
+  User,
+  Shield,
+  RefreshCcw,
+  Lock,
+  IdCard,
+  Mail,
+  Phone,
+  BadgeCheck,
+  BadgeX,
+} from "lucide-react";
 
 export default function PerfilPage() {
   const [data, setData] = useState<PerfilMeResponse | null>(null);
@@ -13,9 +24,10 @@ export default function PerfilPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const [toast, setToast] = useState<{ type: "success" | "error" | "info"; message: string } | null>(
-    null
-  );
+  const [toast, setToast] = useState<{
+    type: "success" | "error" | "info";
+    message: string;
+  } | null>(null);
 
   const docente = data?.docente;
 
@@ -44,7 +56,12 @@ export default function PerfilPage() {
       const res = await perfilService.me();
       setData(res);
     } catch (e: any) {
-      setErr(e?.userMessage || e?.response?.data?.message || e?.message || "Error al cargar perfil");
+      setErr(
+        e?.userMessage ||
+          e?.response?.data?.message ||
+          e?.message ||
+          "Error al cargar perfil"
+      );
     } finally {
       setLoading(false);
     }
@@ -83,55 +100,63 @@ export default function PerfilPage() {
 
     try {
       setSaving(true);
-      const r = await perfilService.changePassword({ newPassword: np, confirmPassword: cp });
+      const r = await perfilService.changePassword({
+        newPassword: np,
+        confirmPassword: cp,
+      });
       showToast("success", r?.message || "Contraseña actualizada.");
       setOpenPwd(false);
     } catch (e: any) {
-      showToast("error", e?.userMessage || e?.response?.data?.message || e?.message || "No se pudo actualizar");
+      showToast(
+        "error",
+        e?.userMessage ||
+          e?.response?.data?.message ||
+          e?.message ||
+          "No se pudo actualizar"
+      );
     } finally {
       setSaving(false);
     }
   }
 
+  // ===== LOADING =====
   if (loading) {
     return (
       <div className="perfilPage">
-        <div className="perfilShell">
-          <div className="perfilCard perfilSkeleton">
-            <div className="skLine w40" />
-            <div className="skLine w70" />
-            <div className="skGrid">
-              <div className="skBox" />
-              <div className="skBox" />
-              <div className="skBox" />
-            </div>
+        <div className="wrap containerFull">
+          <div className="box">
+            <div className="sectionTitle">Cargando perfil…</div>
+            <div className="helperText">Obteniendo información del usuario.</div>
           </div>
         </div>
       </div>
     );
   }
 
+  // ===== ERROR =====
   if (err) {
     return (
       <div className="perfilPage">
-        <div className="perfilShell">
-          <div className="perfilCard">
-            <div className="perfilTop">
-              <div>
-                <h2 className="perfilTitle">Mi Perfil</h2>
-                <p className="perfilSub">No se pudo cargar la información.</p>
+        <div className="wrap containerFull">
+          <div className="box">
+            <div className="boxHead">
+              <div className="sectionTitle">
+                <span className="sectionTitleIcon">
+                  <User size={18} />
+                </span>
+                MI PERFIL
               </div>
-              <button className="btnSecondary" onClick={load}>
-                🔄 Reintentar
+              <button className="btnGhost" onClick={load}>
+                <RefreshCcw size={18} />
+                Reintentar
               </button>
             </div>
 
+            <div className="divider" />
+
             <div className="alertError">
-              <div className="alertIcon">⚠️</div>
-              <div>
-                <div className="alertTitle">Error</div>
-                <div className="alertText">{err}</div>
-              </div>
+              <div className="alertTitle">Error</div>
+              <div className="alertText">{err}</div>
             </div>
           </div>
         </div>
@@ -139,140 +164,240 @@ export default function PerfilPage() {
     );
   }
 
+  // ===== SIN DOCENTE =====
   if (!docente) {
     return (
       <div className="perfilPage">
-        <div className="perfilShell">
-          <div className="perfilCard">
-            <h2 className="perfilTitle">Mi Perfil</h2>
-            <p className="perfilSub">No hay datos para mostrar.</p>
+        <div className="wrap containerFull">
+          <div className="box">
+            <div className="sectionTitle">MI PERFIL</div>
+            <div className="helperText">No hay datos para mostrar.</div>
           </div>
         </div>
       </div>
     );
   }
 
+  const isActive = docente.estado === 1;
+
   return (
     <div className="perfilPage">
-      <div className="perfilShell">
-        {/* ===== HERO / IDENTIDAD ===== */}
-        <div className="perfilHero">
-          <div className="heroBackdrop" aria-hidden="true" />
+      <div className="wrap containerFull">
+        {/* HERO (estilo serio, como Carreras) */}
+        <div className="hero">
+          <div className="heroLeft">
+            <div className="heroMark" aria-hidden="true">
+              <User className="heroMarkIcon" />
+            </div>
 
-          <div className="heroContent">
-            <div className="heroLeft">
-              <div className="avatarBig" aria-hidden="true">
-                <span>{initials(fullName)}</span>
+            <div className="heroText">
+              <h1 className="heroTitle">MI PERFIL</h1>
+              <p className="heroSubtitle">
+                Gestión de información personal y configuración de cuenta
+              </p>
+
+              <div className="heroMiniRow">
+                <span className="heroMiniName">{fullName}</span>
+                <span className={`badgeState ${isActive ? "badgeOk" : "badgeOff"}`}>
+                  {isActive ? (
+                    <>
+                      <BadgeCheck size={16} /> ACTIVO
+                    </>
+                  ) : (
+                    <>
+                      <BadgeX size={16} /> INACTIVO
+                    </>
+                  )}
+                </span>
+                <span className="badgeRole">
+                  <Shield size={16} />
+                  {activeRoleName}
+                </span>
               </div>
+            </div>
+          </div>
 
-              <div className="heroIdentity">
-                <div className="heroName">{fullName}</div>
-                <div className="heroMeta">
-                  <span className="chip chipSoft">👤 @{docente.nombre_usuario}</span>
-                  <span className={`chip ${docente.estado === 1 ? "chipOk" : "chipBad"}`}>
-                    {docente.estado === 1 ? "✅ Activo" : "⛔ Inactivo"}
-                  </span>
-                  <span className="chip chipRole">🛡️ {activeRoleName}</span>
-                </div>
+          <div className="heroActions">
+            <button className="btnPrimary" onClick={openPasswordModal}>
+              <Lock size={18} />
+              Cambiar contraseña
+            </button>
+            <button className="btnGhost" onClick={load}>
+              <RefreshCcw size={18} />
+              Actualizar
+            </button>
+          </div>
+        </div>
 
-                <div className="rolesRow">
-                  <div className="rolesLabel">Roles disponibles</div>
-                  <div className="rolesChips">
-                    {roles.length ? (
-                      roles.map((r) => (
-                        <span
-                          key={r.id_rol}
-                          className={`rolePill ${data?.activeRole === r.id_rol ? "rolePillActive" : ""}`}
-                          title={data?.activeRole === r.id_rol ? "Rol activo" : "Rol"}
-                        >
-                          {r.nombre_rol}
-                        </span>
-                      ))
+        {/* BOX 1: Información personal (form serio) */}
+        <div className="box">
+          <div className="boxHead">
+            <div className="sectionTitle">
+              <span className="sectionTitleIcon">
+                <User size={18} />
+              </span>
+              INFORMACIÓN PERSONAL
+            </div>
+          </div>
+
+          <div className="divider" />
+
+          <div className="formGrid">
+            <div className="field">
+              <label className="label">NOMBRE</label>
+              <input className="input" value={fullName} disabled />
+            </div>
+
+            <div className="field">
+              <label className="label">USUARIO</label>
+              <input className="input" value={docente.nombre_usuario} disabled />
+            </div>
+
+            <div className="field">
+              <label className="label">CÉDULA</label>
+              <div className="inputIconWrap">
+                <IdCard className="inputIcon" />
+                <input className="input inputWithIcon" value={docente.cedula} disabled />
+              </div>
+            </div>
+
+            <div className="field">
+              <label className="label">ID INSTITUCIONAL</label>
+              <input className="input" value={docente.id_institucional_docente} disabled />
+            </div>
+
+            <div className="field">
+              <label className="label">CORREO</label>
+              <div className="inputIconWrap">
+                <Mail className="inputIcon" />
+                <input
+                  className="input inputWithIcon"
+                  value={docente.correo_docente ?? "—"}
+                  disabled
+                />
+              </div>
+            </div>
+
+            <div className="field">
+              <label className="label">TELÉFONO</label>
+              <div className="inputIconWrap">
+                <Phone className="inputIcon" />
+                <input
+                  className="input inputWithIcon"
+                  value={docente.telefono_docente ?? "—"}
+                  disabled
+                />
+              </div>
+            </div>
+
+            <div className="field">
+              <label className="label">DEBE CAMBIAR PASSWORD</label>
+              <input
+                className="input"
+                value={docente.debe_cambiar_password === 1 ? "SÍ" : "NO"}
+                disabled
+              />
+            </div>
+
+            <div className="field">
+              <label className="label">ROL ACTIVO</label>
+              <input className="input" value={activeRoleName} disabled />
+            </div>
+
+            <div className="field fieldFull">
+              <div className="softNote">
+                Si olvidas tu contraseña, podrás cambiarla aquí cuando estés autenticado. En el primer
+                ingreso, el sistema puede obligarte a actualizarla.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* BOX 2: Roles (serio, lista simple) */}
+        <div className="box">
+          <div className="boxHead">
+            <div className="sectionTitle">
+              <span className="sectionTitleIcon">
+                <Shield size={18} />
+              </span>
+              ROLES DISPONIBLES
+            </div>
+          </div>
+
+          <div className="divider" />
+
+          <div className="rolesList">
+            {roles.length ? (
+              roles.map((r) => (
+                <div key={r.id_rol} className="roleRow">
+                  <div className="roleLeft">
+                    <span className={`roleDot ${data?.activeRole === r.id_rol ? "roleDotOn" : ""}`} />
+                    <div className="roleName">{r.nombre_rol}</div>
+                  </div>
+                  <div className="roleRight">
+                    {data?.activeRole === r.id_rol ? (
+                      <span className="roleActiveTag">ACTIVO</span>
                     ) : (
-                      <span className="rolePill">—</span>
+                      <span className="roleTag">ROL</span>
                     )}
                   </div>
                 </div>
-              </div>
-            </div>
-
-            <div className="heroActions">
-              <button className="btnPrimary" onClick={openPasswordModal}>
-                🔒 Cambiar contraseña
-              </button>
-              <button className="btnSecondary" onClick={load}>
-                🔄 Actualizar
-              </button>
-            </div>
+              ))
+            ) : (
+              <div className="helperText">—</div>
+            )}
           </div>
         </div>
 
-        {/* ===== MIS DATOS ===== */}
-        <div className="perfilCard">
-          <div className="sectionHeader">
-            <div>
-              <div className="sectionTitle">Mis datos</div>
-              <div className="sectionSub">Información registrada en el sistema</div>
-            </div>
-          </div>
-
-          <div className="dataGrid">
-            <DataItem icon="🪪" label="Cédula" value={docente.cedula} />
-            <DataItem icon="🏫" label="ID institucional" value={docente.id_institucional_docente} />
-            <DataItem icon="✉️" label="Correo" value={docente.correo_docente ?? "—"} />
-            <DataItem icon="📞" label="Teléfono" value={docente.telefono_docente ?? "—"} />
-            <DataItem icon="🔐" label="Debe cambiar password" value={docente.debe_cambiar_password === 1 ? "Sí" : "No"} />
-            <DataItem icon="🛡️" label="Rol activo" value={activeRoleName} />
-          </div>
-
-          <div className="softNote">
-            <div className="softNoteIcon">ℹ️</div>
-            <div className="softNoteText">
-              Si olvidas tu contraseña, podrás cambiarla aquí cuando estés autenticado. En el primer ingreso,
-              el sistema puede obligarte a actualizarla.
-            </div>
-          </div>
-        </div>
-
-        {/* ===== MODAL PASSWORD ===== */}
+        {/* ===== MODAL PASSWORD (se mantiene) ===== */}
         {openPwd && (
           <div className="modalOverlay" onClick={closePasswordModal}>
             <div className="modal" onClick={(e) => e.stopPropagation()}>
               <div className="modalHeader">
-                <div>
-                  <div className="modalTitle">Cambiar contraseña</div>
-                  <div className="perfilSub" style={{ margin: "6px 0 0" }}>
-                    Ingresa una nueva contraseña y confírmala.
+                <div className="modalHeaderLeft">
+                  <div className="modalHeaderIcon">
+                    <Lock size={18} />
+                  </div>
+                  <div>
+                    <div className="modalHeaderTitle">Cambiar contraseña</div>
+                    <div className="modalHeaderSub">
+                      Ingresa una nueva contraseña y confírmala.
+                    </div>
                   </div>
                 </div>
+
                 <button className="modalClose" onClick={closePasswordModal} disabled={saving}>
                   ✕
                 </button>
               </div>
 
-              <div className="formStack">
-                <div className="formField">
-                  <div className="label">Nueva contraseña</div>
-                  <input
-                    className="fieldInput"
-                    type="password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Mínimo 6 caracteres"
-                    disabled={saving}
-                  />
-                </div>
+              <div className="modalDivider" />
 
-                <div className="formField">
-                  <div className="label">Confirmar contraseña</div>
-                  <input
-                    className="fieldInput"
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Repite la contraseña"
-                    disabled={saving}
-                  />
+              <div className="modalBody">
+                <div className="formGrid formGridOne">
+                  <div className="field">
+                    <div className="label">NUEVA CONTRASEÑA</div>
+                    <input
+                      className="input"
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Mínimo 6 caracteres"
+                      disabled={saving}
+                    />
+                  </div>
+
+                  <div className="field">
+                    <div className="label">CONFIRMAR CONTRASEÑA</div>
+                    <input
+                      className="input"
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Repite la contraseña"
+                      disabled={saving}
+                    />
+                  </div>
                 </div>
 
                 <div className="modalFooter">
@@ -293,23 +418,4 @@ export default function PerfilPage() {
       </div>
     </div>
   );
-}
-
-function DataItem({ icon, label, value }: { icon: string; label: string; value: string }) {
-  return (
-    <div className="dataItem">
-      <div className="dataIcon" aria-hidden="true">{icon}</div>
-      <div className="dataBody">
-        <div className="dataLabel">{label}</div>
-        <div className="dataValue">{value}</div>
-      </div>
-    </div>
-  );
-}
-
-function initials(name: string) {
-  const parts = name.split(" ").filter(Boolean);
-  const a = parts[0]?.[0] ?? "U";
-  const b = parts.length > 1 ? parts[parts.length - 1][0] : "";
-  return (a + b).toUpperCase();
 }

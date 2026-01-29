@@ -1,6 +1,7 @@
+// src/components/carreras/CarreraFormModal.tsx
 import type { Carrera } from "../../types/carrera";
 import type { Departamento } from "../../types/departamento";
-import { X, Save } from "lucide-react";
+import { GraduationCap, Save, X } from "lucide-react";
 
 type CarreraFormState = {
   nombre_carrera: string;
@@ -46,8 +47,6 @@ export default function CarreraFormModal(props: {
 
   function setField<K extends keyof CarreraFormState>(k: K, value: CarreraFormState[K]) {
     setForm({ ...form, [k]: value });
-
-    // limpia error del campo
     if (errors[k]) {
       const copy = { ...errors };
       delete copy[k];
@@ -68,128 +67,127 @@ export default function CarreraFormModal(props: {
       <div className="modalCard">
         <div className="modalHead">
           <div className="modalTitle">
-            {editingCarrera ? "Editar carrera" : "Agregar Nueva Carrera"}
+            <span className="modalTitleIcon">
+              <GraduationCap className="iconSm" />
+            </span>
+            {editingCarrera ? "Editar carrera" : "Nueva carrera"}
           </div>
 
-          <button className="modalClose" onClick={onClose} disabled={loading} title="Cerrar">
-            <X size={18} />
+          <button className="modalClose" onClick={onClose} disabled={loading} aria-label="Cerrar">
+            <X className="iconSm" />
           </button>
         </div>
 
         <div className="modalDivider" />
 
         <div className="modalBody">
-          <div className="formGrid">
-            {/* NOMBRE */}
-            <div className="formField">
-              <label className="label">
-                Nombre de la carrera <span className="req">*</span>
-              </label>
-              <input
-                className={`input ${errors.nombre_carrera ? "inputError" : ""}`}
-                value={form.nombre_carrera}
-                onChange={(e) => setField("nombre_carrera", e.target.value)}
-                placeholder="Ej: Tecnologías de la Información"
-                disabled={loading}
-              />
-              {errors.nombre_carrera ? <div className="fieldError">{errors.nombre_carrera}</div> : null}
-            </div>
+          <div className="formRow">
+            <label className="label">
+              Nombre de la carrera <span className="req">*</span>
+            </label>
+            <input
+              className="input"
+              value={form.nombre_carrera}
+              onChange={(e) => setField("nombre_carrera", e.target.value)}
+              placeholder="Ej: Tecnologías de la Información"
+              disabled={loading}
+              style={errors.nombre_carrera ? { borderColor: "rgba(180,20,20,0.35)" } : undefined}
+            />
+            {errors.nombre_carrera && <div className="fieldError">{errors.nombre_carrera}</div>}
+          </div>
 
-            {/* CÓDIGO */}
-            <div className="formField">
-              <label className="label">
-                Código <span className="req">*</span>
-              </label>
-              <input
-                className={`input ${errors.codigo_carrera ? "inputError" : ""}`}
-                value={form.codigo_carrera}
-                onChange={(e) => setField("codigo_carrera", normalizeCodigo(e.target.value))}
-                placeholder="Ej: TI_EN_LINEA"
-                disabled={loading}
-              />
-              {errors.codigo_carrera ? <div className="fieldError">{errors.codigo_carrera}</div> : null}
-              {!errors.codigo_carrera ? <div className="helperText">Tip: se normaliza automáticamente (mayúsculas y “_”).</div> : null}
-            </div>
+          <div className="formRow">
+            <label className="label">
+              Código <span className="req">*</span>
+            </label>
+            <input
+              className="input"
+              value={form.codigo_carrera}
+              onChange={(e) => setField("codigo_carrera", normalizeCodigo(e.target.value))}
+              placeholder="Ej: TI_EN_LINEA"
+              disabled={loading}
+              style={errors.codigo_carrera ? { borderColor: "rgba(180,20,20,0.35)" } : undefined}
+            />
+            <div className="helperText">Tip: se normaliza automáticamente (mayúsculas y “_”).</div>
+            {errors.codigo_carrera && <div className="fieldError">{errors.codigo_carrera}</div>}
+          </div>
 
-            {/* DEPARTAMENTO */}
-            <div className="formField">
-              <label className="label">
-                Departamento <span className="req">*</span>
-              </label>
-              <select
-                className={`select ${errors.id_departamento ? "inputError" : ""}`}
-                value={form.id_departamento}
-                onChange={(e) => setField("id_departamento", e.target.value)}
-                disabled={loading}
-              >
-                <option value="">--Seleccione un Departamento--</option>
-                {departamentos.map((d) => (
-                  <option key={d.id_departamento} value={String(d.id_departamento)}>
-                    {d.nombre_departamento}
-                  </option>
-                ))}
-              </select>
-              {errors.id_departamento ? <div className="fieldError">{errors.id_departamento}</div> : null}
-            </div>
+          <div className="formRow">
+            <label className="label">
+              Departamento <span className="req">*</span>
+            </label>
+            <select
+              className="input"
+              value={form.id_departamento}
+              onChange={(e) => setField("id_departamento", e.target.value)}
+              disabled={loading}
+              style={errors.id_departamento ? { borderColor: "rgba(180,20,20,0.35)" } : undefined}
+            >
+              <option value="">Seleccione</option>
+              {departamentos.map((d) => (
+                <option key={d.id_departamento} value={d.id_departamento}>
+                  {d.nombre_departamento}
+                </option>
+              ))}
+            </select>
+            {errors.id_departamento && <div className="fieldError">{errors.id_departamento}</div>}
+          </div>
 
-            {/* MODALIDAD */}
-            <div className="formField">
-              <label className="label">
-                Modalidad <span className="req">*</span>
-              </label>
-              <select
-                className={`select ${errors.modalidad ? "inputError" : ""}`}
-                value={form.modalidad}
-                onChange={(e) => setField("modalidad", e.target.value)}
-                disabled={loading}
-              >
-                <option value="">--Seleccione Modalidad--</option>
-                {modalidades.map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
-                ))}
-              </select>
-              {errors.modalidad ? <div className="fieldError">{errors.modalidad}</div> : null}
-            </div>
+          <div className="formRow">
+            <label className="label">
+              Modalidad <span className="req">*</span>
+            </label>
+            <select
+              className="input"
+              value={form.modalidad}
+              onChange={(e) => setField("modalidad", e.target.value)}
+              disabled={loading}
+              style={errors.modalidad ? { borderColor: "rgba(180,20,20,0.35)" } : undefined}
+            >
+              <option value="">Seleccione</option>
+              {modalidades.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
+            {errors.modalidad && <div className="fieldError">{errors.modalidad}</div>}
+          </div>
 
-            {/* SEDE */}
-            <div className="formField">
-              <label className="label">
-                Sede <span className="req">*</span>
-              </label>
-              <select
-                className={`select ${errors.sede ? "inputError" : ""}`}
-                value={form.sede}
-                onChange={(e) => setField("sede", e.target.value)}
-                disabled={loading}
-              >
-                <option value="">--Seleccione Sede--</option>
-                {sedes.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-              {errors.sede ? <div className="fieldError">{errors.sede}</div> : null}
-            </div>
+          <div className="formRow">
+            <label className="label">
+              Sede <span className="req">*</span>
+            </label>
+            <select
+              className="input"
+              value={form.sede}
+              onChange={(e) => setField("sede", e.target.value)}
+              disabled={loading}
+              style={errors.sede ? { borderColor: "rgba(180,20,20,0.35)" } : undefined}
+            >
+              <option value="">Seleccione</option>
+              {sedes.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+            {errors.sede && <div className="fieldError">{errors.sede}</div>}
+          </div>
 
-            {/* DESCRIPCIÓN */}
-            <div className="formField formFieldFull">
-              <label className="label">Descripción</label>
-              <textarea
-                className={`textarea ${errors.descripcion_carrera ? "inputError" : ""}`}
-                value={form.descripcion_carrera}
-                onChange={(e) => setField("descripcion_carrera", e.target.value)}
-                placeholder="Breve descripción (opcional)"
-                disabled={loading}
-              />
-              {errors.descripcion_carrera ? <div className="fieldError">{errors.descripcion_carrera}</div> : null}
-            </div>
+          <div className="formRow">
+            <label className="label">Descripción</label>
+            <textarea
+              className="textarea"
+              value={form.descripcion_carrera}
+              onChange={(e) => setField("descripcion_carrera", e.target.value)}
+              placeholder="Breve descripción (opcional)"
+              disabled={loading}
+            />
           </div>
 
           <div className="modalActions">
-            <button className="btnSecondary" onClick={onClose} disabled={loading}>
+            <button className="btnGhost" onClick={onClose} disabled={loading}>
               Cancelar
             </button>
 
@@ -202,9 +200,8 @@ export default function CarreraFormModal(props: {
                 onSave();
               }}
               disabled={loading}
-              title="Guardar"
             >
-              <Save size={18} /> {editingCarrera ? "Actualizar Carrera" : "Guardar Carrera"}
+              <Save className="iconSm" /> Guardar
             </button>
           </div>
         </div>

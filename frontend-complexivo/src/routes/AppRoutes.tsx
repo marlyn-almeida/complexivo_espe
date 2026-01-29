@@ -12,7 +12,12 @@ import DashboardDocente from "../pages/dashboard/DashboardDocente";
 import PeriodosPage from "../pages/periodos/PeriodosPage";
 import CarrerasPage from "../pages/carreras/CarrerasPage";
 import CarreraAdminsPage from "../pages/carreras/CarreraAdminsPage";
+
 import DocentesPage from "../pages/docentes/DocentesPage";
+// ✅ NUEVO: separar páginas
+import DocenteImportPage from "../pages/docentes/DocenteImportPage";
+import DocenteFormPage from "../pages/docentes/DocenteFormPage";
+
 import EstudiantesPage from "../pages/estudiantes/EstudiantesPage";
 import CarreraPeriodoPage from "../pages/carreraPeriodo/CarreraPeriodoPage";
 import CarreraPeriodoAutoridadesPage from "../pages/carreraPeriodo/CarreraPeriodoAutoridadesPage";
@@ -28,7 +33,7 @@ import TribunalesPage from "../pages/tribunales/TribunalesPage";
 
 import MisTribunalesPage from "../pages/docentes/MisTribunalesPage";
 
-// ✅ NUEVO: Plantillas Acta Word (Super Admin)
+// ✅ Plantillas Acta Word (Super Admin)
 import PlantillasActaWordPage from "../pages/plantillasActa/PlantillasActaWordPage";
 
 import ProtectedRoute from "../components/auth/ProtectedRoute";
@@ -172,7 +177,19 @@ export default function AppRoutes() {
             }
           />
 
-          {/* Docentes: SUPER_ADMIN y ADMIN */}
+          {/* ✅ Plantillas Acta Word: SOLO SUPER_ADMIN */}
+          <Route
+            path="/plantillas-acta"
+            element={
+              <ProtectedRoute allowRoles={[1]}>
+                <PlantillasActaWordPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* =========================
+              DOCENTES (SUPER_ADMIN y ADMIN)
+             ========================= */}
           <Route
             path="/docentes"
             element={
@@ -182,12 +199,32 @@ export default function AppRoutes() {
             }
           />
 
-          {/* ✅ Plantillas Acta Word: SOLO SUPER_ADMIN */}
+          {/* ✅ NUEVO: Importar docentes en página separada */}
           <Route
-            path="/plantillas-acta"
+            path="/docentes/importar"
             element={
-              <ProtectedRoute allowRoles={[1]}>
-                <PlantillasActaWordPage />
+              <ProtectedRoute allowRoles={[1, 2]}>
+                <DocenteImportPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* ✅ NUEVO: Crear docente en página separada */}
+          <Route
+            path="/docentes/nuevo"
+            element={
+              <ProtectedRoute allowRoles={[1, 2]}>
+                <DocenteFormPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* ✅ NUEVO: Editar docente en página separada */}
+          <Route
+            path="/docentes/:id/editar"
+            element={
+              <ProtectedRoute allowRoles={[1, 2]}>
+                <DocenteFormPage />
               </ProtectedRoute>
             }
           />

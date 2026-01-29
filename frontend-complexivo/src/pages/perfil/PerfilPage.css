@@ -1,340 +1,468 @@
-.perfilPage { display: grid; }
-.perfilShell { display: grid; gap: 14px; }
+/* src/pages/perfil/PerfilPage.css */
 
-/* ===== HERO ===== */
-.perfilHero{
-  position: relative;
-  border-radius: 18px;
-  overflow: hidden;
-  border: 1px solid var(--border-soft);
-  box-shadow: var(--shadow-soft);
-  background: white;
-}
+.perfilPage .wrap { padding: 16px 18px 28px; }
+.perfilPage .containerFull { width: 100%; max-width: 100%; }
 
-.heroBackdrop{
-  position:absolute;
-  inset:0;
-  background:
-    radial-gradient(900px 420px at 10% 0%, rgba(15,118,110,0.20), transparent 55%),
-    radial-gradient(900px 420px at 90% 0%, rgba(20,83,45,0.18), transparent 55%),
-    linear-gradient(180deg, rgba(2,6,23,0.04), rgba(2,6,23,0));
-}
-
-.heroContent{
-  position: relative;
-  padding: 18px;
-  display:flex;
-  align-items:flex-start;
-  justify-content: space-between;
-  gap: 14px;
-  flex-wrap: wrap;
-}
-
-.heroLeft{
+/* ===============================
+   HERO (serio institucional)
+   =============================== */
+.perfilPage .hero{
   display:flex;
   align-items:center;
-  gap: 14px;
-  flex-wrap: wrap;
+  justify-content:space-between;
+  gap:16px;
+  background: linear-gradient(90deg, #0b6034 0%, #147a4a 100%);
+  border-radius:14px;
+  padding:14px 16px;
+  border:1px solid rgba(255,255,255,0.18);
+  box-shadow:0 10px 24px rgba(0,0,0,0.10);
 }
 
-.avatarBig{
-  width: 78px;
-  height: 78px;
-  border-radius: 22px;
+.perfilPage .heroLeft{
+  display:flex;
+  align-items:flex-start;
+  gap:14px;
+  min-width:0;
+}
+
+.perfilPage .heroMark{
+  width:42px;
+  height:42px;
+  border-radius:12px;
+  background: rgba(255,255,255,0.14);
+  border: 1px solid rgba(255,255,255,0.22);
   display:grid;
   place-items:center;
-  font-weight: 950;
-  font-size: 1.35rem;
-  color: #0f172a;
-  border: 1px solid rgba(15,118,110,0.28);
-  background: rgba(255,255,255,0.75);
-  backdrop-filter: blur(8px);
-  box-shadow: 0 18px 40px rgba(15,118,110,0.18);
+  flex: 0 0 auto;
 }
 
-.heroIdentity{ display:grid; gap: 8px; }
-.heroName{
-  font-size: 1.35rem;
-  font-weight: 950;
-  color: var(--text-main);
-  letter-spacing: -0.02em;
+.perfilPage .heroMarkIcon{ width:20px; height:20px; color:#fff; }
+
+.perfilPage .heroTitle{
+  margin:0;
+  color:#fff;
+  font-weight:900;
+  font-size:22px;
+  line-height:1.1;
+  letter-spacing:0.2px;
 }
 
-.heroMeta{ display:flex; gap: 8px; flex-wrap: wrap; }
+.perfilPage .heroSubtitle{
+  margin:6px 0 0;
+  color: rgba(255,255,255,0.86);
+  font-size:13px;
+}
 
-.chip{
+.perfilPage .heroMiniRow{
+  margin-top:10px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.perfilPage .heroMiniName{
+  color: rgba(255,255,255,0.96);
+  font-weight:800;
+}
+
+.perfilPage .badgeState,
+.perfilPage .badgeRole{
   display:inline-flex;
   align-items:center;
-  gap: 6px;
+  gap:8px;
   padding: 7px 10px;
   border-radius: 999px;
-  font-weight: 900;
-  font-size: 0.82rem;
-  border: 1px solid var(--border-soft);
-  background: rgba(255,255,255,0.72);
-  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.35);
+  background: rgba(255,255,255,0.10);
+  color: #fff;
+  font-weight:800;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
 }
-.chipSoft{ color: #0f172a; }
-.chipOk{ border-color: rgba(6,118,71,0.35); background: rgba(6,118,71,0.10); }
-.chipBad{ border-color: rgba(180,35,24,0.35); background: rgba(180,35,24,0.10); }
-.chipRole{ border-color: rgba(2,132,199,0.35); background: rgba(2,132,199,0.10); }
 
-.rolesRow{ display:grid; gap: 8px; margin-top: 6px; }
-.rolesLabel{ font-weight: 900; font-size: 0.85rem; color: var(--text-muted); }
-.rolesChips{ display:flex; gap: 8px; flex-wrap: wrap; }
+.perfilPage .badgeOk{
+  background: rgba(223,238,231,0.18);
+  border-color: rgba(223,238,231,0.35);
+}
+.perfilPage .badgeOff{
+  background: rgba(240,240,240,0.12);
+  border-color: rgba(240,240,240,0.26);
+}
 
-.rolePill{
+.perfilPage .heroActions{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+
+/* ===============================
+   BOX (secciones serias)
+   =============================== */
+.perfilPage .box{
+  margin-top:14px;
+  background:#fff;
+  border:1px solid rgba(0,0,0,0.09);
+  border-radius:14px;
+  padding:16px 16px 18px;
+  box-shadow:0 8px 18px rgba(0,0,0,0.05);
+}
+
+.perfilPage .boxHead{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  margin-bottom:12px;
+}
+
+.perfilPage .sectionTitle{
   display:inline-flex;
   align-items:center;
-  padding: 7px 10px;
-  border-radius: 999px;
-  border: 1px solid var(--border-soft);
-  background: rgba(255,255,255,0.78);
-  font-weight: 900;
-  font-size: 0.82rem;
-  color: #0f172a;
+  gap:10px;
+  font-size:18px;
+  font-weight:900;
+  color: rgba(0,0,0,0.78);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
-.rolePillActive{
-  border-color: rgba(15,118,110,0.45);
-  background: rgba(15,118,110,0.12);
+.perfilPage .sectionTitleIcon{
+  width:32px;
+  height:32px;
+  border-radius:10px;
+  background: rgba(10,79,40,0.12);
+  color:#0a4f28;
+  display:grid;
+  place-items:center;
 }
 
-.heroActions{
-  display:flex;
-  gap: 10px;
-  align-items:center;
-  flex-wrap: wrap;
+.perfilPage .divider{
+  height:1px;
+  background: rgba(0,0,0,0.10);
+  margin-bottom:12px;
 }
 
-/* ===== CARD BASE ===== */
-.perfilCard{
-  background: white;
-  border: 1px solid var(--border-soft);
-  border-radius: 18px;
-  padding: 16px;
-  box-shadow: var(--shadow-soft);
-}
-
-.perfilTitle{ margin: 0; font-weight: 950; }
-.perfilSub{ margin: 6px 0 0; color: var(--text-muted); font-weight: 700; }
-
-/* ===== BUTTONS ===== */
-.btnPrimary {
-  border: none;
-  border-radius: 12px;
-  padding: 10px 14px;
-  cursor: pointer;
-  font-weight: 950;
-  color: white;
-  background: linear-gradient(135deg, #0f766e, #14532d);
-  box-shadow: 0 14px 32px rgba(15, 118, 110, 0.22);
-  display:flex;
-  align-items:center;
-  gap:8px;
-}
-
-.btnSecondary{
-  border: 1px solid var(--border-soft);
-  background: rgba(255,255,255,0.9);
-  border-radius: 12px;
-  padding: 10px 12px;
-  cursor: pointer;
-  font-weight: 900;
-  display:flex;
-  align-items:center;
-  gap:8px;
-}
-
-.btnGhost {
-  border: 1px solid var(--border-soft);
-  background: transparent;
-  border-radius: 12px;
-  padding: 10px 12px;
-  cursor: pointer;
-  font-weight: 900;
-}
-
-/* ===== SECTION ===== */
-.sectionHeader{
-  display:flex;
-  align-items:flex-start;
-  justify-content: space-between;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.sectionTitle{ font-weight: 950; color: var(--text-main); }
-.sectionSub{ margin-top: 6px; color: var(--text-muted); font-weight: 800; font-size: 0.9rem; }
-
-.dataGrid{
-  margin-top: 14px;
+/* ===============================
+   FORM (2 columnas)
+   =============================== */
+.perfilPage .formGrid{
   display:grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap:12px;
 }
 
-.dataItem{
-  border: 1px solid var(--border-soft);
-  border-radius: 16px;
-  padding: 12px;
-  background:
-    radial-gradient(900px 260px at 0% 0%, rgba(15,118,110,0.08), transparent 55%),
-    white;
-  display:flex;
-  gap: 12px;
-  align-items:flex-start;
+.perfilPage .formGridOne{
+  grid-template-columns: 1fr;
 }
 
-.dataIcon{
-  width: 38px;
-  height: 38px;
+.perfilPage .field{ display:block; }
+.perfilPage .fieldFull{ grid-column: 1 / -1; }
+
+/* labels MAYÚSCULAS */
+.perfilPage .label{
+  display:block;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 800;
+  font-size: 12.5px;
+  color: rgba(0,0,0,0.70);
+  margin-bottom:6px;
+}
+
+/* inputs normales */
+.perfilPage .input{
+  width:100%;
+  height:40px;
+  border-radius:10px;
+  border:1px solid rgba(0,0,0,0.12);
+  padding:0 12px;
+  outline:none;
+  font-weight:400;
+  font-size:14.5px;
+  color: rgba(0,0,0,0.82);
+  background:#fff;
+  text-transform:none;
+}
+
+.perfilPage .input:focus{
+  border-color: rgba(10,79,40,0.35);
+  box-shadow: 0 0 0 4px rgba(10,79,40,0.12);
+}
+
+.perfilPage .input:disabled{
+  background:#f6f7f9;
+  color: rgba(0,0,0,0.68);
+}
+
+/* input con icono */
+.perfilPage .inputIconWrap{ position:relative; }
+.perfilPage .inputIcon{
+  position:absolute;
+  left:12px;
+  top:50%;
+  transform: translateY(-50%);
+  width:18px;
+  height:18px;
+  color: rgba(0,0,0,0.45);
+}
+.perfilPage .inputWithIcon{ padding-left:40px; }
+
+.perfilPage .helperText{
+  margin-top:8px;
+  font-size:14px;
+  font-weight:500;
+  color:#0a4f28;
+}
+
+.perfilPage .softNote{
+  border: 1px dashed rgba(0,0,0,0.18);
   border-radius: 14px;
-  display:grid;
-  place-items:center;
-  border: 1px solid rgba(15,118,110,0.20);
-  background: rgba(15,118,110,0.10);
-}
-
-.dataBody{ display:grid; gap: 4px; }
-.dataLabel{ font-size: 0.82rem; font-weight: 900; color: var(--text-muted); }
-.dataValue{ font-weight: 950; color: var(--text-main); word-break: break-word; }
-
-.softNote{
-  margin-top: 14px;
-  border: 1px dashed rgba(2,6,23,0.18);
-  border-radius: 16px;
   padding: 12px;
-  background: rgba(2,6,23,0.03);
-  display:flex;
-  gap: 10px;
-  align-items:flex-start;
+  background: rgba(0,0,0,0.02);
+  color: rgba(0,0,0,0.68);
+  font-weight: 600;
 }
-.softNoteIcon{ font-size: 1.1rem; }
-.softNoteText{ font-weight: 800; color: rgba(2,6,23,0.72); }
 
-/* ===== ERROR ALERT ===== */
-.perfilTop{
-  display:flex;
-  align-items:flex-start;
-  justify-content: space-between;
-  gap: 10px;
-  flex-wrap: wrap;
+/* ===============================
+   ROLES (lista sobria)
+   =============================== */
+.perfilPage .rolesList{
+  border:1px solid rgba(0,0,0,0.10);
+  border-radius:12px;
+  overflow:hidden;
+  background:#fff;
 }
-.alertError{
-  margin-top: 12px;
-  border: 1px solid rgba(180,35,24,0.25);
-  background: rgba(180,35,24,0.08);
-  border-radius: 16px;
+
+.perfilPage .roleRow{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:12px 12px;
+  border-bottom:1px solid rgba(0,0,0,0.06);
+}
+
+.perfilPage .roleRow:last-child{ border-bottom:none; }
+
+.perfilPage .roleLeft{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:0;
+}
+
+.perfilPage .roleDot{
+  width:10px;
+  height:10px;
+  border-radius:999px;
+  border: 1px solid rgba(0,0,0,0.20);
+  background:#fff;
+  flex: 0 0 auto;
+}
+
+.perfilPage .roleDotOn{
+  background: rgba(10,79,40,0.90);
+  border-color: rgba(10,79,40,0.35);
+}
+
+.perfilPage .roleName{
+  font-weight:800;
+  color: rgba(0,0,0,0.78);
+  text-transform:none;
+}
+
+.perfilPage .roleRight{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.perfilPage .roleTag,
+.perfilPage .roleActiveTag{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width: 70px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(0,0,0,0.10);
+  font-weight: 700;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.perfilPage .roleActiveTag{
+  background: rgba(10,79,40,0.08);
+  border-color: rgba(10,79,40,0.18);
+  color: #0a4f28;
+}
+
+/* ===============================
+   BOTONES (reusables)
+   =============================== */
+.perfilPage .btnPrimary{
+  height:40px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(10,79,40,0.28);
+  background: #0a4f28;
+  color:#fff;
+  font-weight: 800;
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  gap:10px;
+}
+.perfilPage .btnPrimary:hover{ filter: brightness(1.03); }
+
+.perfilPage .btnGhost{
+  height:40px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(0,0,0,0.14);
+  background:#fff;
+  font-weight:700;
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  gap:10px;
+}
+
+/* ===============================
+   ERROR ALERT (serio)
+   =============================== */
+.perfilPage .alertError{
+  border: 1px solid rgba(180,20,20,0.18);
+  background: rgba(180,20,20,0.06);
+  border-radius: 12px;
   padding: 12px;
-  display:flex;
-  gap: 10px;
-  align-items:flex-start;
 }
-.alertIcon{ font-size: 1.2rem; }
-.alertTitle{ font-weight: 950; }
-.alertText{ margin-top: 2px; font-weight: 800; }
 
-/* ===== MODAL ===== */
-.modalOverlay {
+.perfilPage .alertTitle{
+  font-weight: 900;
+  color: rgba(0,0,0,0.78);
+}
+.perfilPage .alertText{
+  margin-top: 6px;
+  font-weight: 600;
+  color: rgba(0,0,0,0.70);
+}
+
+/* ===============================
+   MODAL (sobrio tipo Carreras)
+   =============================== */
+.perfilPage .modalOverlay{
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.45);
+  background: rgba(0,0,0,0.52);
+  z-index: 9999;
   display: grid;
   place-items: center;
-  z-index: 999;
-  padding: 16px;
+  padding: 18px;
 }
 
-.modal {
+.perfilPage .modal{
   width: min(720px, 100%);
-  background: white;
-  border-radius: 18px;
-  border: 1px solid var(--border-soft);
-  box-shadow: var(--shadow-soft);
-  padding: 16px;
-  max-height: calc(100vh - 32px);
-  overflow: auto;
+  background:#fff;
+  border-radius: 14px;
+  border: 1px solid rgba(0,0,0,0.12);
+  box-shadow: 0 22px 60px rgba(0,0,0,0.22);
+  overflow: hidden;
 }
 
-.modalHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
+.perfilPage .modalHeader{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  padding: 14px 16px;
+  background: linear-gradient(90deg, rgba(10,79,40,0.08), rgba(10,79,40,0.02));
 }
 
-.modalTitle { font-weight: 950; }
+.perfilPage .modalHeaderLeft{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
 
-.modalClose {
-  border: 1px solid var(--border-soft);
-  background: white;
+.perfilPage .modalHeaderIcon{
+  width: 42px;
+  height: 42px;
   border-radius: 12px;
-  padding: 8px 10px;
-  cursor: pointer;
+  background: rgba(10,79,40,0.12);
+  color: #0a4f28;
+  display:grid;
+  place-items:center;
 }
 
-.formStack{
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
-  margin-top: 12px;
+.perfilPage .modalHeaderTitle{
+  font-size: 16px;
+  font-weight: 900;
+  color: rgba(0,0,0,0.82);
+  line-height: 1.1;
 }
 
-.formField{ display:flex; flex-direction:column; gap:8px; }
+.perfilPage .modalHeaderSub{
+  margin-top: 4px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: rgba(0,0,0,0.60);
+}
 
-.label { font-size: 0.82rem; font-weight: 950; color: var(--text-main); }
-
-.fieldInput{
-  width: 100%;
-  height: 44px;
-  padding: 0 12px;
-  border-radius: 12px;
-  border: 1px solid var(--border-soft);
-  outline: none;
+.perfilPage .modalClose{
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid rgba(0,0,0,0.12);
   background: #fff;
-  box-sizing: border-box;
-  font-size: 0.95rem;
+  cursor: pointer;
+  color: rgba(0,0,0,0.65);
+  display: grid;
+  place-items: center;
 }
 
-.modalFooter {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 12px;
+.perfilPage .modalClose:hover{ background: rgba(0,0,0,0.03); }
+
+.perfilPage .modalDivider{ height: 1px; background: rgba(0,0,0,0.10); }
+.perfilPage .modalBody{ padding: 14px 16px 16px; }
+
+.perfilPage .modalFooter{
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+  margin-top:14px;
+  padding-top:12px;
+  border-top: 1px solid rgba(0,0,0,0.08);
 }
 
-/* ===== TOAST ===== */
-.toast {
+/* ===============================
+   TOAST (se mantiene)
+   =============================== */
+.perfilPage .toast{
   position: fixed;
   right: 16px;
   bottom: 16px;
-  z-index: 1000;
+  z-index: 10000;
   padding: 12px 14px;
   border-radius: 12px;
-  box-shadow: var(--shadow-soft);
-  border: 1px solid var(--border-soft);
+  box-shadow: 0 10px 24px rgba(0,0,0,0.12);
+  border: 1px solid rgba(0,0,0,0.12);
   background: white;
-  font-weight: 950;
+  font-weight: 900;
   max-width: 420px;
 }
-.toast-success { border-color: rgba(6,118,71,0.35); }
-.toast-error { border-color: rgba(180,35,24,0.35); }
-.toast-info { border-color: rgba(2, 132, 199, 0.35); }
+.perfilPage .toast-success{ border-color: rgba(6,118,71,0.35); }
+.perfilPage .toast-error{ border-color: rgba(180,35,24,0.35); }
+.perfilPage .toast-info{ border-color: rgba(2,132,199,0.35); }
 
-/* ===== SKELETON ===== */
-.perfilSkeleton .skLine{
-  height: 14px;
-  border-radius: 8px;
-  background: rgba(2,6,23,0.06);
-  margin-bottom: 10px;
-}
-.perfilSkeleton .w40{ width: 40%; }
-.perfilSkeleton .w70{ width: 70%; }
-.skGrid{ display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; }
-.skBox{ height: 56px; border-radius: 16px; background: rgba(2,6,23,0.06); }
-
-@media (max-width: 840px){
-  .dataGrid{ grid-template-columns: 1fr; }
-  .heroActions{ width: 100%; }
+/* RESPONSIVE */
+@media (max-width: 820px){
+  .perfilPage .hero{ flex-direction: column; align-items: flex-start; }
+  .perfilPage .heroActions{ width: 100%; }
+  .perfilPage .formGrid{ grid-template-columns: 1fr; }
 }

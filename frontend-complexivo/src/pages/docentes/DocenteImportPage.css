@@ -1,0 +1,269 @@
+/* src/pages/docentes/DocenteImportPage.css */
+
+/* ===============================
+   BASE (misma línea visual)
+   =============================== */
+.docenteImportPage .wrap {
+  padding: 16px 18px 28px;
+}
+
+.docenteImportPage .hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
+  background: linear-gradient(90deg, #0b6034 0%, #147a4a 100%);
+  border-radius: 14px;
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.10);
+}
+
+.docenteImportPage .heroLeft {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.docenteImportPage .heroLogo {
+  height: 42px;
+  width: auto;
+  filter: drop-shadow(0 3px 10px rgba(0,0,0,0.18));
+}
+
+.docenteImportPage .heroText { min-width: 0; }
+
+.docenteImportPage .heroTitle {
+  margin: 0;
+  color: #fff;
+  font-weight: 900;
+  font-size: 22px;
+  line-height: 1.1;
+  letter-spacing: 0.2px;
+}
+
+.docenteImportPage .heroSubtitle {
+  margin: 6px 0 0;
+  color: rgba(255,255,255,0.86);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.docenteImportPage .heroActions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.docenteImportPage .heroBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgba(255,255,255,0.45);
+  background: rgba(255,255,255,0.06);
+  color: #fff;
+  font-weight: 900;
+  padding: 10px 14px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.08s ease, border-color 0.15s ease;
+  white-space: nowrap;
+}
+
+.docenteImportPage .heroBtn:hover {
+  background: rgba(255,255,255,0.10);
+  border-color: rgba(255,255,255,0.60);
+  transform: translateY(-1px);
+}
+
+.docenteImportPage .heroBtn:active { transform: translateY(0); }
+
+.docenteImportPage .heroBtn svg{
+  width: 18px;
+  height: 18px;
+}
+
+/* ===============================
+   PANEL IMPORT (como tu screenshot: separado y serio)
+   =============================== */
+.docenteImportPage .panel {
+  margin-top: 14px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.09);
+  border-radius: 14px;
+  box-shadow: 0 8px 18px rgba(0,0,0,0.05);
+  overflow: hidden;
+}
+
+.docenteImportPage .panelHead {
+  padding: 14px 16px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  background: linear-gradient(90deg, rgba(10,79,40,0.08), rgba(10,79,40,0.02));
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+}
+
+.docenteImportPage .panelTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 900;
+  color: rgba(0,0,0,0.82);
+}
+
+.docenteImportPage .panelSub {
+  margin: 6px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(0,0,0,0.60);
+}
+
+.docenteImportPage .panelBody {
+  padding: 14px 16px 16px;
+}
+
+.docenteImportPage .steps {
+  display: grid;
+  gap: 12px;
+}
+
+.docenteImportPage .step {
+  border: 1px solid rgba(0,0,0,0.10);
+  border-radius: 14px;
+  padding: 12px;
+  background: #fff;
+}
+
+.docenteImportPage .stepTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.docenteImportPage .stepLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 900;
+  font-size: 14px;
+  color: rgba(0,0,0,0.78);
+}
+
+.docenteImportPage .stepLabel svg{
+  width: 18px;
+  height: 18px;
+  color: #0a4f28;
+}
+
+.docenteImportPage .stepHint {
+  margin-top: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: rgba(0,0,0,0.60);
+  line-height: 1.35;
+}
+
+/* Botones del panel */
+.docenteImportPage .btnPrimary {
+  height: 42px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(10,79,40,0.28);
+  background: #0a4f28;
+  color: #fff;
+  font-weight: 900;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.docenteImportPage .btnPrimary:hover { filter: brightness(1.03); }
+
+.docenteImportPage .btnGhost {
+  height: 42px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.14);
+  background: #fff;
+  font-weight: 900;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.docenteImportPage .btnGhost:disabled,
+.docenteImportPage .btnPrimary:disabled{
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* info / alert */
+.docenteImportPage .infoBox {
+  margin-top: 12px;
+  border: 1px solid rgba(2,132,199,0.22);
+  background: rgba(2,132,199,0.08);
+  border-radius: 14px;
+  padding: 12px;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  color: rgba(0,0,0,0.76);
+}
+
+.docenteImportPage .infoBox svg{
+  width: 18px;
+  height: 18px;
+  color: #0284c7;
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.docenteImportPage .infoText {
+  font-size: 13.5px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+/* Toast */
+.docenteImportPage .toast{
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 99999;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-weight: 900;
+  max-width: 420px;
+  color: #111;
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.12);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+}
+
+.docenteImportPage .toast-success{
+  background: #EAF7EE;
+  border-color: rgba(6,118,71,0.35);
+}
+
+.docenteImportPage .toast-error{
+  background: #FDECEC;
+  border-color: rgba(180,35,24,0.35);
+}
+
+.docenteImportPage .toast-info{
+  background: #EEF5FF;
+  border-color: rgba(2,132,199,0.35);
+}
+
+@media (max-width: 820px) {
+  .docenteImportPage .hero { flex-direction: column; align-items: flex-start; }
+  .docenteImportPage .heroTitle { font-size: 19px; }
+}
