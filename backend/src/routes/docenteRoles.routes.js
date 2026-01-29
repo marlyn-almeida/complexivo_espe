@@ -1,4 +1,3 @@
-// src/routes/docenteRoles.routes.js
 const router = require("express").Router();
 const { param, body } = require("express-validator");
 const validate = require("../middlewares/validate.middleware");

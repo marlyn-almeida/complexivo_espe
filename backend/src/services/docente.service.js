@@ -1,5 +1,4 @@
 // src/services/docente.service.js
-const bcrypt = require("bcryptjs");
 const repo = require("../repositories/docente.repo");
 
 function isAdmin(user) {
@@ -10,9 +9,8 @@ function isSuperAdmin(user) {
   return user?.rol === "SUPER_ADMIN";
 }
 
-// ✅ Resuelve carrera para asignación tipo DOCENTE
+// ✅ Resuelve carrera para asignación tipo DOCENTE (opcional)
 async function resolveCarreraIdForCreate(payload, user) {
-  // ADMIN: siempre por scope (cuando crea)
   if (isAdmin(user)) {
     const carreraId = Number(user?.scope?.id_carrera);
     if (!carreraId) {
@@ -23,12 +21,11 @@ async function resolveCarreraIdForCreate(payload, user) {
     return carreraId;
   }
 
-  // SUPER_ADMIN: puede venir por payload (Formato B)
   if (isSuperAdmin(user)) {
     const idCarrera = payload.id_carrera ? Number(payload.id_carrera) : null;
     const codigoCarrera = payload.codigo_carrera ? String(payload.codigo_carrera).trim() : null;
 
-    if (!idCarrera && !codigoCarrera) return null; // no asigna carrera
+    if (!idCarrera && !codigoCarrera) return null;
 
     if (idCarrera) {
       const c = await repo.findCarreraById(idCarrera);
@@ -42,15 +39,11 @@ async function resolveCarreraIdForCreate(payload, user) {
         err.status = 422;
         throw err;
       }
-
-      if (codigoCarrera) {
-        if (String(c.codigo_carrera).trim() !== codigoCarrera) {
-          const err = new Error("id_carrera y codigo_carrera no coinciden");
-          err.status = 422;
-          throw err;
-        }
+      if (codigoCarrera && String(c.codigo_carrera).trim() !== codigoCarrera) {
+        const err = new Error("id_carrera y codigo_carrera no coinciden");
+        err.status = 422;
+        throw err;
       }
-
       return Number(c.id_carrera);
     }
 
@@ -73,25 +66,23 @@ async function resolveCarreraIdForCreate(payload, user) {
   return null;
 }
 
-/**
- * ✅ LISTADO:
- * - SUPER_ADMIN: ve todos
- * - ADMIN (rol 2): ve todos
- * - Filtro por carrera SOLO si viene query.id_carrera
- */
 async function list(query = {}, user) {
   const includeInactive = Boolean(query.includeInactive);
   const q = query.q || "";
   const page = query.page || 1;
   const limit = query.limit || 50;
 
-  // ✅ filtro opcional por carrera (si el front lo manda)
   const id_carrera =
     query.id_carrera !== undefined && query.id_carrera !== null && String(query.id_carrera).trim() !== ""
       ? Number(query.id_carrera)
       : null;
 
-  return repo.findAll({ includeInactive, q, page, limit, id_carrera });
+  const id_departamento =
+    query.id_departamento !== undefined && query.id_departamento !== null && String(query.id_departamento).trim() !== ""
+      ? Number(query.id_departamento)
+      : null;
+
+  return repo.findAll({ includeInactive, q, page, limit, id_carrera, id_departamento });
 }
 
 async function get(id, user) {
@@ -102,9 +93,7 @@ async function get(id, user) {
     throw err;
   }
 
-  // ✅ aquí sí puedes mantener seguridad por carrera si quieres (opcional)
-  // Si deseas que ADMIN solo pueda VER detalle de docentes de su carrera, déjalo como está.
-  // Si también quieres que ADMIN pueda ver cualquier detalle, borra este bloque.
+  // ✅ opcional: restringir ADMIN a su carrera (si quieres mantenerlo)
   if (isAdmin(user)) {
     const carreraId = Number(user?.scope?.id_carrera);
     if (!carreraId) {
@@ -124,7 +113,23 @@ async function get(id, user) {
   return doc;
 }
 
+function ensureCorreoCom(correo) {
+  const mail = String(correo || "").trim().toLowerCase();
+  if (!mail) {
+    const err = new Error("correo_docente es obligatorio");
+    err.status = 422;
+    throw err;
+  }
+  if (!mail.endsWith(".com")) {
+    const err = new Error("El correo del docente debe terminar en .com");
+    err.status = 422;
+    throw err;
+  }
+  return mail;
+}
+
 async function create(payload, user) {
+  // unicidad
   const byInst = await repo.findByInstitucional(payload.id_institucional_docente);
   if (byInst) {
     const err = new Error("Ya existe un docente con ese ID institucional");
@@ -146,38 +151,47 @@ async function create(payload, user) {
     throw err;
   }
 
-  let passwordPlano = payload.password;
-  if (!passwordPlano || !passwordPlano.trim()) passwordPlano = payload.nombre_usuario;
+  // correo obligatorio + .com
+  const correo = ensureCorreoCom(payload.correo_docente);
 
-  if (passwordPlano.trim().length < 6) {
-    const err = new Error("Password inicial mínimo 6 caracteres (puede ser el username si cumple)");
+  // departamento obligatorio
+  const depId = Number(payload.id_departamento);
+  if (!Number.isFinite(depId) || depId < 1) {
+    const err = new Error("id_departamento es obligatorio y debe ser un entero válido");
     err.status = 422;
     throw err;
   }
 
-  // ✅ Resolver carrera para asignación (Formato B)
-  const carreraIdToAssign = await resolveCarreraIdForCreate(payload, user);
+  // ✅ password inicial = cédula (PLANO) y obliga cambio
+  const cedulaPlano = String(payload.cedula || "").trim();
+  if (cedulaPlano.length < 6) {
+    const err = new Error("La cédula es inválida para usar como password inicial (mínimo 6 caracteres)");
+    err.status = 422;
+    throw err;
+  }
 
-  const passwordHash = await bcrypt.hash(passwordPlano, 10);
+  // ✅ carrera opcional
+  const carreraIdToAssign = await resolveCarreraIdForCreate(payload, user);
 
   const created = await repo.create({
     id_institucional_docente: payload.id_institucional_docente,
+    id_departamento: depId,
     cedula: payload.cedula,
     nombres_docente: payload.nombres_docente,
     apellidos_docente: payload.apellidos_docente,
-    correo_docente: payload.correo_docente ?? null,
-    telefono_docente: payload.telefono_docente ?? null,
+    correo_docente: correo,
+    telefono_docente: payload.telefono_docente ?? null, // ✅ opcional
     nombre_usuario: payload.nombre_usuario,
-    passwordHash,
+    passwordPlano: cedulaPlano, // ✅ PLANO
   });
 
-  // ✅ ROL DOCENTE automático (id_rol=3)
+  // ✅ rol DOCENTE automático
   await repo.assignRolToDocente({
     id_rol: 3,
     id_docente: Number(created.id_docente),
   });
 
-  // ✅ Asignación carrera_docente como DOCENTE
+  // ✅ carrera_docente solo si se decide asignar
   if (carreraIdToAssign) {
     await repo.assignDocenteToCarrera({
       id_carrera: Number(carreraIdToAssign),
@@ -213,12 +227,31 @@ async function update(id, payload, user) {
     throw err;
   }
 
+  // correo obligatorio + .com
+  const correo = ensureCorreoCom(payload.correo_docente);
+
+  const depId = Number(payload.id_departamento);
+  if (!Number.isFinite(depId) || depId < 1) {
+    const err = new Error("id_departamento es obligatorio y debe ser un entero válido");
+    err.status = 422;
+    throw err;
+  }
+
+  // opcional: validar unicidad de correo si cambió
+  const byCorreo = await repo.findByCorreo(correo);
+  if (byCorreo && Number(byCorreo.id_docente) !== Number(id)) {
+    const err = new Error("Ya existe un docente con ese correo");
+    err.status = 409;
+    throw err;
+  }
+
   return repo.update(id, {
     id_institucional_docente: payload.id_institucional_docente,
+    id_departamento: depId,
     cedula: payload.cedula,
     nombres_docente: payload.nombres_docente,
     apellidos_docente: payload.apellidos_docente,
-    correo_docente: payload.correo_docente ?? null,
+    correo_docente: correo,
     telefono_docente: payload.telefono_docente ?? null,
     nombre_usuario: payload.nombre_usuario,
   });

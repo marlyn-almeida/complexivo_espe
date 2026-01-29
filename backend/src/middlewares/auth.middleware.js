@@ -1,4 +1,3 @@
-// src/middlewares/auth.middleware.js
 const jwt = require("jsonwebtoken");
 
 const ROLE_ID_TO_NAME = {
@@ -8,9 +7,9 @@ const ROLE_ID_TO_NAME = {
 };
 
 function normalizeRole(r) {
-  if (typeof r === "string") return r;              // "ADMIN"
-  const n = Number(r);                              // 2
-  return ROLE_ID_TO_NAME[n] || null;                // "ADMIN"
+  if (typeof r === "string") return r;
+  const n = Number(r);
+  return ROLE_ID_TO_NAME[n] || null;
 }
 
 function auth(req, res, next) {
@@ -24,17 +23,12 @@ function auth(req, res, next) {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // roles puede venir como [1,2,3] o ["ADMIN", ...]
     const rawRoles = Array.isArray(decoded.roles) ? decoded.roles : [];
-    const roles = rawRoles
-      .map(normalizeRole)
-      .filter(Boolean);
+    const roles = rawRoles.map(normalizeRole).filter(Boolean);
 
-    // activeRole puede venir como 2 o "ADMIN"
     const rawActiveRole = decoded.activeRole ?? decoded.rol ?? null;
     const activeRole = normalizeRole(rawActiveRole);
 
-    // Rol efectivo: si activeRole no está en roles, usa el primero
     let effectiveRole = activeRole;
     if (roles.length > 0) {
       if (!effectiveRole || !roles.includes(effectiveRole)) {
@@ -44,9 +38,9 @@ function auth(req, res, next) {
 
     req.user = {
       id: decoded.id,
-      roles,                 // ✅ siempre strings
+      roles,
       activeRole: effectiveRole,
-      rol: effectiveRole,    // ✅ rol efectivo string
+      rol: effectiveRole,
       scope: decoded.scope ?? null,
     };
 
@@ -56,11 +50,8 @@ function auth(req, res, next) {
   }
 }
 
-// ✅ authorize: acepta allowRoles ["ADMIN"] (recomendado) y también [2] por compatibilidad
 function authorize(allowRoles = []) {
-  const allowed = (allowRoles || [])
-    .map(normalizeRole)
-    .filter(Boolean);
+  const allowed = (allowRoles || []).map(normalizeRole).filter(Boolean);
 
   return (req, res, next) => {
     const role = req.user?.rol ?? null;

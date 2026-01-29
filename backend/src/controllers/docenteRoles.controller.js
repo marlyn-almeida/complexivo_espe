@@ -1,4 +1,3 @@
-// src/controllers/docenteRoles.controller.js
 const service = require("../services/docenteRoles.service");
 
 async function getRoles(req, res, next) {

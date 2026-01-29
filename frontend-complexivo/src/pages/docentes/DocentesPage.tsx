@@ -25,7 +25,7 @@ import {
   BadgeX,
 } from "lucide-react";
 
-import escudoESPE from "../../assets/escudo-espe.png"; // <-- ajusta tu ruta real si cambia
+import escudoESPE from "../../assets/escudo.png"; 
 import "./DocentesPage.css";
 
 const PAGE_SIZE = 10;

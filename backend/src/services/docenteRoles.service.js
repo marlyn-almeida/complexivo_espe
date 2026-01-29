@@ -1,4 +1,3 @@
-// src/services/docenteRoles.service.js
 const docenteRepo = require("../repositories/docente.repo");
 const rolesRepo = require("../repositories/docenteRoles.repo");
 
@@ -28,7 +27,7 @@ async function getRolesByDocenteId(id_docente) {
       id_rol: Number(r.id_rol),
       nombre_rol: r.nombre_rol,
       descripcion_rol: r.descripcion_rol,
-      estado: Number(r.estado), // estado del rol en catálogo
+      estado: Number(r.estado),
       assigned: activeRoleIds.includes(Number(r.id_rol)),
     })),
     activeRoleIds,
@@ -43,7 +42,6 @@ async function setRolesByDocenteId(id_docente, roleIds = []) {
     throw err;
   }
 
-  // Normaliza IDs
   const normalized = Array.from(new Set((roleIds || []).map(Number))).filter(
     (n) => Number.isFinite(n) && n > 0
   );
@@ -61,7 +59,6 @@ async function setRolesByDocenteId(id_docente, roleIds = []) {
     }
   }
 
-  // Aplicar estado 1/0 para todos los roles del catálogo
   const allRoles = await rolesRepo.getAllRoles({ includeInactive: true });
   const allRoleIds = allRoles.map((r) => Number(r.id_rol));
 

@@ -1,4 +1,3 @@
-// src/repositories/docenteRoles.repo.js
 const pool = require("../config/db");
 
 async function getAllRoles({ includeInactive = true } = {}) {
