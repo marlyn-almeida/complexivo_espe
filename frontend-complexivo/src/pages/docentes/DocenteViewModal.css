@@ -1,0 +1,236 @@
+/* ===============================
+   VIEW MODAL – DOCENTE
+   =============================== */
+
+.dmOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+}
+
+.dmCard {
+  width: min(980px, 100%);
+  background: #fff;
+  border-radius: 18px;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.28);
+  overflow: hidden;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+}
+
+/* ===============================
+   HEADER
+   =============================== */
+
+.dmHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  background: linear-gradient(90deg, #eef6f1, #f8fbf9);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.dmHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dmHeaderIcon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: rgba(10, 79, 40, 0.15);
+  color: #0a4f28;
+  display: grid;
+  place-items: center;
+}
+
+.dmTitle {
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.dmSub {
+  font-size: 13px;
+  opacity: 0.65;
+}
+
+.dmClose {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  background: #fff;
+  cursor: pointer;
+}
+
+/* ===============================
+   BODY
+   =============================== */
+
+.dmBody {
+  padding: 18px;
+}
+
+/* ===============================
+   TOP SUMMARY
+   =============================== */
+
+.dmTop {
+  display: flex;
+  gap: 16px;
+  padding: 14px;
+  border-radius: 16px;
+  background: #fafafa;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.dmAvatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 14px;
+  background: rgba(10, 79, 40, 0.12);
+  color: #0a4f28;
+  display: grid;
+  place-items: center;
+}
+
+.dmTopMain {
+  flex: 1;
+  min-width: 0;
+}
+
+.dmNameRow {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.dmName {
+  font-size: 17px;
+  font-weight: 950;
+}
+
+.dmMiniRow {
+  margin-top: 6px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  opacity: 0.7;
+}
+
+/* ===============================
+   PILLS
+   =============================== */
+
+.dmPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.dmPillGreen {
+  background: #e4f2ea;
+  color: #0a4f28;
+}
+
+.dmPillGray {
+  background: #f0f0f0;
+  color: #555;
+}
+
+.dmPillPurple {
+  background: #eee9ff;
+  color: #5b21b6;
+}
+
+/* ===============================
+   GRID
+   =============================== */
+
+.dmGrid {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.dmField {
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: #fff;
+}
+
+.dmFull {
+  grid-column: 1 / -1;
+}
+
+.dmLabel {
+  font-size: 12px;
+  font-weight: 900;
+  opacity: 0.6;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-transform: uppercase;
+}
+
+.dmValue {
+  margin-top: 6px;
+  font-size: 14.5px;
+  font-weight: 600;
+}
+
+/* ===============================
+   FOOTER
+   =============================== */
+
+.dmFooter {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.dmBtnGhost {
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  background: #fff;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+/* ===============================
+   RESPONSIVE
+   =============================== */
+
+@media (max-width: 900px) {
+  .dmGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .dmTop {
+    flex-direction: column;
+  }
+
+  .dmGrid {
+    grid-template-columns: 1fr;
+  }
+}

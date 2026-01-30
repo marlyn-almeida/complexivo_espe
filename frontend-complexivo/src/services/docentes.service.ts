@@ -9,7 +9,7 @@ export type DocenteListParams = {
   limit?: number;
   id_carrera?: number | null;
 
-  // ✅ NUEVO: filtro por departamento
+  // ✅ filtro por departamento
   id_departamento?: number | null;
 };
 
@@ -43,6 +43,43 @@ export type DocenteUpdateDTO = {
   nombre_usuario: string;
 };
 
+// =========================
+// ✅ TIPOS IMPORT MASIVO
+// =========================
+export type DocenteImportRow = {
+  id_institucional_docente: string;
+  cedula: string;
+  apellidos_docente: string;
+  nombres_docente: string;
+  correo_docente: string;
+  telefono_docente?: string;
+  nombre_usuario: string;
+};
+
+export type DocenteImportBulkResponse = {
+  ok: boolean;
+  resumen: {
+    total: number;
+    importados: number;
+    omitidos: number;
+  };
+  detalles: {
+    importados: Array<{
+      fila: number;
+      id_institucional_docente: string;
+      cedula: string;
+      nombre_usuario: string;
+    }>;
+    omitidos: Array<{
+      fila: number;
+      motivo: string;
+      id_institucional_docente?: string;
+      cedula?: string;
+      nombre_usuario?: string;
+    }>;
+  };
+};
+
 export const docentesService = {
   list: async (arg: boolean | DocenteListParams = false): Promise<Docente[]> => {
     const paramsObj: DocenteListParams =
@@ -67,7 +104,7 @@ export const docentesService = {
         page: paramsObj.page ?? 1,
         limit,
         id_carrera: idCarrera,
-        id_departamento: idDepartamento, // ✅ NUEVO
+        id_departamento: idDepartamento,
       },
     });
 
@@ -99,4 +136,16 @@ export const docentesService = {
     const res = await axiosClient.patch(`/docentes/${id}/super-admin`, { enabled });
     return res.data;
   },
+
+  // ✅ IMPORT MASIVO (usa tu backend: POST /api/docentes/import)
+  importBulk: async (payload: { id_departamento: number; rows: DocenteImportRow[] }) => {
+    const res = await axiosClient.post<DocenteImportBulkResponse>("/docentes/import", payload);
+    return res.data;
+  },
 };
+
+export type DocenteImportBulkPayload = {
+  id_departamento: number;
+  rows: any[];
+};
+

@@ -13,14 +13,14 @@ export type DocenteImportRow = {
 
 // ✅ Para reporte/estadísticas del import
 export type DocenteImportIssue = {
-  rowNum: number;          // fila real en Excel (desde 2)
-  docenteLabel: string;    // "PÉREZ JUAN (L00)" o lo que haya
-  reason: string;          // mensaje humano
+  rowNum: number;
+  docenteLabel: string;
+  reason: string;
 };
 
 export type DocenteImportReport = {
-  rows: DocenteImportRow[];     // solo válidos y no duplicados en el Excel
-  issues: DocenteImportIssue[]; // inválidos + duplicados del Excel
+  rows: DocenteImportRow[];
+  issues: DocenteImportIssue[];
   stats: {
     totalRows: number;
     valid: number;
@@ -29,13 +29,16 @@ export type DocenteImportReport = {
   };
 };
 
+/** ===========================
+ * Plantilla CSV (Excel-friendly)
+ * ===========================*/
 export function downloadPlantillaDocentesCSV() {
-  // Encabezados "para humanos", NO nombres de BD
+  // Encabezados "humanos"
   const headers = ["ID_ESPE", "CÉDULA", "APELLIDOS", "NOMBRES", "CORREO", "TELÉFONO", "USUARIO"];
 
   const example = [
     "L00",
-    "171111111",
+    "1711111111",
     "PÉREZ",
     "JUAN",
     "juan.perez@espe.edu.ec",
@@ -43,13 +46,15 @@ export function downloadPlantillaDocentesCSV() {
     "jperez",
   ];
 
+  // ✅ BOM para que Excel lea bien tildes/ñ
   const bom = "\ufeff";
-  const csv =
-    bom +
-    headers.join(",") +
-    "\n" +
-    example.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",") +
-    "\n";
+
+  // ✅ separador ; (clave para Excel en configuración ES)
+  const sep = ";";
+
+  const line = (arr: any[]) => arr.map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`).join(sep);
+
+  const csv = bom + line(headers) + "\n" + line(example) + "\n";
 
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
@@ -64,14 +69,48 @@ export function downloadPlantillaDocentesCSV() {
 }
 
 /** ===========================
- * Helpers
+ * Plantilla XLSX (bonita)
  * ===========================*/
+export function downloadPlantillaDocentesXLSX() {
+  const headers = ["ID_ESPE", "CÉDULA", "APELLIDOS", "NOMBRES", "CORREO", "TELÉFONO", "USUARIO"];
+
+  const example = [
+    ["L00", "1711111111", "PÉREZ", "JUAN", "juan.perez@espe.edu.ec", "0999999999", "jperez"],
+  ];
+
+  const data = [headers, ...example];
+
+  const ws = XLSX.utils.aoa_to_sheet(data);
+
+  // ✅ ancho de columnas (se ve “bonito”)
+  ws["!cols"] = [
+    { wch: 10 }, // ID_ESPE
+    { wch: 12 }, // CEDULA
+    { wch: 20 }, // APELLIDOS
+    { wch: 20 }, // NOMBRES
+    { wch: 28 }, // CORREO
+    { wch: 14 }, // TELEFONO
+    { wch: 16 }, // USUARIO
+  ];
+
+  // ✅ congelar encabezado
+  ws["!freeze"] = { xSplit: 0, ySplit: 1, topLeftCell: "A2", activePane: "bottomLeft", state: "frozen" } as any;
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "DOCENTES");
+
+  XLSX.writeFile(wb, "plantilla_docentes.xlsx");
+}
+
+/* ===========================
+   Helpers del parse (los tuyos)
+   =========================== */
 function normKey(s: any) {
   return String(s ?? "")
     .trim()
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "") // sin tildes
+    .replace(/[\u0300-\u036f]/g, "")
     .replace(/\s+/g, "_");
 }
 
@@ -80,7 +119,6 @@ function onlyDigits(v: string) {
 }
 
 function isValidEmail(v: string) {
-  // ✅ acepta .ec, .com, .edu.ec, etc.
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v ?? "").trim());
 }
 
@@ -93,15 +131,10 @@ function pickNorm(r: Record<string, any>, keys: string[]) {
   return "";
 }
 
-function makeLabel(
-  apellidos: string,
-  nombres: string,
-  idEspe: string,
-  usuario: string
-) {
+function makeLabel(apellidos: string, nombres: string, idEspe: string, usuario: string) {
   const full = `${(apellidos || "").trim()} ${(nombres || "").trim()}`.trim();
-  const extra = idEspe ? idEspe : (usuario ? usuario : "");
-  return extra ? `${full || "Docente"} (${extra})` : (full || "Docente");
+  const extra = idEspe ? idEspe : usuario ? usuario : "";
+  return extra ? `${full || "Docente"} (${extra})` : full || "Docente";
 }
 
 function missingFieldsHuman(m: {
@@ -123,9 +156,10 @@ function missingFieldsHuman(m: {
 }
 
 /** ===========================
- * Parse Excel con estadísticas
+ * Parse (tu función real se llama parseFileDocentes)
+ * ✅ dejo aquí un ejemplo con la firma; si ya la tienes, NO la dupliques.
  * ===========================*/
-export async function parseExcelDocentes(file: File): Promise<DocenteImportReport> {
+export async function parseFileDocentes(file: File): Promise<DocenteImportReport> {
   const buf = await file.arrayBuffer();
   const wb = XLSX.read(buf, { type: "array" });
 
@@ -149,7 +183,6 @@ export async function parseExcelDocentes(file: File): Promise<DocenteImportRepor
     };
   }
 
-  // Normaliza keys de cada fila
   const normalizedRaw = raw.map((r) => {
     const out: Record<string, any> = {};
     Object.keys(r || {}).forEach((k) => (out[normKey(k)] = r[k]));
@@ -159,7 +192,6 @@ export async function parseExcelDocentes(file: File): Promise<DocenteImportRepor
   const issues: DocenteImportIssue[] = [];
   const validRows: DocenteImportRow[] = [];
 
-  // ✅ Para detectar duplicados dentro del Excel (por campos únicos)
   const seenCedula = new Set<string>();
   const seenCorreo = new Set<string>();
   const seenUsuario = new Set<string>();
@@ -170,31 +202,21 @@ export async function parseExcelDocentes(file: File): Promise<DocenteImportRepor
   normalizedRaw.forEach((r, idx) => {
     const rowNum = idx + 2;
 
-    // Lee valores soportando encabezados "bonitos" y los técnicos
-    const id_espe = String(
-      pickNorm(r, ["ID_ESPE", "id_espe", "id_institucional_docente", "id institucional", "id"])
-    ).trim();
-
+    const id_espe = String(pickNorm(r, ["ID_ESPE", "id_espe", "id_institucional_docente", "id"])).trim();
     const cedulaRaw = String(pickNorm(r, ["CÉDULA", "CEDULA", "cedula", "cédula"])).trim();
     const cedula = onlyDigits(cedulaRaw);
 
     const apellidos = String(pickNorm(r, ["APELLIDOS", "apellidos", "apellidos_docente"])).trim();
     const nombres = String(pickNorm(r, ["NOMBRES", "nombres", "nombres_docente"])).trim();
-
     const correo = String(pickNorm(r, ["CORREO", "correo", "correo_docente", "email"])).trim();
 
-    const telefonoRaw = String(
-      pickNorm(r, ["TELÉFONO", "TELEFONO", "telefono", "telefono_docente", "celular"])
-    ).trim();
+    const telefonoRaw = String(pickNorm(r, ["TELÉFONO", "TELEFONO", "telefono", "celular"])).trim();
     const telefono = onlyDigits(telefonoRaw);
 
-    const usuario = String(
-      pickNorm(r, ["USUARIO", "usuario", "nombre_usuario", "username"])
-    ).trim();
+    const usuario = String(pickNorm(r, ["USUARIO", "usuario", "nombre_usuario", "username"])).trim();
 
     const label = makeLabel(apellidos, nombres, id_espe, usuario);
 
-    // 1) Validar obligatorios (con mensajes humanos)
     const missing = {
       idEspe: !id_espe,
       cedula: !cedula,
@@ -205,25 +227,15 @@ export async function parseExcelDocentes(file: File): Promise<DocenteImportRepor
     };
 
     if (missing.idEspe || missing.cedula || missing.apellidos || missing.nombres || missing.correo || missing.usuario) {
-      issues.push({
-        rowNum,
-        docenteLabel: label,
-        reason: missingFieldsHuman(missing),
-      });
+      issues.push({ rowNum, docenteLabel: label, reason: missingFieldsHuman(missing) });
       return;
     }
 
-    // 2) Validar correo
     if (!isValidEmail(correo)) {
-      issues.push({
-        rowNum,
-        docenteLabel: label,
-        reason: `Correo no válido: "${correo}".`,
-      });
+      issues.push({ rowNum, docenteLabel: label, reason: `Correo no válido: "${correo}".` });
       return;
     }
 
-    // 3) Duplicados dentro del Excel (simulando tus UNIQUE de BD)
     const keyCed = cedula;
     const keyCor = correo.toLowerCase();
     const keyUsr = usuario.toLowerCase();
@@ -237,21 +249,15 @@ export async function parseExcelDocentes(file: File): Promise<DocenteImportRepor
 
     if (dupReasons.length) {
       duplicatesInFile++;
-      issues.push({
-        rowNum,
-        docenteLabel: label,
-        reason: dupReasons.join(" / ") + ".",
-      });
+      issues.push({ rowNum, docenteLabel: label, reason: dupReasons.join(" / ") + "." });
       return;
     }
 
-    // marcar como visto
     seenCedula.add(keyCed);
     seenCorreo.add(keyCor);
     seenUsuario.add(keyUsr);
     seenIdEspe.add(keyId);
 
-    // ✅ ok
     validRows.push({
       id_institucional_docente: id_espe,
       cedula,
@@ -263,13 +269,14 @@ export async function parseExcelDocentes(file: File): Promise<DocenteImportRepor
     });
   });
 
-  const totalRows = normalizedRaw.length;
-  const invalid = issues.length;
-  const valid = validRows.length;
-
   return {
     rows: validRows,
     issues,
-    stats: { totalRows, valid, invalid, duplicatesInFile },
+    stats: {
+      totalRows: normalizedRaw.length,
+      valid: validRows.length,
+      invalid: issues.length,
+      duplicatesInFile,
+    },
   };
 }

@@ -12,10 +12,15 @@
   max-width: 100%;
 }
 
+.docentesPage {
+  width: 100%;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Liberation Sans";
+}
+
 /* ===============================
    HERO
    =============================== */
-.hero {
+.docentesPage .hero {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -25,19 +30,32 @@
   border-radius: 14px;
   padding: 14px 16px;
   border: 1px solid rgba(255, 255, 255, 0.18);
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.10);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.1);
 }
 
-.heroLeft {
+.docentesPage .heroLeft {
   display: flex;
   align-items: center;
   gap: 14px;
   min-width: 0;
 }
 
-.heroText { min-width: 0; }
+.docentesPage .heroLogo {
+  width: 46px;
+  height: 46px;
+  object-fit: contain;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  flex: 0 0 auto;
+}
 
-.heroTitle {
+.docentesPage .heroText {
+  min-width: 0;
+}
+
+.docentesPage .heroTitle {
   margin: 0;
   color: #fff;
   font-weight: 900;
@@ -46,31 +64,25 @@
   letter-spacing: 0.2px;
 }
 
-.heroSubtitle {
+.docentesPage .heroSubtitle {
   margin: 6px 0 0;
-  color: rgba(255,255,255,0.86);
+  color: rgba(255, 255, 255, 0.86);
   font-size: 13px;
 }
 
-.heroNote{
-  margin: 6px 0 0;
-  color: rgba(255,255,255,0.86);
-  font-size: 13px;
-}
-
-.heroActions{
-  display:flex;
+.docentesPage .heroActions {
+  display: flex;
   gap: 10px;
   flex-wrap: wrap;
   justify-content: flex-end;
 }
 
-.heroBtn {
+.docentesPage .heroBtn {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  border: 1px solid rgba(255,255,255,0.45);
-  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.06);
   color: #fff;
   font-weight: 900;
   padding: 10px 14px;
@@ -80,66 +92,120 @@
   white-space: nowrap;
 }
 
-.heroBtn:hover {
-  background: rgba(255,255,255,0.10);
-  border-color: rgba(255,255,255,0.60);
+.docentesPage .heroBtnIcon {
+  width: 18px;
+  height: 18px;
+}
+
+.docentesPage .heroBtn.primary {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.55);
+}
+
+.docentesPage .heroBtn.ghost {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.docentesPage .heroBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.6);
   transform: translateY(-1px);
 }
 
-.heroBtn:active { transform: translateY(0); }
+.docentesPage .heroBtn:active {
+  transform: translateY(0);
+}
 
-.iconAction{ width: 18px; height: 18px; }
+.docentesPage .heroBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 
 /* ===============================
    BOX
    =============================== */
-.box {
+.docentesPage .box {
   margin-top: 14px;
   background: #fff;
   border: 1px solid rgba(0, 0, 0, 0.09);
   border-radius: 14px;
   padding: 16px 16px 18px;
-  box-shadow: 0 8px 18px rgba(0,0,0,0.05);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.05);
+}
+
+.docentesPage .boxHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-bottom: 10px;
+}
+
+.docentesPage .boxRight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.docentesPage .sectionTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 900;
+  color: rgba(0, 0, 0, 0.82);
+}
+
+.docentesPage .sectionTitleIcon {
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  background: rgba(10, 79, 40, 0.1);
+  border: 1px solid rgba(10, 79, 40, 0.18);
+  display: grid;
+  place-items: center;
+  color: #0a4f28;
 }
 
 /* ===============================
    SEARCH
    =============================== */
-.searchWrap {
+.docentesPage .searchWrap {
   position: relative;
   width: min(520px, 100%);
 }
 
-.searchIcon {
+.docentesPage .searchIcon {
   position: absolute;
   left: 12px;
   top: 50%;
   transform: translateY(-50%);
   width: 18px;
   height: 18px;
-  color: rgba(0,0,0,0.45);
+  color: rgba(0, 0, 0, 0.45);
 }
 
-.search {
+.docentesPage .search {
   width: 100%;
   height: 40px;
   border-radius: 10px;
-  border: 1px solid rgba(0,0,0,0.12);
+  border: 1px solid rgba(0, 0, 0, 0.12);
   padding: 0 12px 0 40px;
   outline: none;
   font-weight: 400;
-  font-size: 14.5px; /* ✅ mejor legibilidad */
+  font-size: 14.5px;
 }
 
-.search:focus {
-  border-color: rgba(10,79,40,0.35);
-  box-shadow: 0 0 0 4px rgba(10,79,40,0.12);
+.docentesPage .search:focus {
+  border-color: rgba(10, 79, 40, 0.35);
+  box-shadow: 0 0 0 4px rgba(10, 79, 40, 0.12);
 }
 
 /* ===============================
    SUMMARY
    =============================== */
-.summaryRow {
+.docentesPage .summaryRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -148,14 +214,14 @@
   margin-top: 8px;
 }
 
-.summaryBoxes {
+.docentesPage .summaryBoxes {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
 }
 
-.summaryBox {
-  border: 1px solid rgba(0,0,0,0.10);
+.docentesPage .summaryBox {
+  border: 1px solid rgba(0, 0, 0, 0.1);
   background: #fbfbfb;
   border-radius: 14px;
   padding: 10px 12px;
@@ -165,58 +231,53 @@
   gap: 2px;
 }
 
-.summaryLabel {
+.docentesPage .summaryLabel {
   font-size: 12px;
-  color: rgba(0,0,0,0.55);
+  color: rgba(0, 0, 0, 0.55);
   font-weight: 700;
 }
 
-.summaryValue {
+.docentesPage .summaryValue {
   font-size: 16px;
   font-weight: 900;
-  color: rgba(0,0,0,0.82);
+  color: rgba(0, 0, 0, 0.82);
 }
 
-.summaryBox.active {
-  border-color: rgba(10,79,40,0.18);
-  background: rgba(10,79,40,0.06);
+.docentesPage .summaryBox.active {
+  border-color: rgba(10, 79, 40, 0.18);
+  background: rgba(10, 79, 40, 0.06);
 }
 
-.summaryBox.inactive {
-  border-color: rgba(180,20,20,0.18);
-  background: rgba(180,20,20,0.05);
-}
-
-.summaryActions {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  flex-wrap: wrap;
+.docentesPage .summaryBox.inactive {
+  border-color: rgba(180, 20, 20, 0.18);
+  background: rgba(180, 20, 20, 0.05);
 }
 
 /* Toggle */
-.toggle {
+.docentesPage .toggle {
   display: flex;
   align-items: center;
   gap: 10px;
   user-select: none;
   font-weight: 700;
-  color: rgba(0,0,0,0.72);
+  color: rgba(0, 0, 0, 0.72);
 }
 
-.toggle input { display: none; }
+.docentesPage .toggle input {
+  display: none;
+}
 
-.slider {
+.docentesPage .slider {
   width: 44px;
   height: 26px;
   border-radius: 999px;
-  border: 1px solid rgba(0,0,0,0.12);
+  border: 1px solid rgba(0, 0, 0, 0.12);
   background: #e5e7eb;
   position: relative;
-  transition: background .2s ease;
+  transition: background 0.2s ease;
 }
 
-.slider::after {
+.docentesPage .slider::after {
   content: "";
   width: 20px;
   height: 20px;
@@ -225,28 +286,28 @@
   position: absolute;
   top: 2px;
   left: 2px;
-  transition: transform .2s ease;
-  box-shadow: 0 6px 18px rgba(0,0,0,.12);
+  transition: transform 0.2s ease;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
 }
 
-.toggle input:checked + .slider {
-  background: rgba(10,79,40,0.90);
+.docentesPage .toggle input:checked + .slider {
+  background: rgba(10, 79, 40, 0.9);
 }
 
-.toggle input:checked + .slider::after {
+.docentesPage .toggle input:checked + .slider::after {
   transform: translateX(18px);
 }
 
-.toggleText {
+.docentesPage .toggleText {
   font-size: 13px;
-  color: rgba(0,0,0,0.55);
+  color: rgba(0, 0, 0, 0.55);
   font-weight: 700;
 }
 
 /* ===============================
    FILTERS
    =============================== */
-.filtersRow {
+.docentesPage .filtersRow {
   display: flex;
   gap: 10px;
   margin-top: 12px;
@@ -254,179 +315,287 @@
   align-items: center;
 }
 
-.selectWrap{
+.docentesPage .filterWrap {
   position: relative;
   min-width: 280px;
   flex: 1 1 280px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-.selectIcon{
-  display:none;
+.docentesPage .filterIcon {
+  width: 18px;
+  height: 18px;
+  color: rgba(0, 0, 0, 0.55);
 }
 
-.select {
+.docentesPage .select {
   padding: 10px 12px;
   border-radius: 12px;
-  border: 1px solid rgba(0,0,0,0.12);
+  border: 1px solid rgba(0, 0, 0, 0.12);
   outline: none;
   background: white;
   min-width: 180px;
   font-weight: 400;
   width: 100%;
-  font-size: 14.5px; /* ✅ */
+  font-size: 14.5px;
 }
 
-/* hint */
-.filtersHint{
-  margin-top: 10px;
-  font-size: 13px;
-  color: rgba(0,0,0,0.60);
-  font-weight: 500;
+.docentesPage .select:focus {
+  border-color: rgba(10, 79, 40, 0.35);
+  box-shadow: 0 0 0 4px rgba(10, 79, 40, 0.12);
 }
-.filtersHintLabel{
+
+.docentesPage .chipClear {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: #fff;
   font-weight: 800;
-  color: rgba(0,0,0,0.70);
+  cursor: pointer;
+  white-space: nowrap;
 }
-.filtersHintValue{
-  font-weight: 500;
-  color: rgba(0,0,0,0.65);
+
+.docentesPage .chipClear:hover {
+  background: rgba(0, 0, 0, 0.03);
 }
 
 /* ===============================
    TABLE WRAP
    =============================== */
-.tableWrap {
+.docentesPage .tableWrap {
   overflow: auto;
   border-radius: 12px;
-  border: 1px solid rgba(0,0,0,0.08);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  margin-top: 12px;
 }
 
-/* tabla */
-.table {
+/* ✅ tabla más “ordenada” y sin huecos raros */
+.docentesPage .table {
   width: 100%;
   border-collapse: collapse;
   background: #fff;
   min-width: 980px;
+  table-layout: fixed; /* ✅ clave para que no se deforme la columna Docente */
 }
 
-/* ✅ CABECERA VERDE COMO TU SCREENSHOT */
-.table thead th {
-  text-align: left;
-  font-size: 14px;
-  font-weight: 900;
-  color: rgba(255,255,255,0.96);
+/* ✅ HEAD: centrado + preparado para íconos */
+.docentesPage .table thead th {
+  text-align: center; /* ✅ */
+  font-size: 13.5px;
+  font-weight: 950;
+  color: rgba(255, 255, 255, 0.96);
   background: linear-gradient(135deg, #0b5a3a, #064e2c);
-  border-bottom: 1px solid rgba(0,0,0,0.10);
-  padding: 12px 12px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  padding: 12px 10px;
+  white-space: nowrap;
 }
 
-.thInline {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-/* ✅ MENOS ESPACIO + LETRA MÁS GRANDE */
-.table tbody td {
-  border-bottom: 1px solid rgba(0,0,0,0.06);
-  padding: 10px 12px;       /* antes 12px -> más compacto */
+/* ✅ BODY: centrado */
+.docentesPage .table tbody td {
+  text-align: center; /* ✅ */
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  padding: 10px 10px;
   vertical-align: middle;
-  font-size: 14.5px;        /* antes 14px -> más legible */
-  color: rgba(0,0,0,0.72);
+  font-size: 14.5px;
+  color: rgba(0, 0, 0, 0.72);
   font-weight: 400;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* columns */
-.thState { width: 160px; }
-.thActions { width: 220px; }
-.thName { width: 380px; }
-
-/* NAME */
-.nameMain {
-  font-weight: 700; /* ✅ un toque más fuerte */
-  color: rgba(0,0,0,0.86);
+/* ✅ widths más realistas para que no “reviente” Docente */
+.docentesPage .thName {
+  width: 320px;
+}
+.docentesPage .thState {
+  width: 160px;
+}
+.docentesPage .thActions {
+  width: 200px;
 }
 
-/* ✅ USUARIO NORMAL (SIN CHIP “BOMBA”) */
-.userPlain{
-  font-weight: 600;
-  color: rgba(0,0,0,0.72);
+/* ✅ ya NO forzamos min-width gigante (esto era parte del problema visual) */
+.docentesPage .table td:first-child,
+.docentesPage .table th.thName {
+  min-width: 0 !important;
+}
+
+/* NAME (centrado y limpio) */
+.docentesPage .nameMain {
+  font-weight: 850;
+  color: rgba(0, 0, 0, 0.86);
+  display: flex;
+  align-items: center;
+  justify-content: center; /* ✅ centrado */
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* ===============================
+   ✅ SUBROW (FIX REAL)
+   =============================== */
+
+/* reset fuerte dentro de nameSubRow */
+.docentesPage .table td:first-child .nameSubRow,
+.docentesPage .table td:first-child .nameSubRow * {
+  margin: 0 !important;
+  padding: 0 !important;
+  float: none !important;
+  position: static !important;
+  right: auto !important;
+  left: auto !important;
+}
+
+/* subfila centrada y compacta */
+.docentesPage .table td:first-child .nameSubRow {
+  margin-top: 6px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important; /* ✅ centrado */
+  gap: 10px !important;
+
+  max-width: 100% !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+
+  color: rgba(0, 0, 0, 0.56) !important;
+  font-size: 13px !important;
+  line-height: 1.2 !important;
+}
+
+/* cada item */
+.docentesPage .table td:first-child .nameSubRow .subItem {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  flex: 0 0 auto !important;
+  min-width: 0 !important;
+}
+
+/* correo con ... */
+.docentesPage .table td:first-child .nameSubRow .subMail {
+  flex: 0 1 auto !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* separador • */
+.docentesPage .table td:first-child .nameSubRow .subItem + .subItem::before {
+  content: "•";
+  margin: 0 10px 0 2px;
+  opacity: 0.45;
+}
+
+/* iconos lucide */
+.docentesPage .table td:first-child .nameSubRow svg {
+  width: 14px !important;
+  height: 14px !important;
+  display: inline-block !important;
+  flex: 0 0 14px !important;
+  opacity: 0.85 !important;
+}
+
+/* mono (solo dentro de docentesPage para no romper otras pantallas) */
+.docentesPage .mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
+/* usuario y correo */
+.docentesPage .userCell {
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.72);
+}
+
+.docentesPage .mailCell {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* CHIPS */
-.chipCode {
+.docentesPage .chipCode {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 6px 10px;
   border-radius: 10px;
-  border: 1px solid rgba(59,130,246,0.25);
-  background: rgba(59,130,246,0.10);
-  color: rgba(0,0,0,0.78);
-  font-weight: 700; /* ✅ */
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  background: rgba(59, 130, 246, 0.1);
+  color: rgba(0, 0, 0, 0.78);
+  font-weight: 800;
   letter-spacing: 0.02em;
   white-space: nowrap;
 }
 
-.chipMod {
+.docentesPage .chipPill {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
+  padding: 6px 10px;
   border-radius: 999px;
-  border: 1px solid rgba(10,79,40,0.22);
-  background: rgba(10,79,40,0.08);
-  color: #0a4f28;
-  font-weight: 700;
-  white-space: nowrap;
+  font-weight: 900;
+  font-size: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.docentesPage .chipPurple {
+  background: rgba(124, 58, 237, 0.12);
+  border-color: rgba(124, 58, 237, 0.22);
+  color: rgba(91, 33, 182, 0.92);
 }
 
 /* BADGES */
-.badgeActive,
-.badgeInactive {
+.docentesPage .badgeActive,
+.docentesPage .badgeInactive {
   display: inline-flex;
   justify-content: center;
   align-items: center;
+  gap: 8px;
   min-width: 108px;
   padding: 8px 12px;
   border-radius: 999px;
-  font-weight: 800; /* ✅ */
-  border: 1px solid rgba(0,0,0,0.10);
+  font-weight: 900;
+  border: 1px solid rgba(0, 0, 0, 0.1);
   white-space: nowrap;
 }
 
-.badgeActive {
+.docentesPage .badgeActive {
   background: #dfeee7;
   color: #0a4f28;
-  border-color: rgba(10,79,40,0.18);
+  border-color: rgba(10, 79, 40, 0.18);
 }
 
-.badgeInactive {
+.docentesPage .badgeInactive {
   background: #f0f0f0;
-  color: rgba(0,0,0,0.65);
+  color: rgba(0, 0, 0, 0.65);
 }
 
 /* ACTIONS + TOOLTIP */
-.tdActions {
-  text-align: right;
-  padding-right: 14px;
+.docentesPage .tdActions {
+  text-align: center; /* ✅ centrado */
 }
 
-.actions {
+.docentesPage .actions {
   display: inline-flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: center; /* ✅ centrado */
   gap: 10px;
   flex-wrap: nowrap;
 }
 
-.iconBtn {
+.docentesPage .iconBtn {
   position: relative;
   width: 38px;
   height: 38px;
   border-radius: 10px;
-  border: 1px solid rgba(0,0,0,0.12);
+  border: 1px solid rgba(0, 0, 0, 0.12);
   background: #fff;
   display: grid;
   place-items: center;
@@ -434,35 +603,39 @@
   transition: background 0.15s ease, border-color 0.15s ease, transform 0.08s ease;
 }
 
-.iconBtn:hover {
-  background: rgba(0,0,0,0.04);
+.docentesPage .iconBtn:hover {
+  background: rgba(0, 0, 0, 0.04);
   transform: translateY(-1px);
 }
 
-.iconBtn:active { transform: translateY(0); }
+.docentesPage .iconBtn:active {
+  transform: translateY(0);
+}
 
-.iconBtn_neutral { color: rgba(0,0,0,0.70); }
+.docentesPage .iconBtn_neutral {
+  color: rgba(0, 0, 0, 0.7);
+}
 
-.iconBtn_primary {
+.docentesPage .iconBtn_primary {
   color: #0a4f28;
-  background: rgba(10,79,40,0.10);
-  border-color: rgba(10,79,40,0.30);
+  background: rgba(10, 79, 40, 0.1);
+  border-color: rgba(10, 79, 40, 0.3);
 }
 
-.iconBtn_danger {
-  color: rgba(180,20,20,0.95);
-  background: rgba(180,20,20,0.08);
-  border-color: rgba(180,20,20,0.30);
+.docentesPage .iconBtn_danger {
+  color: rgba(180, 20, 20, 0.95);
+  background: rgba(180, 20, 20, 0.08);
+  border-color: rgba(180, 20, 20, 0.3);
 }
 
-.tooltip {
+.docentesPage .tooltip {
   position: absolute;
   top: -46px;
   left: 50%;
   transform: translateX(-50%) translateY(6px);
-  background: rgba(20,20,20,0.94);
+  background: rgba(20, 20, 20, 0.94);
   color: #fff;
-  font-weight: 700;
+  font-weight: 800;
   font-size: 12px;
   padding: 6px 10px;
   border-radius: 10px;
@@ -473,7 +646,7 @@
   z-index: 50;
 }
 
-.tooltip::after {
+.docentesPage .tooltip::after {
   content: "";
   position: absolute;
   top: 100%;
@@ -481,28 +654,28 @@
   transform: translateX(-50%);
   border-width: 6px 6px 0 6px;
   border-style: solid;
-  border-color: rgba(20,20,20,0.94) transparent transparent transparent;
+  border-color: rgba(20, 20, 20, 0.94) transparent transparent transparent;
 }
 
-.iconBtn:hover .tooltip {
+.docentesPage .iconBtn:hover .tooltip {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
 }
 
 /* EMPTY */
-.emptyCell { padding: 34px 16px !important; }
+.docentesPage .emptyCell {
+  padding: 34px 16px !important;
+}
 
-.empty {
+.docentesPage .empty {
   display: grid;
   place-items: center;
   gap: 10px;
-  color: rgba(0,0,0,0.60);
+  color: rgba(0, 0, 0, 0.6);
 }
 
-.emptyText { font-size: 14.5px; }
-
 /* PAGINATION */
-.paginationRow {
+.docentesPage .paginationRow {
   display: flex;
   justify-content: center;
   gap: 12px;
@@ -511,283 +684,52 @@
   flex-wrap: wrap;
 }
 
-.paginationText {
-  font-weight: 700;
-  color: rgba(0,0,0,0.55);
+.docentesPage .paginationText {
+  font-weight: 800;
+  color: rgba(0, 0, 0, 0.55);
 }
 
 /* Buttons */
-.btnGhost {
+.docentesPage .btnGhost {
   height: 40px;
   padding: 0 14px;
   border-radius: 10px;
-  border: 1px solid rgba(0,0,0,0.14);
+  border: 1px solid rgba(0, 0, 0, 0.14);
   background: #fff;
-  font-weight: 700;
+  font-weight: 800;
   cursor: pointer;
 }
 
-.btnGhost:disabled {
+.docentesPage .btnGhost:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.docentesPage .btnGhost:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
 
-.btnPrimary {
+.docentesPage .btnPrimary {
   height: 40px;
   padding: 0 14px;
   border-radius: 10px;
-  border: 1px solid rgba(10,79,40,0.28);
+  border: 1px solid rgba(10, 79, 40, 0.28);
   background: #0a4f28;
   color: #fff;
-  font-weight: 800;
+  font-weight: 900;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 10px;
 }
 
-.btnPrimary:hover { filter: brightness(1.03); }
-
-.btnPrimary:disabled,
-.heroBtn:disabled {
+.docentesPage .btnPrimary:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
-/* helper + error */
-.helperTextBig {
-  margin-top: 8px;
-  font-size: 14.5px;
-  font-weight: 500;
-  color: #0a4f28;
-}
-
-.fieldError {
-  margin-top: 6px;
-  font-size: 12.5px;
-  font-weight: 700;
-  color: rgba(180, 20, 20, 0.95);
-}
-
-.inputError{
-  border-color: rgba(180, 20, 20, 0.35) !important;
-  box-shadow: 0 0 0 4px rgba(180, 20, 20, 0.08) !important;
-}
-
-/* ===============================
-   MODALES (PRO)
-   =============================== */
-.modalOverlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.52);
-  z-index: 9999;
-  display: grid;
-  place-items: center;
-  padding: 18px;
-}
-
-.modalCard.modalPro,
-.modalPro {
-  width: min(880px, 100%);
-  background: #fff;
-  border-radius: 14px;
-  border: 1px solid rgba(0,0,0,0.12);
-  box-shadow: 0 22px 60px rgba(0,0,0,0.22);
-  overflow: hidden;
-}
-
-.modalHeader {
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap: 14px;
-  padding: 14px 16px;
-  background: linear-gradient(90deg, rgba(10,79,40,0.08), rgba(10,79,40,0.02));
-}
-
-.modalHeaderLeft{
-  display:flex;
-  align-items:center;
-  gap: 12px;
-  min-width: 0;
-}
-
-.modalHeaderIcon{
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
-  background: rgba(10,79,40,0.12);
-  color: #0a4f28;
-  display:grid;
-  place-items:center;
-  flex: 0 0 auto;
-}
-
-.modalHeaderIcon svg{ width: 20px; height: 20px; }
-
-.modalHeaderTitle{
-  font-size: 16px;
-  font-weight: 900;
-  color: rgba(0,0,0,0.82);
-  line-height: 1.1;
-}
-
-.modalHeaderSub{
-  margin-top: 4px;
-  font-size: 13.5px;
-  font-weight: 500;
-  color: rgba(0,0,0,0.60);
-}
-
-.modalDivider { height: 1px; background: rgba(0,0,0,0.10); }
-.modalBody { padding: 14px 16px 16px; }
-
-.modalClose{
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
-  border: 1px solid rgba(0,0,0,0.12);
-  background: #fff;
-  cursor: pointer;
-  color: rgba(0,0,0,0.65);
-  display: grid;
-  place-items: center;
-}
-
-.modalClose:hover { background: rgba(0,0,0,0.03); }
-.modalClose svg{ width: 18px; height: 18px; }
-
-/* form grid */
-.formGrid{
-  display:grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.field{ display:block; }
-.fieldFull{ grid-column: 1 / -1; }
-
-/* LABELS en MAYÚSCULAS */
-.modalPro .label{
-  display: block;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  font-weight: 800;
-  font-size: 12.5px;
-  color: rgba(0,0,0,0.70);
-  margin-bottom: 6px;
-}
-
-.req { color: rgba(180, 20, 20, 0.95); }
-
-.input{
-  width: 100%;
-  height: 40px;
-  border-radius: 10px;
-  border: 1px solid rgba(0,0,0,0.12);
-  padding: 0 12px;
-  outline: none;
-  font-weight: 400;
-  font-size: 14.5px;
-  color: rgba(0,0,0,0.82);
-}
-
-.input:focus{
-  border-color: rgba(10,79,40,0.35);
-  box-shadow: 0 0 0 4px rgba(10,79,40,0.12);
-}
-
-.inputWithIcon,
-.selectWithIcon{
-  position: relative;
-}
-
-.fieldIcon,
-.selectIconInline{
-  position: absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 16px;
-  height: 16px;
-  color: rgba(0,0,0,0.45);
-}
-
-.inputWithIcon .input,
-.selectWithIcon .input{
-  padding-left: 38px;
-}
-
-/* footer modal */
-.modalFooter{
-  display:flex;
-  justify-content:flex-end;
-  gap: 10px;
-  margin-top: 14px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(0,0,0,0.08);
-}
-
-/* VIEW cards */
-.viewCards{
-  display:grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.vCard{
-  border: 1px solid rgba(0,0,0,0.10);
-  border-radius: 14px;
-  padding: 12px;
-  background: #fff;
-}
-
-.vCardFull{ grid-column: 1 / -1; }
-
-/* títulos view en MAYÚSCULAS */
-.modalPro .vLabel{
-  display:flex;
-  align-items:center;
-  gap: 8px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  font-size: 12.5px;
-  font-weight: 800;
-  color: rgba(0,0,0,0.55);
-}
-
-.vIcon{
-  width: 16px;
-  height: 16px;
-  color: rgba(0,0,0,0.50);
-}
-
-/* valores view normales */
-.modalPro .vValue{
-  margin-top: 8px;
-  font-size: 14.5px;
-  font-weight: 400;
-  color: rgba(0,0,0,0.82);
-  word-break: break-word;
-}
-
-/* ===============================
-   MAYÚSCULAS SOLO DONDE QUIERES
-   (CHIPS + ESTADO)
-   =============================== */
-.docentesPage .chipCode,
-.docentesPage .chipMod,
-.docentesPage .badgeActive,
-.docentesPage .badgeInactive {
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-/* ===============================
-   TOAST
-   =============================== */
-.toast{
+/* TOAST */
+.docentesPage .toast {
   position: fixed;
   right: 16px;
   bottom: 16px;
@@ -798,46 +740,233 @@
   max-width: 420px;
   color: #111;
   background: #fff;
-  border: 1px solid rgba(0,0,0,0.12);
-  box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
 }
 
-.toast-success{
-  background: #EAF7EE;
-  border-color: rgba(6,118,71,0.35);
+.docentesPage .toast-success {
+  background: #eaf7ee;
+  border-color: rgba(6, 118, 71, 0.35);
 }
 
-.toast-error{
-  background: #FDECEC;
-  border-color: rgba(180,35,24,0.35);
+.docentesPage .toast-error {
+  background: #fdecec;
+  border-color: rgba(180, 35, 24, 0.35);
 }
 
-.toast-info{
-  background: #EEF5FF;
-  border-color: rgba(2,132,199,0.35);
+.docentesPage .toast-info {
+  background: #eef5ff;
+  border-color: rgba(2, 132, 199, 0.35);
 }
 
-/* ===============================
-   RESPONSIVE
-   =============================== */
 @media (max-width: 820px) {
-  .hero { flex-direction: column; align-items: flex-start; }
-  .heroTitle { font-size: 19px; }
-  .actions { gap: 8px; }
+  .docentesPage .hero {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .docentesPage .heroTitle {
+    font-size: 19px;
+  }
+  .docentesPage .actions {
+    gap: 8px;
+  }
 
-  .formGrid { grid-template-columns: 1fr; }
-  .viewCards { grid-template-columns: 1fr; }
+  .docentesPage .table {
+    table-layout: auto; /* en móvil mejor auto */
+  }
+  .docentesPage .table td:first-child .nameSubRow {
+    white-space: normal !important;
+  }
 }
 
-/* ✅ FORZAR TABLA SIN ZEBRA (OVERRIDE) */
-.table tbody tr,
-.table tbody tr:nth-child(odd),
-.table tbody tr:nth-child(even) {
+/* FORZAR TABLA SIN ZEBRA (OVERRIDE) */
+.docentesPage .table tbody tr,
+.docentesPage .table tbody tr:nth-child(odd),
+.docentesPage .table tbody tr:nth-child(even) {
   background: #fff !important;
 }
 
-.table tbody tr:hover,
-.table tbody tr:nth-child(odd):hover,
-.table tbody tr:nth-child(even):hover {
-  background: rgba(0,0,0,0.03) !important;
+.docentesPage .table tbody tr:hover,
+.docentesPage .table tbody tr:nth-child(odd):hover,
+.docentesPage .table tbody tr:nth-child(even):hover {
+  background: rgba(0, 0, 0, 0.03) !important;
+}
+
+/* =========================
+   MODAL DOCENTE (View/Create/Edit)
+   (DocenteModal.css lo tienes aparte, pero aquí queda si lo usas junto)
+   ========================= */
+
+.dmOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+}
+
+.dmCard {
+  width: min(920px, 100%);
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Liberation Sans";
+}
+
+.dmWide {
+  width: min(980px, 100%);
+}
+
+.dmHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  background: linear-gradient(90deg, rgba(10, 79, 40, 0.10), rgba(10, 79, 40, 0.03));
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.dmHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.dmHeaderIcon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: rgba(10, 79, 40, 0.12);
+  color: #0a4f28;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+
+.dmHeaderText {
+  min-width: 0;
+}
+
+.dmTitle {
+  font-size: 16px;
+  font-weight: 900;
+  color: rgba(0, 0, 0, 0.84);
+  line-height: 1.1;
+}
+
+.dmSub {
+  margin-top: 4px;
+  font-size: 13.5px;
+  color: rgba(0, 0, 0, 0.62);
+  font-weight: 500;
+}
+
+.dmClose {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  background: #fff;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.dmClose:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.dmBody {
+  padding: 14px 16px 16px;
+}
+
+/* Grid view */
+.dmGrid {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.dmField {
+  border: 1px solid rgba(0, 0, 0, 0.10);
+  border-radius: 14px;
+  padding: 12px;
+  background: #fff;
+}
+
+.dmFull {
+  grid-column: 1 / -1;
+}
+
+.dmLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 12px;
+  font-weight: 900;
+  color: rgba(0, 0, 0, 0.56);
+}
+
+.dmLabel svg {
+  width: 16px;
+  height: 16px;
+  opacity: 0.75;
+}
+
+.dmValue {
+  margin-top: 8px;
+  font-size: 14.5px;
+  font-weight: 500;
+  color: rgba(0, 0, 0, 0.84);
+  word-break: break-word;
+}
+
+/* Footer */
+.dmFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.dmBtnGhost {
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  background: #fff;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.dmBtnGhost:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.dmCard .mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+@media (max-width: 980px) {
+  .dmGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .dmGrid {
+    grid-template-columns: 1fr;
+  }
 }

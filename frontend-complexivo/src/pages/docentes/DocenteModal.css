@@ -1,0 +1,452 @@
+/* src/pages/docentes/DocenteModal.css */
+
+/* =========================
+   OVERLAY
+   ========================= */
+.dmOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+}
+
+/* =========================
+   CARD
+   ========================= */
+.dmCard {
+  width: min(860px, 100%);
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Liberation Sans";
+}
+
+/* Más horizontal */
+.dmCardWide {
+  width: min(980px, 100%);
+}
+
+/* =========================
+   HEADER
+   ========================= */
+.dmHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  background: linear-gradient(90deg, rgba(10, 79, 40, 0.10), rgba(10, 79, 40, 0.03));
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.dmHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.dmHeaderIcon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: rgba(10, 79, 40, 0.12);
+  color: #0a4f28;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+
+.dmHeaderIcon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.dmTitle {
+  font-size: 16px;
+  font-weight: 900;
+  color: rgba(0, 0, 0, 0.84);
+  line-height: 1.1;
+}
+
+.dmSub {
+  margin-top: 4px;
+  font-size: 13.5px;
+  color: rgba(0, 0, 0, 0.62);
+  font-weight: 500;
+}
+
+.dmClose {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  background: #fff;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.dmClose:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+/* =========================
+   BODY
+   ========================= */
+.dmBody {
+  padding: 16px;
+}
+
+/* =========================
+   TOP SUMMARY (la barra de arriba)
+   ========================= */
+.dmTop {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(0, 0, 0, 0.10);
+  background: #fbfbfb;
+}
+
+.dmAvatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  background: rgba(10, 79, 40, 0.10);
+  border: 1px solid rgba(10, 79, 40, 0.20);
+  display: grid;
+  place-items: center;
+  color: #0a4f28;
+  flex: 0 0 auto;
+}
+
+.dmTopMain {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.dmNameRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.dmName {
+  font-size: 16px;
+  font-weight: 950;
+  color: rgba(0, 0, 0, 0.85);
+  line-height: 1.2;
+}
+
+.dmMiniRow {
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  color: rgba(0, 0, 0, 0.62);
+  font-size: 13px;
+}
+
+.dmMiniItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.dmMiniItem svg {
+  width: 14px;
+  height: 14px;
+  opacity: 0.85;
+  flex: 0 0 auto;
+}
+
+.dmMiniDot {
+  opacity: 0.45;
+}
+
+/* =========================
+   PILLS (chips de arriba)
+   ========================= */
+.dmPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-weight: 900;
+  font-size: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.10);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.dmPillPurple {
+  background: rgba(124, 58, 237, 0.12);
+  border-color: rgba(124, 58, 237, 0.22);
+  color: rgba(91, 33, 182, 0.92);
+}
+
+.dmPillGreen {
+  background: rgba(10, 79, 40, 0.10);
+  border-color: rgba(10, 79, 40, 0.22);
+  color: #0a4f28;
+}
+
+.dmPillGray {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.12);
+  color: rgba(0, 0, 0, 0.70);
+}
+
+/* =========================
+   HELPERS
+   ========================= */
+.dmEllipsis {
+  display: inline-block;
+  max-width: 520px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+
+.dmWrap {
+  white-space: normal;
+  word-break: break-word;
+}
+
+/* mono */
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+/* =========================
+   VIEW GRID
+   ========================= */
+.dmGrid {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  align-items: stretch;
+}
+
+.dmField {
+  border: 1px solid rgba(0, 0, 0, 0.10);
+  border-radius: 14px;
+  padding: 12px;
+  background: #fff;
+  min-width: 0;
+}
+
+.dmFull {
+  grid-column: 1 / -1;
+}
+
+.dmLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 12px;
+  font-weight: 900;
+  color: rgba(0, 0, 0, 0.56);
+  line-height: 1.1;
+}
+
+.dmLabel svg {
+  width: 16px;
+  height: 16px;
+  opacity: 0.75;
+  flex: 0 0 auto;
+}
+
+.dmValue {
+  margin-top: 8px;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.84);
+  word-break: break-word;
+}
+
+/* =========================
+   BADGES (estado dentro del grid)
+   ========================= */
+.dmBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-weight: 950;
+  border: 1px solid rgba(0, 0, 0, 0.10);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.dmBadgeOk {
+  background: #dfeee7;
+  color: #0a4f28;
+  border-color: rgba(10, 79, 40, 0.18);
+}
+
+.dmBadgeOff {
+  background: #f0f0f0;
+  color: rgba(0, 0, 0, 0.70);
+}
+
+/* =========================
+   FOOTER
+   ========================= */
+.dmFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.dmBtnGhost,
+.dmBtnPrimary {
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 10px;
+  font-weight: 900;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dmBtnGhost {
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  background: #fff;
+}
+
+.dmBtnGhost:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.dmBtnPrimary {
+  border: 1px solid rgba(10, 79, 40, 0.28);
+  background: #0a4f28;
+  color: #fff;
+}
+
+.dmBtnPrimary:disabled,
+.dmBtnGhost:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* =========================
+   FORM (para tu DocenteFormModal)
+   ========================= */
+.dmFormGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  align-items: start;
+  margin-top: 6px;
+}
+
+.dmInput {
+  min-width: 0;
+}
+
+.dmInput label {
+  font-weight: 900;
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.72);
+}
+
+.req {
+  color: #c0392b;
+  font-weight: 900;
+}
+
+.dmInputBox {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #fff;
+}
+
+.dmInputBox svg {
+  width: 18px;
+  height: 18px;
+  opacity: 0.65;
+  flex: 0 0 auto;
+}
+
+.dmInputBox input {
+  border: none;
+  outline: none;
+  width: 100%;
+  font-size: 14.5px;
+  background: transparent;
+  min-width: 0;
+}
+
+.dmSelectBox {
+  margin-top: 8px;
+}
+
+.dmSelectBox select {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  outline: none;
+  background: #fff;
+  font-size: 14.5px;
+}
+
+/* =========================
+   RESPONSIVE
+   ========================= */
+@media (max-width: 980px) {
+  .dmGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .dmFormGrid {
+    grid-template-columns: 1fr;
+  }
+  .dmEllipsis {
+    max-width: 360px;
+  }
+}
+
+@media (max-width: 640px) {
+  .dmTop {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .dmGrid {
+    grid-template-columns: 1fr;
+  }
+  .dmEllipsis {
+    max-width: 100%;
+  }
+}

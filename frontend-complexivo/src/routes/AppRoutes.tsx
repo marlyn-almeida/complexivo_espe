@@ -15,8 +15,7 @@ import CarreraAdminsPage from "../pages/carreras/CarreraAdminsPage";
 
 import DocentesPage from "../pages/docentes/DocentesPage";
 // ✅ NUEVO: separar páginas
-import DocenteImportPage from "../pages/docentes/DocenteImportPage";
-import DocenteFormPage from "../pages/docentes/DocenteFormPage";
+
 
 import EstudiantesPage from "../pages/estudiantes/EstudiantesPage";
 import CarreraPeriodoPage from "../pages/carreraPeriodo/CarreraPeriodoPage";
@@ -199,35 +198,6 @@ export default function AppRoutes() {
             }
           />
 
-          {/* ✅ NUEVO: Importar docentes en página separada */}
-          <Route
-            path="/docentes/importar"
-            element={
-              <ProtectedRoute allowRoles={[1, 2]}>
-                <DocenteImportPage />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* ✅ NUEVO: Crear docente en página separada */}
-          <Route
-            path="/docentes/nuevo"
-            element={
-              <ProtectedRoute allowRoles={[1, 2]}>
-                <DocenteFormPage />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* ✅ NUEVO: Editar docente en página separada */}
-          <Route
-            path="/docentes/:id/editar"
-            element={
-              <ProtectedRoute allowRoles={[1, 2]}>
-                <DocenteFormPage />
-              </ProtectedRoute>
-            }
-          />
 
           {/* =========================
               ADMIN (2)

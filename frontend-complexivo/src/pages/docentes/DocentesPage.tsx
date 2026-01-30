@@ -1,11 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+// ✅ src/pages/docentes/DocentesPage.tsx
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { Docente } from "../../types/docente";
-import type { Carrera } from "../../types/carrera";
+import type { Departamento } from "../../types/departamento";
 
 import { docentesService } from "../../services/docentes.service";
-import { carrerasService } from "../../services/carreras.service";
+import { departamentosService } from "../../services/departamentos.service";
+
+// ✅ MODALES (en la misma carpeta)
+import DocenteFormModal from "./DocenteFormModal";
+import DocenteViewModal from "./DocenteViewModal";
 
 import {
   Plus,
@@ -20,19 +24,22 @@ import {
   User,
   Hash,
   Mail,
-  Phone,
   BadgeCheck,
   BadgeX,
+  Pencil,
+  FileSpreadsheet,
+  Download,
+  Info,
 } from "lucide-react";
 
-import escudoESPE from "../../assets/escudo.png"; 
+import escudoESPE from "../../assets/escudo.png";
 import "./DocentesPage.css";
 
 const PAGE_SIZE = 10;
 type ToastType = "success" | "error" | "info";
 
 function onlyDigits(v: string) {
-  return v.replace(/\D+/g, "");
+  return String(v ?? "").replace(/\D+/g, "");
 }
 
 function getRoleFromTokenBestEffort(): string | null {
@@ -52,7 +59,7 @@ function getRoleFromTokenBestEffort(): string | null {
     const payload = token.split(".")[1];
     const json = JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
 
-    const role = json.activeRole ?? json.rol ?? null;
+    const role = (json as any).activeRole ?? (json as any).rol ?? null;
     if (typeof role === "string") return role;
 
     if (typeof role === "number") {
@@ -61,7 +68,7 @@ function getRoleFromTokenBestEffort(): string | null {
       if (role === 3) return "DOCENTE";
     }
 
-    const roles = Array.isArray(json.roles) ? json.roles : [];
+    const roles = Array.isArray((json as any).roles) ? (json as any).roles : [];
     if (roles.includes("SUPER_ADMIN") || roles.includes(1)) return "SUPER_ADMIN";
     return null;
   } catch {
@@ -70,76 +77,39 @@ function getRoleFromTokenBestEffort(): string | null {
 }
 
 export default function DocentesPage() {
-  const navigate = useNavigate();
-
   const [docentes, setDocentes] = useState<Docente[]>([]);
-  const [carreras, setCarreras] = useState<Carrera[]>([]);
+  const [departamentos, setDepartamentos] = useState<Departamento[]>([]);
   const [loading, setLoading] = useState(false);
-  const [loadingCarreras, setLoadingCarreras] = useState(false);
+  const [loadingDepartamentos, setLoadingDepartamentos] = useState(false);
 
   const [search, setSearch] = useState("");
   const [mostrarInactivos, setMostrarInactivos] = useState(false);
   const [page, setPage] = useState(1);
 
-  const [filterCarreraId, setFilterCarreraId] = useState<string>(""); // "" = todas
+  const [filterDepartamentoId, setFilterDepartamentoId] = useState<string>("");
 
+  // ✅ VIEW MODAL (AHORA SÍ SE USA EL COMPONENTE)
   const [showViewModal, setShowViewModal] = useState(false);
   const [viewDocente, setViewDocente] = useState<Docente | null>(null);
+
+  // ✅ CREATE / EDIT MODAL
+  const [showFormModal, setShowFormModal] = useState(false);
+  const [formMode, setFormMode] = useState<"create" | "edit">("create");
+  const [formDocente, setFormDocente] = useState<Docente | null>(null);
+
+  // IMPORT MODAL
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importDepartamentoId, setImportDepartamentoId] = useState<string>("");
+  const [importing, setImporting] = useState(false);
+  const fileRef = useRef<HTMLInputElement | null>(null);
 
   const [toast, setToast] = useState<{ msg: string; type: ToastType } | null>(null);
 
   const isSuperAdminUI = useMemo(() => getRoleFromTokenBestEffort() === "SUPER_ADMIN", []);
 
-  useEffect(() => {
-    loadCarreras();
-  }, []);
-
-  useEffect(() => {
-    loadAll();
-    setPage(1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mostrarInactivos, filterCarreraId]);
-
-  async function loadCarreras() {
-    try {
-      setLoadingCarreras(true);
-      const data = await carrerasService.list(false);
-      setCarreras((data ?? []).filter((c) => c.estado === 1));
-    } catch {
-      showToast("Error al cargar carreras", "error");
-    } finally {
-      setLoadingCarreras(false);
-    }
-  }
-
-  async function loadAll() {
-    try {
-      setLoading(true);
-
-      const idCarrera =
-        filterCarreraId && Number(filterCarreraId) > 0 ? Number(filterCarreraId) : undefined;
-
-      const data = await docentesService.list({
-        includeInactive: mostrarInactivos,
-        id_carrera: idCarrera,
-      });
-
-      setDocentes(data);
-    } catch {
-      showToast("Error al cargar docentes", "error");
-    } finally {
-      setLoading(false);
-    }
-  }
-
   function showToast(msg: string, type: ToastType = "info") {
     setToast({ msg, type });
     window.setTimeout(() => setToast(null), 3200);
-  }
-
-  function openView(d: Docente) {
-    setViewDocente(d);
-    setShowViewModal(true);
   }
 
   function extractBackendError(err: any): string {
@@ -151,6 +121,80 @@ export default function DocentesPage() {
     }
     if (typeof msg === "string" && msg.trim()) return msg;
     return "Ocurrió un error";
+  }
+
+  useEffect(() => {
+    loadDepartamentos();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    loadAll();
+    setPage(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mostrarInactivos, filterDepartamentoId]);
+
+  async function loadDepartamentos() {
+    try {
+      setLoadingDepartamentos(true);
+      const data = await departamentosService.list();
+      setDepartamentos((data ?? []).filter((d) => d.estado === 1));
+    } catch {
+      showToast("Error al cargar departamentos", "error");
+    } finally {
+      setLoadingDepartamentos(false);
+    }
+  }
+
+  async function loadAll() {
+    try {
+      setLoading(true);
+
+      const idDepartamento =
+        filterDepartamentoId && Number(filterDepartamentoId) > 0 ? Number(filterDepartamentoId) : undefined;
+
+      const data = await docentesService.list({
+        includeInactive: mostrarInactivos,
+        id_departamento: idDepartamento,
+      });
+
+      setDocentes(data);
+    } catch (err: any) {
+      showToast(extractBackendError(err), "error");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function openView(d: Docente) {
+    setViewDocente(d);
+    setShowViewModal(true);
+  }
+
+  function closeView() {
+    setShowViewModal(false);
+    setViewDocente(null);
+  }
+
+  function openCreate() {
+    setFormMode("create");
+    setFormDocente(null);
+    setShowFormModal(true);
+  }
+
+  function openEdit(d: Docente) {
+    setFormMode("edit");
+    setFormDocente(d);
+    setShowFormModal(true);
+  }
+
+  function closeFormModal() {
+    setShowFormModal(false);
+  }
+
+  async function onSavedForm() {
+    await loadAll();
+    setShowFormModal(false);
   }
 
   async function toggleSuperAdmin(d: Docente) {
@@ -207,36 +251,62 @@ export default function DocentesPage() {
   const activos = docentes.filter((d) => d.estado === 1).length;
   const inactivos = docentes.filter((d) => d.estado === 0).length;
 
+  function openImportModal() {
+    setImportDepartamentoId("");
+    setShowImportModal(true);
+  }
+
+  function closeImportModal() {
+    if (!importing) setShowImportModal(false);
+  }
+
+  function onDownloadPlantilla() {
+    showToast("Siguiente paso: plantilla XLSX bonita (no CSV).", "info");
+  }
+
+  function onPickFile() {
+    if (!importDepartamentoId) {
+      showToast("Selecciona un departamento.", "info");
+      return;
+    }
+    fileRef.current?.click();
+  }
+
+  async function onFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    showToast(`Archivo seleccionado: ${file.name}. Siguiente: parse/import real.`, "info");
+  }
+
   return (
     <div className="docentesPage">
       <div className="wrap">
-        {/* HERO */}
         <div className="hero">
           <div className="heroLeft">
             <img className="heroLogo" src={escudoESPE} alt="ESPE" />
             <div className="heroText">
               <h1 className="heroTitle">Docentes</h1>
               <p className="heroSubtitle">
-                Gestión de docentes del sistema. La contraseña inicial será la <b>cédula</b> y en el primer
-                inicio de sesión deberá cambiarla.
+                Gestión de docentes del sistema. La contraseña inicial será la <b>cédula</b> y en el primer inicio de
+                sesión deberá cambiarla.
               </p>
             </div>
           </div>
 
           <div className="heroActions">
-            <button className="heroBtn ghost" onClick={() => navigate("/docentes/importar")} disabled={loading}>
+            <button className="heroBtn ghost" onClick={openImportModal} disabled={loading}>
               <Upload className="heroBtnIcon" />
               Importar
             </button>
 
-            <button className="heroBtn primary" onClick={() => navigate("/docentes/nuevo")} disabled={loading}>
+            <button className="heroBtn primary" onClick={openCreate} disabled={loading}>
               <Plus className="heroBtnIcon" />
               Nuevo docente
             </button>
           </div>
         </div>
 
-        {/* BOX */}
         <div className="box">
           <div className="boxHead">
             <div className="sectionTitle">
@@ -263,7 +333,6 @@ export default function DocentesPage() {
             </div>
           </div>
 
-          {/* SUMMARY */}
           <div className="summaryRow">
             <div className="summaryBoxes">
               <div className="summaryBox">
@@ -283,7 +352,6 @@ export default function DocentesPage() {
             </div>
           </div>
 
-          {/* FILTERS */}
           <div className="filtersRow">
             <div className="searchWrap">
               <Search className="searchIcon" />
@@ -299,43 +367,76 @@ export default function DocentesPage() {
               <Filter className="filterIcon" />
               <select
                 className="select"
-                value={filterCarreraId}
-                onChange={(e) => setFilterCarreraId(e.target.value)}
-                disabled={loadingCarreras}
-                aria-label="Filtrar por carrera"
-                title="Filtrar por carrera"
+                value={filterDepartamentoId}
+                onChange={(e) => setFilterDepartamentoId(e.target.value)}
+                disabled={loadingDepartamentos}
+                aria-label="Filtrar por departamento"
+                title="Filtrar por departamento"
               >
-                <option value="">{loadingCarreras ? "Cargando carreras..." : "Todas las carreras"}</option>
-                {carreras
+                <option value="">{loadingDepartamentos ? "Elegir departamento..." : "Todos los departamentos"}</option>
+                {departamentos
                   .slice()
-                  .sort((a, b) => a.nombre_carrera.localeCompare(b.nombre_carrera, "es"))
-                  .map((c) => (
-                    <option key={c.id_carrera} value={String(c.id_carrera)}>
-                      {c.nombre_carrera} ({c.codigo_carrera})
+                  .sort((a, b) => a.nombre_departamento.localeCompare(b.nombre_departamento, "es"))
+                  .map((d) => (
+                    <option key={d.id_departamento} value={String(d.id_departamento)}>
+                      {d.nombre_departamento}
                     </option>
                   ))}
               </select>
 
-              {filterCarreraId && (
-                <button className="chipClear" onClick={() => setFilterCarreraId("")} title="Quitar filtro">
+              {filterDepartamentoId && (
+                <button className="chipClear" onClick={() => setFilterDepartamentoId("")} title="Quitar filtro">
                   <X size={14} /> Quitar filtro
                 </button>
               )}
             </div>
           </div>
 
-          {/* TABLE */}
           <div className="tableWrap">
             <table className="table">
               <thead>
                 <tr>
-                  <th className="thName">Docente</th>
-                  <th>Cédula</th>
-                  <th>ID institucional</th>
-                  <th>Usuario</th>
-                  <th>Correo</th>
-                  <th className="thState">Estado</th>
-                  <th className="thActions">Acciones</th>
+                  <th className="thName thCenter">
+                    <span className="thFlex">
+                      <User size={16} /> Docente
+                    </span>
+                  </th>
+
+                  <th className="thCenter">
+                    <span className="thFlex">
+                      <Hash size={16} /> Cédula
+                    </span>
+                  </th>
+
+                  <th className="thCenter">
+                    <span className="thFlex">
+                      <BadgeCheck size={16} /> ID institucional
+                    </span>
+                  </th>
+
+                  <th className="thCenter">
+                    <span className="thFlex">
+                      <User size={16} /> Usuario
+                    </span>
+                  </th>
+
+                  <th className="thCenter">
+                    <span className="thFlex">
+                      <Mail size={16} /> Correo
+                    </span>
+                  </th>
+
+                  <th className="thState thCenter">
+                    <span className="thFlex">
+                      <BadgeCheck size={16} /> Estado
+                    </span>
+                  </th>
+
+                  <th className="thActions thCenter">
+                    <span className="thFlex">
+                      <Pencil size={16} /> Acciones
+                    </span>
+                  </th>
                 </tr>
               </thead>
 
@@ -349,7 +450,7 @@ export default function DocentesPage() {
                 ) : pageData.length ? (
                   pageData.map((d) => (
                     <tr key={d.id_docente}>
-                      <td>
+                      <td className="tdCenter tdName">
                         <div className="nameMain">
                           {d.apellidos_docente} {d.nombres_docente}
                           {(d as any).super_admin === 1 && (
@@ -358,55 +459,33 @@ export default function DocentesPage() {
                             </span>
                           )}
                         </div>
-
-                        <div className="nameSubRow">
-                          <span className="subItem">
-                            <Hash size={14} />
-                            {d.id_docente}
-                          </span>
-                          <span className="subDot">•</span>
-                          <span className="subItem">
-                            <Mail size={14} />
-                            {d.correo_docente || "-"}
-                          </span>
-                          {d.telefono_docente ? (
-                            <>
-                              <span className="subDot">•</span>
-                              <span className="subItem">
-                                <Phone size={14} />
-                                {onlyDigits(d.telefono_docente)}
-                              </span>
-                            </>
-                          ) : null}
-                        </div>
                       </td>
 
-                      <td className="mono">{onlyDigits(d.cedula || "") || "-"}</td>
+                      <td className="mono tdCenter">{onlyDigits(d.cedula || "") || "-"}</td>
 
-                      <td>
+                      <td className="tdCenter">
                         <span className="chipCode">{(d.id_institucional_docente || "-").toUpperCase()}</span>
                       </td>
 
-                      {/* ✅ usuario normal (NO chip “bomba”) */}
-                      <td className="mono userCell">{d.nombre_usuario || "-"}</td>
+                      <td className="mono tdCenter userCell">{d.nombre_usuario || "-"}</td>
 
-                      <td className="mailCell">{d.correo_docente || "-"}</td>
+                      <td className="tdCenter mailCell">{d.correo_docente || "-"}</td>
 
-                      <td>
+                      <td className="tdCenter">
                         {d.estado ? (
                           <span className="badgeActive">
-                            <BadgeCheck size={16} />
+                            <BadgeCheck className="badgeIcon" size={16} />
                             ACTIVO
                           </span>
                         ) : (
                           <span className="badgeInactive">
-                            <BadgeX size={16} />
+                            <BadgeX className="badgeIcon" size={16} />
                             INACTIVO
                           </span>
                         )}
                       </td>
 
-                      <td className="tdActions">
+                      <td className="tdActions tdCenter">
                         <div className="actions">
                           {isSuperAdminUI && (
                             <button
@@ -421,18 +500,15 @@ export default function DocentesPage() {
                             </button>
                           )}
 
+                          {/* ✅ VER REAL (usa DocenteViewModal) */}
                           <button className="iconBtn iconBtn_neutral" title="Ver" onClick={() => openView(d)}>
                             <Eye className="iconAction" />
                             <span className="tooltip">Ver</span>
                           </button>
 
-                          <button
-                            className="iconBtn iconBtn_primary"
-                            title="Editar"
-                            onClick={() => navigate(`/docentes/${d.id_docente}/editar`)}
-                          >
-                            {/* re-uso Pencil sin importarlo acá: usa un ícono simple */}
-                            <span className="pencilGlyph">✎</span>
+                          {/* ✅ EDITAR REAL */}
+                          <button className="iconBtn iconBtn_primary" title="Editar" onClick={() => openEdit(d)}>
+                            <Pencil className="iconAction" />
                             <span className="tooltip">Editar</span>
                           </button>
 
@@ -444,8 +520,8 @@ export default function DocentesPage() {
                                 await docentesService.toggleEstado(d.id_docente, d.estado);
                                 showToast(d.estado ? "Docente desactivado." : "Docente activado.", "success");
                                 await loadAll();
-                              } catch {
-                                showToast("No se pudo cambiar el estado.", "error");
+                              } catch (err: any) {
+                                showToast(extractBackendError(err), "error");
                               }
                             }}
                           >
@@ -467,7 +543,6 @@ export default function DocentesPage() {
             </table>
           </div>
 
-          {/* PAGINATION */}
           <div className="paginationRow">
             <button className="btnGhost" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>
               ← Anterior
@@ -484,100 +559,118 @@ export default function DocentesPage() {
         </div>
       </div>
 
-      {/* VIEW MODAL */}
-      {showViewModal && viewDocente && (
-        <div className="modalOverlay" onMouseDown={() => setShowViewModal(false)}>
+      {/* ✅ FORM MODAL (CREATE / EDIT) */}
+      {showFormModal && (
+        <DocenteFormModal
+          mode={formMode}
+          docente={formDocente}
+          departamentos={departamentos}
+          onClose={closeFormModal}
+          onSaved={onSavedForm}
+          onToast={showToast}
+        />
+      )}
+
+      {/* ✅ VIEW MODAL (AHORA SÍ SE USA TU MODAL dm*) */}
+      {showViewModal && viewDocente && <DocenteViewModal docente={viewDocente} onClose={closeView} />}
+
+      {/* IMPORT MODAL (demo) */}
+      {showImportModal && (
+        <div className="modalOverlay" onMouseDown={closeImportModal}>
           <div className="modalCard modalPro" onMouseDown={(e) => e.stopPropagation()}>
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".xlsx,.xls"
+              style={{ display: "none" }}
+              onChange={onFileSelected}
+            />
+
             <div className="modalHeader">
               <div className="modalHeaderLeft">
                 <div className="modalHeaderIcon">
-                  <Eye size={18} />
+                  <FileSpreadsheet size={18} />
                 </div>
                 <div>
-                  <div className="modalHeaderTitle">Detalle de docente</div>
-                  <div className="modalHeaderSub">Información registrada del docente</div>
+                  <div className="modalHeaderTitle">Importar Docentes desde Excel</div>
+                  <div className="modalHeaderSub">Selecciona departamento y sube el archivo</div>
                 </div>
               </div>
 
-              <button className="modalClose" onClick={() => setShowViewModal(false)} aria-label="Cerrar">
+              <button className="modalClose" onClick={closeImportModal} aria-label="Cerrar">
                 ✕
               </button>
             </div>
 
             <div className="modalDivider" />
+
             <div className="modalBody">
               <div className="viewCards">
                 <div className="vCard vCardFull">
                   <div className="vLabel">
                     <User className="vIcon" />
-                    DOCENTE
+                    Departamento <span style={{ color: "#c0392b" }}>*</span>
                   </div>
-                  <div className="vValue">
-                    {viewDocente.apellidos_docente} {viewDocente.nombres_docente}
+
+                  <select
+                    className="select"
+                    value={importDepartamentoId}
+                    onChange={(e) => setImportDepartamentoId(e.target.value)}
+                    disabled={importing || loadingDepartamentos}
+                    style={{ width: "100%", marginTop: 8 }}
+                  >
+                    <option value="">
+                      {loadingDepartamentos ? "Cargando departamentos..." : "Seleccione un departamento"}
+                    </option>
+                    {departamentos
+                      .slice()
+                      .sort((a, b) => a.nombre_departamento.localeCompare(b.nombre_departamento, "es"))
+                      .map((d) => (
+                        <option key={d.id_departamento} value={String(d.id_departamento)}>
+                          {d.nombre_departamento}
+                        </option>
+                      ))}
+                  </select>
+
+                  <div style={{ marginTop: 8, display: "flex", gap: 8, alignItems: "center", opacity: 0.75 }}>
+                    <Info size={14} />
+                    <span>Todos los docentes importados se asignarán a este departamento.</span>
                   </div>
                 </div>
 
-                <div className="vCard">
+                <div className="vCard vCardFull">
                   <div className="vLabel">
-                    <Hash className="vIcon" />
-                    ID INSTITUCIONAL
+                    <Upload className="vIcon" />
+                    Seleccione el archivo Excel <span style={{ color: "#c0392b" }}>*</span>
                   </div>
-                  <div className="vValue mono">{(viewDocente.id_institucional_docente || "-").toUpperCase()}</div>
-                </div>
 
-                <div className="vCard">
-                  <div className="vLabel">
-                    <Hash className="vIcon" />
-                    CÉDULA
-                  </div>
-                  <div className="vValue mono">{onlyDigits(viewDocente.cedula || "") || "-"}</div>
-                </div>
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
+                    <button className="btnGhost" onClick={onDownloadPlantilla} disabled={importing}>
+                      <Download size={16} style={{ marginRight: 8 }} />
+                      Plantilla
+                    </button>
 
-                <div className="vCard">
-                  <div className="vLabel">
-                    <Hash className="vIcon" />
-                    USUARIO
+                    <button className="btnPrimary" onClick={onPickFile} disabled={importing}>
+                      <Upload size={16} style={{ marginRight: 8 }} />
+                      {importing ? "Importando..." : "Seleccionar archivo"}
+                    </button>
                   </div>
-                  <div className="vValue mono">{viewDocente.nombre_usuario || "-"}</div>
-                </div>
 
-                <div className="vCard">
-                  <div className="vLabel">
-                    <Mail className="vIcon" />
-                    CORREO
+                  <div style={{ marginTop: 8, opacity: 0.75 }}>
+                    Formatos permitidos: <b>.xlsx</b>, <b>.xls</b>
                   </div>
-                  <div className="vValue">{viewDocente.correo_docente || "-"}</div>
-                </div>
 
-                <div className="vCard">
-                  <div className="vLabel">
-                    <Phone className="vIcon" />
-                    TELÉFONO
-                  </div>
-                  <div className="vValue">{viewDocente.telefono_docente || "-"}</div>
-                </div>
-
-                <div className="vCard">
-                  <div className="vLabel">
-                    <Hash className="vIcon" />
-                    DEBE CAMBIAR PASSWORD
-                  </div>
-                  <div className="vValue">{viewDocente.debe_cambiar_password === 1 ? "Sí" : "No"}</div>
-                </div>
-
-                <div className="vCard">
-                  <div className="vLabel">
-                    <Hash className="vIcon" />
-                    ESTADO
-                  </div>
-                  <div className="vValue">
-                    {viewDocente.estado ? <span className="badgeActive">ACTIVO</span> : <span className="badgeInactive">INACTIVO</span>}
+                  <div className="infoBox" style={{ marginTop: 12 }}>
+                    <Info />
+                    <div className="infoText">
+                      La cédula será la contraseña inicial. Si una fila falla, el proceso continúa con las demás.
+                    </div>
                   </div>
                 </div>
               </div>
 
               <div className="modalFooter">
-                <button className="btnGhost" onClick={() => setShowViewModal(false)}>
+                <button className="btnGhost" onClick={closeImportModal} disabled={importing}>
                   Cerrar
                 </button>
               </div>
