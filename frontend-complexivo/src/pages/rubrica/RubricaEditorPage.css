@@ -1,238 +1,357 @@
-.re-page { padding: 18px; }
+/* =========================================================
+   RubricaEditorPage.css
+   - Usa el estilo base (wrap/hero/box) como Carreras
+   - Scope: .rubricaEditorPage para no romper otras páginas
+   ========================================================= */
 
-.re-top {
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-end;
-  margin-bottom: 10px;
+.rubricaEditorPage .rePill {
+  margin-left: auto;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-weight: 800;
+  border: 1px solid rgba(0,0,0,0.12);
+  background: #fbfbfb;
+  color: rgba(0,0,0,0.70);
+  white-space: nowrap;
+}
+.rubricaEditorPage .rePill.ok{
+  background: rgba(10,79,40,0.08);
+  border-color: rgba(10,79,40,0.22);
+  color: #0a4f28;
+}
+
+.rubricaEditorPage .reTopGrid{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 12px;
+  margin-top: 10px;
 }
 
-.re-breadcrumb { color:#2563eb; font-weight:900; cursor:pointer; }
-.re-breadcrumb:hover { text-decoration: underline; }
-
-.re-title { margin:0; font-size:22px; font-weight:900; }
-.re-top-actions { display:flex; gap:10px; flex-wrap: wrap; }
-
-.btn {
-  height:36px;
-  padding:0 14px;
-  border-radius:12px;
-  border:1px solid #e5e7eb;
-  background:#fff;
-  font-weight:900;
-  cursor:pointer;
-}
-.btn:hover { filter: brightness(.98); }
-.btn:disabled { opacity:.6; cursor:not-allowed; }
-
-.btn.primary {
-  background:rgba(37,99,235,.12);
-  border-color:rgba(37,99,235,.30);
-  color:#1e3a8a;
-}
-.btn.ghost { background:#fafafa; }
-.btn.danger {
-  background:rgba(239,68,68,.10);
-  border-color:rgba(239,68,68,.30);
-  color:#991b1b;
-}
-.btn.tiny { height:32px; border-radius:10px; padding:0 12px; }
-.btn.icon { width:36px; padding:0; display:flex; align-items:center; justify-content:center; }
-
-.card {
-  background:#fff;
-  border-radius:16px;
-  box-shadow:0 8px 24px rgba(0,0,0,.06);
-  overflow:hidden;
-  margin-top:14px;
-}
-
-.card-head {
-  padding:12px 16px;
-  background:#fafafa;
-  border-bottom:1px solid #eee;
-  font-weight:900;
-  display:flex;
-  gap:10px;
-  align-items:center;
-}
-.card-head.between { justify-content:space-between; }
-
-.card-body { padding:14px 16px; }
-
-.lbl {
-  display:block;
-  font-size:12px;
-  font-weight:900;
-  color:#6b7280;
-  margin-bottom:6px;
-}
-
-.inp {
-  width:100%;
-  height:38px;
-  border-radius:12px;
-  border:1px solid #e5e7eb;
-  padding:0 12px;
-  font-weight:800;
+/* Cards internas (tipo panel ordenado) */
+.rubricaEditorPage .reCard{
+  border: 1px solid rgba(0,0,0,0.10);
+  border-radius: 14px;
   background: #fff;
+  overflow: hidden;
+  box-shadow: 0 8px 18px rgba(0,0,0,0.04);
 }
 
-.inp:focus, .ta:focus {
+.rubricaEditorPage .reCardHead{
+  padding: 10px 12px;
+  background: linear-gradient(90deg, rgba(10,79,40,0.08), rgba(10,79,40,0.02));
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+  font-weight: 900;
+  color: rgba(0,0,0,0.80);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.rubricaEditorPage .reCardHead.between{ justify-content: space-between; }
+
+.rubricaEditorPage .reCardBody{
+  padding: 12px;
+}
+
+/* Labels + inputs */
+.rubricaEditorPage .reLbl{
+  display: block;
+  font-size: 12px;
+  font-weight: 900;
+  color: rgba(0,0,0,0.55);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.rubricaEditorPage .reInp{
+  width: 100%;
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.12);
+  padding: 0 12px;
+  background: #fff;
+  color: rgba(0,0,0,0.82);
+  font-weight: 600;
   outline: none;
-  border-color: rgba(37,99,235,.45);
-  box-shadow: 0 0 0 3px rgba(37,99,235,.12);
+}
+.rubricaEditorPage .reInp:focus,
+.rubricaEditorPage .reTa:focus,
+.rubricaEditorPage .reTaCell:focus{
+  border-color: rgba(10,79,40,0.35);
+  box-shadow: 0 0 0 4px rgba(10,79,40,0.12);
 }
 
-.ta {
-  width:100%;
-  min-height:60px;
-  border-radius:10px;
-  border:1px solid #e5e7eb;
-  padding:10px;
-  font-weight:800;
-  resize:vertical;
-  background:#fff;
+.rubricaEditorPage .reInpSlim{
+  height: 36px;
+  border-radius: 10px;
+  font-weight: 600;
 }
 
-.readonly {
-  padding:10px 12px;
-  border-radius:12px;
-  border:1px solid #e5e7eb;
-  background:#fafafa;
-  font-weight:900;
+.rubricaEditorPage .reTa{
+  width: 100%;
+  min-height: 84px;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.12);
+  padding: 10px 12px;
+  background: #fff;
+  color: rgba(0,0,0,0.82);
+  font-weight: 500;
+  outline: none;
+  resize: vertical;
 }
 
-.muted { color:#6b7280; font-weight:800; }
-.small { font-size:12px; }
-
-.end { display:flex; align-items:flex-end; justify-content:flex-end; }
-.inline { display:flex; gap:10px; flex-wrap: wrap; }
-
-.pill{
-  margin-left:auto;
-  padding:6px 10px;
-  border-radius:999px;
-  font-weight:900;
-  font-size:12px;
-  background:rgba(107,114,128,.10);
-  border:1px solid rgba(107,114,128,.30);
-  color:#374151;
+/* Botones (mismo vibe Carreras) */
+.rubricaEditorPage .reBtn{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.12);
+  background: #fff;
+  font-weight: 900;
+  cursor: pointer;
+  transition: transform .08s ease, background .15s ease, border-color .15s ease;
 }
-.pill.ok{ background:rgba(16,185,129,.12); border-color:rgba(16,185,129,.35); color:#065f46; }
+.rubricaEditorPage .reBtn:hover{ background: rgba(0,0,0,0.03); transform: translateY(-1px); }
+.rubricaEditorPage .reBtn:active{ transform: translateY(0); }
+.rubricaEditorPage .reBtn:disabled{ opacity: .6; cursor: not-allowed; transform:none; }
 
-.re-section-title { margin-top:16px; font-weight:900; font-size:16px; }
+.rubricaEditorPage .reBtnSmall{ height: 34px; padding: 0 12px; border-radius: 10px; font-weight: 900; }
 
-/* =========================
-   ✅ NIVELES: horizontal real
-   ========================= */
-
-/* contenedor */
-.levels-table {
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-  margin-bottom: 12px;
+.rubricaEditorPage .reBtnPrimary{
+  background: rgba(10,79,40,0.10);
+  border-color: rgba(10,79,40,0.28);
+  color: #0a4f28;
+}
+.rubricaEditorPage .reBtnOk{
+  background: rgba(10,79,40,0.10);
+  border-color: rgba(10,79,40,0.28);
+  color: #0a4f28;
+}
+.rubricaEditorPage .reBtnDanger{
+  background: rgba(180,20,20,0.08);
+  border-color: rgba(180,20,20,0.28);
+  color: rgba(180,20,20,0.95);
+}
+.rubricaEditorPage .reBtnGhost{
+  background: #fafafa;
 }
 
-/* header y filas: SIEMPRE horizontal en desktop */
-.levels-head, .levels-row {
-  display:grid;
-  grid-template-columns: 1.6fr .6fr 44px; /* nombre | valor | delete */
-  gap:12px;
-  align-items:end;
+/* icon button */
+.rubricaEditorPage .reIconBtn{
+  width: 38px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid rgba(0,0,0,0.12);
+  background: #fff;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.rubricaEditorPage .reIconBtn.danger{
+  background: rgba(180,20,20,0.06);
+  border-color: rgba(180,20,20,0.22);
+  color: rgba(180,20,20,0.95);
+}
+.rubricaEditorPage .reIconBtn:hover{ background: rgba(0,0,0,0.03); }
+
+/* Hint */
+.rubricaEditorPage .reHint{
+  margin-top: 10px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: rgba(0,0,0,0.60);
 }
 
-/* header */
-.levels-head {
-  font-size:12px;
-  font-weight:900;
-  color:#6b7280;
+/* =========================================================
+   NIVELES (como 1ra imagen, ordenado)
+   ========================================================= */
+.rubricaEditorPage .levelsTable{
+  display: grid;
+  gap: 8px;
+}
+
+.rubricaEditorPage .levelsHead{
+  display: grid;
+  grid-template-columns: 1fr 160px 72px;
+  gap: 10px;
+  font-size: 12px;
+  font-weight: 900;
+  color: rgba(0,0,0,0.55);
   padding: 0 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
-/* ✅ IMPORTANTE:
-   ya NO dependemos de "div".
-   Si tu JSX tiene inputs directos, esto sí aplica. */
-.levels-row .inp{
-  width:100%;
-}
-.levels-row .btn.icon{
-  width:44px;
-  height:38px;
-  border-radius:12px;
-  justify-content:center;
+.rubricaEditorPage .levelsRow{
+  display: grid;
+  grid-template-columns: 1fr 160px 72px;
+  gap: 10px;
+  align-items: center;
 }
 
-/* Form inline reutilizable */
-.inline-form {
-  display:grid;
-  grid-template-columns: 1.6fr .6fr 44px auto;
-  gap:12px;
-  align-items:end;
+.rubricaEditorPage .levelsAction{
+  text-align: center;
 }
 
-/* =========================
-   ✅ GRIDS (formularios)
-   ========================= */
-.grid4 { display:grid; grid-template-columns: 1.6fr .7fr .5fr auto; gap:12px; }
-.grid3 { display:grid; grid-template-columns: 1.6fr .7fr .5fr; gap:12px; }
-.comp-row { display:grid; grid-template-columns: 1.6fr .7fr .5fr; gap:12px; margin-bottom:12px; }
-
-.add-criterio {
-  display:flex;
-  gap:10px;
-  align-items:center;
-  margin-bottom:12px;
-  flex-wrap: wrap;
+/* =========================================================
+   COMPONENTES (cards tipo panel)
+   ========================================================= */
+.rubricaEditorPage .reSectionTitle{
+  margin-top: 16px;
+  font-size: 18px;
+  font-weight: 900;
+  color: rgba(0,0,0,0.78);
 }
-.add-criterio .inp { max-width:520px; }
 
-/* =========================
-   Tabla criterios x niveles
-   ========================= */
-.grid-table-wrap { overflow-x:auto; border-radius:14px; border:1px solid #eef2f7; }
-.grid-table { width:100%; border-collapse:collapse; min-width: 1100px; background:#fff; }
+.rubricaEditorPage .reCompCard{
+  margin-top: 12px;
+  border: 1px solid rgba(0,0,0,0.10);
+  border-radius: 14px;
+  background: #fff;
+  overflow: hidden;
+  box-shadow: 0 8px 18px rgba(0,0,0,0.04);
+}
 
-.grid-table th {
-  background:#fafafa;
-  border-bottom:1px solid #eee;
-  padding:10px;
-  font-size:12px;
-  font-weight:900;
-  color:#6b7280;
-  text-align:left;
+.rubricaEditorPage .reCompHead{
+  padding: 10px 12px;
+  background: #f6f7f9;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.rubricaEditorPage .reCompTitle{
+  font-weight: 900;
+  color: rgba(0,0,0,0.82);
+}
+
+.rubricaEditorPage .reCompBody{
+  padding: 12px;
+}
+
+.rubricaEditorPage .reCompForm{
+  display: grid;
+  grid-template-columns: 1fr 220px;
+  gap: 12px;
+  align-items: end;
+}
+
+/* Tabla criterios x niveles */
+.rubricaEditorPage .reTableWrap{
+  margin-top: 12px;
+  overflow: auto;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.08);
+}
+
+.rubricaEditorPage .reTable{
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  min-width: 1100px;
+}
+
+.rubricaEditorPage .reTable thead th{
+  background: #f6f7f9;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+  padding: 10px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 900;
+  color: rgba(0,0,0,0.72);
   position: sticky;
   top: 0;
   z-index: 1;
 }
 
-.grid-table td {
-  border-bottom:1px solid #f1f5f9;
-  padding:10px;
-  vertical-align:top;
+.rubricaEditorPage .thCrit{ width: 260px; }
+.rubricaEditorPage .thAct{ width: 76px; text-align: center; }
+
+.rubricaEditorPage .thLvlName{
+  font-weight: 900;
+  color: rgba(0,0,0,0.82);
+}
+.rubricaEditorPage .thLvlVal{
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 900;
+  color: #0a4f28;
 }
 
-.grid-table tr:hover td { background: #fcfcfd; }
-
-.td-center { text-align:center; color:#6b7280; font-weight:800; }
-.td-action { width:60px; }
-.crit-cell { width:260px; }
-
-/* =========================
-   Responsive
-   ========================= */
-@media(max-width:1100px){
-  .grid4 { grid-template-columns: 1fr; }
-  .grid3 { grid-template-columns: 1fr; }
-  .comp-row { grid-template-columns: 1fr; }
-  .add-criterio { flex-direction:column; align-items:stretch; }
-  .add-criterio .inp { max-width:none; }
-  .inline-form { grid-template-columns: 1fr; }
+.rubricaEditorPage .reTable tbody td{
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  padding: 10px;
+  vertical-align: top;
 }
 
-/* ✅ OJO: SOLO colapsamos niveles en pantallas pequeñas (no en 1100) */
-@media(max-width:720px){
-  .levels-head, .levels-row { grid-template-columns: 1fr; }
+.rubricaEditorPage .reTable tbody tr:hover td{
+  background: rgba(0,0,0,0.02);
+}
+
+.rubricaEditorPage .tdEmpty{
+  text-align: center;
+  padding: 18px 10px;
+  color: rgba(0,0,0,0.55);
+  font-weight: 700;
+}
+
+.rubricaEditorPage .tdAct{
+  text-align: center;
+}
+
+.rubricaEditorPage .reTaCell{
+  width: 100%;
+  min-height: 58px;
+  border-radius: 10px;
+  border: 1px solid rgba(0,0,0,0.12);
+  padding: 8px 10px;
+  background: #fff;
+  font-weight: 500;
+  color: rgba(0,0,0,0.82);
+  outline: none;
+  resize: vertical;
+}
+
+.rubricaEditorPage .reCompActions{
+  margin-top: 10px;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.rubricaEditorPage .reAddComp{
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-start;
+}
+
+/* Footer actions */
+.rubricaEditorPage .reFooter{
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0,0,0,0.08);
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.rubricaEditorPage .reMuted{
+  margin-left: auto;
+  font-weight: 700;
+  color: rgba(0,0,0,0.55);
+}
+
+/* Responsive */
+@media (max-width: 980px){
+  .rubricaEditorPage .reTopGrid{ grid-template-columns: 1fr; }
+  .rubricaEditorPage .reCompForm{ grid-template-columns: 1fr; }
+  .rubricaEditorPage .levelsHead,
+  .rubricaEditorPage .levelsRow{
+    grid-template-columns: 1fr 120px 64px;
+  }
 }

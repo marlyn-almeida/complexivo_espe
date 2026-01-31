@@ -10,12 +10,11 @@ import DashboardAdmin from "../pages/dashboard/DashboardAdmin";
 import DashboardDocente from "../pages/dashboard/DashboardDocente";
 
 import PeriodosPage from "../pages/periodos/PeriodosPage";
+import PeriodoCarrerasPage from "../pages/periodos/PeriodoCarrerasPage"; // ✅ NUEVO
 import CarrerasPage from "../pages/carreras/CarrerasPage";
 import CarreraAdminsPage from "../pages/carreras/CarreraAdminsPage";
 
 import DocentesPage from "../pages/docentes/DocentesPage";
-// ✅ NUEVO: separar páginas
-
 
 import EstudiantesPage from "../pages/estudiantes/EstudiantesPage";
 import CarreraPeriodoPage from "../pages/carreraPeriodo/CarreraPeriodoPage";
@@ -32,7 +31,6 @@ import TribunalesPage from "../pages/tribunales/TribunalesPage";
 
 import MisTribunalesPage from "../pages/docentes/MisTribunalesPage";
 
-// ✅ Plantillas Acta Word (Super Admin)
 import PlantillasActaWordPage from "../pages/plantillasActa/PlantillasActaWordPage";
 
 import ProtectedRoute from "../components/auth/ProtectedRoute";
@@ -132,6 +130,16 @@ export default function AppRoutes() {
             }
           />
 
+          {/* ✅ NUEVO: VER / GESTIONAR carreras asignadas al periodo */}
+          <Route
+            path="/periodos/:id/carreras"
+            element={
+              <ProtectedRoute allowRoles={[1]}>
+                <PeriodoCarrerasPage />
+              </ProtectedRoute>
+            }
+          />
+
           <Route
             path="/carrera-periodo"
             element={
@@ -176,7 +184,6 @@ export default function AppRoutes() {
             }
           />
 
-          {/* ✅ Plantillas Acta Word: SOLO SUPER_ADMIN */}
           <Route
             path="/plantillas-acta"
             element={
@@ -197,7 +204,6 @@ export default function AppRoutes() {
               </ProtectedRoute>
             }
           />
-
 
           {/* =========================
               ADMIN (2)

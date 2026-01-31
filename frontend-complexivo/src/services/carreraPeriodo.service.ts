@@ -1,5 +1,6 @@
+// src/services/carreraPeriodo.service.ts
 import axiosClient from "../api/axiosClient";
-import type { CarreraPeriodo, CarreraPeriodoBulkDTO, PeriodoResumen } from "../types/carreraPeriodo";
+import type { CarreraPeriodo, PeriodoResumen } from "../types/carreraPeriodo";
 
 // ✅ types director/apoyo (EXPORTADOS)
 export type TipoAdmin = "DIRECTOR" | "APOYO";
@@ -9,7 +10,7 @@ export type AdminDocenteLite = {
   id_docente: number;
   nombres_docente: string;
   apellidos_docente: string;
-  nombre_usuario: string;
+  nombre_usuario?: string | null;
 };
 
 export type CarreraPeriodoAdminsResponse = {
@@ -30,6 +31,12 @@ export type CarreraPeriodoListParams = {
   periodoId?: number | null;
   page?: number;
   limit?: number;
+};
+
+// ✅ DTO REAL para /bulk y /sync (lo que tu backend está validando)
+export type CarreraPeriodoBulkIdsDTO = {
+  id_periodo: number;
+  carreraIds: number[];
 };
 
 export const carreraPeriodoService = {
@@ -94,23 +101,46 @@ export const carreraPeriodoService = {
     periodoId: number,
     params?: { includeInactive?: boolean; q?: string }
   ): Promise<CarreraPeriodo[]> => {
-    const res = await axiosClient.get<CarreraPeriodo[]>(`/carreras-periodos/por-periodo/${periodoId}`, {
-      params: params
-        ? {
-            includeInactive: params.includeInactive ? "true" : "false",
-            q: params.q?.trim() || undefined,
-          }
-        : undefined,
-    });
+    const res = await axiosClient.get<CarreraPeriodo[]>(
+      `/carreras-periodos/por-periodo/${periodoId}`,
+      {
+        params: params
+          ? {
+              includeInactive: params.includeInactive ? "true" : "false",
+              q: params.q?.trim() || undefined,
+            }
+          : undefined,
+      }
+    );
     return res.data ?? [];
   },
 
-  bulkAssign: async (payload: CarreraPeriodoBulkDTO) => {
+  // =========================
+  // ✅ bulk/sync (BACKEND REAL)
+  // =========================
+  bulkAssign: async (payload: CarreraPeriodoBulkIdsDTO) => {
+    // 🔒 Asegurar validación mínima antes de pegarle al backend
+    if (!payload?.id_periodo || !Array.isArray(payload.carreraIds) || payload.carreraIds.length < 1) {
+      throw {
+        status: 400,
+        userMessage: "carreraIds debe ser un arreglo con al menos 1 elemento",
+        data: { message: "Validación cliente", errors: [{ field: "carreraIds", msg: "Debe tener al menos 1" }] },
+      };
+    }
+
     const res = await axiosClient.post("/carreras-periodos/bulk", payload);
     return res.data as { updated: boolean; items: CarreraPeriodo[] };
   },
 
-  sync: async (payload: CarreraPeriodoBulkDTO) => {
+  sync: async (payload: CarreraPeriodoBulkIdsDTO) => {
+    if (!payload?.id_periodo || !Array.isArray(payload.carreraIds) || payload.carreraIds.length < 1) {
+      throw {
+        status: 400,
+        userMessage: "carreraIds debe ser un arreglo con al menos 1 elemento",
+        data: { message: "Validación cliente", errors: [{ field: "carreraIds", msg: "Debe tener al menos 1" }] },
+      };
+    }
+
     const res = await axiosClient.put("/carreras-periodos/sync", payload);
     return res.data as { synced: boolean; items: CarreraPeriodo[] };
   },

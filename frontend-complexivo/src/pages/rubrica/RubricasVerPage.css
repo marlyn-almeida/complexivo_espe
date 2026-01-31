@@ -1,228 +1,247 @@
-/* =========================================================
-   RubricasVerPage (alineado al diseño base del sistema)
-   Mantiene clases rv-* para no tocar el TSX
-========================================================= */
+/* src/pages/rubricas/RubricasVerPage.css
+   Scoped: no rompe otras páginas
+*/
 
-.rv-page{
-  display: grid;
-  gap: 14px;
-  padding: 18px;
-}
-
-/* Header */
-.rv-panel{
-  display:flex;
-  align-items:flex-start;
-  justify-content:space-between;
-  gap: 12px;
+.rubricasVerPage .rvActionsTop {
+  display: flex;
+  gap: 10px;
+  align-items: center;
   flex-wrap: wrap;
 }
 
-.rv-title{
-  margin:0;
-  font-weight: 900;
-  font-size: 1.35rem;
-  color: var(--text-main, #111827);
-}
-
-.rv-subtitle{
-  margin: 6px 0 0;
-  color: var(--text-muted, #6b7280);
-  font-weight: 800;
-}
-
-/* Card principal */
-.rv-card{
-  background: white;
-  border: 1px solid var(--border-soft, rgba(15, 23, 42, 0.10));
-  border-radius: 16px;
-  box-shadow: var(--shadow-soft, 0 10px 30px rgba(0,0,0,0.08));
-  overflow: hidden;
-}
-
-/* Header de card (verde ESPE suave) */
-.rv-card-head{
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--border-soft, rgba(15, 23, 42, 0.10));
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap: 16px;
+/* =========================
+   RESUMEN superior (estado + progreso)
+========================= */
+.rubricasVerPage .rvSummary {
+  margin-top: 10px;
+  display: flex;
+  gap: 10px;
   flex-wrap: wrap;
-
-  /* ✅ Verde más “ESPE” */
-  background: linear-gradient(135deg, rgba(6, 118, 71, 0.10), rgba(6, 118, 71, 0.06));
 }
 
-/* Cuerpo */
-.rv-body{
-  padding: 14px 16px;
+.rubricasVerPage .rvSummaryBox {
+  border: 1px solid rgba(15, 23, 42, 0.10);
+  background: rgba(2, 6, 23, 0.02);
+  border-radius: 14px;
+  padding: 10px 12px;
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
-/* Labels y badges */
-.rv-k{
-  font-size: 0.78rem;
+.rubricasVerPage .rvLabel {
+  font-size: 12px;
+  color: rgba(17, 24, 39, 0.55);
   font-weight: 900;
-  color: var(--text-muted, #6b7280);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
-/* Badge estilo del sistema */
-.rv-badge{
-  display:inline-flex;
-  align-items:center;
-  gap: 8px;
-  margin-top: 6px;
-  padding: 6px 10px;
+.rubricasVerPage .rvBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
   border-radius: 999px;
   font-weight: 900;
-  font-size: 0.78rem;
-
-  color: #111;
+  border: 1px solid rgba(15, 23, 42, 0.10);
   background: #fff;
-  border: 1px solid var(--border-soft, rgba(15, 23, 42, 0.10));
+  width: fit-content;
+  white-space: nowrap;
+  line-height: 1;
 }
 
-.rv-badge.ok{
-  color: #067647;
+/* ✅ Fix para evitar el error de React insertBefore:
+   NO alternamos nodos, alternamos visibilidad */
+.rubricasVerPage .rvIcoWrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+}
+
+.rubricasVerPage .rvIco {
+  width: 16px;
+  height: 16px;
+}
+
+.rubricasVerPage .rvIco.isOff {
+  display: none;
+}
+
+.rubricasVerPage .rvIco.isOn {
+  display: inline-block;
+}
+
+.rubricasVerPage .rvBadge.ok {
   background: rgba(6, 118, 71, 0.10);
-  border-color: rgba(6, 118, 71, 0.25);
+  color: #067647;
+  border-color: rgba(6, 118, 71, 0.22);
 }
 
-.rv-badge.off{
-  color: #b42318;
+.rubricasVerPage .rvBadge.off {
   background: rgba(180, 35, 24, 0.10);
+  color: #b42318;
   border-color: rgba(180, 35, 24, 0.22);
 }
 
-/* Acciones */
-.rv-actions{
-  display:flex;
-  gap: 10px;
-  align-items:center;
-  flex-wrap: wrap;
+/* =========================
+   GRID de detalles
+========================= */
+.rubricasVerPage .rvGrid {
+  margin-top: 6px;
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
 }
 
-/* Botones: reutilizando tu estilo del sistema */
-.rv-btn{
-  border: 1px solid var(--border-soft, rgba(15, 23, 42, 0.12));
-  background: white;
-  border-radius: 12px;
-  padding: 10px 14px;
-  cursor: pointer;
-  font-weight: 900;
-  display: inline-flex;
-  align-items:center;
-  justify-content:center;
-  gap: 8px;
-  height: 44px;
-  transition: transform .15s ease, box-shadow .15s ease;
-}
-
-.rv-btn:hover{
-  transform: translateY(-1px);
-  box-shadow: 0 10px 24px rgba(0,0,0,0.10);
-}
-
-.rv-btn.primary{
-  border: none;
-  color: white;
-  background: linear-gradient(135deg, #0f766e, #14532d);
-  box-shadow: 0 14px 32px rgba(15, 118, 110, 0.22);
-}
-
-.rv-btn.ghost{
-  background: transparent;
-}
-
-/* Rows estilo "viewGrid" pero sin cambiar HTML */
-.rv-row{
-  display:flex;
-  align-items:flex-start;
-  justify-content:space-between;
+.rubricasVerPage .rvRow {
+  display: grid;
+  grid-template-columns: 220px 1fr;
   gap: 12px;
   padding: 12px 0;
-  border-bottom: 1px solid var(--border-soft, rgba(15, 23, 42, 0.10));
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
 }
 
-.rv-row .k{
-  width: 190px;
-  color: var(--text-muted, #6b7280);
+.rubricasVerPage .rvRow .k {
+  font-size: 12px;
   font-weight: 900;
-  font-size: 0.78rem;
+  color: rgba(17, 24, 39, 0.55);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
-.rv-row .v{
-  flex: 1;
-  font-weight: 900;
-  color: var(--text-main, #111827);
-  text-align: left;
+.rubricasVerPage .rvRow .v {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: rgba(17, 24, 39, 0.82);
 }
 
-/* Separadores */
-.rv-divider{
+/* =========================
+   Divider
+========================= */
+.rubricasVerPage .rvDivider {
   height: 1px;
-  background: var(--border-soft, rgba(15, 23, 42, 0.10));
+  background: rgba(15, 23, 42, 0.10);
   margin: 12px 0;
 }
 
-/* Listado por componente */
-.rv-list{
-  display:grid;
+/* =========================
+   Mini cards
+========================= */
+.rubricasVerPage .rvMiniGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
 
-.rv-item{
-  border: 1px solid var(--border-soft, rgba(15, 23, 42, 0.10));
-  background: var(--bg-soft, rgba(2, 6, 23, 0.02));
+.rubricasVerPage .miniCard {
+  border: 1px solid rgba(15, 23, 42, 0.10);
+  background: #fff;
+  border-radius: 14px;
+  padding: 12px;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.04);
+}
+
+.rubricasVerPage .miniLabel {
+  font-size: 12px;
+  font-weight: 900;
+  color: rgba(17, 24, 39, 0.55);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.rubricasVerPage .miniValue {
+  margin-top: 6px;
+  font-size: 20px;
+  font-weight: 900;
+  color: rgba(17, 24, 39, 0.86);
+}
+
+.rubricasVerPage .miniSub {
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(17, 24, 39, 0.55);
+}
+
+/* =========================
+   Subtítulo de sección
+========================= */
+.rubricasVerPage .rvSectionTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 18px;
+  font-weight: 900;
+  color: rgba(17, 24, 39, 0.80);
+}
+
+/* =========================
+   Lista de componentes
+========================= */
+.rubricasVerPage .rvList {
+  margin-top: 10px;
+  display: grid;
+  gap: 10px;
+}
+
+.rubricasVerPage .rvItem {
+  border: 1px solid rgba(15, 23, 42, 0.10);
+  background: #fff;
   border-radius: 14px;
   padding: 12px;
 }
 
-.rv-item-title{
+.rubricasVerPage .rvItemTitle {
   font-weight: 900;
-  color: var(--text-main, #111827);
-  display:flex;
+  color: rgba(17, 24, 39, 0.86);
+  display: flex;
   gap: 10px;
-  align-items:center;
+  align-items: center;
   flex-wrap: wrap;
 }
 
-.rv-item-sub{
-  margin-top: 6px;
-  font-weight: 800;
-  color: var(--text-muted, #6b7280);
-}
-
-/* Pill para tipo_componente */
-.rv-pill{
-  display:inline-flex;
-  align-items:center;
+.rubricasVerPage .rvPill {
+  display: inline-flex;
+  align-items: center;
   padding: 4px 10px;
   border-radius: 999px;
-  font-size: 0.75rem;
+  font-size: 12px;
   font-weight: 900;
-
-  /* Verde suave */
   color: #067647;
   background: rgba(6, 118, 71, 0.10);
-  border: 1px solid rgba(6, 118, 71, 0.25);
+  border: 1px solid rgba(6, 118, 71, 0.22);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
-/* Mensajes */
-.rv-hint,
-.rv-muted{
-  margin-top: 10px;
-  color: var(--text-muted, #6b7280);
-  font-weight: 800;
+.rubricasVerPage .rvItemSub {
+  margin-top: 6px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: rgba(17, 24, 39, 0.60);
 }
 
-/* Responsive */
-@media (max-width: 640px){
-  .rv-row{
-    flex-direction: column;
-    gap: 6px;
+.rubricasVerPage .rvHint,
+.rubricasVerPage .rvMuted {
+  margin-top: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: rgba(17, 24, 39, 0.60);
+}
+
+/* =========================
+   Responsive
+========================= */
+@media (max-width: 820px) {
+  .rubricasVerPage .rvRow {
+    grid-template-columns: 1fr;
   }
-  .rv-row .k{
-    width: 100%;
+
+  .rubricasVerPage .rvMiniGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .rubricasVerPage .rvSummaryBox {
+    min-width: 100%;
   }
 }

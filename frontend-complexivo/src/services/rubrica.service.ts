@@ -2,9 +2,23 @@ import axiosClient from "../api/axiosClient";
 import type { Rubrica } from "../types/rubrica";
 
 export const rubricaService = {
+  // ✅ Si no existe rúbrica para ese período, devolvemos null (404 esperado)
   getByPeriodo: async (periodoId: number) => {
-    const res = await axiosClient.get(`/rubricas/periodo/${periodoId}`);
-    return res.data as Rubrica;
+    try {
+      const res = await axiosClient.get(`/rubricas/periodo/${periodoId}`);
+      return res.data as Rubrica;
+    } catch (err: any) {
+      const status = err?.response?.status;
+      const msg = err?.response?.data?.message;
+
+      // 404 normal cuando aún no se ha creado la rúbrica
+      if (status === 404 && String(msg || "").toLowerCase().includes("no existe rúbrica")) {
+        return null;
+      }
+
+      // otros errores sí deben explotar
+      throw err;
+    }
   },
 
   ensureByPeriodo: async (
@@ -15,10 +29,7 @@ export const rubricaService = {
       ponderacion_global?: number;
     }
   ) => {
-    const res = await axiosClient.post(
-      `/rubricas/periodo/${periodoId}`,
-      payload ?? {}
-    );
+    const res = await axiosClient.post(`/rubricas/periodo/${periodoId}`, payload ?? {});
     return res.data as { created: boolean; rubrica: Rubrica };
   },
 

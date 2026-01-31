@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axiosClient from "../../api/axiosClient";
 
-import { Search } from "lucide-react";
+import { Search, List } from "lucide-react";
+import escudoESPE from "../../assets/escudo.png";
 import "./RubricasPeriodoPage.css";
 
 type PeriodoResumen = {
@@ -21,7 +22,7 @@ export default function RubricasPeriodoPage() {
   const [data, setData] = useState<PeriodoResumen[]>([]);
   const [q, setQ] = useState("");
 
-  const load = async () => {
+  async function load() {
     setLoading(true);
     try {
       const res = await axiosClient.get("/carreras-periodos/resumen", {
@@ -34,120 +35,124 @@ export default function RubricasPeriodoPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Para mostrar rango amigable (si más adelante quieres formatear fechas)
   const rows = useMemo(() => data ?? [], [data]);
 
   return (
-    <div className="page">
-      {/* HEADER en CARD (como Estudiantes) */}
-      <div className="card">
-        <div className="headerRow">
-          <div>
-            <h2 className="title">Rúbricas</h2>
-            <p className="subtitle">
-              Selecciona un período y crea/edita la rúbrica general de ese período.
-            </p>
-          </div>
-
-          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-            <button className="btnSecondary" onClick={load} disabled={loading} title="Actualizar">
-              ⟳ Actualizar
-            </button>
+    <div className="wrap rubricasPage">
+      <div className="containerFull">
+        {/* HERO */}
+        <div className="hero">
+          <div className="heroLeft">
+            <img className="heroLogo" src={escudoESPE} alt="ESPE" />
+            <div className="heroText">
+              <h1 className="heroTitle">RÚBRICAS</h1>
+              <p className="heroSubtitle">Gestión de rúbricas por período académico</p>
+            </div>
           </div>
         </div>
 
-        {/* FILTROS (igual estilo) */}
-        <div className="filtersRow">
-          <div className="searchInline">
-            <Search size={18} />
-            <input
-              type="text"
-              placeholder="Buscar por código o descripción…"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") load();
-              }}
-            />
+        {/* BOX */}
+        <div className="box">
+          <div className="boxHead">
+            <div className="sectionTitle">
+              <span className="sectionTitleIcon">
+                <List className="iconSm" />
+              </span>
+              Períodos académicos
+            </div>
+
+            <div className="searchWrap">
+              <Search className="searchIcon" />
+              <input
+                className="search"
+                placeholder="Buscar por código o descripción…"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") load();
+                }}
+              />
+            </div>
           </div>
 
-          <button className="btnPrimary" onClick={load} disabled={loading}>
-            Buscar
-          </button>
-        </div>
-      </div>
+          {/* TABLA */}
+          <div className="tableWrap" style={{ marginTop: 12 }}>
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Período</th>
+                  <th># Carreras</th>
+                  <th className="thActions">Acciones</th>
+                </tr>
+              </thead>
 
-      {/* TABLA */}
-      <div className="card tableWrap">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Período</th>
-              <th>Rango</th>
-              <th># Carreras</th>
-              <th className="thActions">Acciones</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={4} className="muted" style={{ padding: 16 }}>
-                  Cargando...
-                </td>
-              </tr>
-            ) : rows.length ? (
-              rows.map((row) => {
-                const tieneCarreras = Number(row.total_asignadas || 0) > 0;
-
-                return (
-                  <tr key={row.id_periodo}>
-                    <td>
-                      <div className="tdStrong">{row.codigo_periodo}</div>
-                      <div className="muted" style={{ marginTop: 6, fontWeight: 800 }}>
-                        {row.descripcion_periodo}
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan={3} className="emptyCell">
+                      <div className="empty">
+                        <div className="emptyText">Cargando...</div>
                       </div>
                     </td>
+                  </tr>
+                ) : rows.length ? (
+                  rows.map((row) => {
+                    const tieneCarreras = Number(row.total_asignadas || 0) > 0;
 
-                    <td className="tdStrong">
-                      {row.fecha_inicio} → {row.fecha_fin}
-                    </td>
+                    return (
+                      <tr key={row.id_periodo}>
+                        <td>
+                          <div className="nameMain">{row.codigo_periodo}</div>
+                          <div className="nameSub">{row.descripcion_periodo}</div>
+                        </td>
 
-                    <td>
-                      <span className={`badge ${tieneCarreras ? "badge-success" : "badge-danger"}`}>
-                        {row.total_asignadas}
-                      </span>
-                    </td>
+                        <td>
+                          {tieneCarreras ? (
+                            <span className="badgeActive">{row.total_asignadas}</span>
+                          ) : (
+                            <span className="badgeInactive">0</span>
+                          )}
+                        </td>
 
-                    <td className="actions">
-                      <button
-                        className="btnPrimary"
-                        disabled={!tieneCarreras}
-                        onClick={() => navigate(`/rubricas/periodo/${row.id_periodo}`)}
-                        title={!tieneCarreras ? "Asigna carreras al período primero" : "Abrir rúbrica"}
-                      >
-                        Abrir rúbrica
-                      </button>
+                        <td className="tdActions">
+                          <div className="actions">
+                            <button
+                              className="btnPrimary"
+                              disabled={!tieneCarreras}
+                              title={
+                                !tieneCarreras
+                                  ? "Asigna carreras al período primero"
+                                  : "Gestionar rúbrica"
+                              }
+                              onClick={() => navigate(`/rubricas/periodo/${row.id_periodo}`)}
+                            >
+                              Gestionar rúbrica
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan={3} className="emptyCell">
+                      <div className="empty">
+                        <div className="emptyText">No existen períodos registrados.</div>
+                      </div>
                     </td>
                   </tr>
-                );
-              })
-            ) : (
-              <tr>
-                <td colSpan={4} className="muted" style={{ padding: 16 }}>
-                  No existen períodos registrados.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   );

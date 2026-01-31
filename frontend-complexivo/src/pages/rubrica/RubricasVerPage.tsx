@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+
 import "./RubricasVerPage.css";
 
 import { rubricaService } from "../../services/rubrica.service";
@@ -8,6 +9,9 @@ import {
   type RubricaComponente,
 } from "../../services/rubricaComponente.service";
 import axiosClient from "../../api/axiosClient";
+
+import { Eye, ArrowLeft, BadgeCheck, BadgeX, List } from "lucide-react";
+import escudoESPE from "../../assets/escudo.png";
 
 /** -----------------------------
  * Tipos locales (solo para esta vista)
@@ -26,7 +30,6 @@ type Nivel = {
   id_rubrica: number;
   nombre_nivel: string;
   valor_nivel: number;
-  // según tu BD puede venir como "orden" u "orden_nivel"
   orden?: number;
   orden_nivel?: number;
   estado: number | boolean;
@@ -45,7 +48,6 @@ type Criterio = {
  * Helpers
  * ------------------------------ */
 function isActivo(estado: number | boolean | undefined) {
-  // backend a veces manda 1/0 o true/false
   if (estado === true) return true;
   if (estado === false) return false;
   return Number(estado) === 1;
@@ -56,11 +58,7 @@ function toNum(v: any, fallback = 0) {
   return Number.isFinite(n) ? n : fallback;
 }
 
-/** -----------------------------
- * Service mínimo para criterios (porque dijiste que no lo tenías)
- * Endpoint REAL según tu server.js:
- *   /api/componentes/:componenteId/criterios
- * ------------------------------ */
+/** Endpoints mínimos (según tu server) */
 async function listCriteriosByComponente(
   componenteId: number,
   includeInactive = true
@@ -71,11 +69,6 @@ async function listCriteriosByComponente(
   return (res.data ?? []) as Criterio[];
 }
 
-/** -----------------------------
- * Service mínimo para niveles (porque dijiste que no lo tenías)
- * Endpoint REAL según tu server.js:
- *   /api/rubricas/:rubricaId/niveles
- * ------------------------------ */
 async function listNivelesByRubrica(
   rubricaId: number,
   includeInactive = true
@@ -106,13 +99,14 @@ export default function RubricasVerPage() {
 
     setLoading(true);
     try {
-      // ✅ 1) Rubrica por período (endpoint real)
-      // Si no existe, normalmente el backend puede devolver 404.
+      // 1) Rúbrica por período (si no existe, 404 -> null)
       let r: Rubrica | null = null;
       try {
         r = (await rubricaService.getByPeriodo(periodoId)) as unknown as Rubrica;
-      } catch (e: any) {
-        // si no existe, dejamos rubrica en null (y la UI mostrará "No creado")
+      } catch (err: any) {
+        // si tu backend responde 404 cuando no existe, no lo tratamos como error "fatal"
+        const status = err?.response?.status;
+        if (status !== 404) console.error(err);
         r = null;
       }
 
@@ -127,20 +121,24 @@ export default function RubricasVerPage() {
 
       const rid = r.id_rubrica;
 
-      // ✅ 2) Niveles + Componentes (endpoints reales)
+      // 2) Niveles + Componentes
       const [nivs, comps] = await Promise.all([
         listNivelesByRubrica(rid, true).catch(() => []),
-        rubricaComponenteService.list(rid, { includeInactive: true }).catch(() => []),
+        rubricaComponenteService
+          .list(rid, { includeInactive: true })
+          .catch(() => []),
       ]);
 
       setNiveles(nivs ?? []);
       setComponentes(comps ?? []);
 
-      // ✅ 3) Criterios por componenteId (endpoint real)
+      // 3) Criterios por componente
       const map: Record<number, Criterio[]> = {};
       for (const c of comps ?? []) {
         const compId = c.id_rubrica_componente;
-        map[compId] = await listCriteriosByComponente(compId, true).catch(() => []);
+        map[compId] = await listCriteriosByComponente(compId, true).catch(
+          () => []
+        );
       }
       setCriteriosByComp(map);
     } catch (e) {
@@ -162,7 +160,6 @@ export default function RubricasVerPage() {
     try {
       setLoading(true);
 
-      // ✅ Crear/asegurar por período (endpoint real)
       const resp = await rubricaService.ensureByPeriodo(periodoId, {
         nombre_rubrica: "Rúbrica Complexivo",
         ponderacion_global: 100,
@@ -190,7 +187,6 @@ export default function RubricasVerPage() {
     () => niveles.filter((x) => isActivo(x.estado)),
     [niveles]
   );
-
   const compsActivos = useMemo(
     () => componentes.filter((x) => isActivo(x.estado)),
     [componentes]
@@ -218,130 +214,177 @@ export default function RubricasVerPage() {
     );
   }, [rubrica, nivelesActivos.length, compsActivos.length, totalCriterios]);
 
+  const estadoTexto = !rubrica
+    ? "No creada"
+    : isActivo(rubrica.estado)
+    ? "Activa"
+    : "Inactiva";
+
+  const estadoOk = !!rubrica && isActivo(rubrica.estado);
+
   return (
-    <div className="rv-page">
-      <div className="rv-panel">
-        <div>
-          <h1 className="rv-title">Rúbrica del Período #{idPeriodo}</h1>
-          <p className="rv-subtitle">
-            Aquí puedes ver el estado real de la rúbrica y abrir el editor.
-          </p>
+    <div className="wrap rubricasVerPage">
+      <div className="containerFull">
+        {/* HERO */}
+        <div className="hero">
+          <div className="heroLeft">
+            <img className="heroLogo" src={escudoESPE} alt="ESPE" />
+            <div className="heroText">
+              <h1 className="heroTitle">RÚBRICA DEL PERÍODO</h1>
+              <p className="heroSubtitle">Revisa el estado y abre el editor</p>
+            </div>
+          </div>
+
+          <button className="heroBtn" onClick={() => navigate("/rubricas")}>
+            <ArrowLeft className="iconSm" /> Volver
+          </button>
         </div>
 
-        <button className="rv-btn ghost" onClick={() => navigate("/rubricas")}>
-          Volver
-        </button>
-      </div>
-
-      <div className="rv-card">
-        <div className="rv-card-head">
-          <div>
-            <div className="rv-k">Estado</div>
-            <div
-              className={`rv-badge ${
-                !rubrica ? "off" : isActivo(rubrica.estado) ? "ok" : "off"
-              }`}
-            >
-              {!rubrica ? "No creado" : isActivo(rubrica.estado) ? "Activa" : "Inactiva"}
+        {/* BOX */}
+        <div className="box">
+          <div className="boxHead">
+            <div className="sectionTitle">
+              <span className="sectionTitleIcon">
+                <Eye className="iconSm" />
+              </span>
+              Período #{idPeriodo}
             </div>
 
-            {rubrica && (
-              <div style={{ marginTop: 8 }}>
-                <div className="rv-k">Progreso</div>
-                <div className={`rv-badge ${isLista ? "ok" : "off"}`}>
-                  {isLista ? "Lista para usar" : "Incompleta"}
+            <div className="rvActionsTop">
+              {rubrica ? (
+                <button
+                  className="btnPrimary"
+                  onClick={() =>
+                    navigate(`/rubricas/editar/${rubrica.id_rubrica}`, {
+                      state: { mode: "edit" },
+                    })
+                  }
+                >
+                  Abrir rúbrica
+                </button>
+              ) : (
+                <button className="btnPrimary" onClick={createAndOpen}>
+                  Crear rúbrica
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* ESTADO + PROGRESO */}
+          <div className="rvSummary">
+            <div className="rvSummaryBox">
+              <div className="rvLabel">Estado</div>
+
+              <div className={`rvBadge ${estadoOk ? "ok" : "off"}`}>
+                {/* ✅ FIX: NO alternar nodos (evita insertBefore en DEV) */}
+                <span className="rvIcoWrap" aria-hidden="true">
+                  <BadgeCheck
+                    className={`rvIco ${estadoOk ? "isOn" : "isOff"}`}
+                  />
+                  <BadgeX
+                    className={`rvIco ${estadoOk ? "isOff" : "isOn"}`}
+                  />
+                </span>
+
+                {estadoTexto}
+              </div>
+            </div>
+
+            <div className="rvSummaryBox">
+              <div className="rvLabel">Progreso</div>
+
+              <div className={`rvBadge ${isLista ? "ok" : "off"}`}>
+                {/* ✅ FIX: NO alternar nodos (evita insertBefore en DEV) */}
+                <span className="rvIcoWrap" aria-hidden="true">
+                  <BadgeCheck
+                    className={`rvIco ${isLista ? "isOn" : "isOff"}`}
+                  />
+                  <BadgeX
+                    className={`rvIco ${isLista ? "isOff" : "isOn"}`}
+                  />
+                </span>
+
+                {rubrica ? (isLista ? "Lista para usar" : "Incompleta") : "—"}
+              </div>
+            </div>
+          </div>
+
+          {/* DETALLE */}
+          <div className="rvGrid">
+            <div className="rvRow">
+              <div className="k">Nombre</div>
+              <div className="v">{rubrica?.nombre_rubrica ?? "—"}</div>
+            </div>
+
+            <div className="rvRow">
+              <div className="k">Ponderación global</div>
+              <div className="v">{rubrica?.ponderacion_global ?? "—"}</div>
+            </div>
+
+            <div className="rvRow">
+              <div className="k">Descripción</div>
+              <div className="v">{rubrica?.descripcion_rubrica ?? "—"}</div>
+            </div>
+          </div>
+
+          {rubrica ? (
+            <>
+              <div className="rvDivider" />
+
+              <div className="rvMiniGrid">
+                <div className="miniCard">
+                  <div className="miniLabel">Niveles</div>
+                  <div className="miniValue">{nivelesActivos.length}</div>
+                  <div className="miniSub">{niveles.length} totales</div>
+                </div>
+
+                <div className="miniCard">
+                  <div className="miniLabel">Componentes</div>
+                  <div className="miniValue">{compsActivos.length}</div>
+                  <div className="miniSub">
+                    {componentes.length} totales —{" "}
+                    {totalPonderacion.toFixed(2)}% sumado
+                  </div>
+                </div>
+
+                <div className="miniCard">
+                  <div className="miniLabel">Criterios</div>
+                  <div className="miniValue">{totalCriterios}</div>
+                  <div className="miniSub">activos</div>
                 </div>
               </div>
-            )}
-          </div>
 
-          <div className="rv-actions">
-            {rubrica ? (
-              <button
-                className="rv-btn primary"
-                onClick={() =>
-                  navigate(`/rubricas/editar/${rubrica.id_rubrica}`, {
-                    state: { mode: "edit" },
-                  })
-                }
-              >
-                Editar rúbrica
-              </button>
-            ) : (
-              <button className="rv-btn primary" onClick={createAndOpen}>
-                Crear rúbrica
-              </button>
-            )}
-          </div>
-        </div>
+              <div className="rvDivider" />
 
-        <div className="rv-body">
-          <div className="rv-row">
-            <span className="k">Nombre</span>
-            <span className="v">{rubrica?.nombre_rubrica ?? "—"}</span>
-          </div>
-
-          <div className="rv-row">
-            <span className="k">Ponderación global</span>
-            <span className="v">{rubrica?.ponderacion_global ?? "—"}</span>
-          </div>
-
-          <div className="rv-row">
-            <span className="k">Descripción</span>
-            <span className="v">{rubrica?.descripcion_rubrica ?? "—"}</span>
-          </div>
-
-          {rubrica && (
-            <>
-              <div className="rv-divider" />
-
-              <div className="rv-row">
-                <span className="k">Niveles</span>
-                <span className="v">
-                  {nivelesActivos.length} activos ({niveles.length} totales)
+              <div className="rvSectionTitle">
+                <span className="sectionTitleIcon">
+                  <List className="iconSm" />
                 </span>
-              </div>
-
-              <div className="rv-row">
-                <span className="k">Componentes</span>
-                <span className="v">
-                  {compsActivos.length} activos ({componentes.length} totales) —{" "}
-                  {totalPonderacion.toFixed(2)}% sumado
-                </span>
-              </div>
-
-              <div className="rv-row">
-                <span className="k">Criterios</span>
-                <span className="v">{totalCriterios} activos</span>
-              </div>
-
-              <div className="rv-divider" />
-
-              <div className="rv-k" style={{ marginBottom: 8 }}>
                 Resumen por componente
               </div>
 
               {compsActivos.length === 0 ? (
-                <div className="rv-muted">Aún no hay componentes creados.</div>
+                <div className="rvMuted">Aún no hay componentes creados.</div>
               ) : (
-                <div className="rv-list">
+                <div className="rvList">
                   {compsActivos
                     .slice()
                     .sort((a, b) => toNum(a.orden, 0) - toNum(b.orden, 0))
                     .map((c) => {
-                      const cr = criteriosByComp[c.id_rubrica_componente] ?? [];
+                      const cr =
+                        criteriosByComp[c.id_rubrica_componente] ?? [];
                       const nCr = cr.filter((x) => isActivo(x.estado)).length;
 
                       return (
-                        <div className="rv-item" key={c.id_rubrica_componente}>
-                          <div className="rv-item-title">
-                            {c.nombre_componente}{" "}
-                            <span className="rv-pill">{c.tipo_componente}</span>
+                        <div className="rvItem" key={c.id_rubrica_componente}>
+                          <div className="rvItemTitle">
+                            {c.nombre_componente}
+                            <span className="rvPill">{c.tipo_componente}</span>
                           </div>
-                          <div className="rv-item-sub">
+                          <div className="rvItemSub">
                             Ponderación:{" "}
-                            <b>{toNum(c.ponderacion, 0).toFixed(2)}%</b> — Criterios:{" "}
-                            <b>{nCr}</b>
+                            <b>{toNum(c.ponderacion, 0).toFixed(2)}%</b> —{" "}
+                            Criterios: <b>{nCr}</b>
                           </div>
                         </div>
                       );
@@ -349,18 +392,20 @@ export default function RubricasVerPage() {
                 </div>
               )}
             </>
-          )}
-
-          {!rubrica && (
-            <div className="rv-hint">
+          ) : (
+            <div className="rvHint">
               Primero crea la rúbrica. Luego podrás agregar niveles, componentes y
               criterios.
             </div>
           )}
+
+          {loading ? (
+            <div className="rvMuted" style={{ marginTop: 10 }}>
+              Cargando…
+            </div>
+          ) : null}
         </div>
       </div>
-
-      {loading && <div className="rv-muted">Cargando…</div>}
     </div>
   );
 }

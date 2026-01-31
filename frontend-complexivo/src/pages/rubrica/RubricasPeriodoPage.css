@@ -1,20 +1,60 @@
-/* RubricasPeriodoPage.css
-   Este módulo ya usa el CSS global (page/card/table/buttons).
+/* src/pages/rubrica/RubricasPeriodoPage.css
+   Este módulo usa el CSS global (page/card/table/buttons).
    Aquí solo dejamos micro-ajustes propios.
 */
 
+/* Columna acciones fija y ordenada */
 .thActions {
-  width: 220px;
+  width: 240px;
 }
 
-/* Asegura que el botón "Abrir rúbrica" no se vea gigante en pantallas grandes */
+/* Botón "Abrir rúbrica" compacto y consistente */
 .actions .btnPrimary {
   padding: 10px 14px;
   height: 44px;
   border-radius: 12px;
+  font-weight: 900;
+  white-space: nowrap;
 }
 
-/* Si quieres que la columna de rango no se rompa raro */
+/* Alineación general de celdas */
 .table td {
   vertical-align: top;
+}
+
+/* Que la columna de acciones no se desarme */
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: nowrap;
+}
+
+/* Suaviza hover de fila (si tu global no lo hace) */
+.table tbody tr:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+/* Mejor legibilidad en pantallas pequeñas */
+@media (max-width: 820px) {
+  .thActions {
+    width: 180px;
+  }
+
+  .actions .btnPrimary {
+    height: 40px;
+    padding: 8px 12px;
+    border-radius: 12px;
+  }
+}
+/* RubricasPeriodoPage.css (solo ajustes propios) */
+
+.rubricasPage .thActions {
+  width: 240px;
+}
+
+.rubricasPage .actions .btnPrimary {
+  padding: 10px 14px;
+  height: 44px;
+  border-radius: 12px;
 }
