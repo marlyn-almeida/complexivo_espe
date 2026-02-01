@@ -6,7 +6,12 @@ export interface Estudiante {
 
   id_carrera_periodo: number;
 
+  // "username" conceptual (según lo que me dijiste)
   id_institucional_estudiante: string;
+
+  // ✅ nuevo
+  cedula: string;
+
   nombres_estudiante: string;
   apellidos_estudiante: string;
 

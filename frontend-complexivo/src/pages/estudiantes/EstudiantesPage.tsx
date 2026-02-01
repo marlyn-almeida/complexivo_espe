@@ -31,6 +31,7 @@ import {
   GraduationCap,
   FileSpreadsheet,
   Info,
+  CreditCard,
 } from "lucide-react";
 
 import escudoESPE from "../../assets/escudo.png";
@@ -42,6 +43,10 @@ type ToastType = "success" | "error" | "info";
 type EstudianteFormState = {
   id_carrera_periodo: number | "";
   id_institucional_estudiante: string;
+
+  // ✅ NUEVO
+  cedula: string;
+
   nombres_estudiante: string;
   apellidos_estudiante: string;
   correo_estudiante: string;
@@ -70,7 +75,7 @@ export default function EstudiantesPage() {
   const [page, setPage] = useState(1);
 
   // ===========================
-  // MODALES (por ahora inline)
+  // MODALES
   // ===========================
   const [showFormModal, setShowFormModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
@@ -91,6 +96,7 @@ export default function EstudiantesPage() {
   const [form, setForm] = useState<EstudianteFormState>({
     id_carrera_periodo: "",
     id_institucional_estudiante: "",
+    cedula: "",
     nombres_estudiante: "",
     apellidos_estudiante: "",
     correo_estudiante: "",
@@ -154,12 +160,10 @@ export default function EstudiantesPage() {
     try {
       setLoading(true);
 
-      // ✅ patrón igual a Docentes
       const cps = await carreraPeriodoService.list(false);
 
       setCarreraPeriodos(cps);
 
-      // auto-seleccionar el primero activo (o el primero)
       const first = cps.find((x) => Boolean((x as any).estado)) ?? cps[0];
       if (first) setSelectedCP((first as any).id_carrera_periodo);
     } catch {
@@ -200,6 +204,7 @@ export default function EstudiantesPage() {
     setForm({
       id_carrera_periodo: selectedCP || "",
       id_institucional_estudiante: "",
+      cedula: "",
       nombres_estudiante: "",
       apellidos_estudiante: "",
       correo_estudiante: "",
@@ -222,6 +227,7 @@ export default function EstudiantesPage() {
     setForm({
       id_carrera_periodo: e.id_carrera_periodo,
       id_institucional_estudiante: e.id_institucional_estudiante ?? "",
+      cedula: (e as any).cedula ?? "",
       nombres_estudiante: e.nombres_estudiante ?? "",
       apellidos_estudiante: e.apellidos_estudiante ?? "",
       correo_estudiante: e.correo_estudiante ?? "",
@@ -255,6 +261,14 @@ export default function EstudiantesPage() {
     if (!form.id_carrera_periodo) e.id_carrera_periodo = "Seleccione Carrera–Período.";
     if (!form.id_institucional_estudiante.trim()) e.id_institucional_estudiante = "ID institucional obligatorio.";
 
+    // ✅ cédula obligatoria: solo números + mínimo 10
+    const ced = form.cedula.trim();
+    if (!ced) e.cedula = "Cédula obligatoria.";
+    else {
+      if (!/^\d+$/.test(ced)) e.cedula = "La cédula solo debe contener números.";
+      else if (ced.length < 10) e.cedula = "La cédula debe tener al menos 10 dígitos.";
+    }
+
     if (!form.nombres_estudiante.trim()) e.nombres_estudiante = "Nombres obligatorios.";
     if (form.nombres_estudiante.trim().length < 3) e.nombres_estudiante = "Mínimo 3 caracteres.";
 
@@ -283,6 +297,7 @@ export default function EstudiantesPage() {
       const payload = {
         id_carrera_periodo: Number(form.id_carrera_periodo),
         id_institucional_estudiante: form.id_institucional_estudiante.trim(),
+        cedula: form.cedula.trim(),
         nombres_estudiante: form.nombres_estudiante.trim(),
         apellidos_estudiante: form.apellidos_estudiante.trim(),
         correo_estudiante: form.correo_estudiante.trim() ? form.correo_estudiante.trim() : undefined,
@@ -378,6 +393,8 @@ export default function EstudiantesPage() {
         return {
           id_carrera_periodo: idCP,
           id_institucional_estudiante: r.id_institucional_estudiante,
+          // ✅ NUEVO
+          cedula: (r as any).cedula,
           nombres_estudiante: r.nombres_estudiante,
           apellidos_estudiante: r.apellidos_estudiante,
           correo_estudiante: r.correo_estudiante,
@@ -392,6 +409,12 @@ export default function EstudiantesPage() {
 
       let ok = 0;
       for (const p of payloads) {
+        // ✅ validación rápida por si el excel viene mal
+        const ced = String((p as any).cedula ?? "").trim();
+        if (!ced || !/^\d+$/.test(ced) || ced.length < 10) {
+          throw new Error(`Error de importación: cédula inválida en ID institucional "${p.id_institucional_estudiante}".`);
+        }
+
         await estudiantesService.create(p as any);
         ok++;
       }
@@ -420,6 +443,7 @@ export default function EstudiantesPage() {
         if (!q) return true;
         return (
           (e.id_institucional_estudiante || "").toLowerCase().includes(q) ||
+          ((e as any).cedula || "").toLowerCase().includes(q) ||
           (e.nombres_estudiante || "").toLowerCase().includes(q) ||
           (e.apellidos_estudiante || "").toLowerCase().includes(q) ||
           (e.correo_estudiante || "").toLowerCase().includes(q)
@@ -448,7 +472,7 @@ export default function EstudiantesPage() {
   return (
     <div className="estudiantesPage">
       <div className="wrap">
-        {/* HERO (igual que Docentes) */}
+        {/* HERO */}
         <div className="hero">
           <div className="heroLeft">
             <img className="heroLogo" src={escudoESPE} alt="ESPE" />
@@ -544,7 +568,7 @@ export default function EstudiantesPage() {
               <Search className="searchIcon" />
               <input
                 className="search"
-                placeholder="Buscar por ID institucional, nombres, apellidos o correo..."
+                placeholder="Buscar por ID institucional, cédula, nombres, apellidos o correo..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -589,6 +613,14 @@ export default function EstudiantesPage() {
                       <BadgeCheck size={16} /> ID institucional
                     </span>
                   </th>
+
+                  {/* ✅ NUEVO */}
+                  <th className="thCenter">
+                    <span className="thFlex">
+                      <CreditCard size={16} /> Cédula
+                    </span>
+                  </th>
+
                   <th className="thCenter">
                     <span className="thFlex">
                       <User size={16} /> Estudiante
@@ -615,18 +647,24 @@ export default function EstudiantesPage() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={5} className="emptyCell">
+                    <td colSpan={6} className="emptyCell">
                       <div className="empty">Cargando...</div>
                     </td>
                   </tr>
                 ) : pageData.length ? (
                   pageData.map((e) => {
                     const activo = isActivo(e.estado);
+                    const cedula = (e as any).cedula ?? "-";
 
                     return (
                       <tr key={e.id_estudiante}>
                         <td className="tdCenter">
                           <span className="chipCode">{(e.id_institucional_estudiante || "-").toUpperCase()}</span>
+                        </td>
+
+                        {/* ✅ NUEVO */}
+                        <td className="tdCenter">
+                          <span className="chipCode">{String(cedula)}</span>
                         </td>
 
                         <td className="tdCenter tdName">
@@ -678,7 +716,7 @@ export default function EstudiantesPage() {
                   })
                 ) : (
                   <tr>
-                    <td colSpan={5} className="emptyCell">
+                    <td colSpan={6} className="emptyCell">
                       <div className="empty">No hay estudiantes para mostrar.</div>
                     </td>
                   </tr>
@@ -705,7 +743,7 @@ export default function EstudiantesPage() {
       </div>
 
       {/* ===========================
-          MODAL: FORM (por ahora inline)
+          MODAL: FORM
           =========================== */}
       {showFormModal && (
         <div className="modalOverlay" onMouseDown={closeForm}>
@@ -765,6 +803,22 @@ export default function EstudiantesPage() {
                   )}
                 </div>
 
+                {/* ✅ NUEVO */}
+                <div className="formField">
+                  <label className="fLabel">Cédula *</label>
+                  <input
+                    className={`input ${errors.cedula ? "input-error" : ""}`}
+                    value={form.cedula}
+                    onChange={(e) => {
+                      // opcional: permitir solo dígitos al escribir
+                      const onlyDigits = e.target.value.replace(/[^\d]/g, "");
+                      setForm((p) => ({ ...p, cedula: onlyDigits }));
+                    }}
+                    inputMode="numeric"
+                  />
+                  {errors.cedula && <div className="field-error">{errors.cedula}</div>}
+                </div>
+
                 <div className="formField">
                   <label className="fLabel">Correo</label>
                   <input
@@ -819,7 +873,7 @@ export default function EstudiantesPage() {
       )}
 
       {/* ===========================
-          MODAL: VIEW (por ahora inline)
+          MODAL: VIEW
           =========================== */}
       {showViewModal && viewEstudiante && (
         <div className="modalOverlay" onMouseDown={closeView}>
@@ -849,6 +903,14 @@ export default function EstudiantesPage() {
                     <BadgeCheck className="vIcon" /> ID institucional
                   </div>
                   <div className="vValue mono">{viewEstudiante.id_institucional_estudiante}</div>
+                </div>
+
+                {/* ✅ NUEVO */}
+                <div className="vCard">
+                  <div className="vLabel">
+                    <CreditCard className="vIcon" /> Cédula
+                  </div>
+                  <div className="vValue mono">{(viewEstudiante as any).cedula || "-"}</div>
                 </div>
 
                 <div className="vCard">
@@ -905,7 +967,7 @@ export default function EstudiantesPage() {
       )}
 
       {/* ===========================
-          MODAL: IMPORT (por ahora inline)
+          MODAL: IMPORT
           =========================== */}
       {showImportModal && (
         <div className="modalOverlay" onMouseDown={closeImport}>
@@ -932,8 +994,8 @@ export default function EstudiantesPage() {
               <div className="infoBox">
                 <Info />
                 <div className="infoText">
-                  La plantilla incluye: <b>nombre_carrera</b>, <b>codigo_periodo</b>, <b>id_institucional</b>, nombres,
-                  apellidos, correo y teléfono.
+                  La plantilla incluye: <b>nombre_carrera</b>, <b>codigo_periodo</b>, <b>id_institucional</b>,{" "}
+                  <b>cedula</b>, nombres, apellidos, correo y teléfono.
                 </div>
               </div>
 
