@@ -5,15 +5,12 @@ function isRol2(user) {
 }
 
 async function list(query = {}, user) {
-  // ✅ FIX: en routes ya hacemos .toBoolean(), entonces aquí viene boolean real
   const includeInactive = Boolean(query.includeInactive);
-
   const q = query.q || "";
   const page = query.page || 1;
   const limit = query.limit || 50;
   const carreraPeriodoId = query.carreraPeriodoId || null;
 
-  // ✅ scope rol 2
   const scopeCarreraId = isRol2(user) ? user?.scope?.id_carrera : null;
 
   return repo.findAll({
@@ -34,7 +31,7 @@ async function get(id, user) {
     throw err;
   }
 
-  // ✅ si rol 2, validar que ese estudiante pertenece a su carrera
+  // ✅ scope rol 2
   if (isRol2(user)) {
     const okScope = await repo.carreraPeriodoBelongsToCarrera(
       e.id_carrera_periodo,
@@ -58,7 +55,7 @@ async function create(payload, user) {
     throw err;
   }
 
-  // ✅ si rol 2, el cp debe pertenecer a su carrera
+  // ✅ scope rol 2
   if (isRol2(user)) {
     const okScope = await repo.carreraPeriodoBelongsToCarrera(
       payload.id_carrera_periodo,
@@ -71,9 +68,24 @@ async function create(payload, user) {
     }
   }
 
-  const dup = await repo.findByInstitucional(payload.id_institucional_estudiante);
-  if (dup) {
-    const err = new Error("Ya existe un estudiante con ese ID institucional");
+  // ✅ duplicado por carrera_periodo
+  const dupInst = await repo.findByInstitucionalInCarreraPeriodo(
+    payload.id_carrera_periodo,
+    payload.id_institucional_estudiante
+  );
+  if (dupInst) {
+    const err = new Error("Ya existe un estudiante con ese ID institucional en esta carrera/periodo");
+    err.status = 409;
+    throw err;
+  }
+
+  // ✅ duplicado por carrera_periodo
+  const dupCed = await repo.findByCedulaInCarreraPeriodo(
+    payload.id_carrera_periodo,
+    payload.cedula
+  );
+  if (dupCed) {
+    const err = new Error("Ya existe un estudiante con esa cédula en esta carrera/periodo");
     err.status = 409;
     throw err;
   }
@@ -91,7 +103,7 @@ async function update(id, payload, user) {
     throw err;
   }
 
-  // ✅ si rol 2, el nuevo cp también debe pertenecer a su carrera
+  // ✅ scope rol 2
   if (isRol2(user)) {
     const okScope = await repo.carreraPeriodoBelongsToCarrera(
       payload.id_carrera_periodo,
@@ -104,9 +116,21 @@ async function update(id, payload, user) {
     }
   }
 
-  const dup = await repo.findByInstitucional(payload.id_institucional_estudiante);
-  if (dup && Number(dup.id_estudiante) !== Number(id)) {
-    const err = new Error("Ya existe un estudiante con ese ID institucional");
+  // ✅ duplicado institucional por cp (excluyendo el mismo id)
+  const dupInst = await repo.findByInstitucionalInCarreraPeriodo(
+    payload.id_carrera_periodo,
+    payload.id_institucional_estudiante
+  );
+  if (dupInst && Number(dupInst.id_estudiante) !== Number(id)) {
+    const err = new Error("Ya existe un estudiante con ese ID institucional en esta carrera/periodo");
+    err.status = 409;
+    throw err;
+  }
+
+  // ✅ duplicado cedula por cp (excluyendo el mismo id)
+  const dupCed = await repo.findByCedulaInCarreraPeriodo(payload.id_carrera_periodo, payload.cedula);
+  if (dupCed && Number(dupCed.id_estudiante) !== Number(id)) {
+    const err = new Error("Ya existe un estudiante con esa cédula en esta carrera/periodo");
     err.status = 409;
     throw err;
   }

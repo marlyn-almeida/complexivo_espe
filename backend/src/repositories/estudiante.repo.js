@@ -8,7 +8,7 @@ async function carreraPeriodoExists(id_carrera_periodo) {
   return r.length > 0;
 }
 
-// ✅ valida que un carrera_periodo pertenezca a una carrera (para scope rol 2)
+// ✅ valida que un carrera_periodo pertenezca a una carrera (scope rol 2)
 async function carreraPeriodoBelongsToCarrera(id_carrera_periodo, id_carrera) {
   const [r] = await pool.query(
     `SELECT 1
@@ -27,7 +27,7 @@ async function findAll({
   page = 1,
   limit = 50,
   carreraPeriodoId = null,
-  scopeCarreraId = null, // ✅ scope rol 2 por carrera
+  scopeCarreraId = null,
 } = {}) {
   const safeLimit = Math.min(Math.max(+limit || 50, 1), 100);
   const safePage = Math.max(+page || 1, 1);
@@ -46,12 +46,13 @@ async function findAll({
   if (q && q.trim()) {
     where.push(`(
       e.id_institucional_estudiante LIKE ? OR
+      e.cedula LIKE ? OR
       e.nombres_estudiante LIKE ? OR
       e.apellidos_estudiante LIKE ? OR
       IFNULL(e.correo_estudiante,'') LIKE ?
     )`);
     const like = `%${q.trim()}%`;
-    params.push(like, like, like, like);
+    params.push(like, like, like, like, like);
   }
 
   // ✅ Scope rol 2: solo estudiantes de la carrera del usuario
@@ -67,6 +68,7 @@ async function findAll({
       e.id_estudiante,
       e.id_carrera_periodo,
       e.id_institucional_estudiante,
+      e.cedula,
       e.nombres_estudiante,
       e.apellidos_estudiante,
       e.correo_estudiante,
@@ -96,22 +98,44 @@ async function findAll({
 async function findById(id) {
   const [r] = await pool.query(
     `SELECT
-      id_estudiante, id_carrera_periodo, id_institucional_estudiante,
-      nombres_estudiante, apellidos_estudiante, correo_estudiante, telefono_estudiante,
-      estado, created_at, updated_at
-     FROM estudiante
-     WHERE id_estudiante=?`,
+      e.id_estudiante,
+      e.id_carrera_periodo,
+      e.id_institucional_estudiante,
+      e.cedula,
+      e.nombres_estudiante,
+      e.apellidos_estudiante,
+      e.correo_estudiante,
+      e.telefono_estudiante,
+      e.estado,
+      e.created_at,
+      e.updated_at
+     FROM estudiante e
+     WHERE e.id_estudiante=?`,
     [id]
   );
   return r[0] || null;
 }
 
-async function findByInstitucional(id_institucional_estudiante) {
+// ✅ duplicado por carrera_periodo (NO global)
+async function findByInstitucionalInCarreraPeriodo(id_carrera_periodo, id_institucional_estudiante) {
   const [r] = await pool.query(
-    `SELECT id_estudiante, id_institucional_estudiante
+    `SELECT id_estudiante, id_carrera_periodo, id_institucional_estudiante
      FROM estudiante
-     WHERE id_institucional_estudiante=? LIMIT 1`,
-    [id_institucional_estudiante]
+     WHERE id_carrera_periodo=? AND id_institucional_estudiante=?
+     LIMIT 1`,
+    [id_carrera_periodo, id_institucional_estudiante]
+  );
+  return r[0] || null;
+}
+
+// ✅ duplicado por carrera_periodo (NO global)
+async function findByCedulaInCarreraPeriodo(id_carrera_periodo, cedula) {
+  const [r] = await pool.query(
+    `SELECT id_estudiante, id_carrera_periodo, cedula
+     FROM estudiante
+     WHERE id_carrera_periodo=? AND cedula=?
+     LIMIT 1`,
+    [id_carrera_periodo, cedula]
   );
   return r[0] || null;
 }
@@ -119,11 +143,12 @@ async function findByInstitucional(id_institucional_estudiante) {
 async function create(d) {
   const [res] = await pool.query(
     `INSERT INTO estudiante
-      (id_carrera_periodo, id_institucional_estudiante, nombres_estudiante, apellidos_estudiante, correo_estudiante, telefono_estudiante, estado)
-     VALUES (?, ?, ?, ?, ?, ?, 1)`,
+      (id_carrera_periodo, id_institucional_estudiante, cedula, nombres_estudiante, apellidos_estudiante, correo_estudiante, telefono_estudiante, estado)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 1)`,
     [
       d.id_carrera_periodo,
       d.id_institucional_estudiante,
+      d.cedula,
       d.nombres_estudiante,
       d.apellidos_estudiante,
       d.correo_estudiante ?? null,
@@ -136,11 +161,18 @@ async function create(d) {
 async function update(id, d) {
   await pool.query(
     `UPDATE estudiante
-     SET id_carrera_periodo=?, id_institucional_estudiante=?, nombres_estudiante=?, apellidos_estudiante=?, correo_estudiante=?, telefono_estudiante=?
+     SET id_carrera_periodo=?,
+         id_institucional_estudiante=?,
+         cedula=?,
+         nombres_estudiante=?,
+         apellidos_estudiante=?,
+         correo_estudiante=?,
+         telefono_estudiante=?
      WHERE id_estudiante=?`,
     [
       d.id_carrera_periodo,
       d.id_institucional_estudiante,
+      d.cedula,
       d.nombres_estudiante,
       d.apellidos_estudiante,
       d.correo_estudiante ?? null,
@@ -164,7 +196,8 @@ module.exports = {
   carreraPeriodoBelongsToCarrera,
   findAll,
   findById,
-  findByInstitucional,
+  findByInstitucionalInCarreraPeriodo,
+  findByCedulaInCarreraPeriodo,
   create,
   update,
   setEstado,

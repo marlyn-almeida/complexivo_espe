@@ -30,10 +30,17 @@ router.post(
   "/",
   body("id_carrera_periodo").isInt({ min: 1 }).toInt(),
   body("id_institucional_estudiante").isString().trim().notEmpty(),
+  body("cedula")
+    .isString()
+    .trim()
+    .notEmpty()
+    .withMessage("La cédula es obligatoria")
+    .matches(/^\d{10,}$/)
+    .withMessage("La cédula debe tener solo dígitos (mínimo 10)"),
   body("nombres_estudiante").isString().trim().notEmpty(),
   body("apellidos_estudiante").isString().trim().notEmpty(),
-  body("correo_estudiante").optional().isEmail(),
-  body("telefono_estudiante").optional().isString(),
+  body("correo_estudiante").optional({ nullable: true }).isEmail(),
+  body("telefono_estudiante").optional({ nullable: true }).isString(),
   validate,
   ctrl.create
 );
@@ -43,10 +50,17 @@ router.put(
   param("id").isInt({ min: 1 }).toInt(),
   body("id_carrera_periodo").isInt({ min: 1 }).toInt(),
   body("id_institucional_estudiante").isString().trim().notEmpty(),
+  body("cedula")
+    .isString()
+    .trim()
+    .notEmpty()
+    .withMessage("La cédula es obligatoria")
+    .matches(/^\d{10,}$/)
+    .withMessage("La cédula debe tener solo dígitos (mínimo 10)"),
   body("nombres_estudiante").isString().trim().notEmpty(),
   body("apellidos_estudiante").isString().trim().notEmpty(),
-  body("correo_estudiante").optional().isEmail(),
-  body("telefono_estudiante").optional().isString(),
+  body("correo_estudiante").optional({ nullable: true }).isEmail(),
+  body("telefono_estudiante").optional({ nullable: true }).isString(),
   validate,
   ctrl.update
 );
