@@ -10,15 +10,13 @@ import DashboardAdmin from "../pages/dashboard/DashboardAdmin";
 import DashboardDocente from "../pages/dashboard/DashboardDocente";
 
 import PeriodosPage from "../pages/periodos/PeriodosPage";
-import PeriodoCarrerasPage from "../pages/periodos/PeriodoCarrerasPage"; // ✅ NUEVO
+import PeriodoCarrerasPage from "../pages/periodos/PeriodoCarrerasPage"; // ✅ Ver/gestionar carreras del periodo
 import CarrerasPage from "../pages/carreras/CarrerasPage";
 import CarreraAdminsPage from "../pages/carreras/CarreraAdminsPage";
 
 import DocentesPage from "../pages/docentes/DocentesPage";
 
 import EstudiantesPage from "../pages/estudiantes/EstudiantesPage";
-import CarreraPeriodoPage from "../pages/carreraPeriodo/CarreraPeriodoPage";
-import CarreraPeriodoAutoridadesPage from "../pages/carreraPeriodo/CarreraPeriodoAutoridadesPage";
 
 import PerfilPage from "../pages/perfil/PerfilPage";
 
@@ -130,7 +128,7 @@ export default function AppRoutes() {
             }
           />
 
-          {/* ✅ NUEVO: VER / GESTIONAR carreras asignadas al periodo */}
+          {/* ✅ VER / GESTIONAR carreras asignadas al periodo */}
           <Route
             path="/periodos/:id/carreras"
             element={
@@ -140,24 +138,10 @@ export default function AppRoutes() {
             }
           />
 
-          <Route
-            path="/carrera-periodo"
-            element={
-              <ProtectedRoute allowRoles={[1]}>
-                <CarreraPeriodoPage />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Autoridades por Carrera-Periodo */}
-          <Route
-            path="/carreras-periodos/:id/admin"
-            element={
-              <ProtectedRoute allowRoles={[1]}>
-                <CarreraPeriodoAutoridadesPage />
-              </ProtectedRoute>
-            }
-          />
+          {/* ❌ ELIMINADO: MÓDULO CARRERA-PERIODO
+              - /carrera-periodo
+              - /carreras-periodos/:id/admin
+          */}
 
           <Route
             path="/rubricas"

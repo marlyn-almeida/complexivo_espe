@@ -1,4 +1,3 @@
-// src/components/layout/menuByRole.ts
 import type { RolId } from "../../utils/auth";
 
 export type IconName =
@@ -8,7 +7,6 @@ export type IconName =
   | "periodos"
   | "rubricas"
   | "docentes"
-  | "carrera_periodo"
   | "acta";
 
 export type MenuItem = {
@@ -24,7 +22,7 @@ export type MenuSection = {
   items: MenuItem[];
 };
 
-// 1 = SUPER_ADMIN, 2 = ADMIN, 3 = DOCENTE
+// 1 = SUPER_ADMIN, 2 = ADMIN (Director / Apoyo), 3 = DOCENTE
 export const MENU_SECTIONS: MenuSection[] = [
   {
     title: "Inicio",
@@ -53,29 +51,26 @@ export const MENU_SECTIONS: MenuSection[] = [
     roles: [1],
     items: [
       { label: "Docentes", to: "/docentes", roles: [1], icon: "docentes" },
-      { label: "Carrera-Período", to: "/carrera-periodo", roles: [1], icon: "carrera_periodo" },
       { label: "Plantillas Acta Word", to: "/plantillas-acta", roles: [1], icon: "acta" },
     ],
   },
 
   /* =========================
-     ADMIN (2)
+     ADMIN / DIRECTOR / APOYO (2)
      ========================= */
   {
-    title: "Gestión por carrera",
+    title: "Gestión",
     roles: [2],
     items: [
-      { label: "Docentes", to: "/docentes", roles: [2], icon: "docentes" },
-      { label: "Estudiantes", to: "/estudiantes", roles: [2], icon: "docentes" }, // si luego tienes icon estudiante lo cambiamos
-      { label: "Franjas horarias", to: "/franjas", roles: [2], icon: "periodos" }, // luego lo mejoramos
-    ],
-  },
 
-  {
-    title: "Tribunales",
-    roles: [2],
-    items: [
-      { label: "Tribunales", to: "/tribunales", roles: [2], icon: "carrera_periodo" },
+      { label: "Docentes", to: "/docentes", roles: [2], icon: "docentes" },
+      { label: "Estudiantes", to: "/estudiantes", roles: [2], icon: "docentes" },
+      { label: "Calificaciones", to: "/calificaciones", roles: [2], icon: "rubricas" },
+      { label: "Actas firmadas", to: "/actas-firmadas", roles: [2], icon: "acta" },
+      { label: "Período (lectura)", to: "/periodo", roles: [2], icon: "periodos" },
+      { label: "Casos de estudio", to: "/casos-estudio", roles: [2], icon: "carreras" },
+
+
     ],
   },
 
@@ -86,7 +81,7 @@ export const MENU_SECTIONS: MenuSection[] = [
     title: "Tribunales",
     roles: [3],
     items: [
-      { label: "Mis tribunales", to: "/mis-tribunales", roles: [3], icon: "carrera_periodo" },
+      { label: "Mis tribunales", to: "/mis-tribunales", roles: [3], icon: "periodos" },
       { label: "Actas", to: "/actas", roles: [3], icon: "acta" },
     ],
   },

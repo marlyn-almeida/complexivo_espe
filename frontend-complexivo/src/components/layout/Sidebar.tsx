@@ -10,7 +10,8 @@ function roleLabel(role: number | null) {
     case 1:
       return "Súper Administrador";
     case 2:
-      return "Administrador";
+      // ✅ Ajustado para tu “director/apoyo”
+      return "Director / Apoyo";
     case 3:
       return "Docente";
     default:
@@ -23,7 +24,8 @@ function roleDesc(role: number | null) {
     case 1:
       return "Gestión global";
     case 2:
-      return "Gestión por carrera";
+      // ✅ Ajustado: ya no es “admin operativo”, es académico
+      return "Gestión académica (carrera)";
     case 3:
       return "Tribunales y calificación";
     default:
@@ -36,7 +38,8 @@ function avatarText(role: number | null) {
     case 1:
       return "SA";
     case 2:
-      return "AD";
+      // ✅ Puedes dejar AD si quieres, pero “DC” queda más claro
+      return "DC";
     case 3:
       return "DO";
     default:
@@ -45,7 +48,7 @@ function avatarText(role: number | null) {
 }
 
 function MenuIcon({ name }: { name: IconName }) {
-  // SVG formales (mono) que se pintan con currentColor (CSS)
+  // SVGs monocromos (usan currentColor)
   switch (name) {
     case "principal":
       return (
@@ -53,48 +56,49 @@ function MenuIcon({ name }: { name: IconName }) {
           <path d="M3 10.5 12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1V10.5Z" />
         </svg>
       );
+
     case "perfil":
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M12 12a4.2 4.2 0 1 0-4.2-4.2A4.2 4.2 0 0 0 12 12Zm0 2.2c-4.2 0-7.6 2.2-7.6 4.9V21h15.2v-1.9c0-2.7-3.4-4.9-7.6-4.9Z" />
         </svg>
       );
+
     case "carreras":
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M12 3 1.8 8.3 12 13.5l10.2-5.2L12 3Zm-7 8.2V16c0 2.2 3.1 4 7 4s7-1.8 7-4v-4.8l-7 3.6-7-3.6Z" />
         </svg>
       );
+
     case "periodos":
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M7 2v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2V2h-2v2H9V2H7Zm12 8H5v10h14V10Z" />
         </svg>
       );
+
     case "rubricas":
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M6 2h9l3 3v17a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm8 1.5V6h2.5L14 3.5ZM7 10h8v2H7v-2Zm0 4h8v2H7v-2Zm0 4h6v2H7v-2Z" />
         </svg>
       );
+
     case "docentes":
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M12 12a4 4 0 1 0-4-4a4 4 0 0 0 4 4Zm0 2c-4.4 0-8 2.3-8 5.2V21h16v-1.8C20 16.3 16.4 14 12 14Z" />
         </svg>
       );
-    case "carrera_periodo":
-      return (
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M4 4h7v7H4V4Zm9 0h7v7h-7V4ZM4 13h7v7H4v-7Zm9 3h7v4h-7v-4Zm0-3h7v2h-7v-2Z" />
-        </svg>
-      );
+
     case "acta":
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M6 2h9l3 3v17a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm8 1.5V6h2.5L14 3.5ZM7 11h10v2H7v-2Zm0 4h10v2H7v-2Z" />
         </svg>
       );
+
     default:
       return null;
   }
@@ -141,7 +145,6 @@ export default function Sidebar({
 
   return (
     <>
-      {/* overlay solo cuando está abierto y NO está anclado */}
       {isOpen && !pinned && (
         <div className="sidebar-overlay" onClick={onClose} />
       )}
@@ -159,7 +162,6 @@ export default function Sidebar({
             </div>
           </div>
 
-          {/* ✅ PIN SERIO (se queda) */}
           <button
             type="button"
             className={`sidebar-pin ${pinned ? "on" : ""}`}
@@ -167,16 +169,10 @@ export default function Sidebar({
             aria-label={pinned ? "Desanclar menú" : "Anclar menú"}
             title={pinned ? "Desanclar" : "Anclar"}
           >
-            <svg
-              viewBox="0 0 24 24"
-              className="sidebar-pin-ico"
-              aria-hidden="true"
-            >
+            <svg viewBox="0 0 24 24" className="sidebar-pin-ico">
               <path d="M14 3c.55 0 1 .45 1 1v2.5l2.2 2.2c.2.2.3.45.3.7V12h-5v3.2l1.6 1.6V18h-4v-1.2l1.6-1.6V12H6.3V9.4c0-.25.1-.5.3-.7L8.8 6.5V4c0-.55.45-1 1-1h4Z" />
             </svg>
           </button>
-
-          {/* ❌ X ELIMINADA — el cierre queda SOLO con la hamburguesa */}
         </div>
 
         <div className="sidebar-body">
@@ -194,12 +190,11 @@ export default function Sidebar({
                         `sidebar-link ${isActive ? "active" : ""}`
                       }
                       onClick={() => {
-                        // si NO está anclado, al navegar cerramos (móvil)
                         if (!pinned) onClose();
                       }}
                       end
                     >
-                      <span className="sidebar-ico" aria-hidden="true">
+                      <span className="sidebar-ico">
                         <MenuIcon name={it.icon} />
                       </span>
                       <span className="sidebar-text">{it.label}</span>
@@ -214,7 +209,6 @@ export default function Sidebar({
             <div className="sidebar-profile-card">
               <div className="sidebar-profile-left">
                 <div className="sidebar-avatar">{avatarText(role)}</div>
-
                 <div>
                   <div className="sidebar-profile-name">{roleLabel(role)}</div>
                   <div className="sidebar-profile-role">{roleDesc(role)}</div>

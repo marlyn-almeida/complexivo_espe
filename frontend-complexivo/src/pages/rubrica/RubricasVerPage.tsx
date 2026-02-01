@@ -58,6 +58,18 @@ function toNum(v: any, fallback = 0) {
   return Number.isFinite(n) ? n : fallback;
 }
 
+/** ✅ Para que NO salga OTRO en UI */
+function compTypeLabel(t?: string) {
+  switch (t) {
+    case "ESCRITA":
+      return { text: "Escrita", cls: "rvPill escrita" };
+    case "ORAL":
+      return { text: "Oral", cls: "rvPill oral" };
+    default:
+      return { text: "General", cls: "rvPill general" }; // OTRO/null/undefined
+  }
+}
+
 /** Endpoints mínimos (según tu server) */
 async function listCriteriosByComponente(
   componenteId: number,
@@ -104,7 +116,6 @@ export default function RubricasVerPage() {
       try {
         r = (await rubricaService.getByPeriodo(periodoId)) as unknown as Rubrica;
       } catch (err: any) {
-        // si tu backend responde 404 cuando no existe, no lo tratamos como error "fatal"
         const status = err?.response?.status;
         if (status !== 404) console.error(err);
         r = null;
@@ -172,8 +183,12 @@ export default function RubricasVerPage() {
         return;
       }
 
+      // ✅ importantísimo: mandamos returnTo al editor
       navigate(`/rubricas/editar/${createdRubrica.id_rubrica}`, {
-        state: { mode: resp.created ? "create" : "edit" },
+        state: {
+          mode: resp.created ? "create" : "edit",
+          returnTo: `/rubricas/periodo/${periodoId}`,
+        },
       });
     } catch (e) {
       console.error(e);
@@ -187,6 +202,7 @@ export default function RubricasVerPage() {
     () => niveles.filter((x) => isActivo(x.estado)),
     [niveles]
   );
+
   const compsActivos = useMemo(
     () => componentes.filter((x) => isActivo(x.estado)),
     [componentes]
@@ -205,14 +221,24 @@ export default function RubricasVerPage() {
     return n;
   }, [criteriosByComp, compsActivos]);
 
+  const okPonderacion = useMemo(() => {
+    return Math.abs(totalPonderacion - 100) < 0.001;
+  }, [totalPonderacion]);
+
+  const faltaPonderacion = useMemo(() => {
+    return Math.max(0, 100 - totalPonderacion);
+  }, [totalPonderacion]);
+
+  // ✅ progreso real: también exige ponderación 100
   const isLista = useMemo(() => {
     return (
       !!rubrica &&
       nivelesActivos.length >= 2 &&
       compsActivos.length >= 1 &&
-      totalCriterios >= 1
+      totalCriterios >= 1 &&
+      okPonderacion
     );
-  }, [rubrica, nivelesActivos.length, compsActivos.length, totalCriterios]);
+  }, [rubrica, nivelesActivos.length, compsActivos.length, totalCriterios, okPonderacion]);
 
   const estadoTexto = !rubrica
     ? "No creada"
@@ -235,7 +261,7 @@ export default function RubricasVerPage() {
             </div>
           </div>
 
-          <button className="heroBtn" onClick={() => navigate("/rubricas")}>
+          <button className="heroBtn" onClick={() => navigate("/rubricas")} type="button">
             <ArrowLeft className="iconSm" /> Volver
           </button>
         </div>
@@ -256,14 +282,18 @@ export default function RubricasVerPage() {
                   className="btnPrimary"
                   onClick={() =>
                     navigate(`/rubricas/editar/${rubrica.id_rubrica}`, {
-                      state: { mode: "edit" },
+                      state: {
+                        mode: "edit",
+                        returnTo: `/rubricas/periodo/${periodoId}`,
+                      },
                     })
                   }
+                  type="button"
                 >
                   Abrir rúbrica
                 </button>
               ) : (
-                <button className="btnPrimary" onClick={createAndOpen}>
+                <button className="btnPrimary" onClick={createAndOpen} type="button">
                   Crear rúbrica
                 </button>
               )}
@@ -276,14 +306,9 @@ export default function RubricasVerPage() {
               <div className="rvLabel">Estado</div>
 
               <div className={`rvBadge ${estadoOk ? "ok" : "off"}`}>
-                {/* ✅ FIX: NO alternar nodos (evita insertBefore en DEV) */}
                 <span className="rvIcoWrap" aria-hidden="true">
-                  <BadgeCheck
-                    className={`rvIco ${estadoOk ? "isOn" : "isOff"}`}
-                  />
-                  <BadgeX
-                    className={`rvIco ${estadoOk ? "isOff" : "isOn"}`}
-                  />
+                  <BadgeCheck className={`rvIco ${estadoOk ? "isOn" : "isOff"}`} />
+                  <BadgeX className={`rvIco ${estadoOk ? "isOff" : "isOn"}`} />
                 </span>
 
                 {estadoTexto}
@@ -294,14 +319,9 @@ export default function RubricasVerPage() {
               <div className="rvLabel">Progreso</div>
 
               <div className={`rvBadge ${isLista ? "ok" : "off"}`}>
-                {/* ✅ FIX: NO alternar nodos (evita insertBefore en DEV) */}
                 <span className="rvIcoWrap" aria-hidden="true">
-                  <BadgeCheck
-                    className={`rvIco ${isLista ? "isOn" : "isOff"}`}
-                  />
-                  <BadgeX
-                    className={`rvIco ${isLista ? "isOff" : "isOn"}`}
-                  />
+                  <BadgeCheck className={`rvIco ${isLista ? "isOn" : "isOff"}`} />
+                  <BadgeX className={`rvIco ${isLista ? "isOff" : "isOn"}`} />
                 </span>
 
                 {rubrica ? (isLista ? "Lista para usar" : "Incompleta") : "—"}
@@ -342,8 +362,10 @@ export default function RubricasVerPage() {
                   <div className="miniLabel">Componentes</div>
                   <div className="miniValue">{compsActivos.length}</div>
                   <div className="miniSub">
-                    {componentes.length} totales —{" "}
-                    {totalPonderacion.toFixed(2)}% sumado
+                    {componentes.length} totales — {totalPonderacion.toFixed(2)}% sumado
+                    {!okPonderacion ? (
+                      <span className="miniWarn"> — falta {faltaPonderacion.toFixed(2)}%</span>
+                    ) : null}
                   </div>
                 </div>
 
@@ -371,20 +393,18 @@ export default function RubricasVerPage() {
                     .slice()
                     .sort((a, b) => toNum(a.orden, 0) - toNum(b.orden, 0))
                     .map((c) => {
-                      const cr =
-                        criteriosByComp[c.id_rubrica_componente] ?? [];
+                      const cr = criteriosByComp[c.id_rubrica_componente] ?? [];
                       const nCr = cr.filter((x) => isActivo(x.estado)).length;
+                      const typeUI = compTypeLabel((c as any).tipo_componente);
 
                       return (
                         <div className="rvItem" key={c.id_rubrica_componente}>
                           <div className="rvItemTitle">
                             {c.nombre_componente}
-                            <span className="rvPill">{c.tipo_componente}</span>
+                            <span className={typeUI.cls}>{typeUI.text}</span>
                           </div>
                           <div className="rvItemSub">
-                            Ponderación:{" "}
-                            <b>{toNum(c.ponderacion, 0).toFixed(2)}%</b> —{" "}
-                            Criterios: <b>{nCr}</b>
+                            Ponderación: <b>{toNum(c.ponderacion, 0).toFixed(2)}%</b> — Criterios: <b>{nCr}</b>
                           </div>
                         </div>
                       );
@@ -394,8 +414,7 @@ export default function RubricasVerPage() {
             </>
           ) : (
             <div className="rvHint">
-              Primero crea la rúbrica. Luego podrás agregar niveles, componentes y
-              criterios.
+              Primero crea la rúbrica. Luego podrás agregar niveles, componentes y criterios.
             </div>
           )}
 

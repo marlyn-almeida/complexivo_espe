@@ -163,6 +163,12 @@
   color: rgba(17, 24, 39, 0.55);
 }
 
+/* ✅ Nuevo: aviso de falta de ponderación */
+.rubricasVerPage .miniWarn {
+  font-weight: 900;
+  color: #b42318;
+}
+
 /* =========================
    Subtítulo de sección
 ========================= */
@@ -200,6 +206,7 @@
   flex-wrap: wrap;
 }
 
+/* Pill base (si no trae clase extra, queda estilo ESPE) */
 .rubricasVerPage .rvPill {
   display: inline-flex;
   align-items: center;
@@ -207,11 +214,30 @@
   border-radius: 999px;
   font-size: 12px;
   font-weight: 900;
-  color: #067647;
-  background: rgba(6, 118, 71, 0.10);
-  border: 1px solid rgba(6, 118, 71, 0.22);
   text-transform: uppercase;
   letter-spacing: 0.06em;
+  border: 1px solid rgba(6, 118, 71, 0.22);
+  background: rgba(6, 118, 71, 0.10);
+  color: #067647;
+}
+
+/* ✅ Variantes por tipo (bonito y sin “OTRO”) */
+.rubricasVerPage .rvPill.escrita {
+  border-color: rgba(6, 118, 71, 0.22);
+  background: rgba(6, 118, 71, 0.10);
+  color: #067647;
+}
+
+.rubricasVerPage .rvPill.oral {
+  border-color: rgba(37, 99, 235, 0.22);
+  background: rgba(37, 99, 235, 0.10);
+  color: #1d4ed8;
+}
+
+.rubricasVerPage .rvPill.general {
+  border-color: rgba(107, 114, 128, 0.22);
+  background: rgba(107, 114, 128, 0.10);
+  color: rgba(17, 24, 39, 0.72);
 }
 
 .rubricasVerPage .rvItemSub {

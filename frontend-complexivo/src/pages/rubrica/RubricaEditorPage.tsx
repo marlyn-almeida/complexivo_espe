@@ -1,15 +1,9 @@
+// src/pages/rubricas/RubricaEditorPage.tsx
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axiosClient from "../../api/axiosClient";
 
-import {
-  ArrowLeft,
-  List,
-  Trash2,
-  Plus,
-  Save,
-  XCircle,
-} from "lucide-react";
+import { ArrowLeft, List, Trash2, Plus, Save, XCircle } from "lucide-react";
 
 import escudoESPE from "../../assets/escudo.png";
 import "./RubricaEditorPage.css";
@@ -89,13 +83,22 @@ export default function RubricaEditorPage() {
   const [criteriosByComp, setCriteriosByComp] = useState<Record<number, RubricaCriterio[]>>({});
 
   // Celdas por criterio: { criterioId: { nivelId: celda } }
-  const [celdasByCriterio, setCeldasByCriterio] = useState<Record<number, Record<number, RubricaCriterioNivel>>>({});
+  const [celdasByCriterio, setCeldasByCriterio] = useState<
+    Record<number, Record<number, RubricaCriterioNivel>>
+  >({});
 
   // Drafts: `${criterioId}-${nivelId}`
   const [draftCell, setDraftCell] = useState<Record<string, string>>({});
 
   // Debounce timers
   const saveTimers = useRef<Record<string, any>>({});
+
+  // ✅ VOLVER SIEMPRE AL VIEW DEL PERIODO (RubricasVerPage)
+  function goBack() {
+    const pid = rubrica?.id_periodo;
+    if (pid) navigate(`/rubricas/periodo/${pid}`);
+    else navigate("/rubricas"); // fallback si todavía no cargó rubrica
+  }
 
   const nivelesActivos = useMemo(
     () =>
@@ -342,7 +345,11 @@ export default function RubricaEditorPage() {
     }
   };
 
-  const updateCriterio = async (compId: number, criterio: RubricaCriterio, patch: Partial<RubricaCriterio>) => {
+  const updateCriterio = async (
+    compId: number,
+    criterio: RubricaCriterio,
+    patch: Partial<RubricaCriterio>
+  ) => {
     try {
       await axiosClient.put(`/componentes/${compId}/criterios/${criterio.id_rubrica_criterio}`, {
         nombre_criterio: patch.nombre_criterio ?? criterio.nombre_criterio,
@@ -358,7 +365,9 @@ export default function RubricaEditorPage() {
   const deleteCriterio = async (compId: number, criterioId: number) => {
     if (!confirm("¿Eliminar este criterio?")) return;
     try {
-      await axiosClient.patch(`/componentes/${compId}/criterios/${criterioId}/estado`, { estado: false });
+      await axiosClient.patch(`/componentes/${compId}/criterios/${criterioId}/estado`, {
+        estado: false,
+      });
       await loadCriteriosDeComponente(compId);
     } catch (e) {
       console.error(e);
@@ -403,21 +412,18 @@ export default function RubricaEditorPage() {
   return (
     <div className="wrap rubricaEditorPage">
       <div className="containerFull">
-        {/* HERO (igual estilo Carreras) */}
+        {/* HERO */}
         <div className="hero">
           <div className="heroLeft">
             <img className="heroLogo" src={escudoESPE} alt="ESPE" />
             <div className="heroText">
-              <h1 className="heroTitle">
-                {rubrica ? "EDITAR RÚBRICA" : "RÚBRICA"}
-              </h1>
-              <p className="heroSubtitle">
-                Configuración de criterios y niveles de evaluación
-              </p>
+              <h1 className="heroTitle">{rubrica ? "EDITAR RÚBRICA" : "RÚBRICA"}</h1>
+              <p className="heroSubtitle">Configuración de criterios y niveles de evaluación</p>
             </div>
           </div>
 
-          <button className="heroBtn" onClick={() => navigate("/rubricas")}>
+          {/* ✅ ahora vuelve SIEMPRE al VIEW del periodo */}
+          <button className="heroBtn" onClick={goBack} type="button">
             <ArrowLeft className="iconSm" /> Volver
           </button>
         </div>
@@ -437,7 +443,7 @@ export default function RubricaEditorPage() {
             </div>
           </div>
 
-          {/* TOP GRID: Info general (izq) + Niveles (der) */}
+          {/* TOP GRID */}
           <div className="reTopGrid">
             {/* Info general */}
             <div className="reCard">
@@ -467,7 +473,7 @@ export default function RubricaEditorPage() {
             <div className="reCard">
               <div className="reCardHead between">
                 <div>Niveles de Calificación</div>
-                <button className="reBtn reBtnSmall reBtnOk" onClick={addNivel} disabled={loading}>
+                <button className="reBtn reBtnSmall reBtnOk" onClick={addNivel} disabled={loading} type="button">
                   <Plus className="iconSm" /> Añadir nivel
                 </button>
               </div>
@@ -488,7 +494,9 @@ export default function RubricaEditorPage() {
                         onChange={(e) =>
                           setNiveles((prev) =>
                             prev.map((x) =>
-                              x.id_rubrica_nivel === n.id_rubrica_nivel ? { ...x, nombre_nivel: e.target.value } : x
+                              x.id_rubrica_nivel === n.id_rubrica_nivel
+                                ? { ...x, nombre_nivel: e.target.value }
+                                : x
                             )
                           )
                         }
@@ -502,7 +510,9 @@ export default function RubricaEditorPage() {
                         onChange={(e) =>
                           setNiveles((prev) =>
                             prev.map((x) =>
-                              x.id_rubrica_nivel === n.id_rubrica_nivel ? { ...x, valor_nivel: toNum(e.target.value) } : x
+                              x.id_rubrica_nivel === n.id_rubrica_nivel
+                                ? { ...x, valor_nivel: toNum(e.target.value) }
+                                : x
                             )
                           )
                         }
@@ -698,12 +708,14 @@ export default function RubricaEditorPage() {
             </button>
           </div>
 
-          {/* FOOTER actions */}
+          {/* FOOTER */}
           <div className="reFooter">
             <button className="reBtn reBtnPrimary" onClick={saveRubrica} disabled={loading} type="button">
               <Save className="iconSm" /> Guardar rúbrica
             </button>
-            <button className="reBtn reBtnGhost" onClick={() => navigate(-1)} disabled={loading} type="button">
+
+            {/* ✅ ahora vuelve SIEMPRE al VIEW del periodo */}
+            <button className="reBtn reBtnGhost" onClick={goBack} disabled={loading} type="button">
               <XCircle className="iconSm" /> Cancelar
             </button>
 
