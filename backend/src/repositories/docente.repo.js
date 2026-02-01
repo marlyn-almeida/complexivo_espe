@@ -252,6 +252,10 @@ async function isDocenteInCarrera(id_docente, id_carrera) {
   return rows.length > 0;
 }
 
+/**
+ * ✅ SCOPE ANTIGUO (por carrera_docente)
+ * Lo dejo para no romper nada de lo que ya uses en otras partes.
+ */
 async function getScopeCarreraForRol2(id_docente) {
   const [rows] = await pool.query(
     `SELECT id_carrera, tipo_admin
@@ -260,6 +264,35 @@ async function getScopeCarreraForRol2(id_docente) {
        AND estado = 1
        AND tipo_admin IN ('DIRECTOR','APOYO')
      ORDER BY id_carrera_docente ASC
+     LIMIT 1`,
+    [Number(id_docente)]
+  );
+  return rows[0] || null;
+}
+
+/**
+ * ✅ SCOPE NUEVO (CORRECTO) para ROL 2
+ * Se valida contra carrera_periodo_autoridad + carrera_periodo ACTIVO.
+ * Esto es lo que necesitas para que deje de salir el 403.
+ */
+async function getScopeCarreraPeriodoForRol2(id_docente) {
+  const [rows] = await pool.query(
+    `SELECT
+        cpa.id_carrera_periodo,
+        cp.id_carrera,
+        cp.id_periodo,
+        pa.codigo_periodo,
+        cpa.tipo_admin
+     FROM carrera_periodo_autoridad cpa
+     JOIN carrera_periodo cp
+       ON cp.id_carrera_periodo = cpa.id_carrera_periodo
+     JOIN periodo_academico pa
+       ON pa.id_periodo = cp.id_periodo
+     WHERE cpa.id_docente = ?
+       AND cpa.estado = 1
+       AND cpa.tipo_admin IN ('DIRECTOR','APOYO')
+       AND cp.estado = 1
+     ORDER BY pa.codigo_periodo DESC, cp.id_carrera_periodo DESC
      LIMIT 1`,
     [Number(id_docente)]
   );
@@ -396,7 +429,13 @@ module.exports = {
   findCarreraByCodigo,
 
   isDocenteInCarrera,
+
+  // ✅ dejo el viejo para no romper nada
   getScopeCarreraForRol2,
+
+  // ✅ nuevo (el correcto)
+  getScopeCarreraPeriodoForRol2,
+
   assignDocenteToCarrera,
 
   create,
