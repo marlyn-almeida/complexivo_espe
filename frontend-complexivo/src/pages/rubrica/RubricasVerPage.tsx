@@ -1,3 +1,4 @@
+// src/pages/rubricas/RubricasVerPage.tsx
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -29,7 +30,7 @@ type Nivel = {
   id_rubrica_nivel: number;
   id_rubrica: number;
   nombre_nivel: string;
-  valor_nivel: number;
+  valor_nivel: number | string;
   orden?: number;
   orden_nivel?: number;
   estado: number | boolean;
@@ -53,9 +54,23 @@ function isActivo(estado: number | boolean | undefined) {
   return Number(estado) === 1;
 }
 
+// ✅ soporta "40,00" / "40%" / null
 function toNum(v: any, fallback = 0) {
-  const n = Number(v);
+  if (v === null || v === undefined) return fallback;
+  if (typeof v === "number") return Number.isFinite(v) ? v : fallback;
+
+  const s = String(v).trim().replace("%", "").replace(",", ".");
+  const n = Number(s);
   return Number.isFinite(n) ? n : fallback;
+}
+
+// ✅ unwrap por si tu API manda { ok, data: [...] }
+function unwrapArray<T = any>(payload: any): T[] {
+  if (!payload) return [];
+  if (Array.isArray(payload)) return payload as T[];
+  if (Array.isArray(payload.data)) return payload.data as T[];
+  if (payload.ok && Array.isArray(payload.data)) return payload.data as T[];
+  return [];
 }
 
 /** ✅ Para que NO salga OTRO en UI */
@@ -66,11 +81,11 @@ function compTypeLabel(t?: string) {
     case "ORAL":
       return { text: "Oral", cls: "rvPill oral" };
     default:
-      return { text: "General", cls: "rvPill general" }; // OTRO/null/undefined
+      return { text: "General", cls: "rvPill general" };
   }
 }
 
-/** Endpoints mínimos (según tu server) */
+/** Endpoints mínimos */
 async function listCriteriosByComponente(
   componenteId: number,
   includeInactive = true
@@ -78,7 +93,7 @@ async function listCriteriosByComponente(
   const res = await axiosClient.get(`/componentes/${componenteId}/criterios`, {
     params: { includeInactive: includeInactive ? 1 : 0 },
   });
-  return (res.data ?? []) as Criterio[];
+  return unwrapArray<Criterio>(res.data);
 }
 
 async function listNivelesByRubrica(
@@ -88,7 +103,7 @@ async function listNivelesByRubrica(
   const res = await axiosClient.get(`/rubricas/${rubricaId}/niveles`, {
     params: { includeInactive: includeInactive ? 1 : 0 },
   });
-  return (res.data ?? []) as Nivel[];
+  return unwrapArray<Nivel>(res.data);
 }
 
 export default function RubricasVerPage() {
@@ -111,7 +126,7 @@ export default function RubricasVerPage() {
 
     setLoading(true);
     try {
-      // 1) Rúbrica por período (si no existe, 404 -> null)
+      // 1) Rúbrica por período (404 => null)
       let r: Rubrica | null = null;
       try {
         r = (await rubricaService.getByPeriodo(periodoId)) as unknown as Rubrica;
@@ -137,6 +152,7 @@ export default function RubricasVerPage() {
         listNivelesByRubrica(rid, true).catch(() => []),
         rubricaComponenteService
           .list(rid, { includeInactive: true })
+          .then((x) => unwrapArray<RubricaComponente>(x))
           .catch(() => []),
       ]);
 
@@ -146,7 +162,7 @@ export default function RubricasVerPage() {
       // 3) Criterios por componente
       const map: Record<number, Criterio[]> = {};
       for (const c of comps ?? []) {
-        const compId = c.id_rubrica_componente;
+        const compId = (c as any).id_rubrica_componente;
         map[compId] = await listCriteriosByComponente(compId, true).catch(
           () => []
         );
@@ -174,7 +190,7 @@ export default function RubricasVerPage() {
       const resp = await rubricaService.ensureByPeriodo(periodoId, {
         nombre_rubrica: "Rúbrica Complexivo",
         ponderacion_global: 100,
-        descripcion_rubrica: null as any,
+        descripcion_rubrica: "", // ✅ no null (evita 422)
       });
 
       const createdRubrica = resp?.rubrica as unknown as Rubrica;
@@ -183,7 +199,6 @@ export default function RubricasVerPage() {
         return;
       }
 
-      // ✅ importantísimo: mandamos returnTo al editor
       navigate(`/rubricas/editar/${createdRubrica.id_rubrica}`, {
         state: {
           mode: resp.created ? "create" : "edit",
@@ -198,47 +213,47 @@ export default function RubricasVerPage() {
     }
   };
 
+  // ✅ SOLO ACTIVOS
   const nivelesActivos = useMemo(
     () => niveles.filter((x) => isActivo(x.estado)),
     [niveles]
   );
 
   const compsActivos = useMemo(
-    () => componentes.filter((x) => isActivo(x.estado)),
+    () => componentes.filter((x) => isActivo((x as any).estado)),
     [componentes]
   );
 
-  const totalPonderacion = useMemo(() => {
-    return compsActivos.reduce((acc, c) => acc + toNum(c.ponderacion, 0), 0);
+  const totalPonderacionActiva = useMemo(() => {
+    return compsActivos.reduce((acc, c: any) => acc + toNum(c.ponderacion, 0), 0);
   }, [compsActivos]);
 
-  const totalCriterios = useMemo(() => {
+  const okPonderacion = useMemo(() => Math.abs(totalPonderacionActiva - 100) < 0.001, [totalPonderacionActiva]);
+
+  const faltaPonderacion = useMemo(
+    () => Math.max(0, 100 - totalPonderacionActiva),
+    [totalPonderacionActiva]
+  );
+
+  const totalCriteriosActivos = useMemo(() => {
     let n = 0;
-    for (const comp of compsActivos) {
+    for (const comp of compsActivos as any[]) {
       const arr = criteriosByComp[comp.id_rubrica_componente] ?? [];
       n += arr.filter((x) => isActivo(x.estado)).length;
     }
     return n;
   }, [criteriosByComp, compsActivos]);
 
-  const okPonderacion = useMemo(() => {
-    return Math.abs(totalPonderacion - 100) < 0.001;
-  }, [totalPonderacion]);
-
-  const faltaPonderacion = useMemo(() => {
-    return Math.max(0, 100 - totalPonderacion);
-  }, [totalPonderacion]);
-
-  // ✅ progreso real: también exige ponderación 100
+  // ✅ progreso real (sin “—” cuando ya existe rubrica)
   const isLista = useMemo(() => {
     return (
       !!rubrica &&
       nivelesActivos.length >= 2 &&
       compsActivos.length >= 1 &&
-      totalCriterios >= 1 &&
+      totalCriteriosActivos >= 1 &&
       okPonderacion
     );
-  }, [rubrica, nivelesActivos.length, compsActivos.length, totalCriterios, okPonderacion]);
+  }, [rubrica, nivelesActivos.length, compsActivos.length, totalCriteriosActivos, okPonderacion]);
 
   const estadoTexto = !rubrica
     ? "No creada"
@@ -261,7 +276,11 @@ export default function RubricasVerPage() {
             </div>
           </div>
 
-          <button className="heroBtn" onClick={() => navigate("/rubricas")} type="button">
+          <button
+            className="heroBtn"
+            onClick={() => navigate("/rubricas")}
+            type="button"
+          >
             <ArrowLeft className="iconSm" /> Volver
           </button>
         </div>
@@ -293,7 +312,11 @@ export default function RubricasVerPage() {
                   Abrir rúbrica
                 </button>
               ) : (
-                <button className="btnPrimary" onClick={createAndOpen} type="button">
+                <button
+                  className="btnPrimary"
+                  onClick={createAndOpen}
+                  type="button"
+                >
                   Crear rúbrica
                 </button>
               )}
@@ -351,18 +374,19 @@ export default function RubricasVerPage() {
             <>
               <div className="rvDivider" />
 
+              {/* ✅ MINI CARDS: SOLO ACTIVOS (sin “totales”) */}
               <div className="rvMiniGrid">
                 <div className="miniCard">
                   <div className="miniLabel">Niveles</div>
                   <div className="miniValue">{nivelesActivos.length}</div>
-                  <div className="miniSub">{niveles.length} totales</div>
+                  <div className="miniSub">activos</div>
                 </div>
 
                 <div className="miniCard">
                   <div className="miniLabel">Componentes</div>
                   <div className="miniValue">{compsActivos.length}</div>
                   <div className="miniSub">
-                    {componentes.length} totales — {totalPonderacion.toFixed(2)}% sumado
+                    Total ponderación: <b>{totalPonderacionActiva.toFixed(2)}%</b>
                     {!okPonderacion ? (
                       <span className="miniWarn"> — falta {faltaPonderacion.toFixed(2)}%</span>
                     ) : null}
@@ -371,7 +395,7 @@ export default function RubricasVerPage() {
 
                 <div className="miniCard">
                   <div className="miniLabel">Criterios</div>
-                  <div className="miniValue">{totalCriterios}</div>
+                  <div className="miniValue">{totalCriteriosActivos}</div>
                   <div className="miniSub">activos</div>
                 </div>
               </div>
@@ -386,16 +410,16 @@ export default function RubricasVerPage() {
               </div>
 
               {compsActivos.length === 0 ? (
-                <div className="rvMuted">Aún no hay componentes creados.</div>
+                <div className="rvMuted">Aún no hay componentes activos.</div>
               ) : (
                 <div className="rvList">
                   {compsActivos
                     .slice()
-                    .sort((a, b) => toNum(a.orden, 0) - toNum(b.orden, 0))
-                    .map((c) => {
+                    .sort((a: any, b: any) => toNum(a.orden, 0) - toNum(b.orden, 0))
+                    .map((c: any) => {
                       const cr = criteriosByComp[c.id_rubrica_componente] ?? [];
                       const nCr = cr.filter((x) => isActivo(x.estado)).length;
-                      const typeUI = compTypeLabel((c as any).tipo_componente);
+                      const typeUI = compTypeLabel(c.tipo_componente);
 
                       return (
                         <div className="rvItem" key={c.id_rubrica_componente}>
@@ -404,7 +428,8 @@ export default function RubricasVerPage() {
                             <span className={typeUI.cls}>{typeUI.text}</span>
                           </div>
                           <div className="rvItemSub">
-                            Ponderación: <b>{toNum(c.ponderacion, 0).toFixed(2)}%</b> — Criterios: <b>{nCr}</b>
+                            Ponderación: <b>{toNum(c.ponderacion, 0).toFixed(2)}%</b> — Criterios:{" "}
+                            <b>{nCr}</b>
                           </div>
                         </div>
                       );
