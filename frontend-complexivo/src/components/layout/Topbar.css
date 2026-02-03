@@ -187,7 +187,7 @@
 
 /* Iconos GRANDES y visibles */
 .ddIcon {
-  font-size: 22px;           /* ⬅️ aquí el tamaño */
+  font-size: 22px;           /*  aquí el tamaño */
   line-height: 1;
   color: var(--espe-green); /* contraste */
 }

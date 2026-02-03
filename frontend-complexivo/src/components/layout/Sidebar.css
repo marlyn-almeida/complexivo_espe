@@ -182,7 +182,7 @@
 
 .sidebar-link.active {
   background: rgba(255, 255, 255, 0.92);
-  color: #0b5f33;
+  color: #063e21;
   font-weight: 900;
   box-shadow: var(--shadow-soft);
 }
@@ -200,7 +200,7 @@
   opacity: 0.98;
 }
 
-/* ✅ FIX: SVG hereda el color del contenedor */
+/*  FIX: SVG hereda el color del contenedor */
 .sidebar-ico svg {
   width: 100%;
   height: 100%;
@@ -215,7 +215,7 @@
 }
 
 .sidebar-link.active .sidebar-ico {
-  color: #0b5f33;
+  color: #074f2a;
   filter: none;
 }
 
@@ -276,7 +276,7 @@
 
   font-size: 0.82rem;
   font-weight: 900;
-  color: #fff;
+  color: #ffffff;
   background: rgba(255, 255, 255, 0.14);
 
   transition: transform var(--transition-fast), background var(--transition-fast);
