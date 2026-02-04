@@ -373,32 +373,34 @@
   border-radius: 12px;
   border: 1px solid rgba(0, 0, 0, 0.08);
   margin-top: 12px;
+
+  /* ✅ CLAVE para que el tooltip NO se corte */
+  overflow: visible;
 }
 
-/* ✅ tabla más “ordenada” y sin huecos raros */
 .docentesPage .table {
   width: 100%;
   border-collapse: collapse;
   background: #fff;
   min-width: 980px;
-  table-layout: fixed; /* ✅ clave para que no se deforme la columna Docente */
+  table-layout: fixed;
 }
 
-/* ✅ HEAD: centrado + preparado para íconos */
+/* ✅ HEAD */
 .docentesPage .table thead th {
-  text-align: center; /* ✅ */
+  text-align: center;
   font-size: 13.5px;
   font-weight: 950;
   color: rgba(255, 255, 255, 0.96);
-  background: linear-gradient(135deg, #0b5a3a, #064e2c);
+  background: #0b6034; /* ✅ SOLIDO (antes gradient) */
   border-bottom: 1px solid rgba(0, 0, 0, 0.1);
   padding: 12px 10px;
   white-space: nowrap;
 }
 
-/* ✅ BODY: centrado */
+
 .docentesPage .table tbody td {
-  text-align: center; /* ✅ */
+  text-align: center;
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   padding: 10px 10px;
   vertical-align: middle;
@@ -409,7 +411,7 @@
   text-overflow: ellipsis;
 }
 
-/* ✅ widths más realistas para que no “reviente” Docente */
+/* widths */
 .docentesPage .thName {
   width: 320px;
 }
@@ -420,28 +422,25 @@
   width: 200px;
 }
 
-/* ✅ ya NO forzamos min-width gigante (esto era parte del problema visual) */
 .docentesPage .table td:first-child,
 .docentesPage .table th.thName {
   min-width: 0 !important;
 }
 
-/* NAME (centrado y limpio) */
+/* NAME */
 .docentesPage .nameMain {
   font-weight: 850;
   color: rgba(0, 0, 0, 0.86);
   display: flex;
   align-items: center;
-  justify-content: center; /* ✅ centrado */
+  justify-content: center;
   gap: 10px;
   flex-wrap: wrap;
 }
 
 /* ===============================
-   ✅ SUBROW (FIX REAL)
+   SUBROW FIX (si lo usas)
    =============================== */
-
-/* reset fuerte dentro de nameSubRow */
 .docentesPage .table td:first-child .nameSubRow,
 .docentesPage .table td:first-child .nameSubRow * {
   margin: 0 !important;
@@ -452,12 +451,11 @@
   left: auto !important;
 }
 
-/* subfila centrada y compacta */
 .docentesPage .table td:first-child .nameSubRow {
   margin-top: 6px !important;
   display: inline-flex !important;
   align-items: center !important;
-  justify-content: center !important; /* ✅ centrado */
+  justify-content: center !important;
   gap: 10px !important;
 
   max-width: 100% !important;
@@ -469,7 +467,6 @@
   line-height: 1.2 !important;
 }
 
-/* cada item */
 .docentesPage .table td:first-child .nameSubRow .subItem {
   display: inline-flex !important;
   align-items: center !important;
@@ -478,7 +475,6 @@
   min-width: 0 !important;
 }
 
-/* correo con ... */
 .docentesPage .table td:first-child .nameSubRow .subMail {
   flex: 0 1 auto !important;
   min-width: 0 !important;
@@ -486,14 +482,12 @@
   text-overflow: ellipsis !important;
 }
 
-/* separador • */
 .docentesPage .table td:first-child .nameSubRow .subItem + .subItem::before {
   content: "•";
   margin: 0 10px 0 2px;
   opacity: 0.45;
 }
 
-/* iconos lucide */
 .docentesPage .table td:first-child .nameSubRow svg {
   width: 14px !important;
   height: 14px !important;
@@ -502,12 +496,10 @@
   opacity: 0.85 !important;
 }
 
-/* mono (solo dentro de docentesPage para no romper otras pantallas) */
 .docentesPage .mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
-/* usuario y correo */
 .docentesPage .userCell {
   font-weight: 600;
   color: rgba(0, 0, 0, 0.72);
@@ -577,62 +569,131 @@
   color: rgba(0, 0, 0, 0.65);
 }
 
-/* ACTIONS + TOOLTIP */
+/* ===============================
+   ACTIONS + TOOLTIP
+   =============================== */
 .docentesPage .tdActions {
-  text-align: center; /* ✅ centrado */
+  text-align: center;
+
+  /* ✅ evita que el contenido haga salto de línea */
+  white-space: nowrap;
+
+  /* ✅ permite que el tooltip salga sin cortarse */
+  overflow: visible;
 }
 
 .docentesPage .actions {
   display: inline-flex;
   align-items: center;
-  justify-content: center; /* ✅ centrado */
+  justify-content: center;
   gap: 10px;
+
+  /* ✅ SIEMPRE en fila */
   flex-wrap: nowrap;
+  white-space: nowrap;
+
+  /* ✅ no recorta tooltips */
+  overflow: visible;
 }
 
+/* Botón base (SOFT, no tan fuerte) */
 .docentesPage .iconBtn {
   position: relative;
+
   width: 38px;
   height: 38px;
   border-radius: 10px;
-  border: 1px solid rgba(0, 0, 0, 0.12);
+
+  border: 1px solid rgba(0, 0, 0, 0.10);
   background: #fff;
+
   display: grid;
   place-items: center;
   cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease, transform 0.08s ease;
+
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.08s ease, box-shadow 0.15s ease;
+
+  /* ✅ importante para tooltip */
+  overflow: visible;
 }
 
 .docentesPage .iconBtn:hover {
-  background: rgba(0, 0, 0, 0.04);
   transform: translateY(-1px);
+
+  /* ✅ sombra suave (no “potente”) */
+  box-shadow: 0 8px 14px rgba(0, 0, 0, 0.06);
 }
 
 .docentesPage .iconBtn:active {
   transform: translateY(0);
+  box-shadow: none;
 }
 
+.docentesPage .iconBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.docentesPage .iconAction {
+  width: 18px;
+  height: 18px;
+}
+
+/* ✅ VER (azul SOFT) */
 .docentesPage .iconBtn_neutral {
-  color: rgba(0, 0, 0, 0.7);
+  color: #2563eb;
+  background: rgba(37, 99, 235, 0.10);
+  border-color: rgba(37, 99, 235, 0.28);
 }
 
+.docentesPage .iconBtn_neutral:hover {
+  background: rgba(37, 99, 235, 0.16);
+  border-color: rgba(37, 99, 235, 0.35);
+}
+
+/* ✅ ACTIVAR (verde SOFT, NO blanco sólido) */
 .docentesPage .iconBtn_primary {
   color: #0a4f28;
-  background: rgba(10, 79, 40, 0.1);
-  border-color: rgba(10, 79, 40, 0.3);
+  background: rgba(10, 79, 40, 0.10);
+  border-color: rgba(10, 79, 40, 0.26);
 }
 
+.docentesPage .iconBtn_primary:hover {
+  background: rgba(10, 79, 40, 0.16);
+  border-color: rgba(10, 79, 40, 0.35);
+}
+
+/* ✅ EDITAR (morado SOFT) */
+.docentesPage .iconBtn_purple {
+  color: #6f42c1;
+  background: rgba(111, 66, 193, 0.12);
+  border-color: rgba(111, 66, 193, 0.28);
+}
+
+.docentesPage .iconBtn_purple:hover {
+  background: rgba(111, 66, 193, 0.18);
+  border-color: rgba(111, 66, 193, 0.35);
+}
+
+/* ✅ DESACTIVAR (naranja SOFT) */
 .docentesPage .iconBtn_danger {
-  color: rgba(180, 20, 20, 0.95);
-  background: rgba(180, 20, 20, 0.08);
-  border-color: rgba(180, 20, 20, 0.3);
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.14);
+  border-color: rgba(245, 158, 11, 0.30);
 }
 
+.docentesPage .iconBtn_danger:hover {
+  background: rgba(245, 158, 11, 0.20);
+  border-color: rgba(245, 158, 11, 0.38);
+}
+
+/* ✅ Tooltip arriba (NO se corta) */
 .docentesPage .tooltip {
   position: absolute;
   top: -46px;
   left: 50%;
   transform: translateX(-50%) translateY(6px);
+
   background: rgba(20, 20, 20, 0.94);
   color: #fff;
   font-weight: 800;
@@ -640,10 +701,13 @@
   padding: 6px 10px;
   border-radius: 10px;
   white-space: nowrap;
+
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.12s ease, transform 0.12s ease;
-  z-index: 50;
+
+  /* ✅ por encima de la tabla */
+  z-index: 99999;
 }
 
 .docentesPage .tooltip::after {
@@ -661,6 +725,7 @@
   opacity: 1;
   transform: translateX(-50%) translateY(0);
 }
+
 
 /* EMPTY */
 .docentesPage .emptyCell {
@@ -772,7 +837,7 @@
   }
 
   .docentesPage .table {
-    table-layout: auto; /* en móvil mejor auto */
+    table-layout: auto;
   }
   .docentesPage .table td:first-child .nameSubRow {
     white-space: normal !important;
@@ -794,9 +859,7 @@
 
 /* =========================
    MODAL DOCENTE (View/Create/Edit)
-   (DocenteModal.css lo tienes aparte, pero aquí queda si lo usas junto)
    ========================= */
-
 .dmOverlay {
   position: fixed;
   inset: 0;

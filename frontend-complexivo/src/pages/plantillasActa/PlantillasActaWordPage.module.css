@@ -5,7 +5,6 @@
   padding: 16px 18px 28px;
 }
 
-/* ✅ Full width para que no quede “en medio” */
 .containerFull {
   width: 100%;
   max-width: 100%;
@@ -57,13 +56,16 @@
   font-size: 13px;
 }
 
+/* ✅ Botón que combina (vidrio) */
 .heroBtn {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  border: 1px solid rgba(255,255,255,0.45);
-  background: rgba(255,255,255,0.06);
+
+  border: 1px solid rgba(255,255,255,0.40);
+  background: rgba(255,255,255,0.12);
   color: #fff;
+
   font-weight: 900;
   padding: 10px 14px;
   border-radius: 12px;
@@ -73,8 +75,8 @@
 }
 
 .heroBtn:hover {
-  background: rgba(255,255,255,0.10);
-  border-color: rgba(255,255,255,0.60);
+  background: rgba(255,255,255,0.18);
+  border-color: rgba(255,255,255,0.55);
   transform: translateY(-1px);
 }
 
@@ -161,22 +163,36 @@
   border: 1px solid rgba(0,0,0,0.08);
 }
 
-/* tabla grande para que no se apachurre */
 .table {
   width: 100%;
   border-collapse: collapse;
   background: #fff;
-  min-width: 980px; /* ✅ un poquito más para acciones */
+  min-width: 980px;
 }
 
+/* ✅ HEADER VERDE PLANO */
 .table thead th {
   text-align: left;
   font-size: 14px;
   font-weight: 900;
-  color: rgba(0,0,0,0.72);
-  background: #f6f7f9;
-  border-bottom: 1px solid rgba(0,0,0,0.08);
+  color: #ffffff;
+  background: #0a5a33; /* ✅ verde plano */
+  border-bottom: 1px solid rgba(0,0,0,0.18);
   padding: 12px 12px;
+  vertical-align: middle;
+}
+
+/* ✅ IMPORTANTE: evita íconos gigantes en header */
+.table thead th svg {
+  width: 18px !important;
+  height: 18px !important;
+  display: inline-block;
+  flex: 0 0 18px;
+  color: #ffffff;
+}
+
+.table thead th:not(:last-child) {
+  box-shadow: inset -1px 0 0 rgba(255,255,255,0.18);
 }
 
 .thInline {
@@ -196,8 +212,8 @@
 /* columnas */
 .thNum, .tdNum { width: 56px; }
 .thState { width: 160px; }
-.thActions { width: 220px; } /* ✅ más ancho para que se lean */
-.thFile { width: 300px; }    /* ✅ para el nombre del archivo */
+.thActions { width: 220px; }
+.thFile { width: 300px; }
 .thName { width: 380px; }
 
 /* ===============================
@@ -214,7 +230,6 @@
   color: rgba(0,0,0,0.52);
 }
 
-/* Archivo con ellipsis */
 .tdFile {
   max-width: 340px;
   overflow: hidden;
@@ -239,18 +254,19 @@
 }
 
 .badgeActive {
-  background: #dfeee7;
-  color: #0a4f28;
-  border-color: rgba(10,79,40,0.18);
+  background: #0a5a33;
+  color: #ffffff;
+  border-color: rgba(10, 90, 51, 0.35);
 }
 
 .badgeInactive {
-  background: #f0f0f0;
-  color: rgba(0,0,0,0.65);
+  background: #e5e7eb;
+  color: #374151;
+  border-color: rgba(0,0,0,0.10);
 }
 
 /* ===============================
-   ✅ ACCIONES (ICONOS + TOOLTIP)
+   ACCIONES
    =============================== */
 .tdActions {
   text-align: right;
@@ -265,22 +281,17 @@
   flex-wrap: nowrap;
 }
 
-/* Botón icono */
 .iconBtn {
   position: relative;
   width: 38px;
   height: 38px;
   border-radius: 10px;
-  border: 1px solid rgba(0,0,0,0.12);
+  border: 1px solid rgba(0,0,0,0.14);
   background: #fff;
   display: grid;
   place-items: center;
   cursor: pointer;
-
-  transition:
-    background 0.15s ease,
-    border-color 0.15s ease,
-    transform 0.08s ease;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.08s ease;
 }
 
 .iconBtn:hover {
@@ -295,21 +306,32 @@
   cursor: not-allowed;
 }
 
-/* variantes */
+/* Descargar - azul */
 .iconBtn_neutral {
-  color: rgba(0,0,0,0.70);
+  color: #2563eb;
+  border-color: rgba(37, 99, 235, 0.45);
+  background: rgba(37, 99, 235, 0.08);
 }
 
+/* Activar - verde */
 .iconBtn_primary {
-  color: #0a4f28;
-  background: rgba(10,79,40,0.10);
-  border-color: rgba(10,79,40,0.30);
+  color: #0a5a33;
+  border-color: rgba(10, 90, 51, 0.45);
+  background: rgba(10, 90, 51, 0.08);
 }
 
+/* Desactivar - naranja */
+.iconBtn_warning {
+  color: #f59e0b;
+  border-color: rgba(245, 158, 11, 0.55);
+  background: rgba(245, 158, 11, 0.12);
+}
+
+/* Eliminar - rojo */
 .iconBtn_danger {
-  color: rgba(180,20,20,0.95);
-  background: rgba(180,20,20,0.08);
-  border-color: rgba(180,20,20,0.30);
+  color: #dc2626;
+  border-color: rgba(220, 38, 38, 0.45);
+  background: rgba(220, 38, 38, 0.08);
 }
 
 .iconAction {
@@ -317,13 +339,12 @@
   height: 18px;
 }
 
-/* ✅ TOOLTIP ARRIBA (para que NO se corte) */
+/* TOOLTIP ARRIBA */
 .tooltip {
   position: absolute;
   top: -46px;
   left: 50%;
   transform: translateX(-50%) translateY(6px);
-
   background: rgba(20,20,20,0.94);
   color: #fff;
   font-weight: 800;
@@ -331,15 +352,12 @@
   padding: 6px 10px;
   border-radius: 10px;
   white-space: nowrap;
-
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.12s ease, transform 0.12s ease;
-
   z-index: 50;
 }
 
-/* Flechita */
 .tooltip::after {
   content: "";
   position: absolute;

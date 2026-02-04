@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { Departamento } from "../../types/departamento";
-
 import { docentesService, type DocenteImportBulkResponse } from "../../services/docentes.service";
 
 import {
@@ -10,9 +9,68 @@ import {
   parseFileDocentes,
 } from "../../services/docentesImport.service";
 
-import { Download, FileSpreadsheet, Info, Upload, User, X } from "lucide-react";
+import {
+  Download,
+  FileSpreadsheet,
+  Info,
+  Upload,
+  User,
+  X,
+  AlertTriangle,
+  CheckCircle2,
+} from "lucide-react";
+
+import "./DocentesImportModal.css";
 
 type ToastType = "success" | "error" | "info";
+type Issue = { rowNum: number; docenteLabel: string; reason: string };
+
+function tryGetArray(obj: any, keys: string[]): any[] | null {
+  for (const k of keys) {
+    const v = obj?.[k];
+    if (Array.isArray(v)) return v;
+  }
+  return null;
+}
+
+function normalizeBackendOmissions(result: any): Issue[] {
+  const arr =
+    tryGetArray(result, [
+      "omitidos_detalle",
+      "omitidosDetalle",
+      "detalle_omitidos",
+      "detalleOmitidos",
+      "errors",
+      "errores",
+    ]) ||
+    tryGetArray(result?.resumen, [
+      "omitidos_detalle",
+      "omitidosDetalle",
+      "detalle_omitidos",
+      "detalleOmitidos",
+    ]) ||
+    [];
+
+  if (!Array.isArray(arr) || !arr.length) return [];
+
+  return arr
+    .map((x: any, idx: number) => ({
+      rowNum: Number(x?.rowNum ?? x?.fila ?? x?.row ?? x?.index ?? idx + 1),
+      docenteLabel:
+        String(
+          x?.docenteLabel ??
+            x?.docente ??
+            x?.nombre ??
+            x?.label ??
+            x?.correo_docente ??
+            x?.nombre_usuario ??
+            x?.cedula ??
+            "Docente"
+        ) || "Docente",
+      reason: String(x?.reason ?? x?.motivo ?? x?.message ?? x?.msg ?? "Omitido"),
+    }))
+    .slice(0, 200);
+}
 
 export default function DocentesImportModal({
   open,
@@ -26,10 +84,10 @@ export default function DocentesImportModal({
   open: boolean;
   departamentos: Departamento[];
   loadingDepartamentos: boolean;
-  importingExternal?: boolean; // por si luego quieres controlar import desde afuera
+  importingExternal?: boolean;
   onClose: () => void;
   onToast: (msg: string, type?: ToastType) => void;
-  onImported?: () => void; // callback para refrescar listado al terminar
+  onImported?: () => void;
 }) {
   const fileRef = useRef<HTMLInputElement | null>(null);
 
@@ -43,9 +101,9 @@ export default function DocentesImportModal({
     duplicatesInFile: number;
   } | null>(null);
 
-  const [parseIssues, setParseIssues] = useState<Array<{ rowNum: number; docenteLabel: string; reason: string }>>([]);
-
+  const [parseIssues, setParseIssues] = useState<Issue[]>([]);
   const [backendResult, setBackendResult] = useState<DocenteImportBulkResponse | null>(null);
+  const [backendOmissions, setBackendOmissions] = useState<Issue[]>([]);
 
   const busy = importing || importingExternal;
 
@@ -63,16 +121,14 @@ export default function DocentesImportModal({
     return "Error al importar docentes";
   }
 
-  // ✅ Al abrir: setear un departamento por defecto
   useEffect(() => {
     if (!open) return;
 
-    // reset visual
     setBackendResult(null);
+    setBackendOmissions([]);
     setParseStats(null);
     setParseIssues([]);
 
-    // poner depto por defecto si existe
     if (activeDeps.length) {
       setDepId((prev) => (prev ? prev : Number(activeDeps[0].id_departamento)));
     } else {
@@ -110,6 +166,7 @@ export default function DocentesImportModal({
     if (!file) return;
 
     setBackendResult(null);
+    setBackendOmissions([]);
     setParseStats(null);
     setParseIssues([]);
 
@@ -126,7 +183,6 @@ export default function DocentesImportModal({
         return;
       }
 
-      // ✅ IMPORT MASIVO (backend)
       const result = await docentesService.importBulk({
         id_departamento: Number(depId),
         rows: report.rows,
@@ -134,8 +190,11 @@ export default function DocentesImportModal({
 
       setBackendResult(result);
 
-      const ok = result?.resumen?.importados ?? 0;
-      const omitidos = result?.resumen?.omitidos ?? 0;
+      const om = normalizeBackendOmissions(result);
+      setBackendOmissions(om);
+
+      const ok = (result as any)?.resumen?.importados ?? 0;
+      const omitidos = (result as any)?.resumen?.omitidos ?? 0;
 
       if (omitidos === 0) onToast(`Importación completa: ${ok} importados.`, "success");
       else onToast(`Importación terminada: ${ok} importados, ${omitidos} omitidos.`, "info");
@@ -148,135 +207,154 @@ export default function DocentesImportModal({
     }
   }
 
-  return (
-    <div className="modalOverlay" onMouseDown={close}>
-      <div className="modalCard modalPro" onMouseDown={(e) => e.stopPropagation()}>
-        <input
-          ref={fileRef}
-          type="file"
-          accept=".xlsx,.xls"
-          style={{ display: "none" }}
-          onChange={onFileSelected}
-        />
+  const omitidosCount = (backendResult as any)?.resumen?.omitidos ?? 0;
+  const importadosCount = (backendResult as any)?.resumen?.importados ?? 0;
 
-        <div className="modalHeader">
-          <div className="modalHeaderLeft">
-            <div className="modalHeaderIcon">
+  return (
+    <div className="dmOverlay" onMouseDown={close}>
+      <div className="dmCard dmWide" onMouseDown={(e) => e.stopPropagation()}>
+        <input ref={fileRef} type="file" accept=".xlsx,.xls" style={{ display: "none" }} onChange={onFileSelected} />
+
+        {/* Header */}
+        <div className="dmHeader">
+          <div className="dmHeaderLeft">
+            <div className="dmHeaderIcon">
               <FileSpreadsheet size={18} />
             </div>
-            <div>
-              <div className="modalHeaderTitle">Importar docentes</div>
-              <div className="modalHeaderSub">Carga masiva desde Excel con validaciones y reporte final</div>
+            <div className="dmHeaderText">
+              <div className="dmTitle">Importar docentes</div>
+              <div className="dmSub">Carga masiva desde Excel con validaciones y reporte final</div>
             </div>
           </div>
 
-          <button className="modalClose" onClick={close} aria-label="Cerrar" disabled={busy}>
-            <X />
+          <button className="dmClose" onClick={close} aria-label="Cerrar" disabled={busy}>
+            <X size={18} />
           </button>
         </div>
 
-        <div className="modalDivider" />
-
-        <div className="modalBody">
-          {/* Departamento */}
-          <div className="importTopRow">
-            <div className="importTopLeft">
-              <div className="importLabel">
-                <User size={16} /> Departamento <span className="req">*</span>
+        <div className="dmBody">
+          {/* ✅ GRID 2 columnas: Departamento | Plantillas */}
+          <div className="dimTopGrid">
+            {/* ===== Recuadro: Departamento ===== */}
+            <div className="dimCard">
+              <div className="dimCardHead">
+                <div className="dimCardTitle">
+                  <User size={16} /> Departamento <span className="dimReq">*</span>
+                </div>
               </div>
 
-              <select
-                className="select"
-                value={depId}
-                onChange={(e) => setDepId(Number(e.target.value))}
-                disabled={busy || loadingDepartamentos || !activeDeps.length}
-              >
-                {activeDeps.length === 0 ? (
-                  <option value="">Sin departamentos</option>
-                ) : (
-                  activeDeps.map((d) => (
-                    <option key={d.id_departamento} value={d.id_departamento}>
-                      {d.nombre_departamento}
-                    </option>
-                  ))
-                )}
-              </select>
+              <div className="dimRow">
+                <select
+                  className="select"
+                  value={depId}
+                  onChange={(e) => setDepId(Number(e.target.value))}
+                  disabled={busy || loadingDepartamentos || !activeDeps.length}
+                >
+                  {activeDeps.length === 0 ? (
+                    <option value="">Sin departamentos</option>
+                  ) : (
+                    activeDeps.map((d) => (
+                      <option key={d.id_departamento} value={d.id_departamento}>
+                        {d.nombre_departamento}
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
+
+              <div className="dimHint">
+                <Info size={16} />
+                <span>Todos los docentes importados se asignarán a este departamento.</span>
+              </div>
             </div>
 
-            <div className="importTopRight">
-              <div className="importLabel">
-                <Download size={16} /> Plantillas
+            {/* ===== Recuadro: Plantillas ===== */}
+            <div className="dimCard">
+              <div className="dimCardHead">
+                <div className="dimCardTitle">
+                  <Download size={16} /> Plantillas
+                </div>
               </div>
-              <div className="importBtnRow">
-                <button className="btnGhost" onClick={onDownloadCSV} disabled={busy}>
+
+              <div className="dimTemplateBtns" style={{ marginTop: 10 }}>
+                <button className="dimTemplateBtn" onClick={onDownloadCSV} disabled={busy} title="Descargar plantilla CSV">
                   <Download size={16} />
-                  CSV
+                  <span>CSV</span>
                 </button>
-                <button className="btnGhost" onClick={onDownloadXLSX} disabled={busy}>
+
+                <button className="dimTemplateBtn" onClick={onDownloadXLSX} disabled={busy} title="Descargar plantilla XLSX">
                   <Download size={16} />
-                  XLSX
+                  <span>XLSX</span>
                 </button>
+              </div>
+
+              <div className="dimHint" style={{ marginTop: 10 }}>
+                <Info size={16} />
+                <span>
+                  Estas son las <b>plantillas oficiales</b>. Descárgalas para llenar los datos con el formato correcto.
+                </span>
               </div>
             </div>
           </div>
 
-          {/* Paso importar */}
-          <div className="importStepBox">
-            <div className="importStepHead">
-              <div className="importStepTitle">
-                <Upload size={18} />
-                Importar Excel
+          {/* ===== Recuadro: Importar ===== */}
+          <div className="dimCard" style={{ marginTop: 12 }}>
+            <div className="dimCardHead">
+              <div className="dimCardTitle">
+                <Upload size={16} /> Importar Excel
               </div>
+            </div>
+
+            <div className="dimRow" style={{ alignItems: "center" }}>
               <button className="btnPrimary" onClick={onClickImport} disabled={busy || !depId}>
                 <Upload size={16} />
                 {busy ? "Importando..." : "Seleccionar archivo"}
               </button>
+
+              <div className="dimSmall">
+                Formatos permitidos: <b>.xlsx</b> y <b>.xls</b>
+              </div>
             </div>
 
-            <div className="importHint">
-              Formatos permitidos: <b>.xlsx</b> y <b>.xls</b>. Se validan correos, duplicados dentro del archivo y
-              duplicados en BD (se omiten).
-            </div>
-          </div>
-
-          <div className="infoBox" style={{ marginTop: 12 }}>
-            <Info />
-            <div className="infoText">
-              El import continúa aunque algunas filas fallen. Al final verás un resumen y los motivos de omitidos.
+            <div className="dimNote">
+              <Info size={16} />
+              <span>La cédula será la contraseña inicial. Si una fila falla, el proceso continúa con los demás.</span>
             </div>
           </div>
 
-          {/* Stats del archivo */}
+          {/* Resumen del archivo */}
           {parseStats && (
-            <div className="importBlock">
-              <h4 className="importH4">Resumen del archivo</h4>
-              <div className="chipRow">
-                <div className="chip">
-                  Total filas: <b>{parseStats.totalRows}</b>
-                </div>
-                <div className="chip">
+            <div className="dimSection">
+              <div className="dimSectionTitle">Resumen del archivo</div>
+              <div className="dimChips">
+                <span className="dimChip">
+                  Total: <b>{parseStats.totalRows}</b>
+                </span>
+                <span className="dimChip dimChipOk">
                   Válidas: <b>{parseStats.valid}</b>
-                </div>
-                <div className="chip">
+                </span>
+                <span className="dimChip dimChipWarn">
                   Inválidas: <b>{parseStats.invalid}</b>
-                </div>
-                <div className="chip">
+                </span>
+                <span className="dimChip">
                   Duplicadas en Excel: <b>{parseStats.duplicatesInFile}</b>
-                </div>
+                </span>
               </div>
             </div>
           )}
 
-          {/* Issues */}
+          {/* Issues parse */}
           {!!parseIssues.length && (
-            <div className="importBlock">
-              <h4 className="importH4">Problemas detectados en el archivo</h4>
+            <div className="dimSection">
+              <div className="dimSectionTitle">
+                <AlertTriangle size={16} /> Problemas detectados en el archivo
+              </div>
 
-              <div className="tableBox">
-                <table className="table importTableMini">
+              <div className="dimTableWrap">
+                <table className="dimTable">
                   <thead>
                     <tr>
-                      <th>Fila</th>
+                      <th style={{ width: 90 }}>Fila</th>
                       <th>Docente</th>
                       <th>Motivo</th>
                     </tr>
@@ -294,31 +372,43 @@ export default function DocentesImportModal({
               </div>
 
               {parseIssues.length > 20 && (
-                <div className="mutedSmall">Mostrando 20 de {parseIssues.length} errores del archivo.</div>
+                <div className="dimSmall" style={{ marginTop: 8 }}>
+                  Mostrando 20 de {parseIssues.length} problemas del archivo.
+                </div>
               )}
             </div>
           )}
 
-          {/* Resultado backend */}
+          {/* Backend result */}
           {backendResult && (
-            <div className="importBlock">
-              <h4 className="importH4">Resultado de importación</h4>
-              <div className="chipRow">
-                <div className="chip">
-                  Total enviado: <b>{backendResult.resumen.total}</b>
-                </div>
-                <div className="chip">
-                  Importados: <b>{backendResult.resumen.importados}</b>
-                </div>
-                <div className="chip">
-                  Omitidos: <b>{backendResult.resumen.omitidos}</b>
-                </div>
+            <div className="dimSection">
+              <div className="dimSectionTitle">
+                <CheckCircle2 size={16} /> Resultado de importación
               </div>
+
+              <div className="dimChips">
+                <span className="dimChip">
+                  Importados: <b>{importadosCount}</b>
+                </span>
+                <span className="dimChip dimChipWarn">
+                  Omitidos: <b>{omitidosCount}</b>
+                </span>
+              </div>
+
+              {omitidosCount > 0 && backendOmissions.length === 0 && (
+                <div className="dimNoDetail">
+                  <Info size={16} />
+                  <span>
+                    El servidor omitió {omitidosCount} registro(s), pero <b>no devolvió el motivo por fila</b>.
+                    Usualmente es por duplicados en BD (correo/usuario/cédula) o validaciones del backend.
+                  </span>
+                </div>
+              )}
             </div>
           )}
 
-          <div className="modalFooter">
-            <button className="btnGhost" onClick={close} disabled={busy}>
+          <div className="dmFooter">
+            <button className="dmBtnGhost" onClick={close} disabled={busy}>
               Cerrar
             </button>
           </div>

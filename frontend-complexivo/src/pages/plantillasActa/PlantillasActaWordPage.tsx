@@ -34,7 +34,12 @@ function IconList(props: React.SVGProps<SVGSVGElement>) {
       <path d="M8 6h13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
       <path d="M8 12h13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
       <path d="M8 18h13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      <path d="M3.5 6h.01M3.5 12h.01M3.5 18h.01" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+      <path
+        d="M3.5 6h.01M3.5 12h.01M3.5 18h.01"
+        stroke="currentColor"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
@@ -49,7 +54,13 @@ function IconUpload(props: React.SVGProps<SVGSVGElement>) {
         strokeLinecap="round"
       />
       <path d="M12 21v-8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      <path d="M8.5 16.5 12 13l3.5 3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M8.5 16.5 12 13l3.5 3.5"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
@@ -72,7 +83,12 @@ function IconFile(props: React.SVGProps<SVGSVGElement>) {
 function IconToggle(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 24 24" fill="none" {...props}>
-      <path d="M7 17h10a4 4 0 0 0 0-8H7a4 4 0 0 0 0 8Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <path
+        d="M7 17h10a4 4 0 0 0 0-8H7a4 4 0 0 0 0 8Z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
       <path d="M9 13a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" fill="currentColor" />
     </svg>
   );
@@ -102,13 +118,24 @@ function IconBoxEmpty(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
-/** ✅ Íconos para acciones */
+/** Íconos para acciones */
 function IconDownload(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 24 24" fill="none" {...props}>
       <path d="M12 3v10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      <path d="M8.5 10.5 12 14l3.5-3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M4 17.5V20a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-2.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path
+        d="M8.5 10.5 12 14l3.5-3.5"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M4 17.5V20a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-2.5"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
@@ -143,7 +170,7 @@ function ActionIconButton({
   children,
 }: {
   title: string;
-  variant: "neutral" | "primary" | "danger";
+  variant: "neutral" | "primary" | "warning" | "danger";
   onClick: () => void;
   disabled?: boolean;
   children: React.ReactNode;
@@ -157,7 +184,6 @@ function ActionIconButton({
       aria-label={title}
     >
       {children}
-      {/* ✅ tooltip visible (sale ARRIBA, no abajo) */}
       <span className={styles.tooltip}>{title}</span>
     </button>
   );
@@ -259,7 +285,12 @@ function UploadModal({ open, onClose, onSubmit }: ModalProps) {
 
           <div className={styles.formRow}>
             <label className={styles.label}>Descripción (Opcional)</label>
-            <textarea className={styles.textarea} value={descripcion} onChange={(e) => setDescripcion(e.target.value)} rows={3} />
+            <textarea
+              className={styles.textarea}
+              value={descripcion}
+              onChange={(e) => setDescripcion(e.target.value)}
+              rows={3}
+            />
           </div>
 
           <div className={styles.formRow}>
@@ -270,7 +301,12 @@ function UploadModal({ open, onClose, onSubmit }: ModalProps) {
             <div className={styles.fileRow}>
               <label className={styles.fileBtn}>
                 Seleccionar archivo
-                <input type="file" accept=".docx" className={styles.fileInput} onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+                <input
+                  type="file"
+                  accept=".docx"
+                  className={styles.fileInput}
+                  onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                />
               </label>
 
               <div className={styles.fileName}>{file ? file.name : "Ningún archivo seleccionado"}</div>
@@ -399,7 +435,7 @@ export default function PlantillasActaWordPage() {
 
           <button className={styles.heroBtn} onClick={() => setOpenModal(true)}>
             <IconUpload className={styles.iconSm} />
-            Subir Plantilla Word
+            Subir plantilla de Word
           </button>
         </div>
 
@@ -414,7 +450,12 @@ export default function PlantillasActaWordPage() {
 
             <div className={styles.searchWrap}>
               <IconSearch className={styles.searchIcon} />
-              <input className={styles.search} placeholder="Buscar por nombre..." value={q} onChange={(e) => setQ(e.target.value)} />
+              <input
+                className={styles.search}
+                placeholder="Buscar por nombre..."
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+              />
             </div>
           </div>
 
@@ -485,7 +526,7 @@ export default function PlantillasActaWordPage() {
                           </ActionIconButton>
 
                           {p.estado === "ACTIVA" ? (
-                            <ActionIconButton title="Desactivar" variant="neutral" onClick={() => handleDesactivar(p)}>
+                            <ActionIconButton title="Desactivar" variant="warning" onClick={() => handleDesactivar(p)}>
                               <IconPower className={styles.iconAction} />
                             </ActionIconButton>
                           ) : (

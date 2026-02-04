@@ -21,8 +21,8 @@ type RubricaNivel = {
   id_rubrica_nivel: number;
   id_rubrica: number;
   nombre_nivel: string;
-  valor_nivel: number;
-  orden_nivel: number;
+  valor_nivel: number | string; // puede venir string del backend
+  orden_nivel: number | string; // puede venir string del backend
   estado: number;
 };
 
@@ -31,8 +31,8 @@ type RubricaComponente = {
   id_rubrica: number;
   nombre_componente: string;
   tipo_componente: "ESCRITA" | "ORAL" | "OTRO";
-  ponderacion: number;
-  orden: number;
+  ponderacion: number | string; // puede venir "40,00"
+  orden: number | string; // puede venir string
   estado: number;
 };
 
@@ -40,7 +40,7 @@ type RubricaCriterio = {
   id_rubrica_criterio: number;
   id_rubrica_componente: number;
   nombre_criterio: string;
-  orden: number;
+  orden: number | string;
   estado: number;
 };
 
@@ -55,7 +55,9 @@ type RubricaCriterioNivel = {
   orden_nivel?: number;
 };
 
-/** ✅ FIX: soporta "40,00" => 40.00 */
+type ToastType = "success" | "error" | "info";
+
+/** ✅ soporta "40,00" / "40.00" / números */
 function toNum(v: any, fallback = 0) {
   if (v === null || v === undefined) return fallback;
   const s = String(v).trim().replace(/\s/g, "").replace(",", ".");
@@ -96,6 +98,16 @@ export default function RubricaEditorPage() {
   // Debounce timers
   const saveTimers = useRef<Record<string, any>>({});
 
+  // ✅ Toast (abajo-izquierda) en vez de alert()
+  const [toast, setToast] = useState<{ type: ToastType; message: string } | null>(null);
+  const toastTimer = useRef<any>(null);
+
+  const showToast = (type: ToastType, message: string) => {
+    setToast({ type, message });
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), 2600);
+  };
+
   // ✅ VOLVER SIEMPRE AL VIEW DEL PERIODO (RubricasVerPage)
   function goBack() {
     const pid = rubrica?.id_periodo;
@@ -103,24 +115,21 @@ export default function RubricaEditorPage() {
     else navigate("/rubricas");
   }
 
-  const nivelesActivos = useMemo(
-    () =>
-      niveles
-        .filter((n) => n.estado === 1)
-        .slice()
-        .sort((a, b) => a.orden_nivel - b.orden_nivel),
-    [niveles]
-  );
+  const nivelesActivos = useMemo(() => {
+    return niveles
+      .filter((n) => n.estado === 1)
+      .slice()
+      .sort((a, b) => toNum(a.orden_nivel, 0) - toNum(b.orden_nivel, 0));
+  }, [niveles]);
 
-  const componentesActivos = useMemo(
-    () =>
-      componentes
-        .filter((c) => c.estado === 1)
-        .slice()
-        .sort((a, b) => a.orden - b.orden),
-    [componentes]
-  );
+  const componentesActivos = useMemo(() => {
+    return componentes
+      .filter((c) => c.estado === 1)
+      .slice()
+      .sort((a, b) => toNum(a.orden, 0) - toNum(b.orden, 0));
+  }, [componentes]);
 
+  // ✅ Total ponderación SIEMPRE correcto aunque venga "40,00"
   const totalPonderacionActiva = useMemo(() => {
     return componentesActivos.reduce((acc, c) => acc + toNum(c.ponderacion, 0), 0);
   }, [componentesActivos]);
@@ -136,61 +145,45 @@ export default function RubricaEditorPage() {
     setDescRubrica(r?.descripcion_rubrica ?? "");
   };
 
-  /** ✅ Normaliza TODO a number al guardar en estado */
   const loadNiveles = async () => {
     const res = await axiosClient.get(`/rubricas/${rid}/niveles`, {
       params: { includeInactive: true },
     });
+    const arr = (res.data ?? []) as RubricaNivel[];
 
-    const raw = (res.data ?? []) as any[];
-    const norm: RubricaNivel[] = raw.map((n) => ({
-      id_rubrica_nivel: toNum(n.id_rubrica_nivel, 0),
-      id_rubrica: toNum(n.id_rubrica, rid),
-      nombre_nivel: String(n.nombre_nivel ?? ""),
-      valor_nivel: toNum(n.valor_nivel, 0),
-      orden_nivel: toNum(n.orden_nivel ?? n.orden, 0),
-      estado: toNum(n.estado, 1),
-    }));
-
-    setNiveles(norm);
+    // ✅ normaliza para evitar string|number en cálculos
+    setNiveles(
+      arr.map((n) => ({
+        ...n,
+        valor_nivel: toNum(n.valor_nivel, 0),
+        orden_nivel: toNum(n.orden_nivel, 0),
+      }))
+    );
   };
 
-  /** ✅ Normaliza TODO a number al guardar en estado */
   const loadComponentes = async () => {
     const res = await axiosClient.get(`/rubricas/${rid}/componentes`, {
       params: { includeInactive: true },
     });
+    const arr = (res.data ?? []) as RubricaComponente[];
 
-    const raw = (res.data ?? []) as any[];
-    const norm: RubricaComponente[] = raw.map((c) => ({
-      id_rubrica_componente: toNum(c.id_rubrica_componente, 0),
-      id_rubrica: toNum(c.id_rubrica, rid),
-      nombre_componente: String(c.nombre_componente ?? ""),
-      tipo_componente: (c.tipo_componente ?? "OTRO") as "ESCRITA" | "ORAL" | "OTRO",
-      ponderacion: toNum(c.ponderacion, 0), // ✅ aquí arregla "40,00"
-      orden: toNum(c.orden, 0),
-      estado: toNum(c.estado, 1),
-    }));
-
-    setComponentes(norm);
+    // ✅ normaliza ponderacion/orden para evitar "40,00"
+    setComponentes(
+      arr.map((c) => ({
+        ...c,
+        ponderacion: toNum(c.ponderacion, 0),
+        orden: toNum(c.orden, 0),
+      }))
+    );
   };
 
   const loadCriteriosDeComponente = async (idComp: number) => {
     const res = await axiosClient.get(`/componentes/${idComp}/criterios`, {
       params: { includeInactive: true },
     });
-
-    const raw = (res.data ?? []) as any[];
-    const norm: RubricaCriterio[] = raw.map((x) => ({
-      id_rubrica_criterio: toNum(x.id_rubrica_criterio, 0),
-      id_rubrica_componente: toNum(x.id_rubrica_componente, idComp),
-      nombre_criterio: String(x.nombre_criterio ?? ""),
-      orden: toNum(x.orden, 0),
-      estado: toNum(x.estado, 1),
-    }));
-
-    setCriteriosByComp((prev) => ({ ...prev, [idComp]: norm }));
-    return norm;
+    const arr = (res.data ?? []) as RubricaCriterio[];
+    setCriteriosByComp((prev) => ({ ...prev, [idComp]: arr }));
+    return arr;
   };
 
   const loadCeldasDeCriterio = async (criterioId: number) => {
@@ -211,34 +204,29 @@ export default function RubricaEditorPage() {
     try {
       await Promise.all([loadRubrica(), loadNiveles(), loadComponentes()]);
 
-      // criterios
-      const compArr = await (async () => {
-        const res = await axiosClient.get(`/rubricas/${rid}/componentes`, {
-          params: { includeInactive: true },
-        });
-        const raw = (res.data ?? []) as any[];
-        const norm: RubricaComponente[] = raw.map((c) => ({
-          id_rubrica_componente: toNum(c.id_rubrica_componente, 0),
-          id_rubrica: toNum(c.id_rubrica, rid),
-          nombre_componente: String(c.nombre_componente ?? ""),
-          tipo_componente: (c.tipo_componente ?? "OTRO") as "ESCRITA" | "ORAL" | "OTRO",
-          ponderacion: toNum(c.ponderacion, 0),
-          orden: toNum(c.orden, 0),
-          estado: toNum(c.estado, 1),
-        }));
-        setComponentes(norm);
-        return norm;
-      })();
+      // reload comps (y normaliza)
+      const compsRes = await axiosClient.get(`/rubricas/${rid}/componentes`, {
+        params: { includeInactive: true },
+      });
+      const compArrRaw = (compsRes.data ?? []) as RubricaComponente[];
+      const compArr = compArrRaw.map((c) => ({
+        ...c,
+        ponderacion: toNum(c.ponderacion, 0),
+        orden: toNum(c.orden, 0),
+      }));
+      setComponentes(compArr);
 
+      // criterios
       const criteriosArrays = await Promise.all(
         compArr.map((c) => loadCriteriosDeComponente(c.id_rubrica_componente))
       );
 
+      // celdas
       const allCriterios = criteriosArrays.flat();
       await Promise.all(allCriterios.map((cr) => loadCeldasDeCriterio(cr.id_rubrica_criterio)));
     } catch (e) {
       console.error(e);
-      alert("No se pudo cargar el editor de rúbrica");
+      showToast("error", "No se pudo cargar el editor de rúbrica");
     } finally {
       setLoading(false);
     }
@@ -262,10 +250,10 @@ export default function RubricaEditorPage() {
         ponderacion_global: 100,
       });
       await loadRubrica();
-      alert("Rúbrica actualizada");
+      showToast("success", "Rúbrica actualizada");
     } catch (e) {
       console.error(e);
-      alert("No se pudo actualizar la rúbrica");
+      showToast("error", "No se pudo actualizar la rúbrica");
     } finally {
       setLoading(false);
     }
@@ -276,16 +264,19 @@ export default function RubricaEditorPage() {
   // ---------------------------
   const addNivel = async () => {
     try {
-      const orden = (nivelesActivos.at(-1)?.orden_nivel ?? 0) + 1;
+      const lastOrden = toNum(nivelesActivos.at(-1)?.orden_nivel, 0);
+      const orden = lastOrden + 1;
+
       await axiosClient.post(`/rubricas/${rid}/niveles`, {
         nombre_nivel: "Nuevo nivel",
         valor_nivel: 0,
         orden_nivel: orden,
       });
       await loadNiveles();
+      showToast("success", "Nivel añadido");
     } catch (e) {
       console.error(e);
-      alert("No se pudo añadir el nivel");
+      showToast("error", "No se pudo añadir el nivel");
     }
   };
 
@@ -295,14 +286,15 @@ export default function RubricaEditorPage() {
 
     try {
       await axiosClient.put(`/rubricas/${rid}/niveles/${nivelId}`, {
-        nombre_nivel: patch.nombre_nivel ?? current.nombre_nivel,
-        valor_nivel: patch.valor_nivel ?? current.valor_nivel,
-        orden_nivel: patch.orden_nivel ?? current.orden_nivel,
+        nombre_nivel: (patch.nombre_nivel ?? current.nombre_nivel) ?? "",
+        valor_nivel: toNum(patch.valor_nivel ?? current.valor_nivel, 0),
+        orden_nivel: toNum(patch.orden_nivel ?? current.orden_nivel, 0),
       });
       await loadNiveles();
+      showToast("success", "Nivel actualizado");
     } catch (e) {
       console.error(e);
-      alert("No se pudo actualizar el nivel");
+      showToast("error", "No se pudo actualizar el nivel");
     }
   };
 
@@ -311,9 +303,10 @@ export default function RubricaEditorPage() {
     try {
       await axiosClient.patch(`/rubricas/${rid}/niveles/${nivelId}/estado`, { estado: false });
       await loadNiveles();
+      showToast("success", "Nivel eliminado");
     } catch (e) {
       console.error(e);
-      alert("No se pudo eliminar el nivel");
+      showToast("error", "No se pudo eliminar el nivel");
     }
   };
 
@@ -322,7 +315,9 @@ export default function RubricaEditorPage() {
   // ---------------------------
   const addComponente = async () => {
     try {
-      const orden = (componentesActivos.at(-1)?.orden ?? 0) + 1;
+      const lastOrden = toNum(componentesActivos.at(-1)?.orden, 0);
+      const orden = lastOrden + 1;
+
       await axiosClient.post(`/rubricas/${rid}/componentes`, {
         nombre_componente: `Componente ${orden}`,
         tipo_componente: "OTRO",
@@ -330,24 +325,26 @@ export default function RubricaEditorPage() {
         orden,
       });
       await loadComponentes();
+      showToast("success", "Componente añadido");
     } catch (e) {
       console.error(e);
-      alert("No se pudo añadir el componente");
+      showToast("error", "No se pudo añadir el componente");
     }
   };
 
   const updateComponente = async (comp: RubricaComponente, patch: Partial<RubricaComponente>) => {
     try {
       await axiosClient.put(`/rubricas/${rid}/componentes/${comp.id_rubrica_componente}`, {
-        nombre_componente: patch.nombre_componente ?? comp.nombre_componente,
+        nombre_componente: (patch.nombre_componente ?? comp.nombre_componente) ?? "",
         tipo_componente: patch.tipo_componente ?? comp.tipo_componente,
-        ponderacion: patch.ponderacion ?? comp.ponderacion,
-        orden: patch.orden ?? comp.orden,
+        ponderacion: toNum(patch.ponderacion ?? comp.ponderacion, 0),
+        orden: toNum(patch.orden ?? comp.orden, 0),
       });
       await loadComponentes();
+      showToast("success", "Componente actualizado");
     } catch (e) {
       console.error(e);
-      alert("No se pudo actualizar el componente");
+      showToast("error", "No se pudo actualizar el componente");
     }
   };
 
@@ -356,9 +353,10 @@ export default function RubricaEditorPage() {
     try {
       await axiosClient.patch(`/rubricas/${rid}/componentes/${compId}/estado`, { estado: false });
       await loadComponentes();
+      showToast("success", "Componente eliminado");
     } catch (e) {
       console.error(e);
-      alert("No se pudo eliminar el componente");
+      showToast("error", "No se pudo eliminar el componente");
     }
   };
 
@@ -368,12 +366,14 @@ export default function RubricaEditorPage() {
   const addCriterio = async (compId: number) => {
     try {
       const arr = criteriosByComp[compId] ?? [];
-      const orden =
-        (arr
+      const lastOrden =
+        arr
           .filter((x) => x.estado === 1)
           .slice()
-          .sort((a, b) => a.orden - b.orden)
-          .at(-1)?.orden ?? 0) + 1;
+          .sort((a, b) => toNum(a.orden, 0) - toNum(b.orden, 0))
+          .at(-1)?.orden ?? 0;
+
+      const orden = toNum(lastOrden, 0) + 1;
 
       await axiosClient.post(`/componentes/${compId}/criterios`, {
         nombre_criterio: "Nuevo criterio",
@@ -381,14 +381,16 @@ export default function RubricaEditorPage() {
       });
 
       const nuevos = await loadCriteriosDeComponente(compId);
-      const creado = nuevos.find((x) => x.orden === orden) ?? nuevos.at(-1);
+      const creado = nuevos.find((x) => toNum(x.orden, 0) === orden) ?? nuevos.at(-1);
 
       if (creado?.id_rubrica_criterio) {
         await loadCeldasDeCriterio(creado.id_rubrica_criterio);
       }
+
+      showToast("success", "Criterio añadido");
     } catch (e) {
       console.error(e);
-      alert("No se pudo añadir el criterio");
+      showToast("error", "No se pudo añadir el criterio");
     }
   };
 
@@ -399,13 +401,14 @@ export default function RubricaEditorPage() {
   ) => {
     try {
       await axiosClient.put(`/componentes/${compId}/criterios/${criterio.id_rubrica_criterio}`, {
-        nombre_criterio: patch.nombre_criterio ?? criterio.nombre_criterio,
-        orden: patch.orden ?? criterio.orden,
+        nombre_criterio: (patch.nombre_criterio ?? criterio.nombre_criterio) ?? "",
+        orden: toNum(patch.orden ?? criterio.orden, 0),
       });
       await loadCriteriosDeComponente(compId);
+      showToast("success", "Criterio actualizado");
     } catch (e) {
       console.error(e);
-      alert("No se pudo actualizar el criterio");
+      showToast("error", "No se pudo actualizar el criterio");
     }
   };
 
@@ -416,9 +419,10 @@ export default function RubricaEditorPage() {
         estado: false,
       });
       await loadCriteriosDeComponente(compId);
+      showToast("success", "Criterio eliminado");
     } catch (e) {
       console.error(e);
-      alert("No se pudo eliminar el criterio");
+      showToast("error", "No se pudo eliminar el criterio");
     }
   };
 
@@ -449,6 +453,7 @@ export default function RubricaEditorPage() {
         await loadCeldasDeCriterio(criterioId);
       } catch (e) {
         console.error(e);
+        showToast("error", "No se pudo guardar la celda");
       }
     }, 280);
   };
@@ -489,10 +494,324 @@ export default function RubricaEditorPage() {
             </div>
           </div>
 
-          {/* ... tu resto del render se queda IGUAL ... */}
-          {/* (No lo repito aquí para no hacerte copiar gigante otra vez) */}
+          {/* TOP GRID */}
+          <div className="reTopGrid">
+            {/* Info general */}
+            <div className="reCard">
+              <div className="reCardHead">Información General</div>
+              <div className="reCardBody">
+                <label className="reLbl">Nombre de la Rúbrica</label>
+                <input
+                  className="reInp"
+                  placeholder="Ej: Rúbrica General de Examen Complexivo"
+                  value={nombreRubrica}
+                  onChange={(e) => setNombreRubrica(e.target.value)}
+                />
+
+                <label className="reLbl" style={{ marginTop: 10 }}>
+                  Descripción (opcional)
+                </label>
+                <textarea
+                  className="reTa"
+                  placeholder="Ej: Diseño de rúbrica ESCRITA (50%)"
+                  value={descRubrica}
+                  onChange={(e) => setDescRubrica(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Niveles */}
+            <div className="reCard">
+              <div className="reCardHead between">
+                <div>Niveles de Calificación</div>
+                <button
+                  className="reBtn reBtnSmall reBtnOk"
+                  onClick={addNivel}
+                  disabled={loading}
+                  type="button"
+                >
+                  <Plus className="iconSm" /> Añadir nivel
+                </button>
+              </div>
+
+              <div className="reCardBody">
+                <div className="levelsTable">
+                  <div className="levelsHead">
+                    <div>Nombre del nivel</div>
+                    <div>Valor</div>
+                    <div className="levelsAction">Acción</div>
+                  </div>
+
+                  {nivelesActivos.map((n) => (
+                    <div className="levelsRow" key={n.id_rubrica_nivel}>
+                      <input
+                        className="reInp reInpSlim"
+                        value={n.nombre_nivel}
+                        onChange={(e) =>
+                          setNiveles((prev) =>
+                            prev.map((x) =>
+                              x.id_rubrica_nivel === n.id_rubrica_nivel
+                                ? { ...x, nombre_nivel: e.target.value }
+                                : x
+                            )
+                          )
+                        }
+                        onBlur={() =>
+                          updateNivel(n.id_rubrica_nivel, { nombre_nivel: n.nombre_nivel })
+                        }
+                      />
+
+                      <input
+                        className="reInp reInpSlim"
+                        type="number"
+                        value={toNum(n.valor_nivel, 0)}
+                        onChange={(e) =>
+                          setNiveles((prev) =>
+                            prev.map((x) =>
+                              x.id_rubrica_nivel === n.id_rubrica_nivel
+                                ? { ...x, valor_nivel: toNum(e.target.value, 0) }
+                                : x
+                            )
+                          )
+                        }
+                        onBlur={() =>
+                          updateNivel(n.id_rubrica_nivel, { valor_nivel: toNum(n.valor_nivel, 0) })
+                        }
+                      />
+
+                      <button
+                        className="reIconBtn danger"
+                        onClick={() => deleteNivel(n.id_rubrica_nivel)}
+                        title="Eliminar nivel"
+                        type="button"
+                      >
+                        <Trash2 className="iconSm" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                {nivelesActivos.length < 2 ? (
+                  <div className="reHint">
+                    Recomendación: usa al menos <b>2 niveles</b> para que la rúbrica sea válida.
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </div>
+
+          {/* COMPONENTES */}
+          <div className="reSectionTitle">Componentes y Criterios</div>
+
+          {componentesActivos.map((comp, idx) => {
+            const criterios = (criteriosByComp[comp.id_rubrica_componente] ?? [])
+              .filter((x) => x.estado === 1)
+              .slice()
+              .sort((a, b) => toNum(a.orden, 0) - toNum(b.orden, 0));
+
+            return (
+              <div className="reCompCard" key={comp.id_rubrica_componente}>
+                <div className="reCompHead">
+                  <div className="reCompTitle">Componente {idx + 1}</div>
+
+                  <button
+                    className="reBtn reBtnDanger"
+                    onClick={() => deleteComponente(comp.id_rubrica_componente)}
+                    type="button"
+                  >
+                    <Trash2 className="iconSm" /> Eliminar componente
+                  </button>
+                </div>
+
+                <div className="reCompBody">
+                  <div className="reCompForm">
+                    <div>
+                      <label className="reLbl">Nombre del componente</label>
+                      <input
+                        className="reInp"
+                        placeholder="Ej: Parte Escrita"
+                        value={comp.nombre_componente}
+                        onChange={(e) =>
+                          setComponentes((prev) =>
+                            prev.map((x) =>
+                              x.id_rubrica_componente === comp.id_rubrica_componente
+                                ? { ...x, nombre_componente: e.target.value }
+                                : x
+                            )
+                          )
+                        }
+                        onBlur={() =>
+                          updateComponente(comp, { nombre_componente: comp.nombre_componente })
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <label className="reLbl">Ponderación (%)</label>
+                      <input
+                        className="reInp"
+                        type="number"
+                        value={toNum(comp.ponderacion, 0)}
+                        onChange={(e) =>
+                          setComponentes((prev) =>
+                            prev.map((x) =>
+                              x.id_rubrica_componente === comp.id_rubrica_componente
+                                ? { ...x, ponderacion: toNum(e.target.value, 0) }
+                                : x
+                            )
+                          )
+                        }
+                        onBlur={() =>
+                          updateComponente(comp, { ponderacion: toNum(comp.ponderacion, 0) })
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  {/* Tabla criterios */}
+                  <div className="reTableWrap">
+                    <table className="reTable">
+                      <thead>
+                        <tr>
+                          <th className="thCrit">Criterio</th>
+                          {nivelesActivos.map((n) => (
+                            <th key={n.id_rubrica_nivel} className="thLvl">
+                              <div className="thLvlName">{n.nombre_nivel}</div>
+                              <div className="thLvlVal">{toNum(n.valor_nivel, 0)}</div>
+                            </th>
+                          ))}
+                          <th className="thAct">Acción</th>
+                        </tr>
+                      </thead>
+
+                      <tbody>
+                        {criterios.length === 0 ? (
+                          <tr>
+                            <td colSpan={nivelesActivos.length + 2} className="tdEmpty">
+                              No hay criterios en este componente.
+                            </td>
+                          </tr>
+                        ) : (
+                          criterios.map((cr) => (
+                            <tr key={cr.id_rubrica_criterio}>
+                              <td className="tdCrit">
+                                <textarea
+                                  className="reTaCell"
+                                  value={cr.nombre_criterio}
+                                  placeholder="Descripción del criterio"
+                                  onChange={(e) =>
+                                    setCriteriosByComp((prev) => ({
+                                      ...prev,
+                                      [comp.id_rubrica_componente]: (prev[comp.id_rubrica_componente] ?? []).map(
+                                        (x) =>
+                                          x.id_rubrica_criterio === cr.id_rubrica_criterio
+                                            ? { ...x, nombre_criterio: e.target.value }
+                                            : x
+                                      ),
+                                    }))
+                                  }
+                                  onBlur={() =>
+                                    updateCriterio(comp.id_rubrica_componente, cr, {
+                                      nombre_criterio: cr.nombre_criterio,
+                                    })
+                                  }
+                                />
+                              </td>
+
+                              {nivelesActivos.map((n) => (
+                                <td key={n.id_rubrica_nivel} className="tdCell">
+                                  <textarea
+                                    className="reTaCell"
+                                    value={getCellValue(cr.id_rubrica_criterio, n.id_rubrica_nivel)}
+                                    placeholder="Descripción..."
+                                    onChange={(e) => {
+                                      const v = e.target.value;
+                                      const key = getCellKey(cr.id_rubrica_criterio, n.id_rubrica_nivel);
+                                      setDraftCell((prev) => ({ ...prev, [key]: v }));
+                                    }}
+                                    onBlur={(e) => {
+                                      scheduleUpsert(cr.id_rubrica_criterio, n.id_rubrica_nivel, e.target.value);
+                                    }}
+                                  />
+                                </td>
+                              ))}
+
+                              <td className="tdAct">
+                                <button
+                                  className="reIconBtn danger"
+                                  onClick={() =>
+                                    deleteCriterio(comp.id_rubrica_componente, cr.id_rubrica_criterio)
+                                  }
+                                  title="Eliminar criterio"
+                                  type="button"
+                                >
+                                  <Trash2 className="iconSm" />
+                                </button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="reCompActions">
+                    <button
+                      className="reBtn reBtnPrimary"
+                      onClick={() => addCriterio(comp.id_rubrica_componente)}
+                      type="button"
+                    >
+                      <Plus className="iconSm" /> Añadir criterio a este componente
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+
+          <div className="reAddComp">
+            <button className="reBtn reBtnOk" onClick={addComponente} type="button">
+              <Plus className="iconSm" /> Añadir nuevo componente
+            </button>
+          </div>
+
+          {/* FOOTER */}
+          <div className="reFooter">
+            <button
+              className="reBtn reBtnPrimary"
+              onClick={saveRubrica}
+              disabled={loading}
+              type="button"
+            >
+              <Save className="iconSm" /> Guardar rúbrica
+            </button>
+
+            <button className="reBtn reBtnGhost" onClick={goBack} disabled={loading} type="button">
+              <XCircle className="iconSm" /> Cancelar
+            </button>
+
+            {loading ? <div className="reMuted">Cargando…</div> : null}
+          </div>
         </div>
       </div>
+
+      {/* ✅ Toast abajo-izquierda (si ya tienes estilos en otros módulos, reutiliza esas clases) */}
+      {toast ? (
+        <div
+          className={`toast toast-${toast.type}`}
+          style={{
+            position: "fixed",
+            left: 18,
+            bottom: 18,
+            zIndex: 9999,
+          }}
+          onClick={() => setToast(null)}
+          role="status"
+          aria-live="polite"
+        >
+          {toast.message}
+        </div>
+      ) : null}
     </div>
   );
 }

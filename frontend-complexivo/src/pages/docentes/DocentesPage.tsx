@@ -1,5 +1,5 @@
 // ✅ src/pages/docentes/DocentesPage.tsx
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type { Docente } from "../../types/docente";
 import type { Departamento } from "../../types/departamento";
@@ -10,6 +10,7 @@ import { departamentosService } from "../../services/departamentos.service";
 // ✅ MODALES (en la misma carpeta)
 import DocenteFormModal from "./DocenteFormModal";
 import DocenteViewModal from "./DocenteViewModal";
+import DocentesImportModal from "./DocentesImportModal"; // ✅ usa el modal real
 
 import {
   Plus,
@@ -18,7 +19,6 @@ import {
   ToggleRight,
   Search,
   Upload,
-  Shield,
   Filter,
   X,
   User,
@@ -27,9 +27,6 @@ import {
   BadgeCheck,
   BadgeX,
   Pencil,
-  FileSpreadsheet,
-  Download,
-  Info,
 } from "lucide-react";
 
 import escudoESPE from "../../assets/escudo.png";
@@ -40,40 +37,6 @@ type ToastType = "success" | "error" | "info";
 
 function onlyDigits(v: string) {
   return String(v ?? "").replace(/\D+/g, "");
-}
-
-function getRoleFromTokenBestEffort(): string | null {
-  const keys = ["token", "accessToken", "authToken", "jwt", "JWT"];
-  let token: string | null = null;
-
-  for (const k of keys) {
-    const v = localStorage.getItem(k);
-    if (v && v.split(".").length === 3) {
-      token = v;
-      break;
-    }
-  }
-  if (!token) return null;
-
-  try {
-    const payload = token.split(".")[1];
-    const json = JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
-
-    const role = (json as any).activeRole ?? (json as any).rol ?? null;
-    if (typeof role === "string") return role;
-
-    if (typeof role === "number") {
-      if (role === 1) return "SUPER_ADMIN";
-      if (role === 2) return "ADMIN";
-      if (role === 3) return "DOCENTE";
-    }
-
-    const roles = Array.isArray((json as any).roles) ? (json as any).roles : [];
-    if (roles.includes("SUPER_ADMIN") || roles.includes(1)) return "SUPER_ADMIN";
-    return null;
-  } catch {
-    return null;
-  }
 }
 
 export default function DocentesPage() {
@@ -88,7 +51,7 @@ export default function DocentesPage() {
 
   const [filterDepartamentoId, setFilterDepartamentoId] = useState<string>("");
 
-  // ✅ VIEW MODAL (AHORA SÍ SE USA EL COMPONENTE)
+  // ✅ VIEW MODAL
   const [showViewModal, setShowViewModal] = useState(false);
   const [viewDocente, setViewDocente] = useState<Docente | null>(null);
 
@@ -97,15 +60,11 @@ export default function DocentesPage() {
   const [formMode, setFormMode] = useState<"create" | "edit">("create");
   const [formDocente, setFormDocente] = useState<Docente | null>(null);
 
-  // IMPORT MODAL
+  // ✅ IMPORT MODAL REAL
   const [showImportModal, setShowImportModal] = useState(false);
-  const [importDepartamentoId, setImportDepartamentoId] = useState<string>("");
-  const [importing, setImporting] = useState(false);
-  const fileRef = useRef<HTMLInputElement | null>(null);
+  const [importingExternal, setImportingExternal] = useState(false);
 
   const [toast, setToast] = useState<{ msg: string; type: ToastType } | null>(null);
-
-  const isSuperAdminUI = useMemo(() => getRoleFromTokenBestEffort() === "SUPER_ADMIN", []);
 
   function showToast(msg: string, type: ToastType = "info") {
     setToast({ msg, type });
@@ -197,23 +156,6 @@ export default function DocentesPage() {
     setShowFormModal(false);
   }
 
-  async function toggleSuperAdmin(d: Docente) {
-    if (typeof (d as any).super_admin === "undefined") {
-      showToast("Falta flag super_admin en el listado (backend).", "error");
-      return;
-    }
-
-    const enabled = (d as any).super_admin === 0;
-
-    try {
-      await docentesService.setSuperAdmin(d.id_docente, enabled);
-      showToast(enabled ? "Rol SUPER_ADMIN asignado." : "Rol SUPER_ADMIN removido.", "success");
-      await loadAll();
-    } catch (err: any) {
-      showToast(extractBackendError(err), "error");
-    }
-  }
-
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
 
@@ -252,31 +194,11 @@ export default function DocentesPage() {
   const inactivos = docentes.filter((d) => d.estado === 0).length;
 
   function openImportModal() {
-    setImportDepartamentoId("");
     setShowImportModal(true);
   }
 
   function closeImportModal() {
-    if (!importing) setShowImportModal(false);
-  }
-
-  function onDownloadPlantilla() {
-    showToast("Siguiente paso: plantilla XLSX bonita (no CSV).", "info");
-  }
-
-  function onPickFile() {
-    if (!importDepartamentoId) {
-      showToast("Selecciona un departamento.", "info");
-      return;
-    }
-    fileRef.current?.click();
-  }
-
-  async function onFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-    showToast(`Archivo seleccionado: ${file.name}. Siguiente: parse/import real.`, "info");
+    if (!importingExternal) setShowImportModal(false);
   }
 
   return (
@@ -453,11 +375,6 @@ export default function DocentesPage() {
                       <td className="tdCenter tdName">
                         <div className="nameMain">
                           {d.apellidos_docente} {d.nombres_docente}
-                          {(d as any).super_admin === 1 && (
-                            <span className="chipPill chipPurple" title="Rol global">
-                              SUPER_ADMIN
-                            </span>
-                          )}
                         </div>
                       </td>
 
@@ -487,31 +404,19 @@ export default function DocentesPage() {
 
                       <td className="tdActions tdCenter">
                         <div className="actions">
-                          {isSuperAdminUI && (
-                            <button
-                              className={`iconBtn iconBtn_neutral ${(d as any).super_admin === 1 ? "isOn" : ""}`}
-                              title={(d as any).super_admin === 1 ? "Quitar SUPER_ADMIN" : "Hacer SUPER_ADMIN"}
-                              onClick={() => toggleSuperAdmin(d)}
-                            >
-                              <Shield className="iconAction" />
-                              <span className="tooltip">
-                                {(d as any).super_admin === 1 ? "Quitar SUPER_ADMIN" : "Hacer SUPER_ADMIN"}
-                              </span>
-                            </button>
-                          )}
-
-                          {/* ✅ VER REAL (usa DocenteViewModal) */}
+                          {/* ✅ VER (AZUL) */}
                           <button className="iconBtn iconBtn_neutral" title="Ver" onClick={() => openView(d)}>
                             <Eye className="iconAction" />
                             <span className="tooltip">Ver</span>
                           </button>
 
-                          {/* ✅ EDITAR REAL */}
-                          <button className="iconBtn iconBtn_primary" title="Editar" onClick={() => openEdit(d)}>
+                          {/* ✅ EDITAR (MORADO) */}
+                          <button className="iconBtn iconBtn_purple" title="Editar" onClick={() => openEdit(d)}>
                             <Pencil className="iconAction" />
                             <span className="tooltip">Editar</span>
                           </button>
 
+                          {/* ✅ ACTIVAR/DESACTIVAR: Activar = VERDE / Desactivar = NARANJA */}
                           <button
                             className={`iconBtn ${d.estado ? "iconBtn_danger" : "iconBtn_primary"}`}
                             title={d.estado ? "Desactivar" : "Activar"}
@@ -559,7 +464,6 @@ export default function DocentesPage() {
         </div>
       </div>
 
-      {/* ✅ FORM MODAL (CREATE / EDIT) */}
       {showFormModal && (
         <DocenteFormModal
           mode={formMode}
@@ -571,113 +475,20 @@ export default function DocentesPage() {
         />
       )}
 
-      {/* ✅ VIEW MODAL (AHORA SÍ SE USA TU MODAL dm*) */}
       {showViewModal && viewDocente && <DocenteViewModal docente={viewDocente} onClose={closeView} />}
 
-      {/* IMPORT MODAL (demo) */}
-      {showImportModal && (
-        <div className="modalOverlay" onMouseDown={closeImportModal}>
-          <div className="modalCard modalPro" onMouseDown={(e) => e.stopPropagation()}>
-            <input
-              ref={fileRef}
-              type="file"
-              accept=".xlsx,.xls"
-              style={{ display: "none" }}
-              onChange={onFileSelected}
-            />
-
-            <div className="modalHeader">
-              <div className="modalHeaderLeft">
-                <div className="modalHeaderIcon">
-                  <FileSpreadsheet size={18} />
-                </div>
-                <div>
-                  <div className="modalHeaderTitle">Importar Docentes desde Excel</div>
-                  <div className="modalHeaderSub">Selecciona departamento y sube el archivo</div>
-                </div>
-              </div>
-
-              <button className="modalClose" onClick={closeImportModal} aria-label="Cerrar">
-                ✕
-              </button>
-            </div>
-
-            <div className="modalDivider" />
-
-            <div className="modalBody">
-              <div className="viewCards">
-                <div className="vCard vCardFull">
-                  <div className="vLabel">
-                    <User className="vIcon" />
-                    Departamento <span style={{ color: "#c0392b" }}>*</span>
-                  </div>
-
-                  <select
-                    className="select"
-                    value={importDepartamentoId}
-                    onChange={(e) => setImportDepartamentoId(e.target.value)}
-                    disabled={importing || loadingDepartamentos}
-                    style={{ width: "100%", marginTop: 8 }}
-                  >
-                    <option value="">
-                      {loadingDepartamentos ? "Cargando departamentos..." : "Seleccione un departamento"}
-                    </option>
-                    {departamentos
-                      .slice()
-                      .sort((a, b) => a.nombre_departamento.localeCompare(b.nombre_departamento, "es"))
-                      .map((d) => (
-                        <option key={d.id_departamento} value={String(d.id_departamento)}>
-                          {d.nombre_departamento}
-                        </option>
-                      ))}
-                  </select>
-
-                  <div style={{ marginTop: 8, display: "flex", gap: 8, alignItems: "center", opacity: 0.75 }}>
-                    <Info size={14} />
-                    <span>Todos los docentes importados se asignarán a este departamento.</span>
-                  </div>
-                </div>
-
-                <div className="vCard vCardFull">
-                  <div className="vLabel">
-                    <Upload className="vIcon" />
-                    Seleccione el archivo Excel <span style={{ color: "#c0392b" }}>*</span>
-                  </div>
-
-                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
-                    <button className="btnGhost" onClick={onDownloadPlantilla} disabled={importing}>
-                      <Download size={16} style={{ marginRight: 8 }} />
-                      Plantilla
-                    </button>
-
-                    <button className="btnPrimary" onClick={onPickFile} disabled={importing}>
-                      <Upload size={16} style={{ marginRight: 8 }} />
-                      {importing ? "Importando..." : "Seleccionar archivo"}
-                    </button>
-                  </div>
-
-                  <div style={{ marginTop: 8, opacity: 0.75 }}>
-                    Formatos permitidos: <b>.xlsx</b>, <b>.xls</b>
-                  </div>
-
-                  <div className="infoBox" style={{ marginTop: 12 }}>
-                    <Info />
-                    <div className="infoText">
-                      La cédula será la contraseña inicial. Si una fila falla, el proceso continúa con las demás.
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="modalFooter">
-                <button className="btnGhost" onClick={closeImportModal} disabled={importing}>
-                  Cerrar
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ✅ IMPORT MODAL REAL */}
+      <DocentesImportModal
+        open={showImportModal}
+        departamentos={departamentos}
+        loadingDepartamentos={loadingDepartamentos}
+        importingExternal={importingExternal}
+        onClose={closeImportModal}
+        onToast={(msg, type) => showToast(msg, type ?? "info")}
+        onImported={async () => {
+          await loadAll();
+        }}
+      />
 
       {toast && <div className={`toast toast-${toast.type}`}>{toast.msg}</div>}
     </div>

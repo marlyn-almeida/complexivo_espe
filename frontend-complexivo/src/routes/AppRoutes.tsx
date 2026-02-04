@@ -10,14 +10,12 @@ import DashboardAdmin from "../pages/dashboard/DashboardAdmin";
 import DashboardDocente from "../pages/dashboard/DashboardDocente";
 
 import PeriodosPage from "../pages/periodos/PeriodosPage";
-import PeriodoCarrerasPage from "../pages/periodos/PeriodoCarrerasPage"; // ✅ Ver/gestionar carreras del periodo
+import PeriodoCarrerasPage from "../pages/periodos/PeriodoCarrerasPage";
 import CarrerasPage from "../pages/carreras/CarrerasPage";
 import CarreraAdminsPage from "../pages/carreras/CarreraAdminsPage";
 
 import DocentesPage from "../pages/docentes/DocentesPage";
-
 import EstudiantesPage from "../pages/estudiantes/EstudiantesPage";
-
 import PerfilPage from "../pages/perfil/PerfilPage";
 
 import RubricasPeriodoPage from "../pages/rubrica/RubricasPeriodoPage";
@@ -28,7 +26,6 @@ import FranjaHorariaPage from "../pages/franja-horaria/FranjaHorariaPage";
 import TribunalesPage from "../pages/tribunales/TribunalesPage";
 
 import MisTribunalesPage from "../pages/docentes/MisTribunalesPage";
-
 import PlantillasActaWordPage from "../pages/plantillasActa/PlantillasActaWordPage";
 
 import ProtectedRoute from "../components/auth/ProtectedRoute";
@@ -138,11 +135,6 @@ export default function AppRoutes() {
             }
           />
 
-          {/* ❌ ELIMINADO: MÓDULO CARRERA-PERIODO
-              - /carrera-periodo
-              - /carreras-periodos/:id/admin
-          */}
-
           <Route
             path="/rubricas"
             element={
@@ -200,14 +192,17 @@ export default function AppRoutes() {
               </ProtectedRoute>
             }
           />
+
+          {/* ✅ CAMBIO: FRANJAS ahora también para SUPER_ADMIN */}
           <Route
             path="/franjas"
             element={
-              <ProtectedRoute allowRoles={[2]}>
+              <ProtectedRoute allowRoles={[1, 2]}>
                 <FranjaHorariaPage />
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/tribunales"
             element={

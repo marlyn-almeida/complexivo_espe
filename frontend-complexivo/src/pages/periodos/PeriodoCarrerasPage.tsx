@@ -1,7 +1,17 @@
 // src/pages/periodos/PeriodoCarrerasPage.tsx
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Users, Plus, Search, RefreshCw, Filter, X, Save } from "lucide-react";
+import {
+  ArrowLeft,
+  Users,
+  Plus,
+  Search,
+  RefreshCw,
+  Filter,
+  X,
+  Save,
+  Clock,
+} from "lucide-react";
 
 import "./PeriodoCarrerasPage.css";
 
@@ -29,9 +39,9 @@ function carreraMeta(x: any) {
 
 function formatAdminLite(a?: any | null) {
   if (!a) return "— Sin asignar —";
-  const full = `${a.apellidos_docente} ${a.nombres_docente}`.trim();
+  const full = `${a.apellidos_docente ?? ""} ${a.nombres_docente ?? ""}`.trim();
   const user = a.nombre_usuario ? ` (${a.nombre_usuario})` : "";
-  return full + user;
+  return (full || "—") + user;
 }
 
 type ToastType = "success" | "error" | "info";
@@ -83,13 +93,11 @@ export default function PeriodoCarrerasPage() {
   const [departamentos, setDepartamentos] = useState<Departamento[]>([]);
   const [items, setItems] = useState<CarreraPeriodo[]>([]);
 
-  // filtros lista (cards)
+  // filtros
   const [q, setQ] = useState<string>("");
-  const [includeInactive, setIncludeInactive] = useState<boolean>(true);
   const [deptId, setDeptId] = useState<string>("");
 
-  // ✅ flags booleanos puros (evitan boolean | "")
-  const hasDeptSelected = deptId !== "";
+  const [loadAdminsInCards, setLoadAdminsInCards] = useState<boolean>(false);
 
   // debounce search
   const [qDebounced, setQDebounced] = useState<string>("");
@@ -98,12 +106,7 @@ export default function PeriodoCarrerasPage() {
     return () => window.clearTimeout(t);
   }, [q]);
 
-  // opcional: traer admins en tarjetas (costo extra)
-  const [loadAdminsInCards, setLoadAdminsInCards] = useState<boolean>(false);
-
-  // =========================
-  // Modal ASIGNAR (1 por 1) + autoridades en el MISMO modal
-  // =========================
+  // Modal ASIGNAR + autoridades
   const [showAssignModal, setShowAssignModal] = useState<boolean>(false);
   const [assignSaving, setAssignSaving] = useState<boolean>(false);
 
@@ -111,13 +114,10 @@ export default function PeriodoCarrerasPage() {
   const hasCarreraSelected = selectedCarreraId !== "";
 
   const [showAllDocentes, setShowAllDocentes] = useState<boolean>(false);
-
   const [dirIdNew, setDirIdNew] = useState<string>("");
   const [apoIdNew, setApoIdNew] = useState<string>("");
 
-  // =========================
   // Modal Autoridades (desde card)
-  // =========================
   const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
   const [authLoading, setAuthLoading] = useState<boolean>(false);
   const [authSaving, setAuthSaving] = useState<boolean>(false);
@@ -131,7 +131,6 @@ export default function PeriodoCarrerasPage() {
   const [docentes, setDocentes] = useState<any[]>([]);
   const [loadingDocentes, setLoadingDocentes] = useState<boolean>(false);
 
-  // evitar setState si se desmonta
   const mountedRef = useRef<boolean>(true);
   useEffect(() => {
     mountedRef.current = true;
@@ -197,13 +196,15 @@ export default function PeriodoCarrerasPage() {
     if (!opts?.silent) setLoading(true);
 
     try {
-      // ⚠️ includeInactive siempre boolean (evita boolean|"")
       const data = await carreraPeriodoService.listByPeriodo(periodoId, {
-        includeInactive: Boolean(includeInactive),
+        includeInactive: false,
         q: qDebounced.trim() || undefined,
       });
 
       let list = (data ?? []) as any[];
+
+      // ✅ si el backend aún devuelve inactivas por error, filtramos aquí
+      list = list.filter((x: any) => isActive(x.estado));
 
       if (loadAdminsInCards && list.length) {
         list = (await enrichAdmins(list)) as any[];
@@ -247,7 +248,7 @@ export default function PeriodoCarrerasPage() {
     if (loading) return;
     loadItems();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [includeInactive, qDebounced, loadAdminsInCards]);
+  }, [qDebounced, loadAdminsInCards]);
 
   // =========================
   // Helpers UI
@@ -271,6 +272,8 @@ export default function PeriodoCarrerasPage() {
     return m;
   }, [items]);
 
+  const hasDeptSelected = deptId !== "";
+
   const itemsFiltered = useMemo(() => {
     const term = q.trim().toLowerCase();
     const dept = hasDeptSelected ? Number(deptId) : null;
@@ -292,7 +295,6 @@ export default function PeriodoCarrerasPage() {
   }, [items, q, deptId, carreraById, hasDeptSelected]);
 
   const carrerasDisponibles = useMemo(() => {
-    // Solo carreras NO asignadas (para el modal)
     const arr = [...(carreras ?? [])].filter((c: any) => !assignedMap.has(Number(c.id_carrera)));
     arr.sort((a: any, b: any) =>
       String(a.nombre_carrera || "").localeCompare(String(b.nombre_carrera || ""))
@@ -319,7 +321,6 @@ export default function PeriodoCarrerasPage() {
   }
 
   const docentesFiltrados = useMemo(() => {
-    // si aún no elige carrera, no filtres (para no confundir)
     const idCarr = Number(selectedCarreraId);
     if (!idCarr) return docentes;
 
@@ -333,7 +334,7 @@ export default function PeriodoCarrerasPage() {
   }, [docentes, showAllDocentes, selectedCarreraId, carreraById]);
 
   // =========================
-  // MODAL ASIGNAR (1 por 1) + autoridades
+  // MODAL ASIGNAR + autoridades
   // =========================
   async function openAssign() {
     setSelectedCarreraId("");
@@ -362,13 +363,11 @@ export default function PeriodoCarrerasPage() {
 
     setAssignSaving(true);
     try {
-      // 1) crear carrera-periodo (bulk con 1 id) — y usar la respuesta del backend
       const bulkRes = await carreraPeriodoService.bulkAssign({
         id_periodo: periodoId,
         carreraIds: [idCarrera],
       });
 
-      // 2) obtener id_carrera_periodo desde respuesta
       const createdCP =
         (bulkRes?.items || []).find((x: any) => Number(x.id_carrera) === idCarrera) ?? null;
 
@@ -383,7 +382,6 @@ export default function PeriodoCarrerasPage() {
         return;
       }
 
-      // 3) guardar autoridades
       await carreraPeriodoService.setAdmins(idCarreraPeriodo, {
         id_docente_director: Number(dirIdNew),
         id_docente_apoyo: Number(apoIdNew),
@@ -401,7 +399,7 @@ export default function PeriodoCarrerasPage() {
   }
 
   // =========================
-  // Modal Autoridades (desde card)
+  // MODAL AUTORIDADES (desde card)
   // =========================
   async function openAutoridadesModal(cp: CarreraPeriodo) {
     setSelectedCP(cp);
@@ -472,332 +470,358 @@ export default function PeriodoCarrerasPage() {
   }
 
   // =========================
+  // FRANJAS HORARIAS (NUEVO)
+  // =========================
+  function goFranjas(cp: CarreraPeriodo) {
+    const idCP = Number((cp as any).id_carrera_periodo || 0);
+    if (!idCP) return showToast("No existe id_carrera_periodo", "error");
+
+    const nombreCarrera = encodeURIComponent(String((cp as any).nombre_carrera || ""));
+
+    // ✅ CAMBIO: tu ruta real en AppRoutes es "/franjas"
+    nav(`/franjas?carreraPeriodoId=${idCP}&periodoId=${periodoId}&carrera=${nombreCarrera}`);
+  }
+
+  // =========================
   // Render
   // =========================
   return (
-    <div className="pcp-page">
-      {/* HERO */}
-      <div className="pcp-hero">
-        <div className="pcp-heroLeft">
-          <button className="pcp-back" onClick={() => nav("/periodos")} type="button">
-            <ArrowLeft size={16} /> Volver
-          </button>
+    <div className="wrap">
+      <div className="containerFull">
+        <div className="pcpPage">
+          {/* HERO */}
+          <div className="hero">
+            <div className="heroLeft">
+              <button className="heroBtn ghost" onClick={() => nav("/periodos")} type="button" title="Volver">
+                <ArrowLeft className="heroBtnIcon" /> Volver
+              </button>
 
-          <div className="pcp-heroText">
-            <h1 className="pcp-title">{title}</h1>
-            <div className="pcp-sub">{subtitle}</div>
-            {rango ? <div className="pcp-range">{rango}</div> : null}
-          </div>
-        </div>
-
-        <div className="pcp-heroActions">
-          <button className="pcp-btn pcp-btnPrimary" onClick={openAssign} disabled={loading} type="button">
-            <Plus size={16} /> Asignar carrera
-          </button>
-        </div>
-      </div>
-
-      {/* LIST */}
-      <div className="pcp-box">
-        <div className="pcp-boxHead">
-          <div className="pcp-sectionTitle">
-            Carreras del período <span className="pcp-pill">{itemsFiltered.length}</span>
-          </div>
-
-          <div className="pcp-right">
-            <div className="pcp-searchWrap">
-              <Search size={16} />
-              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar carrera…" />
+              <div className="heroText">
+                <h1 className="heroTitle">{title}</h1>
+                <div className="heroSubtitle">{subtitle}</div>
+                {rango ? <div className="heroSubtitle">{rango}</div> : null}
+              </div>
             </div>
 
-            {/* filtro por departamento */}
-            <div className="pcp-selectWrap" title="Filtrar por departamento">
-              <Filter size={16} />
-              <select value={deptId} onChange={(e) => setDeptId(e.target.value)}>
-                <option value="">Todos los departamentos</option>
-                {departamentos.map((d: any) => (
-                  <option key={d.id_departamento} value={String(d.id_departamento)}>
-                    {d.nombre_departamento}
-                  </option>
-                ))}
-              </select>
+            <div className="heroActions">
+              <button className="heroBtn primary" onClick={openAssign} disabled={loading} type="button">
+                <Plus className="heroBtnIcon" /> Asignar carrera
+              </button>
+            </div>
+          </div>
+
+          {/* BOX */}
+          <div className="box">
+            <div className="boxHead">
+              <div className="sectionTitle">
+                <span className="sectionTitleIcon">
+                  <Users size={18} />
+                </span>
+                Carreras del período <span className="pcpCount">{itemsFiltered.length}</span>
+              </div>
+
+              <div className="boxRight">
+                {/* SEARCH */}
+                <div className="searchWrap">
+                  <Search className="searchIcon" />
+                  <input
+                    className="search"
+                    value={q}
+                    onChange={(e) => setQ(e.target.value)}
+                    placeholder="Buscar carrera…"
+                  />
+                </div>
+
+                {/* FILTER DEPARTAMENTO */}
+                <div className="filterWrap" title="Filtrar por departamento">
+                  <Filter className="filterIcon" />
+                  <select className="select" value={deptId} onChange={(e) => setDeptId(e.target.value)}>
+                    <option value="">Todos los departamentos</option>
+                    {departamentos.map((d: any) => (
+                      <option key={d.id_departamento} value={String(d.id_departamento)}>
+                        {d.nombre_departamento}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* TOGGLE: ver autoridades */}
+                <label className="toggle" title="Mostrar Director/Apoyo en cada card (puede demorar)">
+                  <input
+                    type="checkbox"
+                    checked={loadAdminsInCards}
+                    onChange={(e) => setLoadAdminsInCards(e.target.checked)}
+                  />
+                  <span className="slider" />
+                  <span className="toggleText">Ver autoridades</span>
+                </label>
+
+                {/* REFRESH */}
+                <button className="iconBtn iconBtn_primary" onClick={() => loadItems()} disabled={loading} type="button">
+                  <RefreshCw className="iconAction" />
+                  <span className="tooltip">Actualizar</span>
+                </button>
+              </div>
             </div>
 
-            <label className="pcp-toggle" title="Incluir carreras inactivas">
-              <input
-                type="checkbox"
-                checked={includeInactive}
-                onChange={(e) => setIncludeInactive(e.target.checked)}
-              />
-              <span className="pcp-toggleSlider" />
-              <span className="pcp-toggleText">Incluir inactivas</span>
-            </label>
+            {loading ? (
+              <div className="empty">Cargando…</div>
+            ) : itemsFiltered.length === 0 ? (
+              <div className="empty">No hay carreras asignadas.</div>
+            ) : (
+              <div className="pcpCards">
+                {itemsFiltered.map((x: any) => {
+                  const activo = isActive(x.estado);
 
-            <label className="pcp-toggle" title="Mostrar Director/Apoyo en cada card (puede demorar)">
-              <input
-                type="checkbox"
-                checked={loadAdminsInCards}
-                onChange={(e) => setLoadAdminsInCards(e.target.checked)}
-              />
-              <span className="pcp-toggleSlider" />
-              <span className="pcp-toggleText">Ver autoridades</span>
-            </label>
-
-            <button
-              className="pcp-btn pcp-btnIcon"
-              onClick={() => loadItems()}
-              disabled={loading}
-              title="Refrescar"
-              type="button"
-            >
-              <RefreshCw size={16} />
-            </button>
-          </div>
-        </div>
-
-        {loading ? (
-          <div className="pcp-empty">Cargando…</div>
-        ) : itemsFiltered.length === 0 ? (
-          <div className="pcp-empty">No hay carreras asignadas.</div>
-        ) : (
-          <div className="pcp-cards">
-            {itemsFiltered.map((x: any) => {
-              const activo = isActive(x.estado);
-
-              return (
-                <div className="pcp-card" key={x.id_carrera_periodo}>
-                  <div className="pcp-cardLeft">
-                    <div className="pcp-name">{x.nombre_carrera || "—"}</div>
-                    <div className="pcp-meta">{carreraMeta(x) || "—"}</div>
-
-                    {loadAdminsInCards ? (
-                      <div className="pcp-admins">
-                        <div className="pcp-adminRow">
-                          <span className="pcp-k">Director:</span>
-                          <span className="pcp-v">{formatAdminLite((x as any).director)}</span>
+                  return (
+                    <div className="pcpCard" key={x.id_carrera_periodo}>
+                      <div className="pcpCardLeft">
+                        <div className="pcpTitleRow">
+                          <div className="pcpCardTitle">{x.nombre_carrera || "—"}</div>
+                          <span className="pcpBadgeActive">{activo ? "ACTIVO" : "INACTIVO"}</span>
                         </div>
-                        <div className="pcp-adminRow">
-                          <span className="pcp-k">Apoyo:</span>
-                          <span className="pcp-v">{formatAdminLite((x as any).apoyo)}</span>
-                        </div>
+
+                        <div className="pcpCardMeta">{carreraMeta(x) || "—"}</div>
+
+                        {loadAdminsInCards ? (
+                          <div className="pcpAdmins">
+                            <div className="pcpAdminRow">
+                              <span className="pcpAdminK">Director:</span>
+                              <span className="pcpAdminV">{formatAdminLite((x as any).director)}</span>
+                            </div>
+                            <div className="pcpAdminRow">
+                              <span className="pcpAdminK">Docente Apoyo:</span>
+                              <span className="pcpAdminV">{formatAdminLite((x as any).apoyo)}</span>
+                            </div>
+                          </div>
+                        ) : null}
                       </div>
-                    ) : null}
+
+                      <div className="pcpCardRight">
+                        <button
+                          className="pcpBtn pcpBtnSoft"
+                          onClick={() => openAutoridadesModal(x)}
+                          disabled={!activo}
+                          type="button"
+                        >
+                          <Users size={16} /> Autoridades
+                        </button>
+
+                        <button
+                          className="pcpBtn pcpBtnGhost"
+                          onClick={() => goFranjas(x)}
+                          disabled={!activo}
+                          type="button"
+                        >
+                          <Clock size={16} /> Franjas
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* MODAL ASIGNAR + autoridades */}
+          {showAssignModal && (
+            <div className="pcpOverlay" onClick={closeAssign}>
+              <div className="pcpModal" onClick={(e) => e.stopPropagation()}>
+                <div className="pcpModalHeader">
+                  <div className="pcpModalHeaderLeft">
+                    <div className="pcpModalIcon">
+                      <Plus size={18} />
+                    </div>
+                    <div className="pcpModalHeaderText">
+                      <div className="pcpModalTitle">Asignar carrera + autoridades</div>
+                      <div className="pcpModalSub">{title}</div>
+                    </div>
+                  </div>
+                  <button className="pcpModalClose" onClick={closeAssign} aria-label="Cerrar" type="button">
+                    <X size={18} />
+                  </button>
+                </div>
+
+                <div className="pcpModalBody">
+                  <div className="pcpField">
+                    <label>Carrera</label>
+                    <select
+                      value={selectedCarreraId}
+                      onChange={(e) => {
+                        setSelectedCarreraId(e.target.value);
+                        setDirIdNew("");
+                        setApoIdNew("");
+                        setShowAllDocentes(false);
+                      }}
+                      disabled={assignSaving}
+                    >
+                      <option value="">(Selecciona una carrera)</option>
+                      {carrerasDisponibles.map((c: any) => (
+                        <option key={c.id_carrera} value={String(c.id_carrera)}>
+                          {c.nombre_carrera} — {carreraMeta(c)}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="pcpHint">Solo aparecen carreras que aún no están asignadas al período.</div>
                   </div>
 
-                  <div className="pcp-cardRight">
-                    <span className={`pcp-badge ${activo ? "active" : "inactive"}`}>
-                      {activo ? "ACTIVO" : "INACTIVO"}
-                    </span>
+                  <label className="toggle" title="Por defecto se muestran docentes del departamento de la carrera">
+                    <input
+                      type="checkbox"
+                      checked={showAllDocentes}
+                      onChange={(e) => setShowAllDocentes(e.target.checked)}
+                      disabled={assignSaving || loadingDocentes || !hasCarreraSelected}
+                    />
+                    <span className="slider" />
+                    <span className="toggleText">Mostrar docentes de todos los departamentos</span>
+                  </label>
+
+                  <div className="pcpField">
+                    <label>Director</label>
+                    <select
+                      value={dirIdNew}
+                      onChange={(e) => setDirIdNew(e.target.value)}
+                      disabled={assignSaving || loadingDocentes || !hasCarreraSelected}
+                    >
+                      <option value="">(Selecciona Director)</option>
+                      {docentesFiltrados.map((d: any) => (
+                        <option key={d.id_docente} value={String(d.id_docente)}>
+                          {d.apellidos_docente} {d.nombres_docente} — {d.nombre_usuario}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="pcpField">
+                    <label>Docente de apoyo</label>
+                    <select
+                      value={apoIdNew}
+                      onChange={(e) => setApoIdNew(e.target.value)}
+                      disabled={assignSaving || loadingDocentes || !hasCarreraSelected}
+                    >
+                      <option value="">(Selecciona Apoyo)</option>
+                      {docentesFiltrados.map((d: any) => (
+                        <option key={d.id_docente} value={String(d.id_docente)}>
+                          {d.apellidos_docente} {d.nombres_docente} — {d.nombre_usuario}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {loadingDocentes ? <div className="pcpHint">Cargando docentes...</div> : null}
+
+                  <div className="pcpModalFooter">
+                    <button className="dmBtnGhost" onClick={closeAssign} disabled={assignSaving} type="button">
+                      Cancelar
+                    </button>
 
                     <button
-                      className="pcp-iconBtn"
-                      title="Autoridades (Director / Apoyo)"
-                      onClick={() => openAutoridadesModal(x)}
-                      disabled={!activo}
+                      className="btnPrimary"
+                      onClick={onSaveAssignWithAdmins}
+                      disabled={assignSaving || !hasCarreraSelected || !dirIdNew || !apoIdNew || dirIdNew === apoIdNew}
                       type="button"
                     >
-                      <Users size={18} />
+                      <Save size={16} /> {assignSaving ? "Guardando..." : "Guardar"}
                     </button>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        )}
+              </div>
+            </div>
+          )}
+
+          {/* MODAL AUTORIDADES */}
+          {showAuthModal && selectedCP && (
+            <div className="pcpOverlay" onClick={closeAutoridadesModal}>
+              <div className="pcpModal pcpModalSm" onClick={(e) => e.stopPropagation()}>
+                <div className="pcpModalHeader">
+                  <div className="pcpModalHeaderLeft">
+                    <div className="pcpModalIcon">
+                      <Users size={18} />
+                    </div>
+                    <div className="pcpModalHeaderText">
+                      <div className="pcpModalTitle">Autoridades</div>
+                      <div className="pcpModalSub">{(selectedCP as any).nombre_carrera || "Carrera"}</div>
+                    </div>
+                  </div>
+
+                  <button className="pcpModalClose" onClick={closeAutoridadesModal} aria-label="Cerrar" type="button">
+                    <X size={18} />
+                  </button>
+                </div>
+
+                <div className="pcpModalBody">
+                  <div className="pcpAuthGrid">
+                    <div className="pcpAuthBox">
+                      <div className="pcpAuthK">Director actual</div>
+                      <div className="pcpAuthV">{admins ? formatAdminLite(admins.director) : "—"}</div>
+                    </div>
+                    <div className="pcpAuthBox">
+                      <div className="pcpAuthK">Apoyo actual</div>
+                      <div className="pcpAuthV">{admins ? formatAdminLite(admins.apoyo) : "—"}</div>
+                    </div>
+                  </div>
+
+                  {authLoading ? (
+                    <div className="pcpHint">Cargando autoridades...</div>
+                  ) : (
+                    <>
+                      <div className="pcpField">
+                        <label>Director</label>
+                        <select
+                          value={dirId}
+                          onChange={(e) => setDirId(e.target.value)}
+                          disabled={loadingDocentes || authSaving}
+                        >
+                          <option value="">(Sin asignar)</option>
+                          {docentes.map((d: any) => (
+                            <option key={d.id_docente} value={String(d.id_docente)}>
+                              {d.apellidos_docente} {d.nombres_docente} — {d.nombre_usuario}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="pcpField">
+                        <label>Apoyo</label>
+                        <select
+                          value={apoId}
+                          onChange={(e) => setApoId(e.target.value)}
+                          disabled={loadingDocentes || authSaving}
+                        >
+                          <option value="">(Sin asignar)</option>
+                          {docentes.map((d: any) => (
+                            <option key={d.id_docente} value={String(d.id_docente)}>
+                              {d.apellidos_docente} {d.nombres_docente} — {d.nombre_usuario}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {loadingDocentes ? <div className="pcpHint">Cargando docentes...</div> : null}
+                    </>
+                  )}
+
+                  <div className="pcpModalFooter">
+                    <button className="dmBtnGhost" onClick={closeAutoridadesModal} disabled={authSaving} type="button">
+                      Cancelar
+                    </button>
+                    <button
+                      className="btnPrimary"
+                      onClick={onSaveAutoridades}
+                      disabled={authSaving || authLoading || (dirId !== "" && apoId !== "" && dirId === apoId)}
+                      type="button"
+                    >
+                      {authSaving ? "Guardando..." : "Guardar"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {toast && <div className={`toast toast-${toast.type}`}>{toast.msg}</div>}
+        </div>
       </div>
-
-      {/* =========================
-          MODAL ASIGNAR (1 carrera) + autoridades
-         ========================= */}
-      {showAssignModal && (
-        <div className="pcp-overlay" onClick={closeAssign}>
-          <div className="pcp-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="pcp-modalHead">
-              <div>
-                <div className="pcp-modalTitle">Asignar carrera + autoridades</div>
-                <div className="pcp-modalSub">{title}</div>
-              </div>
-              <button className="pcp-x" onClick={closeAssign} aria-label="Cerrar" type="button">
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="pcp-modalBody">
-              <div className="pcp-field">
-                <label>Carrera</label>
-                <select
-                  value={selectedCarreraId}
-                  onChange={(e) => {
-                    setSelectedCarreraId(e.target.value);
-                    setDirIdNew("");
-                    setApoIdNew("");
-                    setShowAllDocentes(false);
-                  }}
-                  disabled={assignSaving}
-                >
-                  <option value="">(Selecciona una carrera)</option>
-                  {carrerasDisponibles.map((c: any) => (
-                    <option key={c.id_carrera} value={String(c.id_carrera)}>
-                      {c.nombre_carrera} — {carreraMeta(c)}
-                    </option>
-                  ))}
-                </select>
-                <div className="pcp-muted" style={{ marginTop: 6 }}>
-                  Solo aparecen carreras que aún no están asignadas al período.
-                </div>
-              </div>
-
-              <label className="pcp-toggle" title="Por defecto se muestran docentes del departamento de la carrera">
-                <input
-                  type="checkbox"
-                  checked={showAllDocentes}
-                  onChange={(e) => setShowAllDocentes(e.target.checked)}
-                  disabled={assignSaving || loadingDocentes || !hasCarreraSelected}
-                />
-                <span className="pcp-toggleSlider" />
-                <span className="pcp-toggleText">Mostrar docentes de todos los departamentos</span>
-              </label>
-
-              <div className="pcp-field">
-                <label>Director</label>
-                <select
-                  value={dirIdNew}
-                  onChange={(e) => setDirIdNew(e.target.value)}
-                  disabled={assignSaving || loadingDocentes || !hasCarreraSelected}
-                >
-                  <option value="">(Selecciona Director)</option>
-                  {docentesFiltrados.map((d: any) => (
-                    <option key={d.id_docente} value={String(d.id_docente)}>
-                      {d.apellidos_docente} {d.nombres_docente} — {d.nombre_usuario}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="pcp-field">
-                <label>Docente de apoyo</label>
-                <select
-                  value={apoIdNew}
-                  onChange={(e) => setApoIdNew(e.target.value)}
-                  disabled={assignSaving || loadingDocentes || !hasCarreraSelected}
-                >
-                  <option value="">(Selecciona Apoyo)</option>
-                  {docentesFiltrados.map((d: any) => (
-                    <option key={d.id_docente} value={String(d.id_docente)}>
-                      {d.apellidos_docente} {d.nombres_docente} — {d.nombre_usuario}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {loadingDocentes ? <div className="pcp-muted">Cargando docentes...</div> : null}
-
-              <div className="pcp-modalFooter">
-                <button className="pcp-ghost" onClick={closeAssign} disabled={assignSaving} type="button">
-                  Cancelar
-                </button>
-
-                <button
-                  className="pcp-primary"
-                  onClick={onSaveAssignWithAdmins}
-                  disabled={assignSaving || !hasCarreraSelected || !dirIdNew || !apoIdNew || dirIdNew === apoIdNew}
-                  type="button"
-                >
-                  <Save size={16} /> {assignSaving ? "Guardando..." : "Guardar"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* =========================
-          MODAL AUTORIDADES (desde card)
-         ========================= */}
-      {showAuthModal && selectedCP && (
-        <div className="pcp-overlay" onClick={closeAutoridadesModal}>
-          <div className="pcp-modal pcp-modalSm" onClick={(e) => e.stopPropagation()}>
-            <div className="pcp-modalHead">
-              <div>
-                <div className="pcp-modalTitle">Autoridades</div>
-                <div className="pcp-modalSub">{(selectedCP as any).nombre_carrera || "Carrera"}</div>
-              </div>
-              <button className="pcp-x" onClick={closeAutoridadesModal} aria-label="Cerrar" type="button">
-                ✕
-              </button>
-            </div>
-
-            <div className="pcp-modalBody">
-              <div className="pcp-authCurrent">
-                <div className="pcp-authBox">
-                  <div className="pcp-authK">Director actual</div>
-                  <div className="pcp-authV">{admins ? formatAdminLite(admins.director) : "—"}</div>
-                </div>
-                <div className="pcp-authBox">
-                  <div className="pcp-authK">Apoyo actual</div>
-                  <div className="pcp-authV">{admins ? formatAdminLite(admins.apoyo) : "—"}</div>
-                </div>
-              </div>
-
-              {authLoading ? (
-                <div className="pcp-muted">Cargando autoridades...</div>
-              ) : (
-                <>
-                  <div className="pcp-field">
-                    <label>Director</label>
-                    <select
-                      value={dirId}
-                      onChange={(e) => setDirId(e.target.value)}
-                      disabled={loadingDocentes || authSaving}
-                    >
-                      <option value="">(Sin asignar)</option>
-                      {docentes.map((d: any) => (
-                        <option key={d.id_docente} value={String(d.id_docente)}>
-                          {d.apellidos_docente} {d.nombres_docente} — {d.nombre_usuario}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="pcp-field">
-                    <label>Apoyo</label>
-                    <select
-                      value={apoId}
-                      onChange={(e) => setApoId(e.target.value)}
-                      disabled={loadingDocentes || authSaving}
-                    >
-                      <option value="">(Sin asignar)</option>
-                      {docentes.map((d: any) => (
-                        <option key={d.id_docente} value={String(d.id_docente)}>
-                          {d.apellidos_docente} {d.nombres_docente} — {d.nombre_usuario}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {loadingDocentes ? <div className="pcp-muted">Cargando docentes...</div> : null}
-                </>
-              )}
-
-              <div className="pcp-modalFooter">
-                <button className="pcp-ghost" onClick={closeAutoridadesModal} disabled={authSaving} type="button">
-                  Cancelar
-                </button>
-                <button
-                  className="pcp-primary"
-                  onClick={onSaveAutoridades}
-                  disabled={authSaving || authLoading || (dirId !== "" && apoId !== "" && dirId === apoId)}
-                  type="button"
-                >
-                  {authSaving ? "Guardando..." : "Guardar"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {toast && <div className={`pcp-toast pcp-toast-${toast.type}`}>{toast.msg}</div>}
     </div>
   );
 }
