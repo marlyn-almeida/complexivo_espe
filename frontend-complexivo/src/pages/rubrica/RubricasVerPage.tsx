@@ -48,28 +48,43 @@ type Criterio = {
 /** -----------------------------
  * Helpers
  * ------------------------------ */
-function isActivo(estado: number | boolean | undefined) {
+function isActivo(estado: number | boolean | undefined | null) {
   if (estado === true) return true;
   if (estado === false) return false;
+  if (estado === null || estado === undefined) return false;
   return Number(estado) === 1;
 }
 
-// ✅ soporta "40,00" / "40%" / null
+// ✅ soporta "40,00" / "40%" / "40,00 %" / null
 function toNum(v: any, fallback = 0) {
   if (v === null || v === undefined) return fallback;
   if (typeof v === "number") return Number.isFinite(v) ? v : fallback;
 
-  const s = String(v).trim().replace("%", "").replace(",", ".");
+  const s = String(v)
+    .trim()
+    .replace(/\s/g, "")
+    .replace("%", "")
+    .replace(",", ".");
   const n = Number(s);
   return Number.isFinite(n) ? n : fallback;
 }
 
-// ✅ unwrap por si tu API manda { ok, data: [...] }
+// ✅ unwrap por si tu API manda { ok, data: [...] } o si te pasan AxiosResponse
 function unwrapArray<T = any>(payload: any): T[] {
   if (!payload) return [];
   if (Array.isArray(payload)) return payload as T[];
-  if (Array.isArray(payload.data)) return payload.data as T[];
-  if (payload.ok && Array.isArray(payload.data)) return payload.data as T[];
+
+  // AxiosResponse
+  if (payload?.data !== undefined) {
+    const d = payload.data;
+    if (Array.isArray(d)) return d as T[];
+    if (d?.ok && Array.isArray(d.data)) return d.data as T[];
+    if (Array.isArray(d?.data)) return d.data as T[];
+  }
+
+  // { ok, data }
+  if (payload?.ok && Array.isArray(payload.data)) return payload.data as T[];
+  if (Array.isArray(payload?.data)) return payload.data as T[];
   return [];
 }
 
@@ -85,6 +100,31 @@ function compTypeLabel(t?: string) {
   }
 }
 
+/** ✅ Normaliza campos del componente (para que no te salga total 0) */
+function normalizeComp(raw: any): RubricaComponente {
+  const ponderacion =
+    raw?.ponderacion ??
+    raw?.ponderacion_componente ??
+    raw?.porcentaje ??
+    raw?.porcentaje_ponderacion ??
+    0;
+
+  const estado =
+    raw?.estado ??
+    raw?.estado_activo ??
+    raw?.estadoActivo ??
+    raw?.estadoActiva ??
+    raw?.estado_activa ??
+    1;
+
+  // ojo: tu UI y cálculos usan estas claves
+  return {
+    ...raw,
+    ponderacion: toNum(ponderacion, 0),
+    estado, // lo dejamos como venga (0/1/bool), isActivo lo interpreta
+  } as RubricaComponente;
+}
+
 /** Endpoints mínimos */
 async function listCriteriosByComponente(
   componenteId: number,
@@ -93,7 +133,7 @@ async function listCriteriosByComponente(
   const res = await axiosClient.get(`/componentes/${componenteId}/criterios`, {
     params: { includeInactive: includeInactive ? 1 : 0 },
   });
-  return unwrapArray<Criterio>(res.data);
+  return unwrapArray<Criterio>(res);
 }
 
 async function listNivelesByRubrica(
@@ -103,7 +143,7 @@ async function listNivelesByRubrica(
   const res = await axiosClient.get(`/rubricas/${rubricaId}/niveles`, {
     params: { includeInactive: includeInactive ? 1 : 0 },
   });
-  return unwrapArray<Nivel>(res.data);
+  return unwrapArray<Nivel>(res);
 }
 
 export default function RubricasVerPage() {
@@ -117,9 +157,7 @@ export default function RubricasVerPage() {
 
   const [niveles, setNiveles] = useState<Nivel[]>([]);
   const [componentes, setComponentes] = useState<RubricaComponente[]>([]);
-  const [criteriosByComp, setCriteriosByComp] = useState<
-    Record<number, Criterio[]>
-  >({});
+  const [criteriosByComp, setCriteriosByComp] = useState<Record<number, Criterio[]>>({});
 
   const load = async () => {
     if (!periodoId) return;
@@ -148,24 +186,27 @@ export default function RubricasVerPage() {
       const rid = r.id_rubrica;
 
       // 2) Niveles + Componentes
-      const [nivs, comps] = await Promise.all([
+      const [nivsRaw, compsResp] = await Promise.all([
         listNivelesByRubrica(rid, true).catch(() => []),
-        rubricaComponenteService
-          .list(rid, { includeInactive: true })
-          .then((x) => unwrapArray<RubricaComponente>(x))
-          .catch(() => []),
+        rubricaComponenteService.list(rid, { includeInactive: true }).catch(() => null),
       ]);
 
-      setNiveles(nivs ?? []);
-      setComponentes(comps ?? []);
+      const nivs = (nivsRaw ?? []).map((n: any) => ({
+        ...n,
+        valor_nivel: toNum(n.valor_nivel, 0),
+        orden_nivel: toNum(n.orden_nivel ?? n.orden ?? 0, 0),
+      })) as Nivel[];
+      setNiveles(nivs);
+
+      const compsArrRaw = unwrapArray<RubricaComponente>(compsResp);
+      const comps = (compsArrRaw ?? []).map((c: any) => normalizeComp(c));
+      setComponentes(comps);
 
       // 3) Criterios por componente
       const map: Record<number, Criterio[]> = {};
       for (const c of comps ?? []) {
         const compId = (c as any).id_rubrica_componente;
-        map[compId] = await listCriteriosByComponente(compId, true).catch(
-          () => []
-        );
+        map[compId] = await listCriteriosByComponente(compId, true).catch(() => []);
       }
       setCriteriosByComp(map);
     } catch (e) {
@@ -190,7 +231,7 @@ export default function RubricasVerPage() {
       const resp = await rubricaService.ensureByPeriodo(periodoId, {
         nombre_rubrica: "Rúbrica Complexivo",
         ponderacion_global: 100,
-        descripcion_rubrica: "", // ✅ no null (evita 422)
+        descripcion_rubrica: "",
       });
 
       const createdRubrica = resp?.rubrica as unknown as Rubrica;
@@ -213,22 +254,23 @@ export default function RubricasVerPage() {
     }
   };
 
-  // ✅ SOLO ACTIVOS
-  const nivelesActivos = useMemo(
-    () => niveles.filter((x) => isActivo(x.estado)),
-    [niveles]
-  );
+  // ✅ SOLO ACTIVOS (y usando estado normalizado)
+  const nivelesActivos = useMemo(() => niveles.filter((x) => isActivo(x.estado)), [niveles]);
 
   const compsActivos = useMemo(
-    () => componentes.filter((x) => isActivo((x as any).estado)),
+    () => componentes.filter((x: any) => isActivo(x.estado)),
     [componentes]
   );
 
+  // ✅ Total ponderación REAL (con normalizeComp ya no te dará 0 raro)
   const totalPonderacionActiva = useMemo(() => {
     return compsActivos.reduce((acc, c: any) => acc + toNum(c.ponderacion, 0), 0);
   }, [compsActivos]);
 
-  const okPonderacion = useMemo(() => Math.abs(totalPonderacionActiva - 100) < 0.001, [totalPonderacionActiva]);
+  const okPonderacion = useMemo(
+    () => Math.abs(totalPonderacionActiva - 100) < 0.001,
+    [totalPonderacionActiva]
+  );
 
   const faltaPonderacion = useMemo(
     () => Math.max(0, 100 - totalPonderacionActiva),
@@ -244,7 +286,7 @@ export default function RubricasVerPage() {
     return n;
   }, [criteriosByComp, compsActivos]);
 
-  // ✅ progreso real (sin “—” cuando ya existe rubrica)
+  // ✅ progreso real (no “—” si ya existe)
   const isLista = useMemo(() => {
     return (
       !!rubrica &&
@@ -255,12 +297,7 @@ export default function RubricasVerPage() {
     );
   }, [rubrica, nivelesActivos.length, compsActivos.length, totalCriteriosActivos, okPonderacion]);
 
-  const estadoTexto = !rubrica
-    ? "No creada"
-    : isActivo(rubrica.estado)
-    ? "Activa"
-    : "Inactiva";
-
+  const estadoTexto = !rubrica ? "No creada" : isActivo(rubrica.estado) ? "Activa" : "Inactiva";
   const estadoOk = !!rubrica && isActivo(rubrica.estado);
 
   return (
@@ -276,11 +313,7 @@ export default function RubricasVerPage() {
             </div>
           </div>
 
-          <button
-            className="heroBtn"
-            onClick={() => navigate("/rubricas")}
-            type="button"
-          >
+          <button className="heroBtn" onClick={() => navigate("/rubricas")} type="button">
             <ArrowLeft className="iconSm" /> Volver
           </button>
         </div>
@@ -301,10 +334,7 @@ export default function RubricasVerPage() {
                   className="btnPrimary"
                   onClick={() =>
                     navigate(`/rubricas/editar/${rubrica.id_rubrica}`, {
-                      state: {
-                        mode: "edit",
-                        returnTo: `/rubricas/periodo/${periodoId}`,
-                      },
+                      state: { mode: "edit", returnTo: `/rubricas/periodo/${periodoId}` },
                     })
                   }
                   type="button"
@@ -312,11 +342,7 @@ export default function RubricasVerPage() {
                   Abrir rúbrica
                 </button>
               ) : (
-                <button
-                  className="btnPrimary"
-                  onClick={createAndOpen}
-                  type="button"
-                >
+                <button className="btnPrimary" onClick={createAndOpen} type="button">
                   Crear rúbrica
                 </button>
               )}
@@ -333,7 +359,6 @@ export default function RubricasVerPage() {
                   <BadgeCheck className={`rvIco ${estadoOk ? "isOn" : "isOff"}`} />
                   <BadgeX className={`rvIco ${estadoOk ? "isOff" : "isOn"}`} />
                 </span>
-
                 {estadoTexto}
               </div>
             </div>
@@ -341,10 +366,10 @@ export default function RubricasVerPage() {
             <div className="rvSummaryBox">
               <div className="rvLabel">Progreso</div>
 
-              <div className={`rvBadge ${isLista ? "ok" : "off"}`}>
+              <div className={`rvBadge ${rubrica && isLista ? "ok" : "off"}`}>
                 <span className="rvIcoWrap" aria-hidden="true">
-                  <BadgeCheck className={`rvIco ${isLista ? "isOn" : "isOff"}`} />
-                  <BadgeX className={`rvIco ${isLista ? "isOff" : "isOn"}`} />
+                  <BadgeCheck className={`rvIco ${rubrica && isLista ? "isOn" : "isOff"}`} />
+                  <BadgeX className={`rvIco ${rubrica && isLista ? "isOff" : "isOn"}`} />
                 </span>
 
                 {rubrica ? (isLista ? "Lista para usar" : "Incompleta") : "—"}
@@ -374,7 +399,7 @@ export default function RubricasVerPage() {
             <>
               <div className="rvDivider" />
 
-              {/* ✅ MINI CARDS: SOLO ACTIVOS (sin “totales”) */}
+              {/* MINI CARDS: ACTIVOS */}
               <div className="rvMiniGrid">
                 <div className="miniCard">
                   <div className="miniLabel">Niveles</div>

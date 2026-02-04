@@ -2,11 +2,204 @@
    Scoped: no rompe otras páginas
 */
 
+/* ===============================
+   BASE (como Docentes)
+   =============================== */
+.wrap {
+  padding: 16px 18px 28px;
+}
+
+.containerFull {
+  width: 100%;
+  max-width: 100%;
+}
+
+.rubricasVerPage {
+  width: 100%;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Liberation Sans";
+}
+
+/* ===============================
+   ICONOS
+   =============================== */
+.rubricasVerPage .iconSm {
+  width: 18px;
+  height: 18px;
+}
+
+/* ===============================
+   HERO (verde como Docentes)
+   =============================== */
+.rubricasVerPage .hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
+  background: linear-gradient(90deg, #0b6034 0%, #147a4a 100%);
+  border-radius: 14px;
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.1);
+}
+
+.rubricasVerPage .heroLeft {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.rubricasVerPage .heroLogo {
+  width: 46px;
+  height: 46px;
+  object-fit: contain;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  flex: 0 0 auto;
+}
+
+.rubricasVerPage .heroText {
+  min-width: 0;
+}
+
+.rubricasVerPage .heroTitle {
+  margin: 0;
+  color: #fff;
+  font-weight: 900;
+  font-size: 22px;
+  line-height: 1.1;
+  letter-spacing: 0.2px;
+}
+
+.rubricasVerPage .heroSubtitle {
+  margin: 6px 0 0;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 13px;
+}
+
+.rubricasVerPage .heroBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font-weight: 900;
+  padding: 10px 14px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.08s ease, border-color 0.15s ease;
+  white-space: nowrap;
+}
+
+.rubricasVerPage .heroBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.6);
+  transform: translateY(-1px);
+}
+
+.rubricasVerPage .heroBtn:active {
+  transform: translateY(0);
+}
+
+/* ===============================
+   BOX (como Docentes)
+   =============================== */
+.rubricasVerPage .box {
+  margin-top: 14px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.09);
+  border-radius: 14px;
+  padding: 16px 16px 18px;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.05);
+}
+
+.rubricasVerPage .boxHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-bottom: 10px;
+}
+
+.rubricasVerPage .sectionTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 900;
+  color: rgba(0, 0, 0, 0.82);
+}
+
+.rubricasVerPage .sectionTitleIcon {
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  background: rgba(10, 79, 40, 0.1);
+  border: 1px solid rgba(10, 79, 40, 0.18);
+  display: grid;
+  place-items: center;
+  color: #0a4f28;
+}
+
+/* Buttons base */
+.rubricasVerPage .btnPrimary {
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(10, 79, 40, 0.28);
+  background: #0a4f28;
+  color: #fff;
+  font-weight: 900;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rubricasVerPage .btnPrimary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Acciones top */
 .rubricasVerPage .rvActionsTop {
   display: flex;
   gap: 10px;
   align-items: center;
   flex-wrap: wrap;
+}
+
+/* ===============================
+   ✅ PILL PONDERACIÓN TOTAL (NUEVO)
+   - se ve como “chip” a la derecha, estilo ESPE
+   =============================== */
+.rubricasVerPage .rvTotalPill {
+  margin-left: auto;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-weight: 900;
+  border: 1px solid rgba(10, 79, 40, 0.22);
+  background: rgba(10, 79, 40, 0.08);
+  color: #0a4f28;
+  white-space: nowrap;
+}
+
+.rubricasVerPage .rvTotalPill b {
+  font-weight: 950;
+}
+
+.rubricasVerPage .rvTotalPill.ok {
+  background: rgba(10, 79, 40, 0.12);
+  border-color: rgba(10, 79, 40, 0.28);
+}
+
+.rubricasVerPage .rvTotalWarn {
+  color: #b42318;
+  font-weight: 950;
 }
 
 /* =========================
@@ -52,8 +245,7 @@
   line-height: 1;
 }
 
-/* ✅ Fix para evitar insertBefore:
-   alternamos visibilidad (no nodos) */
+/* ✅ Fix para evitar insertBefore: alternamos visibilidad (no nodos) */
 .rubricasVerPage .rvIcoWrap {
   display: inline-flex;
   align-items: center;
@@ -253,65 +445,18 @@
 }
 
 /* =========================
-   ✅ Toast inferior izquierda
-========================= */
-.rubricasVerPage .rvToast {
-  position: fixed;
-  left: 16px;
-  bottom: 16px;
-  z-index: 9999;
-  min-width: 280px;
-  max-width: 420px;
-
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-
-  border-radius: 14px;
-  padding: 12px 12px;
-  box-shadow: 0 14px 35px rgba(0, 0, 0, 0.20);
-  border: 1px solid rgba(15, 23, 42, 0.18);
-  background: #fff;
-}
-
-.rubricasVerPage .rvToastMsg {
-  font-size: 13.5px;
-  font-weight: 800;
-  color: rgba(17, 24, 39, 0.86);
-  line-height: 1.25;
-}
-
-.rubricasVerPage .rvToastClose {
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  font-size: 18px;
-  font-weight: 900;
-  color: rgba(17, 24, 39, 0.55);
-  line-height: 1;
-  padding: 0 4px;
-}
-
-.rubricasVerPage .rvToast.success {
-  background: rgba(6, 118, 71, 0.10);
-  border-color: rgba(6, 118, 71, 0.22);
-}
-
-.rubricasVerPage .rvToast.error {
-  background: rgba(180, 35, 24, 0.10);
-  border-color: rgba(180, 35, 24, 0.22);
-}
-
-.rubricasVerPage .rvToast.info {
-  background: rgba(2, 132, 199, 0.10);
-  border-color: rgba(2, 132, 199, 0.22);
-}
-
-/* =========================
    Responsive
 ========================= */
 @media (max-width: 820px) {
+  .rubricasVerPage .hero {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .rubricasVerPage .heroTitle {
+    font-size: 19px;
+  }
+
   .rubricasVerPage .rvRow {
     grid-template-columns: 1fr;
   }
@@ -324,46 +469,8 @@
     min-width: 100%;
   }
 
-  .rubricasVerPage .rvToast {
-    left: 12px;
-    right: 12px;
-    min-width: auto;
-    max-width: none;
+  /* ✅ para que la pill no “se vaya” feo en móvil */
+  .rubricasVerPage .rvTotalPill {
+    margin-left: 0;
   }
 }
-/* ===== Toast abajo izquierda (como estudiantes) ===== */
-.toastBL{
-  position: fixed;
-  left: 18px;
-  bottom: 18px;
-  z-index: 9999;
-  background: #111827;
-  color: #fff;
-  border-radius: 14px;
-  padding: 12px 14px;
-  box-shadow: 0 14px 30px rgba(0,0,0,.25);
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  max-width: min(520px, calc(100vw - 36px));
-}
-.toastBL.success{ background: #0b6034; }
-.toastBL.error{ background: #b42318; }
-.toastBL.info{ background: #111827; }
-
-.toastMsg{
-  font-size: 13.5px;
-  font-weight: 800;
-  line-height: 1.2;
-}
-.toastBtn{
-  width: 28px;
-  height: 28px;
-  border-radius: 10px;
-  border: 1px solid rgba(255,255,255,.18);
-  background: rgba(255,255,255,.10);
-  color: #fff;
-  font-weight: 900;
-  cursor: pointer;
-}
-.toastBtn:hover{ background: rgba(255,255,255,.16); }

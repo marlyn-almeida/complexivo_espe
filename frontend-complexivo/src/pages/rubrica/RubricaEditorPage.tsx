@@ -14,16 +14,16 @@ type Rubrica = {
   ponderacion_global: number;
   nombre_rubrica: string;
   descripcion_rubrica?: string | null;
-  estado: number;
+  estado: number | boolean | string;
 };
 
 type RubricaNivel = {
   id_rubrica_nivel: number;
   id_rubrica: number;
   nombre_nivel: string;
-  valor_nivel: number | string; // puede venir string del backend
-  orden_nivel: number | string; // puede venir string del backend
-  estado: number;
+  valor_nivel: number | string;
+  orden_nivel: number | string;
+  estado: number | boolean | string;
 };
 
 type RubricaComponente = {
@@ -33,7 +33,7 @@ type RubricaComponente = {
   tipo_componente: "ESCRITA" | "ORAL" | "OTRO";
   ponderacion: number | string; // puede venir "40,00"
   orden: number | string; // puede venir string
-  estado: number;
+  estado: number | boolean | string;
 };
 
 type RubricaCriterio = {
@@ -41,7 +41,7 @@ type RubricaCriterio = {
   id_rubrica_componente: number;
   nombre_criterio: string;
   orden: number | string;
-  estado: number;
+  estado: number | boolean | string;
 };
 
 type RubricaCriterioNivel = {
@@ -49,7 +49,7 @@ type RubricaCriterioNivel = {
   id_rubrica_criterio: number;
   id_rubrica_nivel: number;
   descripcion: string;
-  estado: number;
+  estado: number | boolean | string;
   nombre_nivel?: string;
   valor_nivel?: number;
   orden_nivel?: number;
@@ -57,12 +57,19 @@ type RubricaCriterioNivel = {
 
 type ToastType = "success" | "error" | "info";
 
-/** ✅ soporta "40,00" / "40.00" / números */
+/** ✅ soporta "40,00" / "40.00" / números / null */
 function toNum(v: any, fallback = 0) {
   if (v === null || v === undefined) return fallback;
   const s = String(v).trim().replace(/\s/g, "").replace(",", ".");
   const n = Number(s);
   return Number.isFinite(n) ? n : fallback;
+}
+
+/** ✅ estado robusto: 1/"1"/true => activo */
+function isActivo(v: any) {
+  if (v === true) return true;
+  if (v === false) return false;
+  return toNum(v, 0) === 1;
 }
 
 export default function RubricaEditorPage() {
@@ -98,7 +105,7 @@ export default function RubricaEditorPage() {
   // Debounce timers
   const saveTimers = useRef<Record<string, any>>({});
 
-  // ✅ Toast (abajo-izquierda) en vez de alert()
+  // ✅ Toast (abajo-derecha via CSS .reToastBL)
   const [toast, setToast] = useState<{ type: ToastType; message: string } | null>(null);
   const toastTimer = useRef<any>(null);
 
@@ -117,14 +124,14 @@ export default function RubricaEditorPage() {
 
   const nivelesActivos = useMemo(() => {
     return niveles
-      .filter((n) => n.estado === 1)
+      .filter((n) => isActivo(n.estado))
       .slice()
       .sort((a, b) => toNum(a.orden_nivel, 0) - toNum(b.orden_nivel, 0));
   }, [niveles]);
 
   const componentesActivos = useMemo(() => {
     return componentes
-      .filter((c) => c.estado === 1)
+      .filter((c) => isActivo(c.estado))
       .slice()
       .sort((a, b) => toNum(a.orden, 0) - toNum(b.orden, 0));
   }, [componentes]);
@@ -135,46 +142,51 @@ export default function RubricaEditorPage() {
   }, [componentesActivos]);
 
   // ---------------------------
-  // LOADERS
+  // LOADERS (SIN DOBLE SET QUE CAUSA "PARPADEO")
   // ---------------------------
   const loadRubrica = async () => {
     const res = await axiosClient.get(`/rubricas/${rid}`);
     const r = res.data as Rubrica;
+
     setRubrica(r);
-    setNombreRubrica(r?.nombre_rubrica ?? "");
-    setDescRubrica(r?.descripcion_rubrica ?? "");
+
+    // ✅ set por defecto con fallback (evita "sin nombre" raro si llega null/undefined)
+    setNombreRubrica((r?.nombre_rubrica ?? "").toString());
+    setDescRubrica((r?.descripcion_rubrica ?? "").toString());
   };
 
-  const loadNiveles = async () => {
+  const loadNiveles = async (): Promise<RubricaNivel[]> => {
     const res = await axiosClient.get(`/rubricas/${rid}/niveles`, {
       params: { includeInactive: true },
     });
     const arr = (res.data ?? []) as RubricaNivel[];
 
-    // ✅ normaliza para evitar string|number en cálculos
-    setNiveles(
-      arr.map((n) => ({
-        ...n,
-        valor_nivel: toNum(n.valor_nivel, 0),
-        orden_nivel: toNum(n.orden_nivel, 0),
-      }))
-    );
+    const normalized = arr.map((n) => ({
+      ...n,
+      estado: toNum((n as any).estado, 1), // ✅ normaliza estado
+      valor_nivel: toNum(n.valor_nivel, 0),
+      orden_nivel: toNum(n.orden_nivel, 0),
+    }));
+
+    setNiveles(normalized);
+    return normalized;
   };
 
-  const loadComponentes = async () => {
+  const loadComponentes = async (): Promise<RubricaComponente[]> => {
     const res = await axiosClient.get(`/rubricas/${rid}/componentes`, {
       params: { includeInactive: true },
     });
     const arr = (res.data ?? []) as RubricaComponente[];
 
-    // ✅ normaliza ponderacion/orden para evitar "40,00"
-    setComponentes(
-      arr.map((c) => ({
-        ...c,
-        ponderacion: toNum(c.ponderacion, 0),
-        orden: toNum(c.orden, 0),
-      }))
-    );
+    const normalized = arr.map((c) => ({
+      ...c,
+      estado: toNum((c as any).estado, 1), // ✅ normaliza estado
+      ponderacion: toNum(c.ponderacion, 0),
+      orden: toNum(c.orden, 0),
+    }));
+
+    setComponentes(normalized);
+    return normalized;
   };
 
   const loadCriteriosDeComponente = async (idComp: number) => {
@@ -182,8 +194,15 @@ export default function RubricaEditorPage() {
       params: { includeInactive: true },
     });
     const arr = (res.data ?? []) as RubricaCriterio[];
-    setCriteriosByComp((prev) => ({ ...prev, [idComp]: arr }));
-    return arr;
+
+    const normalized = arr.map((x) => ({
+      ...x,
+      estado: toNum((x as any).estado, 1),
+      orden: toNum((x as any).orden, 0),
+    }));
+
+    setCriteriosByComp((prev) => ({ ...prev, [idComp]: normalized }));
+    return normalized;
   };
 
   const loadCeldasDeCriterio = async (criterioId: number) => {
@@ -194,7 +213,10 @@ export default function RubricaEditorPage() {
 
     const map: Record<number, RubricaCriterioNivel> = {};
     for (const rcn of arr) {
-      map[toNum((rcn as any).id_rubrica_nivel)] = rcn;
+      map[toNum((rcn as any).id_rubrica_nivel)] = {
+        ...rcn,
+        estado: toNum((rcn as any).estado, 1),
+      };
     }
     setCeldasByCriterio((prev) => ({ ...prev, [criterioId]: map }));
   };
@@ -202,23 +224,11 @@ export default function RubricaEditorPage() {
   const loadAll = async () => {
     setLoading(true);
     try {
-      await Promise.all([loadRubrica(), loadNiveles(), loadComponentes()]);
-
-      // reload comps (y normaliza)
-      const compsRes = await axiosClient.get(`/rubricas/${rid}/componentes`, {
-        params: { includeInactive: true },
-      });
-      const compArrRaw = (compsRes.data ?? []) as RubricaComponente[];
-      const compArr = compArrRaw.map((c) => ({
-        ...c,
-        ponderacion: toNum(c.ponderacion, 0),
-        orden: toNum(c.orden, 0),
-      }));
-      setComponentes(compArr);
+      const [_r, _n, comps] = await Promise.all([loadRubrica(), loadNiveles(), loadComponentes()]);
 
       // criterios
       const criteriosArrays = await Promise.all(
-        compArr.map((c) => loadCriteriosDeComponente(c.id_rubrica_componente))
+        comps.map((c) => loadCriteriosDeComponente(c.id_rubrica_componente))
       );
 
       // celdas
@@ -246,7 +256,8 @@ export default function RubricaEditorPage() {
       setLoading(true);
       await axiosClient.put(`/rubricas/${rid}`, {
         nombre_rubrica: nombreRubrica.trim(),
-        descripcion_rubrica: descRubrica.trim() ? descRubrica.trim() : null,
+        // ✅ evita null si tu backend no lo quiere (si lo acepta, igual funciona)
+        descripcion_rubrica: descRubrica.trim() ? descRubrica.trim() : "",
         ponderacion_global: 100,
       });
       await loadRubrica();
@@ -336,7 +347,7 @@ export default function RubricaEditorPage() {
     try {
       await axiosClient.put(`/rubricas/${rid}/componentes/${comp.id_rubrica_componente}`, {
         nombre_componente: (patch.nombre_componente ?? comp.nombre_componente) ?? "",
-        tipo_componente: patch.tipo_componente ?? comp.tipo_componente,
+        tipo_componente: (patch.tipo_componente ?? comp.tipo_componente) as any,
         ponderacion: toNum(patch.ponderacion ?? comp.ponderacion, 0),
         orden: toNum(patch.orden ?? comp.orden, 0),
       });
@@ -368,7 +379,7 @@ export default function RubricaEditorPage() {
       const arr = criteriosByComp[compId] ?? [];
       const lastOrden =
         arr
-          .filter((x) => x.estado === 1)
+          .filter((x) => isActivo(x.estado))
           .slice()
           .sort((a, b) => toNum(a.orden, 0) - toNum(b.orden, 0))
           .at(-1)?.orden ?? 0;
@@ -490,7 +501,7 @@ export default function RubricaEditorPage() {
             </div>
 
             <div className={`rePill ${Math.abs(totalPonderacionActiva - 100) < 0.001 ? "ok" : ""}`}>
-              Total ponderación: <b>{totalPonderacionActiva.toFixed(2)}%</b>
+              Total ponderación: <b>{loading ? "—" : `${totalPonderacionActiva.toFixed(2)}%`}</b>
             </div>
           </div>
 
@@ -524,12 +535,7 @@ export default function RubricaEditorPage() {
             <div className="reCard">
               <div className="reCardHead between">
                 <div>Niveles de Calificación</div>
-                <button
-                  className="reBtn reBtnSmall reBtnOk"
-                  onClick={addNivel}
-                  disabled={loading}
-                  type="button"
-                >
+                <button className="reBtn reBtnSmall reBtnOk" onClick={addNivel} disabled={loading} type="button">
                   <Plus className="iconSm" /> Añadir nivel
                 </button>
               </div>
@@ -550,15 +556,11 @@ export default function RubricaEditorPage() {
                         onChange={(e) =>
                           setNiveles((prev) =>
                             prev.map((x) =>
-                              x.id_rubrica_nivel === n.id_rubrica_nivel
-                                ? { ...x, nombre_nivel: e.target.value }
-                                : x
+                              x.id_rubrica_nivel === n.id_rubrica_nivel ? { ...x, nombre_nivel: e.target.value } : x
                             )
                           )
                         }
-                        onBlur={() =>
-                          updateNivel(n.id_rubrica_nivel, { nombre_nivel: n.nombre_nivel })
-                        }
+                        onBlur={() => updateNivel(n.id_rubrica_nivel, { nombre_nivel: n.nombre_nivel })}
                       />
 
                       <input
@@ -574,9 +576,7 @@ export default function RubricaEditorPage() {
                             )
                           )
                         }
-                        onBlur={() =>
-                          updateNivel(n.id_rubrica_nivel, { valor_nivel: toNum(n.valor_nivel, 0) })
-                        }
+                        onBlur={() => updateNivel(n.id_rubrica_nivel, { valor_nivel: toNum(n.valor_nivel, 0) })}
                       />
 
                       <button
@@ -605,7 +605,7 @@ export default function RubricaEditorPage() {
 
           {componentesActivos.map((comp, idx) => {
             const criterios = (criteriosByComp[comp.id_rubrica_componente] ?? [])
-              .filter((x) => x.estado === 1)
+              .filter((x) => isActivo(x.estado))
               .slice()
               .sort((a, b) => toNum(a.orden, 0) - toNum(b.orden, 0));
 
@@ -614,11 +614,7 @@ export default function RubricaEditorPage() {
                 <div className="reCompHead">
                   <div className="reCompTitle">Componente {idx + 1}</div>
 
-                  <button
-                    className="reBtn reBtnDanger"
-                    onClick={() => deleteComponente(comp.id_rubrica_componente)}
-                    type="button"
-                  >
+                  <button className="reBtn reBtnDanger" onClick={() => deleteComponente(comp.id_rubrica_componente)} type="button">
                     <Trash2 className="iconSm" /> Eliminar componente
                   </button>
                 </div>
@@ -634,15 +630,11 @@ export default function RubricaEditorPage() {
                         onChange={(e) =>
                           setComponentes((prev) =>
                             prev.map((x) =>
-                              x.id_rubrica_componente === comp.id_rubrica_componente
-                                ? { ...x, nombre_componente: e.target.value }
-                                : x
+                              x.id_rubrica_componente === comp.id_rubrica_componente ? { ...x, nombre_componente: e.target.value } : x
                             )
                           )
                         }
-                        onBlur={() =>
-                          updateComponente(comp, { nombre_componente: comp.nombre_componente })
-                        }
+                        onBlur={() => updateComponente(comp, { nombre_componente: comp.nombre_componente })}
                       />
                     </div>
 
@@ -655,15 +647,11 @@ export default function RubricaEditorPage() {
                         onChange={(e) =>
                           setComponentes((prev) =>
                             prev.map((x) =>
-                              x.id_rubrica_componente === comp.id_rubrica_componente
-                                ? { ...x, ponderacion: toNum(e.target.value, 0) }
-                                : x
+                              x.id_rubrica_componente === comp.id_rubrica_componente ? { ...x, ponderacion: toNum(e.target.value, 0) } : x
                             )
                           )
                         }
-                        onBlur={() =>
-                          updateComponente(comp, { ponderacion: toNum(comp.ponderacion, 0) })
-                        }
+                        onBlur={() => updateComponente(comp, { ponderacion: toNum(comp.ponderacion, 0) })}
                       />
                     </div>
                   </div>
@@ -702,11 +690,8 @@ export default function RubricaEditorPage() {
                                   onChange={(e) =>
                                     setCriteriosByComp((prev) => ({
                                       ...prev,
-                                      [comp.id_rubrica_componente]: (prev[comp.id_rubrica_componente] ?? []).map(
-                                        (x) =>
-                                          x.id_rubrica_criterio === cr.id_rubrica_criterio
-                                            ? { ...x, nombre_criterio: e.target.value }
-                                            : x
+                                      [comp.id_rubrica_componente]: (prev[comp.id_rubrica_componente] ?? []).map((x) =>
+                                        x.id_rubrica_criterio === cr.id_rubrica_criterio ? { ...x, nombre_criterio: e.target.value } : x
                                       ),
                                     }))
                                   }
@@ -739,9 +724,7 @@ export default function RubricaEditorPage() {
                               <td className="tdAct">
                                 <button
                                   className="reIconBtn danger"
-                                  onClick={() =>
-                                    deleteCriterio(comp.id_rubrica_componente, cr.id_rubrica_criterio)
-                                  }
+                                  onClick={() => deleteCriterio(comp.id_rubrica_componente, cr.id_rubrica_criterio)}
                                   title="Eliminar criterio"
                                   type="button"
                                 >
@@ -756,11 +739,7 @@ export default function RubricaEditorPage() {
                   </div>
 
                   <div className="reCompActions">
-                    <button
-                      className="reBtn reBtnPrimary"
-                      onClick={() => addCriterio(comp.id_rubrica_componente)}
-                      type="button"
-                    >
+                    <button className="reBtn reBtnPrimary" onClick={() => addCriterio(comp.id_rubrica_componente)} type="button">
                       <Plus className="iconSm" /> Añadir criterio a este componente
                     </button>
                   </div>
@@ -777,12 +756,7 @@ export default function RubricaEditorPage() {
 
           {/* FOOTER */}
           <div className="reFooter">
-            <button
-              className="reBtn reBtnPrimary"
-              onClick={saveRubrica}
-              disabled={loading}
-              type="button"
-            >
+            <button className="reBtn reBtnPrimary" onClick={saveRubrica} disabled={loading} type="button">
               <Save className="iconSm" /> Guardar rúbrica
             </button>
 
@@ -795,21 +769,10 @@ export default function RubricaEditorPage() {
         </div>
       </div>
 
-      {/* ✅ Toast abajo-izquierda (si ya tienes estilos en otros módulos, reutiliza esas clases) */}
+      {/* ✅ Toast abajo-derecha (usa el CSS .reToastBL) */}
       {toast ? (
-        <div
-          className={`toast toast-${toast.type}`}
-          style={{
-            position: "fixed",
-            left: 18,
-            bottom: 18,
-            zIndex: 9999,
-          }}
-          onClick={() => setToast(null)}
-          role="status"
-          aria-live="polite"
-        >
-          {toast.message}
+        <div className={`reToastBL ${toast.type}`} onClick={() => setToast(null)} role="status" aria-live="polite">
+          <div className="reToastMsg">{toast.message}</div>
         </div>
       ) : null}
     </div>

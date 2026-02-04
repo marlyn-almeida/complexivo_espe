@@ -10,7 +10,6 @@ function roleLabel(role: number | null) {
     case 1:
       return "Súper Administrador";
     case 2:
-      // ✅ Ajustado para tu “director/apoyo”
       return "Director / Apoyo";
     case 3:
       return "Docente";
@@ -24,7 +23,6 @@ function roleDesc(role: number | null) {
     case 1:
       return "Gestión global";
     case 2:
-      // ✅ Ajustado: ya no es “admin operativo”, es académico
       return "Gestión académica (carrera)";
     case 3:
       return "Tribunales y calificación";
@@ -38,7 +36,6 @@ function avatarText(role: number | null) {
     case 1:
       return "SA";
     case 2:
-      // ✅ Puedes dejar AD si quieres, pero “DC” queda más claro
       return "DC";
     case 3:
       return "DO";
@@ -89,6 +86,20 @@ function MenuIcon({ name }: { name: IconName }) {
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M12 12a4 4 0 1 0-4-4a4 4 0 0 0 4 4Zm0 2c-4.4 0-8 2.3-8 5.2V21h16v-1.8C20 16.3 16.4 14 12 14Z" />
+        </svg>
+      );
+
+    case "estudiantes":
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 12a4 4 0 1 0-4-4a4 4 0 0 0 4 4Zm8 9v-1.7c0-2.4-3.2-4.3-7.2-4.3h-1.6C7.2 14.999 4 16.9 4 19.3V21h16Z" />
+        </svg>
+      );
+
+    case "tribunales":
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 2 4 6v6c0 5 3.4 9.4 8 10 4.6-.6 8-5 8-10V6l-8-4Zm-2 14-3-3 1.4-1.4L10 13.2l5.6-5.6L17 9l-7 7Z" />
         </svg>
       );
 
@@ -145,21 +156,15 @@ export default function Sidebar({
 
   return (
     <>
-      {isOpen && !pinned && (
-        <div className="sidebar-overlay" onClick={onClose} />
-      )}
+      {isOpen && !pinned && <div className="sidebar-overlay" onClick={onClose} />}
 
-      <aside
-        className={`sidebar ${isOpen ? "open" : ""} ${pinned ? "pinned" : ""}`}
-      >
+      <aside className={`sidebar ${isOpen ? "open" : ""} ${pinned ? "pinned" : ""}`}>
         <div className="sidebar-header">
           <div className="sidebar-badge">{avatarText(role)}</div>
 
           <div>
             <div className="sidebar-title">Menú</div>
-            <div className="sidebar-subtitle">
-              {role ? roleLabel(role) : "—"}
-            </div>
+            <div className="sidebar-subtitle">{role ? roleLabel(role) : "—"}</div>
           </div>
 
           <button
@@ -186,9 +191,7 @@ export default function Sidebar({
                     <NavLink
                       key={it.to}
                       to={it.to}
-                      className={({ isActive }) =>
-                        `sidebar-link ${isActive ? "active" : ""}`
-                      }
+                      className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}
                       onClick={() => {
                         if (!pinned) onClose();
                       }}

@@ -1,60 +1,348 @@
-/* src/pages/rubrica/RubricasPeriodoPage.css
-   Este módulo usa el CSS global (page/card/table/buttons).
-   Aquí solo dejamos micro-ajustes propios.
-*/
+/* src/pages/rubrica/RubricasPeriodoPage.css */
 
-/* Columna acciones fija y ordenada */
-.thActions {
-  width: 240px;
+/* ===============================
+   BASE
+   =============================== */
+.wrap {
+  padding: 16px 18px 28px;
 }
 
-/* Botón "Abrir rúbrica" compacto y consistente */
-.actions .btnPrimary {
-  padding: 10px 14px;
-  height: 44px;
+.containerFull {
+  width: 100%;
+  max-width: 100%;
+}
+
+.rubricasPage {
+  width: 100%;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans",
+    "Liberation Sans";
+}
+
+/* ===============================
+   HERO
+   =============================== */
+.rubricasPage .hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
+  background: linear-gradient(90deg, #0b6034 0%, #147a4a 100%);
+  border-radius: 14px;
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.1);
+}
+
+.rubricasPage .heroLeft {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.rubricasPage .heroLogo {
+  width: 46px;
+  height: 46px;
+  object-fit: contain;
+  background: rgba(255, 255, 255, 0.12);
   border-radius: 12px;
+  padding: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  flex: 0 0 auto;
+}
+
+.rubricasPage .heroText {
+  min-width: 0;
+}
+
+.rubricasPage .heroTitle {
+  margin: 0;
+  color: #fff;
   font-weight: 900;
+  font-size: 22px;
+  line-height: 1.1;
+  letter-spacing: 0.2px;
+}
+
+.rubricasPage .heroSubtitle {
+  margin: 6px 0 0;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 13px;
+}
+
+/* ===============================
+   BOX
+   =============================== */
+.rubricasPage .box {
+  margin-top: 14px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.09);
+  border-radius: 14px;
+  padding: 16px 16px 18px;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.05);
+}
+
+.rubricasPage .boxHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-bottom: 10px;
+}
+
+.rubricasPage .sectionTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 900;
+  color: rgba(0, 0, 0, 0.82);
+}
+
+.rubricasPage .sectionTitleIcon {
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  background: rgba(10, 79, 40, 0.1);
+  border: 1px solid rgba(10, 79, 40, 0.18);
+  display: grid;
+  place-items: center;
+  color: #0a4f28;
+}
+
+/* ===============================
+   ICONOS (pequeños)
+   =============================== */
+.rubricasPage .iconSm {
+  width: 16px;
+  height: 16px;
+  opacity: 0.95;
+}
+
+/* TH inline con icono como Plantillas */
+.rubricasPage .thInline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   white-space: nowrap;
 }
 
-/* Alineación general de celdas */
-.table td {
-  vertical-align: top;
+/* ===============================
+   SEARCH
+   =============================== */
+.rubricasPage .searchWrap {
+  position: relative;
+  width: min(520px, 100%);
 }
 
-/* Que la columna de acciones no se desarme */
-.actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  flex-wrap: nowrap;
+.rubricasPage .searchIcon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  color: rgba(0, 0, 0, 0.45);
 }
 
-/* Suaviza hover de fila (si tu global no lo hace) */
-.table tbody tr:hover {
-  background: rgba(0, 0, 0, 0.03);
+.rubricasPage .search {
+  width: 100%;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  padding: 0 12px 0 40px;
+  outline: none;
+  font-weight: 400;
+  font-size: 14.5px;
 }
 
-/* Mejor legibilidad en pantallas pequeñas */
-@media (max-width: 820px) {
-  .thActions {
-    width: 180px;
-  }
-
-  .actions .btnPrimary {
-    height: 40px;
-    padding: 8px 12px;
-    border-radius: 12px;
-  }
+.rubricasPage .search:focus {
+  border-color: rgba(10, 79, 40, 0.35);
+  box-shadow: 0 0 0 4px rgba(10, 79, 40, 0.12);
 }
-/* RubricasPeriodoPage.css (solo ajustes propios) */
 
+/* ===============================
+   TABLE WRAP
+   =============================== */
+.rubricasPage .tableWrap {
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  margin-top: 12px;
+
+  /* ✅ clave para ver esquinas redondeadas del header */
+  overflow: hidden;
+}
+
+.rubricasPage .table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  min-width: 980px;
+  table-layout: fixed;
+}
+
+/* HEAD */
+.rubricasPage .table thead th {
+  text-align: center;
+  font-size: 13.5px;
+  font-weight: 950;
+  color: rgba(255, 255, 255, 0.96);
+  background: #0b6034; /* sólido */
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  padding: 12px 10px;
+  white-space: nowrap;
+}
+
+/* ✅ esquinas redondeadas en el header */
+.rubricasPage .table thead th:first-child {
+  border-top-left-radius: 12px;
+}
+
+.rubricasPage .table thead th:last-child {
+  border-top-right-radius: 12px;
+}
+
+/* BODY */
+.rubricasPage .table tbody td {
+  text-align: center;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  padding: 10px 10px;
+  vertical-align: middle;
+  font-size: 14.5px;
+  color: rgba(0, 0, 0, 0.72);
+  font-weight: 400;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Acciones */
 .rubricasPage .thActions {
   width: 240px;
 }
 
-.rubricasPage .actions .btnPrimary {
-  padding: 10px 14px;
-  height: 44px;
-  border-radius: 12px;
+.rubricasPage .tdActions {
+  text-align: center;
+  white-space: nowrap;
+}
+
+.rubricasPage .actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+/* Nombre */
+.rubricasPage .nameMain {
+  font-weight: 850;
+  color: rgba(0, 0, 0, 0.86);
+}
+
+.rubricasPage .nameSub {
+  margin-top: 6px;
+  color: rgba(0, 0, 0, 0.56);
+  font-size: 13px;
+}
+
+/* BADGES */
+.rubricasPage .badgeActive,
+.rubricasPage .badgeInactive {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  min-width: 108px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-weight: 900;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  white-space: nowrap;
+}
+
+.rubricasPage .badgeActive {
+  background: #dfeee7;
+  color: #0a4f28;
+  border-color: rgba(10, 79, 40, 0.18);
+}
+
+.rubricasPage .badgeInactive {
+  background: #f0f0f0;
+  color: rgba(0, 0, 0, 0.65);
+}
+
+/* Botón */
+.rubricasPage .btnPrimary {
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(10, 79, 40, 0.28);
+  background: #0a4f28;
+  color: #fff;
+  font-weight: 900;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rubricasPage .btnPrimary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Empty */
+.rubricasPage .emptyCell {
+  padding: 34px 16px !important;
+}
+
+.rubricasPage .empty {
+  display: grid;
+  place-items: center;
+  gap: 10px;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.rubricasPage .emptyText {
+  font-weight: 700;
+}
+
+/* Hover (sin zebra) */
+.rubricasPage .table tbody tr,
+.rubricasPage .table tbody tr:nth-child(odd),
+.rubricasPage .table tbody tr:nth-child(even) {
+  background: #fff !important;
+}
+
+.rubricasPage .table tbody tr:hover,
+.rubricasPage .table tbody tr:nth-child(odd):hover,
+.rubricasPage .table tbody tr:nth-child(even):hover {
+  background: rgba(0, 0, 0, 0.03) !important;
+}
+
+/* Responsive */
+@media (max-width: 820px) {
+  .rubricasPage .hero {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .rubricasPage .heroTitle {
+    font-size: 19px;
+  }
+
+  .rubricasPage .actions {
+    gap: 8px;
+  }
+
+  .rubricasPage .table {
+    table-layout: auto;
+  }
+
+  .rubricasPage .thActions {
+    width: 180px;
+  }
 }

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axiosClient from "../../api/axiosClient";
 
-import { Search, List } from "lucide-react";
+import { Search, List, Hash, Settings } from "lucide-react";
 import escudoESPE from "../../assets/escudo.png";
 import "./RubricasPeriodoPage.css";
 
@@ -87,9 +87,26 @@ export default function RubricasPeriodoPage() {
             <table className="table">
               <thead>
                 <tr>
-                  <th>Período</th>
-                  <th># Carreras</th>
-                  <th className="thActions">Acciones</th>
+                  <th>
+                    <span className="thInline">
+                      <List className="iconSm" />
+                      Período
+                    </span>
+                  </th>
+
+                  <th>
+                    <span className="thInline">
+                      <Hash className="iconSm" />
+                      # Carreras
+                    </span>
+                  </th>
+
+                  <th className="thActions">
+                    <span className="thInline">
+                      <Settings className="iconSm" />
+                      Acciones
+                    </span>
+                  </th>
                 </tr>
               </thead>
 
