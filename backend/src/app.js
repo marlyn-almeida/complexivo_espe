@@ -4,6 +4,7 @@ require("dotenv").config();
 
 const { auth } = require("./middlewares/auth.middleware");
 const { attachScope } = require("./middlewares/scope.middleware");
+const { attachCarreraPeriodoCtx } = require("./middlewares/ctx.middleware"); // ✅ NUEVO
 
 const app = express();
 
@@ -22,10 +23,15 @@ app.get("/api/health", (req, res) => {
 });
 
 // =========================
-// RUTAS PROTEGIDAS (JWT + SCOPE rol 2)
+// RUTAS PROTEGIDAS (JWT + SCOPE rol 2 + CTX CP)
 // =========================
 const protectedApi = express.Router();
-protectedApi.use(auth, attachScope);
+
+// ✅ Orden correcto:
+// 1) auth → carga req.user
+// 2) attachScope → carga req.user.scope (solo ADMIN)
+// 3) attachCarreraPeriodoCtx → carga req.ctx.id_carrera_periodo (solo ADMIN)
+protectedApi.use(auth, attachScope, attachCarreraPeriodoCtx);
 
 // OJO: desde aquí todo requiere token
 protectedApi.use("/perfil", require("./routes/perfil.routes"));
@@ -44,8 +50,6 @@ protectedApi.use("/docentes", require("./routes/docente.routes"));
 // Rutas:
 //   GET  /api/docentes/:id/roles
 //   PUT  /api/docentes/:id/roles
-// Nota: Este router define rutas completas con /docentes/:id/roles,
-// por eso se monta en "/" y no en "/docentes"
 protectedApi.use("/", require("./routes/docenteRoles.routes"));
 
 // =========================
@@ -68,9 +72,19 @@ protectedApi.use("/tribunales-estudiantes", require("./routes/tribunal_estudiant
 
 protectedApi.use("/calificaciones", require("./routes/calificacion.routes"));
 protectedApi.use("/actas", require("./routes/acta.routes"));
+
 // ✅ PLANTILLAS ACTA WORD
 protectedApi.use("/plantillas-acta", require("./routes/plantillaActaWord.routes"));
 
+// =========================
+// ✅ NUEVOS MÓDULOS (ROL 2)
+// =========================
+protectedApi.use("/casos-estudio", require("./routes/casos_estudio.routes"));
+protectedApi.use("/entregas-caso", require("./routes/entregas_caso.routes"));
+protectedApi.use("/plan-evaluacion", require("./routes/plan_evaluacion.routes"));
+protectedApi.use("/calificadores-generales", require("./routes/calificadores_generales.routes"));
+protectedApi.use("/nota-teorico", require("./routes/nota_teorico.routes"));
+protectedApi.use("/ponderaciones-examen", require("./routes/ponderacion.routes"));
 
 // =========================
 // RÚBRICAS (nuevo flujo: 1 rubrica por período)
@@ -99,9 +113,9 @@ protectedApi.use("/niveles", require("./routes/nivel.routes"));
 // Otros catálogos agrupados
 protectedApi.use("/", require("./routes/catalogos.routes"));
 
-// (Opcional) DEBUG para confirmar scope
+// (Opcional) DEBUG para confirmar scope + ctx
 protectedApi.get("/debug/whoami", (req, res) => {
-  res.json({ ok: true, user: req.user });
+  res.json({ ok: true, user: req.user, ctx: req.ctx });
 });
 
 // Montar el router protegido
