@@ -1,4 +1,4 @@
-// src/routes/AppRoutes.tsx
+// ✅ src/routes/AppRoutes.tsx
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import Layout from "../components/layout/Layout";
@@ -16,6 +16,7 @@ import CarreraAdminsPage from "../pages/carreras/CarreraAdminsPage";
 
 import DocentesPage from "../pages/docentes/DocentesPage";
 import EstudiantesPage from "../pages/estudiantes/EstudiantesPage";
+import EstudianteAsignacionesPage from "../pages/estudiantes/EstudianteAsignacionesPage"; // ✅ NUEVO
 import PerfilPage from "../pages/perfil/PerfilPage";
 
 import RubricasPeriodoPage from "../pages/rubrica/RubricasPeriodoPage";
@@ -189,6 +190,16 @@ export default function AppRoutes() {
             element={
               <ProtectedRoute allowRoles={[2]}>
                 <EstudiantesPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* ✅ NUEVO: Asignaciones por estudiante (ROL 2) */}
+          <Route
+            path="/estudiantes/:idEstudiante/asignaciones"
+            element={
+              <ProtectedRoute allowRoles={[2]}>
+                <EstudianteAsignacionesPage />
               </ProtectedRoute>
             }
           />

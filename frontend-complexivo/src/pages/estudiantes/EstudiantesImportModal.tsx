@@ -6,20 +6,11 @@ import { estudiantesService } from "../../services/estudiantes.service";
 
 import {
   downloadPlantillaEstudiantesCSV,
-  // ✅ si tienes XLSX, úsalo; si no, quita este import y el botón XLSX
   downloadPlantillaEstudiantesXLSX,
   parseExcelEstudiantes,
 } from "../../services/estudiantesImport.service";
 
-import {
-  Download,
-  FileSpreadsheet,
-  Info,
-  Upload,
-  GraduationCap,
-  X,
-  AlertTriangle,
-} from "lucide-react";
+import { Download, FileSpreadsheet, Info, Upload, GraduationCap, X, AlertTriangle } from "lucide-react";
 
 // ✅ REUSA el mismo CSS de Docentes
 import "../docentes/DocentesImportModal.css";
@@ -34,6 +25,14 @@ function onlyDigits(v: any) {
 function isValidCedulaMin(ced: string) {
   const d = onlyDigits(ced);
   return d.length >= 10;
+}
+
+function isValidUsuario(u: string) {
+  const v = String(u ?? "").trim();
+  if (!v) return false;
+  if (/\s/.test(v)) return false;
+  if (v.length < 4) return false;
+  return true;
 }
 
 export default function EstudiantesImportModal({
@@ -89,10 +88,8 @@ export default function EstudiantesImportModal({
   }
 
   function labelCP(cp: any) {
-    // ✅ robusto: usa lo que venga
     const carrera = (cp.nombre_carrera ?? cp.codigo_carrera) || "Carrera";
     const periodo = (cp.codigo_periodo ?? cp.descripcion_periodo) || "Período";
-
     return `${carrera} — ${periodo}`;
   }
 
@@ -110,7 +107,6 @@ export default function EstudiantesImportModal({
   }
 
   function onDownloadXLSX() {
-    // ⚠️ Si no tienes esta función, elimina este botón y el import.
     downloadPlantillaEstudiantesXLSX();
     onToast("Plantilla descargada (Excel).", "success");
   }
@@ -148,9 +144,8 @@ export default function EstudiantesImportModal({
       for (const r of rows as any[]) {
         const rowNum = Number(r.__rowNumber ?? 0) || 0;
 
-        // ✅ Tu parser puede mapear desde headers “bonitos” a estas keys internas,
-        // pero aquí NO mostramos nada de BD en pantalla.
         const idInst = String(r.id_institucional_estudiante ?? "").trim();
+        const usuario = String(r.nombre_usuario ?? "").trim(); // ✅ CLAVE
         const cedulaRaw = String(r.cedula ?? "").trim();
         const cedula = onlyDigits(cedulaRaw);
 
@@ -163,12 +158,21 @@ export default function EstudiantesImportModal({
         const labelBase =
           `${idInst || "SIN-ID"} — ${nombres} ${apellidos}`.trim() || `Fila ${rowNum || ""}`;
 
-        // ✅ VALIDACIONES (sin mostrar nombres de columnas)
+        // ✅ VALIDACIONES
         if (!idInst || !nombres || !apellidos) {
           om.push({
             rowNum,
             label: labelBase,
             reason: "Faltan datos obligatorios (identificación y nombres).",
+          });
+          continue;
+        }
+
+        if (!isValidUsuario(usuario)) {
+          om.push({
+            rowNum,
+            label: labelBase,
+            reason: "Usuario inválido (obligatorio, sin espacios y mínimo 4 caracteres).",
           });
           continue;
         }
@@ -179,11 +183,7 @@ export default function EstudiantesImportModal({
         }
 
         if (!isValidCedulaMin(cedula)) {
-          om.push({
-            rowNum,
-            label: labelBase,
-            reason: "Cédula inválida (mínimo 10 dígitos).",
-          });
+          om.push({ rowNum, label: labelBase, reason: "Cédula inválida (mínimo 10 dígitos)." });
           continue;
         }
 
@@ -191,6 +191,7 @@ export default function EstudiantesImportModal({
           await estudiantesService.create({
             id_carrera_periodo: Number(cpId),
             id_institucional_estudiante: idInst,
+            nombre_usuario: usuario, // ✅ FIX REAL: enviar al backend
             cedula,
             nombres_estudiante: nombres,
             apellidos_estudiante: apellidos,

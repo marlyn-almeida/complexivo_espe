@@ -1,5 +1,6 @@
 // ✅ src/pages/estudiantes/EstudiantesPage.tsx
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import type { Estudiante, Estado01 } from "../../types/estudiante";
 import type { CarreraPeriodo } from "../../types/carreraPeriodo";
@@ -49,6 +50,8 @@ function isActivo(v: any): boolean {
 }
 
 export default function EstudiantesPage() {
+  const navigate = useNavigate();
+
   // ===========================
   // DATA
   // ===========================
@@ -108,6 +111,11 @@ export default function EstudiantesPage() {
     const periodo = (cp as any).codigo_periodo ?? (cp as any).descripcion_periodo ?? "Período";
     return `${carrera} — ${periodo}`;
   }, [carreraPeriodos, selectedCP]);
+
+  // ✅ NUEVO: navegar a pantalla de Asignaciones del estudiante
+  function goAsignaciones(e: Estudiante) {
+    navigate(`/estudiantes/${e.id_estudiante}/asignaciones`);
+  }
 
   // ===========================
   // LOAD
@@ -306,8 +314,6 @@ export default function EstudiantesPage() {
               Importar
             </button>
 
-            {/* ✅ QUITADO: Botón Plantilla (ya está dentro de Importar) */}
-
             <button className="heroBtn primary" onClick={openCreate} disabled={loading}>
               <Plus className="heroBtnIcon" />
               Nuevo estudiante
@@ -422,7 +428,7 @@ export default function EstudiantesPage() {
                     </span>
                   </th>
 
-                  {/* ✅ NUEVO: Username */}
+                  {/* ✅ Username */}
                   <th className="thCenter thUser">
                     <span className="thFlex">
                       <User size={16} /> Usuario
@@ -482,7 +488,6 @@ export default function EstudiantesPage() {
 
                         <td className="mono tdCenter">{cedula}</td>
 
-                        {/* ✅ NUEVO: Username */}
                         <td className="tdCenter mono">{username}</td>
 
                         <td className="tdCenter tdName">
@@ -509,6 +514,16 @@ export default function EstudiantesPage() {
 
                         <td className="tdActions tdCenter">
                           <div className="actions">
+                            {/* ✅ NUEVO: Asignaciones */}
+                            <button
+                              className="iconBtn iconBtn_primary"
+                              title="Asignaciones"
+                              onClick={() => goAsignaciones(e)}
+                            >
+                              <Plus className="iconAction" />
+                              <span className="tooltip">Asignaciones</span>
+                            </button>
+
                             <button className="iconBtn iconBtn_neutral" title="Ver" onClick={() => openView(e)}>
                               <Eye className="iconAction" />
                               <span className="tooltip">Ver</span>
@@ -574,11 +589,7 @@ export default function EstudiantesPage() {
       )}
 
       {showViewModal && viewEstudiante && (
-        <EstudianteViewModal
-          estudiante={viewEstudiante}
-          selectedCPLabel={selectedCPLabel}
-          onClose={closeView}
-        />
+        <EstudianteViewModal estudiante={viewEstudiante} selectedCPLabel={selectedCPLabel} onClose={closeView} />
       )}
 
       <EstudiantesImportModal

@@ -38,7 +38,7 @@ const FRIENDLY_HEADERS = [
 const KEY_ALIASES: Record<string, string[]> = {
   idInst: ["id institucional", "id", "identificacion", "id estudiante", "codigo", "matricula"],
 
-  // ✅ NUEVO: usuario
+  // ✅ usuario
   usuario: ["usuario", "username", "user", "nombre de usuario", "nickname", "cuenta"],
 
   cedula: ["cedula", "c i", "ci", "documento", "numero de cedula", "nro cedula"],
@@ -86,6 +86,7 @@ export async function parseExcelEstudiantes(
     EstudianteCreateDTO & {
       __rowNumber: number;
       cedula: string;
+      nombre_usuario: string;
     }
   >
 > {
@@ -110,7 +111,7 @@ export async function parseExcelEstudiantes(
     const rowNumber = i + 2;
 
     const idInst = asString(pickByAliases(row, KEY_ALIASES.idInst));
-    const usuario = asString(pickByAliases(row, KEY_ALIASES.usuario)); // ✅ NUEVO
+    const usuario = asString(pickByAliases(row, KEY_ALIASES.usuario)); // ✅
     const cedula = onlyDigits(pickByAliases(row, KEY_ALIASES.cedula));
     const nombres = asString(pickByAliases(row, KEY_ALIASES.nombres));
     const apellidos = asString(pickByAliases(row, KEY_ALIASES.apellidos));
@@ -138,7 +139,7 @@ export async function parseExcelEstudiantes(
       id_carrera_periodo: 0, // se setea desde el modal
 
       id_institucional_estudiante: idInst,
-      nombre_usuario: usuario, // ✅ NUEVO
+      nombre_usuario: usuario.trim(), // ✅ IMPORTANTÍSIMO
       cedula,
 
       nombres_estudiante: nombres,
