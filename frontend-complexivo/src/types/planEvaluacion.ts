@@ -1,15 +1,14 @@
 export type PlanEvaluacion = {
   id_plan_evaluacion: number;
   id_carrera_periodo: number;
-
-  nombre: string;
-  descripcion?: string | null;
-
-  estado: number;
-  created_at: string;
+  nombre_plan: string;
+  descripcion_plan?: string | null;
+  estado: 0 | 1;
+  created_at?: string;
+  updated_at?: string;
 };
 
 export type PlanEvaluacionCreate = {
-  nombre: string;
-  descripcion?: string;
+  nombre_plan: string;
+  descripcion_plan?: string | null;
 };

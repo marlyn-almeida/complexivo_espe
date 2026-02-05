@@ -1,41 +1,69 @@
 /* src/pages/casosEstudio/CasoEstudioViewModal.css */
 
-/* avatar un poco diferente para “Caso” */
-.ceAvatar {
+/* ===============================
+   VIEW MODAL – CASO DE ESTUDIO
+   Solo estilos específicos
+   (los dm* base vienen de CasoEstudioModal.css)
+   =============================== */
+
+.dmAvatar {
   background: rgba(10, 79, 40, 0.10);
   color: #0a4f28;
 }
 
-/* nombre un pelín más compacto */
-.ceName {
+.dmName {
   font-size: 16.5px;
   font-weight: 950;
 }
 
-/* mini info */
-.ceMiniItem {
+/* Mini info */
+.dmMiniItem {
   display: inline-flex;
   align-items: center;
   gap: 6px;
 }
 
-.ceMiniDot {
+.dmMiniDot {
   opacity: 0.4;
 }
 
-/* texto largo */
-.ceWrap {
+.dmWrap {
   word-break: break-word;
   line-height: 1.4;
 }
 
-/* grid con más aire */
-.ceGrid {
+/* Badge (estado) */
+.dmBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.dmBadgeOk {
+  background: #e4f2ea;
+  color: #0a4f28;
+}
+
+.dmBadgeOff {
+  background: #f0f0f0;
+  color: #555;
+}
+
+/* Grid con más aire */
+.dmGrid {
   gap: 16px;
 }
 
 @media (max-width: 600px) {
-  .ceName {
+  .dmName {
     font-size: 15.5px;
   }
 }
