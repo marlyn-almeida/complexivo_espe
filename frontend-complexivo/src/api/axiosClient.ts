@@ -10,12 +10,23 @@ function normalizeBaseURL() {
   return raw.replace(/\/$/, "") + "/api";
 }
 
+// ✅ clave única para guardar el CP activo (carrera_periodo)
+const ACTIVE_CP_KEY = "active_carrera_periodo_id";
+
+// ✅ helper: lee CP activo desde localStorage (si existe y es número válido)
+function getActiveCarreraPeriodoId(): number | null {
+  const v = localStorage.getItem(ACTIVE_CP_KEY);
+  if (!v) return null;
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
 const axiosClient = axios.create({
   baseURL: normalizeBaseURL(),
   headers: { "Content-Type": "application/json" },
 });
 
-// ✅ REQUEST: adjunta token
+// ✅ REQUEST: adjunta token + (MUY IMPORTANTE) adjunta carrera_periodo activo
 axiosClient.interceptors.request.use(
   (config) => {
     const token = getToken();
@@ -23,6 +34,14 @@ axiosClient.interceptors.request.use(
       config.headers = config.headers ?? {};
       (config.headers as any).Authorization = `Bearer ${token}`;
     }
+
+    // ✅ CLAVE: enviar CP activo SIEMPRE (para Rol 2 y módulos por carrera-periodo)
+    const cpId = getActiveCarreraPeriodoId();
+    if (cpId) {
+      config.headers = config.headers ?? {};
+      (config.headers as any)["x-carrera-periodo-id"] = String(cpId);
+    }
+
     return config;
   },
   (error) => Promise.reject(error)
@@ -61,8 +80,8 @@ function buildUserMessage(status?: number, data?: any, fallback?: string) {
     // si manda string
     if (typeof first === "string") return `${base}: ${first}`;
     // si manda { msg } o { message }
-    if (first.msg) return `${base}: ${first.msg}`;
-    if (first.message) return `${base}: ${first.message}`;
+    if ((first as any).msg) return `${base}: ${(first as any).msg}`;
+    if ((first as any).message) return `${base}: ${(first as any).message}`;
   }
 
   // Errores típicos por status
@@ -120,3 +139,9 @@ axiosClient.interceptors.response.use(
 );
 
 export default axiosClient;
+
+// ✅ EXPORT opcional: por si quieres setear CP desde cualquier parte del front
+export function setActiveCarreraPeriodoId(id: number | null) {
+  if (!id || id <= 0) localStorage.removeItem(ACTIVE_CP_KEY);
+  else localStorage.setItem(ACTIVE_CP_KEY, String(id));
+}

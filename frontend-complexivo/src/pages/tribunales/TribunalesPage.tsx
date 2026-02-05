@@ -1,3 +1,4 @@
+// src/pages/tribunales/TribunalesPage.tsx
 import { useEffect, useMemo, useState } from "react";
 import {
   Plus,
@@ -32,6 +33,9 @@ import { calificadoresGeneralesService } from "../../services/calificadoresGener
 
 import TribunalAsignacionesModal from "./TribunalAsignacionesModal";
 import TribunalViewModal from "./TribunalViewModal";
+
+// ✅ CLAVE: guardar CP activo para que axiosClient mande header x-carrera-periodo-id
+import { setActiveCarreraPeriodoId } from "../../api/axiosClient";
 
 const PAGE_SIZE = 10;
 
@@ -104,8 +108,8 @@ export default function TribunalesPage() {
   function selectedCPLabel(): string {
     const cp = carreraPeriodos.find((x) => Number(x.id_carrera_periodo) === Number(selectedCP));
     if (!cp) return "";
-    const carrera = cp.nombre_carrera ?? "Carrera";
-    const periodo = cp.codigo_periodo ?? cp.descripcion_periodo ?? "Período";
+    const carrera = (cp as any).nombre_carrera ?? "Carrera";
+    const periodo = (cp as any).codigo_periodo ?? (cp as any).descripcion_periodo ?? "Período";
     return `${carrera} — ${periodo}`;
   }
 
@@ -125,22 +129,55 @@ export default function TribunalesPage() {
       loadAll();
       loadDocentesByCP();
       loadPlanAndCalificadores();
+    } else {
+      setTribunales([]);
+      setDocentes([]);
+      setPlan(null);
+      setCg1("");
+      setCg2("");
+      setCg3("");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCP, mostrarInactivos]);
 
+  // ✅ Importante: usa CP guardado si existe
   async function loadCarreraPeriodos() {
     try {
       setLoading(true);
       const cps = await carreraPeriodoService.list(false);
       setCarreraPeriodos(cps);
 
-      const first = cps.find((x) => Boolean(x.estado)) ?? cps[0];
-      if (first) setSelectedCP(first.id_carrera_periodo);
+      // 1) intentar CP guardado
+      const savedRaw = localStorage.getItem("active_carrera_periodo_id");
+      const saved = savedRaw ? Number(savedRaw) : 0;
+
+      const savedExists =
+        saved > 0 &&
+        cps.some(
+          (x: any) => Number(x.id_carrera_periodo) === saved && Boolean((x as any).estado)
+        );
+
+      if (savedExists) {
+        setSelectedCP(saved);
+        setActiveCarreraPeriodoId(saved); // ✅ header para todo el sistema
+        return;
+      }
+
+      // 2) fallback: primer CP activo
+      const first = (cps ?? []).find((x: any) => Boolean((x as any).estado)) ?? (cps ?? [])[0];
+
+      if (first) {
+        setSelectedCP((first as any).id_carrera_periodo);
+        setActiveCarreraPeriodoId((first as any).id_carrera_periodo);
+      } else {
+        setSelectedCP("");
+        setActiveCarreraPeriodoId(null);
+      }
     } catch {
       showToast("Error al cargar Carrera–Período", "error");
       setCarreraPeriodos([]);
       setSelectedCP("");
+      setActiveCarreraPeriodoId(null);
     } finally {
       setLoading(false);
     }
@@ -150,8 +187,8 @@ export default function TribunalesPage() {
     if (!selectedCP) return;
 
     try {
-      const cp = carreraPeriodos.find((x) => Number(x.id_carrera_periodo) === Number(selectedCP));
-      const carreraId = cp?.id_carrera;
+      const cp = carreraPeriodos.find((x) => Number((x as any).id_carrera_periodo) === Number(selectedCP));
+      const carreraId = (cp as any)?.id_carrera;
 
       if (!carreraId) {
         setDocentes([]);
@@ -205,7 +242,7 @@ export default function TribunalesPage() {
       setLoadingPlan(false);
     }
 
-    // CALIFICADORES (trae activos y pre-llena 3 slots)
+    // CALIFICADORES
     try {
       const rows = await calificadoresGeneralesService.list(Number(selectedCP), false);
       const ids = (rows ?? [])
@@ -224,16 +261,19 @@ export default function TribunalesPage() {
   // ===== FILTRO + PAGINACIÓN =====
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
-    return tribunales
-      .filter((t) => (mostrarInactivos ? true : isActivo(t.estado)))
+    return (tribunales ?? [])
+      .filter((t) => (mostrarInactivos ? true : isActivo((t as any).estado)))
       .filter((t) => {
         if (!q) return true;
-        return (t.nombre_tribunal || "").toLowerCase().includes(q) || String(t.caso ?? "").toLowerCase().includes(q);
+        return (
+          String((t as any).nombre_tribunal || "").toLowerCase().includes(q) ||
+          String((t as any).caso ?? "").toLowerCase().includes(q)
+        );
       });
   }, [tribunales, search, mostrarInactivos]);
 
   const total = filtered.length;
-  const activos = filtered.filter((x) => isActivo(x.estado)).length;
+  const activos = filtered.filter((x) => isActivo((x as any).estado)).length;
   const inactivos = total - activos;
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
@@ -251,19 +291,19 @@ export default function TribunalesPage() {
 
       const [a, est, fr] = await Promise.all([
         tribunalEstudiantesService.list({
-          tribunalId: t.id_tribunal,
+          tribunalId: (t as any).id_tribunal,
           includeInactive: true,
           page: 1,
           limit: 100,
         }),
         estudiantesService.list({
-          carreraPeriodoId: t.id_carrera_periodo,
+          carreraPeriodoId: Number((t as any).id_carrera_periodo),
           includeInactive: false,
           page: 1,
           limit: 100,
         }),
         franjaHorarioService.list({
-          carreraPeriodoId: t.id_carrera_periodo,
+          carreraPeriodoId: Number((t as any).id_carrera_periodo),
           includeInactive: false,
           page: 1,
           limit: 100,
@@ -302,7 +342,7 @@ export default function TribunalesPage() {
       setLoading(true);
 
       await tribunalEstudiantesService.create({
-        id_tribunal: activeTribunalForAsign.id_tribunal,
+        id_tribunal: Number((activeTribunalForAsign as any).id_tribunal),
         id_estudiante: Number(asignForm.id_estudiante),
         id_franja_horario: Number(asignForm.id_franja_horario),
       });
@@ -310,7 +350,7 @@ export default function TribunalesPage() {
       showToast("Asignación creada.", "success");
 
       const a = await tribunalEstudiantesService.list({
-        tribunalId: activeTribunalForAsign.id_tribunal,
+        tribunalId: Number((activeTribunalForAsign as any).id_tribunal),
         includeInactive: true,
         page: 1,
         limit: 100,
@@ -328,15 +368,18 @@ export default function TribunalesPage() {
   async function onToggleAsignEstado(row: TribunalEstudiante) {
     try {
       setLoading(true);
-      const current = estado01(row.estado);
+      const current = estado01((row as any).estado);
 
-      await tribunalEstudiantesService.toggleEstado(row.id_tribunal_estudiante, current as 0 | 1);
+      await tribunalEstudiantesService.toggleEstado(
+        Number((row as any).id_tribunal_estudiante),
+        current as 0 | 1
+      );
 
       showToast(current === 1 ? "Asignación desactivada." : "Asignación activada.", "success");
 
       if (activeTribunalForAsign) {
         const a = await tribunalEstudiantesService.list({
-          tribunalId: activeTribunalForAsign.id_tribunal,
+          tribunalId: Number((activeTribunalForAsign as any).id_tribunal),
           includeInactive: true,
           page: 1,
           limit: 100,
@@ -353,9 +396,9 @@ export default function TribunalesPage() {
   async function onToggleEstado(t: Tribunal) {
     try {
       setLoading(true);
-      const current = estado01(t.estado);
+      const current = estado01((t as any).estado);
 
-      await tribunalesService.toggleEstado(t.id_tribunal, current as 0 | 1);
+      await tribunalesService.toggleEstado(Number((t as any).id_tribunal), current as 0 | 1);
 
       showToast(current === 1 ? "Tribunal desactivado." : "Tribunal activado.", "success");
       await loadAll();
@@ -382,7 +425,6 @@ export default function TribunalesPage() {
     const desiredRaw = [toNum(cg1), toNum(cg2), toNum(cg3)];
     const desired = uniqueNonEmpty(desiredRaw);
 
-    // evita duplicados en UI
     const totalSelected = desiredRaw.filter(Boolean).length;
     if (desired.length !== totalSelected) {
       showToast("No repitas el mismo docente en Calificador 1, 2 y 3.", "error");
@@ -392,25 +434,22 @@ export default function TribunalesPage() {
     try {
       setSavingCG(true);
 
-      // current activos
       const currentRows = await calificadoresGeneralesService.list(Number(selectedCP), false);
       const currentActive = (currentRows ?? []).map((r: any) => ({
         id_cp_calificador_general: Number(r.id_cp_calificador_general),
         id_carrera_docente: Number(r.id_carrera_docente),
       }));
 
-      const currentIds = new Set(currentActive.map((x) => x.id_carrera_docente));
+      const currentIds = new Set(currentActive.map((x: any) => x.id_carrera_docente));
       const desiredIds = new Set(desired);
 
-      const toRemove = currentActive.filter((x) => !desiredIds.has(x.id_carrera_docente));
+      const toRemove = currentActive.filter((x: any) => !desiredIds.has(x.id_carrera_docente));
       const toAdd = desired.filter((id) => !currentIds.has(id));
 
-      // 1) remove
       for (const r of toRemove) {
-        await calificadoresGeneralesService.remove(r.id_cp_calificador_general);
+        await calificadoresGeneralesService.remove(Number(r.id_cp_calificador_general));
       }
 
-      // 2) add
       for (const id_carrera_docente of toAdd) {
         await calificadoresGeneralesService.create(Number(selectedCP), { id_carrera_docente });
       }
@@ -452,7 +491,7 @@ export default function TribunalesPage() {
         </div>
       </div>
 
-      {/* FILTROS (estilo simple, lo puedes mejorar luego si quieres) */}
+      {/* FILTROS */}
       <div className="box">
         <div className="boxHead">
           <div className="sectionTitle">
@@ -468,12 +507,18 @@ export default function TribunalesPage() {
             <select
               className="select"
               value={selectedCP}
-              onChange={(e) => setSelectedCP(e.target.value ? Number(e.target.value) : "")}
+              onChange={(e) => {
+                const next = e.target.value ? Number(e.target.value) : "";
+                setSelectedCP(next);
+                setActiveCarreraPeriodoId(typeof next === "number" ? next : null); // ✅ CLAVE
+              }}
             >
               <option value="">Seleccione Carrera–Período...</option>
-              {carreraPeriodos.map((cp) => (
+              {carreraPeriodos.map((cp: any) => (
                 <option key={cp.id_carrera_periodo} value={cp.id_carrera_periodo}>
-                  {(cp.nombre_carrera ?? "Carrera") + " — " + (cp.codigo_periodo ?? cp.descripcion_periodo ?? "Período")}
+                  {(cp.nombre_carrera ?? "Carrera") +
+                    " — " +
+                    (cp.codigo_periodo ?? cp.descripcion_periodo ?? "Período")}
                 </option>
               ))}
             </select>
@@ -495,10 +540,34 @@ export default function TribunalesPage() {
           </button>
 
           <label className="toggle">
-            <input type="checkbox" checked={mostrarInactivos} onChange={(e) => setMostrarInactivos(e.target.checked)} />
+            <input
+              type="checkbox"
+              checked={mostrarInactivos}
+              onChange={(e) => setMostrarInactivos(e.target.checked)}
+            />
             <span className="slider" />
             <span className="toggleText">Mostrar inactivos</span>
           </label>
+        </div>
+
+        {/* SUMMARY */}
+        <div className="summaryRow" style={{ marginTop: 10 }}>
+          <div className="summaryBoxes">
+            <div className="summaryBox">
+              <span className="summaryLabel">Total</span>
+              <span className="summaryValue">{total}</span>
+            </div>
+
+            <div className="summaryBox active">
+              <span className="summaryLabel">Activos</span>
+              <span className="summaryValue">{activos}</span>
+            </div>
+
+            <div className="summaryBox inactive">
+              <span className="summaryLabel">Inactivos</span>
+              <span className="summaryValue">{inactivos}</span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -523,7 +592,11 @@ export default function TribunalesPage() {
                 <AlertTriangle size={20} />
               </div>
               <div>No se ha configurado un Plan de Evaluación para esta carrera y período.</div>
-              <button className="btnWarn" onClick={() => navigate(`/plan-evaluacion?cp=${selectedCP}`)} disabled={!selectedCP}>
+              <button
+                className="btnWarn"
+                onClick={() => navigate(`/plan-evaluacion?cp=${selectedCP}`)}
+                disabled={!selectedCP}
+              >
                 Configurar Plan Ahora
               </button>
             </div>
@@ -533,7 +606,11 @@ export default function TribunalesPage() {
                 Plan activo: <b>{plan.nombre_plan ?? "Plan de evaluación"}</b>
               </p>
               {plan.descripcion_plan ? <p className="muted">{plan.descripcion_plan}</p> : null}
-              <button className="btnGhost" onClick={() => navigate(`/plan-evaluacion?cp=${selectedCP}`)} disabled={!selectedCP}>
+              <button
+                className="btnGhost"
+                onClick={() => navigate(`/plan-evaluacion?cp=${selectedCP}`)}
+                disabled={!selectedCP}
+              >
                 Ver / Editar Plan
               </button>
             </div>
@@ -554,9 +631,13 @@ export default function TribunalesPage() {
           <div className="cgGrid">
             <div className="cgRow">
               <div className="cgLabel">Calificador General 1</div>
-              <select className="select" value={cg1} onChange={(e) => setCg1(e.target.value ? Number(e.target.value) : "")}>
+              <select
+                className="select"
+                value={cg1}
+                onChange={(e) => setCg1(e.target.value ? Number(e.target.value) : "")}
+              >
                 <option value="">-- Sin asignar --</option>
-                {docentes.map((cd) => (
+                {docentes.map((cd: any) => (
                   <option key={cd.id_carrera_docente} value={cd.id_carrera_docente}>
                     {(cd.apellidos_docente ?? "") + " " + (cd.nombres_docente ?? "")}
                   </option>
@@ -566,9 +647,13 @@ export default function TribunalesPage() {
 
             <div className="cgRow">
               <div className="cgLabel">Calificador General 2</div>
-              <select className="select" value={cg2} onChange={(e) => setCg2(e.target.value ? Number(e.target.value) : "")}>
+              <select
+                className="select"
+                value={cg2}
+                onChange={(e) => setCg2(e.target.value ? Number(e.target.value) : "")}
+              >
                 <option value="">-- Sin asignar --</option>
-                {docentes.map((cd) => (
+                {docentes.map((cd: any) => (
                   <option key={cd.id_carrera_docente} value={cd.id_carrera_docente}>
                     {(cd.apellidos_docente ?? "") + " " + (cd.nombres_docente ?? "")}
                   </option>
@@ -578,9 +663,13 @@ export default function TribunalesPage() {
 
             <div className="cgRow">
               <div className="cgLabel">Calificador General 3</div>
-              <select className="select" value={cg3} onChange={(e) => setCg3(e.target.value ? Number(e.target.value) : "")}>
+              <select
+                className="select"
+                value={cg3}
+                onChange={(e) => setCg3(e.target.value ? Number(e.target.value) : "")}
+              >
                 <option value="">-- Sin asignar --</option>
-                {docentes.map((cd) => (
+                {docentes.map((cd: any) => (
                   <option key={cd.id_carrera_docente} value={cd.id_carrera_docente}>
                     {(cd.apellidos_docente ?? "") + " " + (cd.nombres_docente ?? "")}
                   </option>
@@ -588,7 +677,11 @@ export default function TribunalesPage() {
               </select>
             </div>
 
-            <button className="btnPrimary btnBlock" onClick={onSaveCalificadoresGenerales} disabled={!selectedCP || savingCG}>
+            <button
+              className="btnPrimary btnBlock"
+              onClick={onSaveCalificadoresGenerales}
+              disabled={!selectedCP || savingCG}
+            >
               {savingCG ? "Guardando..." : "Guardar Calificadores Generales"}
             </button>
           </div>
@@ -624,7 +717,7 @@ export default function TribunalesPage() {
                   </td>
                 </tr>
               ) : (
-                paginated.map((t) => {
+                paginated.map((t: any) => {
                   const activo = isActivo(t.estado);
                   return (
                     <tr key={t.id_tribunal}>
@@ -675,7 +768,11 @@ export default function TribunalesPage() {
         </div>
 
         <div className="paginationRow">
-          <button className="btnGhost" disabled={currentPage <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+          <button
+            className="btnGhost"
+            disabled={currentPage <= 1}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+          >
             Anterior
           </button>
           <span className="paginationText">
