@@ -4,7 +4,8 @@ const s = require("../services/tribunal.service");
 module.exports = {
   list: async (req, res, next) => {
     try {
-      res.json(await s.list(req.query, req.user?.scope || null));
+      // ✅ FIX: manda el usuario completo, NO req.user.scope
+      res.json(await s.list(req.query, req.user || null));
     } catch (e) {
       next(e);
     }
@@ -12,7 +13,7 @@ module.exports = {
 
   get: async (req, res, next) => {
     try {
-      res.json(await s.get(req.params.id, req.user?.scope || null));
+      res.json(await s.get(req.params.id, req.user || null));
     } catch (e) {
       next(e);
     }
@@ -20,7 +21,7 @@ module.exports = {
 
   create: async (req, res, next) => {
     try {
-      res.status(201).json(await s.create(req.body, req.user?.scope || null));
+      res.status(201).json(await s.create(req.body, req.user || null));
     } catch (e) {
       next(e);
     }
@@ -28,7 +29,7 @@ module.exports = {
 
   update: async (req, res, next) => {
     try {
-      res.json(await s.update(req.params.id, req.body, req.user?.scope || null));
+      res.json(await s.update(req.params.id, req.body, req.user || null));
     } catch (e) {
       next(e);
     }
@@ -36,13 +37,12 @@ module.exports = {
 
   changeEstado: async (req, res, next) => {
     try {
-      res.json(await s.changeEstado(req.params.id, req.body.estado, req.user?.scope || null));
+      res.json(await s.changeEstado(req.params.id, req.body.estado, req.user || null));
     } catch (e) {
       next(e);
     }
   },
 
-  // ✅ NUEVO: rol 3 (docente) -> ver sus tribunales
   misTribunales: async (req, res, next) => {
     try {
       res.json(await s.misTribunales(req.query, req.user));

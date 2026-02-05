@@ -1,4 +1,6 @@
+import type { Dispatch, SetStateAction } from "react";
 import { ToggleLeft, ToggleRight } from "lucide-react";
+
 import type { Tribunal } from "../../types/tribunal";
 import type { TribunalEstudiante } from "../../types/tribunalEstudiante";
 import type { Estudiante } from "../../types/estudiante";
@@ -16,7 +18,7 @@ type Props = {
   activeTribunalForAsign: Tribunal | null;
 
   asignForm: AsignacionFormState;
-  setAsignForm: React.Dispatch<React.SetStateAction<AsignacionFormState>>;
+  setAsignForm: Dispatch<SetStateAction<AsignacionFormState>>;
 
   estudiantes: Estudiante[];
   franjas: FranjaHorario[];
@@ -28,7 +30,6 @@ type Props = {
   onCreateAsignacion: () => void;
   onToggleAsignEstado: (row: TribunalEstudiante) => void;
 
-  // helper para mantener exactamente la misma lógica de estado
   isActivo: (v: any) => boolean;
 };
 
@@ -53,8 +54,10 @@ export default function TribunalAsignacionesModal({
     <div className="modalOverlay" onMouseDown={() => setShowAsignModal(false)}>
       <div className="modalCard modalWide" onMouseDown={(e) => e.stopPropagation()}>
         <div className="modalHeader">
-          <h3 className="modalTitle">Asignaciones: {activeTribunalForAsign.nombre_tribunal}</h3>
-          <button className="btnClose" onClick={() => setShowAsignModal(false)}>
+          <h3 className="modalTitle">
+            Asignaciones: {activeTribunalForAsign.nombre_tribunal}
+          </h3>
+          <button className="btnClose" onClick={() => setShowAsignModal(false)} type="button">
             ✕
           </button>
         </div>
@@ -106,7 +109,7 @@ export default function TribunalAsignacionesModal({
             </div>
 
             <div className="field full">
-              <button className="btnPrimary" onClick={onCreateAsignacion} disabled={loading}>
+              <button className="btnPrimary" onClick={onCreateAsignacion} disabled={loading} type="button">
                 {loading ? "Asignando..." : "Crear asignación"}
               </button>
             </div>
@@ -142,6 +145,7 @@ export default function TribunalAsignacionesModal({
                           </div>
                           <div className="tdSub">{row.id_institucional_estudiante ?? "—"}</div>
                         </td>
+
                         <td>
                           {row.fecha ? (
                             <div>
@@ -154,20 +158,24 @@ export default function TribunalAsignacionesModal({
                             "—"
                           )}
                         </td>
+
                         <td>
                           <span className={`badge ${activo ? "badgeActive" : "badgeInactive"}`}>
                             {activo ? "Activo" : "Inactivo"}
                           </span>
                         </td>
+
                         <td>
                           <div className="actions">
+                            {/* ✅ FIX: usar iconBtn que sí existe en tu CSS */}
                             <button
-                              className="btnIcon"
+                              className="iconBtn iconBtn_primary"
                               onClick={() => onToggleAsignEstado(row)}
                               title="Activar/Desactivar"
                               disabled={loading}
+                              type="button"
                             >
-                              {activo ? <ToggleRight size={20} /> : <ToggleLeft size={20} />}
+                              {activo ? <ToggleRight className="iconAction" /> : <ToggleLeft className="iconAction" />}
                             </button>
                           </div>
                         </td>
@@ -181,7 +189,7 @@ export default function TribunalAsignacionesModal({
         </div>
 
         <div className="modalFooter">
-          <button className="btnPrimary" onClick={() => setShowAsignModal(false)}>
+          <button className="btnPrimary" onClick={() => setShowAsignModal(false)} type="button">
             Cerrar
           </button>
         </div>
