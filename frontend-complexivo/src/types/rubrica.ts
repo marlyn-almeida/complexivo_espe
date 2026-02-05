@@ -14,13 +14,26 @@ export interface Rubrica {
 /** ✅ Para selects (opcional, si quieres más liviano) */
 export type RubricaLite = Pick<Rubrica, "id_rubrica" | "nombre_rubrica" | "estado">;
 
-/** ✅ NUEVO: componente de rúbrica (para distribución 50/50, etc.) */
+/** ✅ componente de rúbrica */
 export interface RubricaComponente {
   id_rubrica_componente: number;
   id_rubrica: number;
   nombre_componente: string;
-  ponderacion_pct: number; // 0..100 (interna)
+
+  // 👇 en tu app tienes 2 “formatos” circulando:
+  // - en types: ponderacion_pct
+  // - en algunos services: ponderacion (number|string)
+  // Para que NO se rompa, soportamos ambos.
+  ponderacion_pct?: number; // 0..100 (interna)
+  ponderacion?: number | string;
+
   estado: number | boolean;
   created_at?: string;
   updated_at?: string;
 }
+
+/** ✅ Lite para PlanEvaluacion (lo que necesitas para listar + distribuir) */
+export type RubricaComponenteLite = Pick<
+  RubricaComponente,
+  "id_rubrica_componente" | "id_rubrica" | "nombre_componente" | "estado" | "ponderacion_pct" | "ponderacion"
+>;

@@ -10,10 +10,12 @@ import { carreraPeriodoService } from "../../services/carreraPeriodo.service";
 import type { PlanEvaluacion } from "../../types/planEvaluacion";
 import type { PlanEvaluacionItem, CalificadoPor, TipoItemPlan } from "../../types/planEvaluacionItem";
 import type { RubricaLite, RubricaComponenteLite } from "../../types/rubrica";
-import type { PlanItemRubricaCalificador } from "../../types/planItemRubricaCalificador";
 
 import { planEvaluacionService } from "../../services/planEvaluacion.service";
 import { rubricasLiteService } from "../../services/rubricasLite.service";
+
+// ✅ CLAVE: setear CP activo para que el backend responda el contexto correcto
+import { setActiveCarreraPeriodoId } from "../../api/axiosClient";
 
 type ToastType = "success" | "error" | "info";
 
@@ -42,6 +44,17 @@ function labelCalificador(c: CalificadoPor) {
   if (c === "ROL2") return "Director de Carrera / Docente de Apoyo";
   if (c === "TRIBUNAL") return "Miembros del Tribunal";
   return "Calificadores Generales";
+}
+
+// ✅ normaliza ponderación interna del componente (soporta ponderacion_pct o ponderacion)
+function compPct(c: RubricaComponenteLite): number {
+  const a = Number((c as any).ponderacion_pct);
+  if (Number.isFinite(a) && a >= 0) return a;
+
+  const b = Number((c as any).ponderacion);
+  if (Number.isFinite(b) && b >= 0) return b;
+
+  return 0;
 }
 
 export default function PlanEvaluacionPage() {
@@ -74,8 +87,8 @@ export default function PlanEvaluacionPage() {
   function selectedCPLabel(): string {
     const cp = carreraPeriodos.find((x) => Number(x.id_carrera_periodo) === Number(selectedCP));
     if (!cp) return "";
-    const carrera = cp.nombre_carrera ?? "Carrera";
-    const periodo = cp.codigo_periodo ?? cp.descripcion_periodo ?? "Período";
+    const carrera = (cp as any).nombre_carrera ?? "Carrera";
+    const periodo = (cp as any).codigo_periodo ?? (cp as any).descripcion_periodo ?? "Período";
     return `${carrera} — ${periodo}`;
   }
 
@@ -91,13 +104,13 @@ export default function PlanEvaluacionPage() {
     try {
       setLoading(true);
       const cps = await carreraPeriodoService.list(false);
-      setCarreraPeriodos(cps);
+      setCarreraPeriodos(cps ?? []);
 
       const qp = sp.get("cp");
       if (qp) return;
 
-      const first = cps.find((x) => Boolean(x.estado)) ?? cps[0];
-      if (first) setSelectedCP(first.id_carrera_periodo);
+      const first = (cps ?? []).find((x: any) => Boolean((x as any).estado)) ?? (cps ?? [])[0];
+      if (first) setSelectedCP(Number((first as any).id_carrera_periodo));
     } catch {
       setCarreraPeriodos([]);
       setSelectedCP("");
@@ -110,6 +123,10 @@ export default function PlanEvaluacionPage() {
   // ===== LOAD BY CP =====
   useEffect(() => {
     if (!selectedCP) return;
+
+    // ✅ FIJA CONTEXTO GLOBAL PARA EL BACKEND (esto evita “no toma datos”)
+    setActiveCarreraPeriodoId(Number(selectedCP));
+
     loadAllByCP(Number(selectedCP));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCP]);
@@ -118,7 +135,11 @@ export default function PlanEvaluacionPage() {
     try {
       setLoading(true);
 
-      const [p, r] = await Promise.all([planEvaluacionService.getByCP(cpId), rubricasLiteService.listByCP(cpId)]);
+      const [p, r] = await Promise.all([
+        planEvaluacionService.getByCP(cpId),
+        rubricasLiteService.listByCP(cpId),
+      ]);
+
       setRubricas(r ?? []);
 
       if (!p) {
@@ -135,20 +156,26 @@ export default function PlanEvaluacionPage() {
       setDescPlan(p.descripcion_plan ?? "");
 
       const its = await planEvaluacionService.listItems(cpId, p.id_plan_evaluacion);
-      const drafts: ItemDraft[] = (its ?? []).map((x) => ({ ...x, _tempId: uid() }));
+      const drafts: ItemDraft[] = (its ?? []).map((x: any) => ({ ...x, _tempId: uid() }));
       setItems(drafts);
 
       // cargar calificador por componente (solo para items rubrica)
       for (const it of drafts) {
         if (it.tipo_item === "RUBRICA" && it.id_plan_item) {
           const map = await planEvaluacionService.listComponentCalificadores(cpId, it.id_plan_item);
+
           setComponentCalif((prev) => ({
             ...prev,
-            [it.id_plan_item as number]: map.reduce((acc, row) => {
+            [it.id_plan_item as number]: (map ?? []).reduce((acc: any, row: any) => {
               acc[Number(row.id_rubrica_componente)] = row.calificado_por;
               return acc;
             }, {} as Record<number, CalificadoPor>),
           }));
+
+          // ✅ también precarga componentes si ya tiene rúbrica
+          if (it.id_rubrica) {
+            await ensureRubricaComponentes(Number(it.id_rubrica));
+          }
         }
       }
     } catch (e: any) {
@@ -188,7 +215,6 @@ export default function PlanEvaluacionPage() {
     const it = items.find((x) => x._tempId === tempId);
     if (!it) return;
 
-    // si existe en DB => update estado false, sino solo borrar en UI
     if (it.id_plan_item) {
       try {
         setLoading(true);
@@ -232,7 +258,6 @@ export default function PlanEvaluacionPage() {
   async function onSaveAll() {
     if (!selectedCP) return;
 
-    // validaciones base
     if (!nombrePlan.trim()) {
       showToast("Ingrese el nombre del plan.", "error");
       return;
@@ -247,14 +272,12 @@ export default function PlanEvaluacionPage() {
 
       let planId = plan?.id_plan_evaluacion;
 
-      // 1) crear o actualizar plan
       if (!planId) {
         planId = await planEvaluacionService.create(Number(selectedCP), {
           nombre_plan: nombrePlan.trim(),
           descripcion_plan: descPlan.trim() || null,
         });
 
-        // refrescar plan
         const p = await planEvaluacionService.getByCP(Number(selectedCP));
         setPlan(p);
       } else {
@@ -271,18 +294,16 @@ export default function PlanEvaluacionPage() {
         if (it._deleted) continue;
 
         const nombre_item = String(it.nombre_item ?? "").trim();
-        if (!nombre_item) continue; // si está vacío, no lo guardo
+        if (!nombre_item) continue;
 
         const tipo_item = (it.tipo_item ?? "NOTA_DIRECTA") as TipoItemPlan;
         const ponderacion_global_pct = clampPct(it.ponderacion_global_pct ?? 0);
 
-        // calificado_por: para RUBRICA lo dejamos en ROL2 por defecto (igual asignas por componente)
         const calificado_por: CalificadoPor =
           tipo_item === "RUBRICA" ? "ROL2" : ((it.calificado_por ?? "ROL2") as CalificadoPor);
 
         const id_rubrica = tipo_item === "RUBRICA" ? Number(it.id_rubrica || 0) || null : null;
 
-        // create
         if (!it.id_plan_item) {
           const newId = await planEvaluacionService.createItem(Number(selectedCP), {
             id_plan_evaluacion: planId,
@@ -293,12 +314,10 @@ export default function PlanEvaluacionPage() {
             id_rubrica,
           });
 
-          // actualizar UI con id
           setItems((prev) =>
             prev.map((x) => (x._tempId === it._tempId ? { ...x, id_plan_item: newId, id_plan_evaluacion: planId } : x))
           );
 
-          // si rubrica, carga calificador por componente si ya está seteado
           if (tipo_item === "RUBRICA" && id_rubrica) {
             await ensureRubricaComponentes(id_rubrica);
           }
@@ -306,7 +325,6 @@ export default function PlanEvaluacionPage() {
           continue;
         }
 
-        // update
         await planEvaluacionService.updateItem(Number(selectedCP), it.id_plan_item, {
           nombre_item,
           tipo_item,
@@ -316,7 +334,7 @@ export default function PlanEvaluacionPage() {
         });
       }
 
-      // 3) guardar asignación de calificadores por componente (solo items RUBRICA)
+      // 3) guardar asignación por componente
       for (const it of items) {
         if (it._deleted) continue;
         if (it.tipo_item !== "RUBRICA") continue;
@@ -328,7 +346,6 @@ export default function PlanEvaluacionPage() {
 
         const map = componentCalif[it.id_plan_item] ?? {};
 
-        // si no eligió nada, por defecto: TRIBUNAL
         for (const c of comps) {
           const chosen = (map[c.id_rubrica_componente] ?? "TRIBUNAL") as CalificadoPor;
           await planEvaluacionService.setComponentCalificador(Number(selectedCP), {
@@ -340,8 +357,6 @@ export default function PlanEvaluacionPage() {
       }
 
       showToast("Plan de evaluación guardado.", "success");
-
-      // recargar todo para que quede “limpio”
       await loadAllByCP(Number(selectedCP));
     } catch (e: any) {
       const msg = e?.response?.data?.message || e?.message || "No se pudo guardar el plan.";
@@ -387,7 +402,7 @@ export default function PlanEvaluacionPage() {
             <option value="">Seleccione Carrera–Período...</option>
             {carreraPeriodos.map((cp) => (
               <option key={cp.id_carrera_periodo} value={cp.id_carrera_periodo}>
-                {(cp.nombre_carrera ?? "Carrera") + " — " + (cp.codigo_periodo ?? cp.descripcion_periodo ?? "Período")}
+                {(cp as any).nombre_carrera ?? "Carrera"} — {(cp as any).codigo_periodo ?? (cp as any).descripcion_periodo ?? "Período"}
               </option>
             ))}
           </select>
@@ -489,13 +504,16 @@ export default function PlanEvaluacionPage() {
                           value={tipo}
                           onChange={async (e) => {
                             const t = e.target.value as TipoItemPlan;
+
+                            const firstRubId = rubricas[0]?.id_rubrica ?? null;
+
                             updateItemDraft(it._tempId, {
                               tipo_item: t,
-                              id_rubrica: t === "RUBRICA" ? (rubricas[0]?.id_rubrica ?? null) : null,
+                              id_rubrica: t === "RUBRICA" ? firstRubId : null,
                             });
 
-                            if (t === "RUBRICA" && rubricas[0]?.id_rubrica) {
-                              await ensureRubricaComponentes(rubricas[0].id_rubrica);
+                            if (t === "RUBRICA" && firstRubId) {
+                              await ensureRubricaComponentes(firstRubId);
                             }
                           }}
                         >
@@ -535,7 +553,7 @@ export default function PlanEvaluacionPage() {
                         </div>
                       ) : null}
 
-                      {/* RUBRICA: plantilla + distribución + asignación por componente */}
+                      {/* RUBRICA */}
                       {isRubrica ? (
                         <div className="field fieldFull">
                           <label>Plantilla de Rúbrica</label>
@@ -545,7 +563,7 @@ export default function PlanEvaluacionPage() {
                               const id = e.target.value ? Number(e.target.value) : null;
                               updateItemDraft(it._tempId, { id_rubrica: id });
 
-                              if (id) (await ensureRubricaComponentes(id));
+                              if (id) await ensureRubricaComponentes(id);
                             }}
                           >
                             <option value="">Seleccione una rúbrica...</option>
@@ -558,13 +576,16 @@ export default function PlanEvaluacionPage() {
 
                           {/* Distribución */}
                           <div className="distBox">
-                            <div className="distTitle">Distribución de la Ponderación Global ({itemGlobalPct.toFixed(0)}%):</div>
+                            <div className="distTitle">
+                              Distribución de la Ponderación Global ({itemGlobalPct.toFixed(0)}%):
+                            </div>
 
                             {rubId && comps.length ? (
                               <div className="distLines">
                                 {comps.map((c) => {
-                                  const part = (Number(c.ponderacion_pct) || 0);
+                                  const part = compPct(c);
                                   const total = (itemGlobalPct * part) / 100;
+
                                   return (
                                     <div className="distLine" key={c.id_rubrica_componente}>
                                       <span>
@@ -581,7 +602,7 @@ export default function PlanEvaluacionPage() {
                             )}
                           </div>
 
-                          {/* Asignar calificadores a componentes */}
+                          {/* Asignar calificadores */}
                           <div className="compBox">
                             <div className="compTitle">
                               <Users size={16} /> Asignar Calificadores a Componentes de la Rúbrica:
@@ -600,7 +621,7 @@ export default function PlanEvaluacionPage() {
                                     <div className="compRow" key={c.id_rubrica_componente}>
                                       <div className="compLeft">
                                         <div className="compName">{c.nombre_componente}</div>
-                                        <div className="compSub">{Number(c.ponderacion_pct).toFixed(2)}% de esta rúbrica</div>
+                                        <div className="compSub">{compPct(c).toFixed(2)}% de esta rúbrica</div>
                                       </div>
 
                                       <select
@@ -608,7 +629,6 @@ export default function PlanEvaluacionPage() {
                                         onChange={(e) => {
                                           const v = e.target.value as CalificadoPor;
 
-                                          // si aún no tiene id_plan_item, se guarda en UI y al guardar plan se persiste
                                           if (it.id_plan_item) {
                                             setCompCalificador(it.id_plan_item, c.id_rubrica_componente, v);
                                           } else {

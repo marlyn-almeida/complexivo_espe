@@ -8,16 +8,7 @@ function pickArray(x: any): any[] | null {
 }
 
 function unwrapArrayFromAxios(res: any): CasoEstudio[] {
-  // axiosClient devuelve AxiosResponse (response)
   const data = res?.data ?? res;
-
-  // posibles formas:
-  // 1) data = []
-  // 2) data = { ok:true, data: [] }
-  // 3) data = { data: [] }
-  // 4) data = { ok:true, rows: [] }
-  // 5) data = { ok:true, data: { rows: [] } }
-  // 6) data = { result: [] }
 
   return (
     pickArray(data) ||
@@ -32,16 +23,15 @@ function unwrapArrayFromAxios(res: any): CasoEstudio[] {
 
 function unwrapObjectFromAxios(res: any): any {
   const data = res?.data ?? res;
-  // a veces viene { ok:true, data:{...} }
   return data?.data ?? data;
 }
 
 export const casosEstudioService = {
-  async list(params: { includeInactive?: boolean; carreraPeriodoId: number }) {
+  // ✅ LISTA por Carrera–Período usando CONTEXTO (header x-carrera-periodo-id)
+  async list(params?: { includeInactive?: boolean }) {
     const res = await axiosClient.get("/casos-estudio", {
       params: {
-        includeInactive: !!params.includeInactive,
-        carreraPeriodoId: params.carreraPeriodoId,
+        includeInactive: !!params?.includeInactive,
       },
     });
     return unwrapArrayFromAxios(res);
@@ -68,8 +58,8 @@ export const casosEstudioService = {
     return unwrapObjectFromAxios(res);
   },
 
+  // ⚠️ OJO: este endpoint no existe en tus rutas actuales
   async download(id: number) {
-    // backend debería devolver archivo
     return axiosClient.get(`/casos-estudio/${id}/download`, { responseType: "blob" });
   },
 };

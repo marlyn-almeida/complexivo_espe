@@ -1,3 +1,4 @@
+// ✅ src/pages/casosEstudio/CasosEstudioPage.tsx
 import { useEffect, useMemo, useState } from "react";
 
 import type { CarreraPeriodo } from "../../types/carreraPeriodo";
@@ -19,13 +20,37 @@ import {
   FileText,
   BadgeCheck,
   Download,
+  Pencil,
+  Trash2,
+  ToggleLeft,
+  ToggleRight,
 } from "lucide-react";
 
 import escudoESPE from "../../assets/escudo.png";
 import "./CasosEstudioPage.css";
 
+// ✅ CLAVE: guardar CP activo para que axiosClient mande header x-carrera-periodo-id
+import { setActiveCarreraPeriodoId } from "../../api/axiosClient";
+
 const PAGE_SIZE = 10;
 type ToastType = "success" | "error" | "info";
+
+// ✅ misma clave que usas en axiosClient
+const ACTIVE_CP_KEY = "active_carrera_periodo_id";
+
+function readSavedCP(): number | null {
+  const raw = localStorage.getItem(ACTIVE_CP_KEY);
+  if (!raw) return null;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function estado01(v: any): 0 | 1 {
+  return Number(v) === 1 ? 1 : 0;
+}
+function isActivo(v: any): boolean {
+  return estado01(v) === 1;
+}
 
 export default function CasosEstudioPage() {
   // ===========================
@@ -36,6 +61,9 @@ export default function CasosEstudioPage() {
 
   const [casos, setCasos] = useState<CasoEstudio[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // ✅ opcional: ver inactivos (para “eliminados”)
+  const [mostrarInactivos, setMostrarInactivos] = useState(false);
 
   // ===========================
   // UI
@@ -69,6 +97,7 @@ export default function CasosEstudioPage() {
     if (Array.isArray(list) && list.length) {
       const first = list[0];
       if (first?.msg) return String(first.msg);
+      if (first?.message) return String(first.message);
     }
     if (typeof msg === "string" && msg.trim()) return msg;
 
@@ -76,7 +105,7 @@ export default function CasosEstudioPage() {
   }
 
   const selectedCPLabel = useMemo(() => {
-    const cp = carreraPeriodos.find((x: any) => x.id_carrera_periodo === selectedCP);
+    const cp = carreraPeriodos.find((x: any) => Number(x.id_carrera_periodo) === Number(selectedCP));
     if (!cp) return "";
     const carrera = (cp as any).nombre_carrera ?? "Carrera";
     const periodo = (cp as any).codigo_periodo ?? (cp as any).descripcion_periodo ?? "Período";
@@ -93,13 +122,16 @@ export default function CasosEstudioPage() {
 
   useEffect(() => {
     if (selectedCP) {
+      // ✅ setea CP global para todo el módulo (header)
+      setActiveCarreraPeriodoId(Number(selectedCP));
       loadAll();
       setPage(1);
     } else {
       setCasos([]);
+      setActiveCarreraPeriodoId(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCP]);
+  }, [selectedCP, mostrarInactivos]);
 
   async function loadCarreraPeriodos() {
     try {
@@ -108,13 +140,36 @@ export default function CasosEstudioPage() {
       const cps = await carreraPeriodoService.list(false);
       setCarreraPeriodos(cps ?? []);
 
+      // ✅ 1) si hay CP guardado y existe/está activo, usarlo
+      const saved = readSavedCP();
+      const savedOk =
+        !!saved &&
+        (cps ?? []).some(
+          (x: any) => Number(x.id_carrera_periodo) === Number(saved) && Boolean((x as any).estado)
+        );
+
+      if (savedOk) {
+        setSelectedCP(saved as number);
+        setActiveCarreraPeriodoId(saved as number);
+        return;
+      }
+
+      // ✅ 2) fallback: primer CP activo
       const first = (cps ?? []).find((x: any) => Boolean((x as any).estado)) ?? (cps ?? [])[0];
-      if (first) setSelectedCP((first as any).id_carrera_periodo);
-      else setSelectedCP("");
+
+      if (first) {
+        const id = Number((first as any).id_carrera_periodo);
+        setSelectedCP(id);
+        setActiveCarreraPeriodoId(id);
+      } else {
+        setSelectedCP("");
+        setActiveCarreraPeriodoId(null);
+      }
     } catch {
       showToast("Error al cargar Carrera–Período", "error");
       setCarreraPeriodos([]);
       setSelectedCP("");
+      setActiveCarreraPeriodoId(null);
     } finally {
       setLoading(false);
     }
@@ -126,8 +181,9 @@ export default function CasosEstudioPage() {
     try {
       setLoading(true);
 
+      // ✅ CLAVE: NO mandar carreraPeriodoId (el backend usa header)
       const data = await casosEstudioService.list({
-        carreraPeriodoId: Number(selectedCP),
+        includeInactive: mostrarInactivos,
       });
 
       setCasos(data ?? []);
@@ -178,19 +234,47 @@ export default function CasosEstudioPage() {
   }
 
   // ===========================
+  // “ELIMINAR” (DESACTIVAR) / ACTIVAR
+  // ===========================
+  async function onToggleEstado(item: CasoEstudio) {
+    try {
+      setLoading(true);
+      const current = estado01((item as any).estado);
+      await casosEstudioService.toggleEstado(Number(item.id_caso_estudio), current);
+
+      showToast(current === 1 ? "Caso desactivado." : "Caso activado.", "success");
+      await loadAll();
+    } catch (err: any) {
+      showToast(extractBackendError(err), "error");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function onDeleteUI(item: CasoEstudio) {
+    // ✅ “Eliminar” = desactivar (porque no hay DELETE real)
+    const ok = window.confirm(
+      `¿Seguro que deseas eliminar (desactivar) el Caso ${item.numero_caso}?`
+    );
+    if (!ok) return;
+    await onToggleEstado(item);
+  }
+
+  // ===========================
   // FILTER + PAGINATION
   // ===========================
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
 
     return (casos ?? [])
+      .filter((x: any) => (mostrarInactivos ? true : isActivo(x.estado)))
       .filter((x) => {
         if (!q) return true;
         const t = `${x.numero_caso} ${x.titulo ?? ""} ${x.descripcion ?? ""} ${x.archivo_nombre ?? ""}`.toLowerCase();
         return t.includes(q);
       })
       .sort((a, b) => Number(a.numero_caso) - Number(b.numero_caso));
-  }, [casos, search]);
+  }, [casos, search, mostrarInactivos]);
 
   useEffect(() => setPage(1), [search]);
 
@@ -252,6 +336,18 @@ export default function CasosEstudioPage() {
                   <span className="summaryValue">{total}</span>
                 </div>
               </div>
+
+              {/* ✅ opcional: mostrar inactivos */}
+              <label className="toggle" style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
+                <input
+                  type="checkbox"
+                  checked={mostrarInactivos}
+                  onChange={(e) => setMostrarInactivos(e.target.checked)}
+                  disabled={!selectedCP}
+                />
+                <span className="slider" />
+                <span className="toggleText">Mostrar eliminados</span>
+              </label>
             </div>
           </div>
 
@@ -273,7 +369,11 @@ export default function CasosEstudioPage() {
               <select
                 className="select"
                 value={selectedCP}
-                onChange={(e) => setSelectedCP(e.target.value ? Number(e.target.value) : "")}
+                onChange={(e) => {
+                  const next = e.target.value ? Number(e.target.value) : "";
+                  setSelectedCP(next);
+                  setActiveCarreraPeriodoId(typeof next === "number" ? next : null);
+                }}
                 disabled={loading}
                 title="Seleccione Carrera–Período"
               >
@@ -290,7 +390,14 @@ export default function CasosEstudioPage() {
               </select>
 
               {selectedCP && (
-                <button className="chipClear" onClick={() => setSelectedCP("")} title="Quitar filtro">
+                <button
+                  className="chipClear"
+                  onClick={() => {
+                    setSelectedCP("");
+                    setActiveCarreraPeriodoId(null);
+                  }}
+                  title="Quitar filtro"
+                >
                   <X size={14} /> Quitar
                 </button>
               )}
@@ -326,7 +433,7 @@ export default function CasosEstudioPage() {
                     </span>
                   </th>
 
-                  <th className="thActions thCenter" style={{ width: 220 }}>
+                  <th className="thActions thCenter" style={{ width: 260 }}>
                     <span className="thFlex">
                       <FileText size={16} /> Acciones
                     </span>
@@ -348,48 +455,69 @@ export default function CasosEstudioPage() {
                     </td>
                   </tr>
                 ) : pageData.length ? (
-                  pageData.map((x) => (
-                    <tr key={x.id_caso_estudio}>
-                      <td className="tdCenter">
-                        <span className="chipCode">CASO {x.numero_caso}</span>
-                      </td>
+                  pageData.map((x: any) => {
+                    const activo = isActivo(x.estado);
 
-                      <td className="tdCenter tdName">
-                        <div className="nameMain">{x.titulo || "-"}</div>
-                      </td>
+                    return (
+                      <tr key={x.id_caso_estudio}>
+                        <td className="tdCenter">
+                          <span className="chipCode">CASO {x.numero_caso}</span>
+                        </td>
 
-                      <td className="tdCenter">{x.descripcion || "-"}</td>
+                        <td className="tdCenter tdName">
+                          <div className="nameMain">{x.titulo || "-"}</div>
+                        </td>
 
-                      <td className="tdCenter mailCell" title={x.archivo_nombre}>
-                        {x.archivo_nombre}
-                      </td>
+                        <td className="tdCenter">{x.descripcion || "-"}</td>
 
-                      <td className="tdActions tdCenter">
-                        <div className="actions">
-                          <button className="iconBtn iconBtn_neutral" title="Ver" onClick={() => openView(x)}>
-                            <Eye className="iconAction" />
-                            <span className="tooltip">Ver</span>
-                          </button>
+                        <td className="tdCenter mailCell" title={x.archivo_nombre}>
+                          {x.archivo_nombre || "-"}
+                        </td>
 
-                          <a
-                            className="iconBtn iconBtn_primary"
-                            title="Descargar"
-                            href={x.archivo_path}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            <Download className="iconAction" />
-                            <span className="tooltip">Descargar</span>
-                          </a>
+                        <td className="tdActions tdCenter">
+                          <div className="actions">
+                            <button className="iconBtn iconBtn_neutral" title="Ver" onClick={() => openView(x)}>
+                              <Eye className="iconAction" />
+                              <span className="tooltip">Ver</span>
+                            </button>
 
-                          <button className="iconBtn iconBtn_purple" title="Editar" onClick={() => openEdit(x)}>
-                            ✎
-                            <span className="tooltip">Editar</span>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                            {x.archivo_path ? (
+                              <a
+                                className="iconBtn iconBtn_primary"
+                                title="Descargar"
+                                href={x.archivo_path}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                <Download className="iconAction" />
+                                <span className="tooltip">Descargar</span>
+                              </a>
+                            ) : (
+                              <button className="iconBtn iconBtn_primary" disabled title="Sin archivo">
+                                <Download className="iconAction" />
+                                <span className="tooltip">Sin archivo</span>
+                              </button>
+                            )}
+
+                            <button className="iconBtn iconBtn_purple" title="Editar" onClick={() => openEdit(x)}>
+                              <Pencil className="iconAction" />
+                              <span className="tooltip">Editar</span>
+                            </button>
+
+                            {/* ✅ ELIMINAR (desactivar) / activar */}
+                            <button
+                              className={`iconBtn ${activo ? "iconBtn_danger" : "iconBtn_primary"}`}
+                              title={activo ? "Eliminar" : "Activar"}
+                              onClick={() => (activo ? onDeleteUI(x) : onToggleEstado(x))}
+                            >
+                              {activo ? <Trash2 className="iconAction" /> : <ToggleLeft className="iconAction" />}
+                              <span className="tooltip">{activo ? "Eliminar" : "Activar"}</span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
                 ) : (
                   <tr>
                     <td colSpan={5} className="emptyCell">
@@ -431,11 +559,7 @@ export default function CasosEstudioPage() {
       )}
 
       {showViewModal && viewItem && (
-        <CasoEstudioViewModal
-          caso={viewItem}
-          selectedCPLabel={selectedCPLabel}
-          onClose={closeView}
-        />
+        <CasoEstudioViewModal caso={viewItem} selectedCPLabel={selectedCPLabel} onClose={closeView} />
       )}
 
       {toast && <div className={`toast toast-${toast.type}`}>{toast.msg}</div>}

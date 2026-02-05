@@ -415,6 +415,13 @@
   box-shadow: none;
 }
 
+.casosEstudioPage .iconBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
 .casosEstudioPage .iconAction {
   width: 18px;
   height: 18px;
@@ -448,6 +455,17 @@
 .casosEstudioPage .iconBtn_purple:hover {
   background: rgba(111, 66, 193, 0.18);
   border-color: rgba(111, 66, 193, 0.35);
+}
+
+/* ✅ NUEVO: PELIGRO (ELIMINAR) */
+.casosEstudioPage .iconBtn_danger {
+  color: #b42318;
+  background: rgba(180, 35, 24, 0.12);
+  border-color: rgba(180, 35, 24, 0.30);
+}
+.casosEstudioPage .iconBtn_danger:hover {
+  background: rgba(180, 35, 24, 0.18);
+  border-color: rgba(180, 35, 24, 0.38);
 }
 
 .casosEstudioPage .tooltip {

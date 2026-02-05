@@ -1,29 +1,40 @@
+// src/services/rubricasLite.service.ts
 import axiosClient from "../api/axiosClient";
 import type { RubricaLite, RubricaComponenteLite } from "../types/rubrica";
 
-const CP_HEADER = "x-id-carrera-periodo";
+function unwrapArray<T = any>(payload: any): T[] {
+  if (!payload) return [];
+  if (Array.isArray(payload)) return payload as T[];
 
-/**
- * ⚠️ Ajusta estos endpoints si en tu backend ya existen con otro path.
- * - listByCP: lista rúbricas del período
- * - listComponentes: lista componentes de una rúbrica
- */
+  // { ok:true, data:[...] }
+  if (payload.ok && Array.isArray(payload.data)) return payload.data as T[];
+
+  // { data:[...] }
+  if (Array.isArray(payload.data)) return payload.data as T[];
+
+  // doble wrapper
+  if (payload.ok && payload.data && Array.isArray(payload.data.data)) return payload.data.data as T[];
+  if (payload.data && Array.isArray(payload.data.data)) return payload.data.data as T[];
+
+  return [];
+}
+
 export const rubricasLiteService = {
+  // ✅ Lista rúbricas por CP (tu backend puede leer CP por header global de axiosClient)
   listByCP: async (carreraPeriodoId: number): Promise<RubricaLite[]> => {
-    // ✅ endpoint típico (si el tuyo es otro, cámbialo aquí)
-    const { data } = await axiosClient.get("/rubricas", {
-      headers: { [CP_HEADER]: String(carreraPeriodoId) },
-      params: { includeInactive: false },
+    // Importante: NO fuerces headers raros aquí.
+    // Tu app ya maneja el contexto (x-id-carrera-periodo / x-carrera-periodo-id) desde axiosClient.
+    const res = await axiosClient.get("/rubricas", {
+      params: { includeInactive: false, carreraPeriodoId }, // si backend lo ignora, no pasa nada
     });
-    // soporta {ok,data} o data directo
-    return (data?.data ?? data ?? []) as RubricaLite[];
+    return unwrapArray<RubricaLite>(res.data);
   },
 
+  // ✅ Componentes de una rúbrica
   listComponentes: async (id_rubrica: number): Promise<RubricaComponenteLite[]> => {
-    // ✅ endpoint típico (si el tuyo es otro, cámbialo aquí)
-    const { data } = await axiosClient.get(`/rubricas/${id_rubrica}/componentes`, {
+    const res = await axiosClient.get(`/rubricas/${id_rubrica}/componentes`, {
       params: { includeInactive: false },
     });
-    return (data?.data ?? data ?? []) as RubricaComponenteLite[];
+    return unwrapArray<RubricaComponenteLite>(res.data);
   },
 };
