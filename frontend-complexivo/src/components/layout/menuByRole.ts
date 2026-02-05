@@ -11,7 +11,7 @@ export type IconName =
   | "acta"
   | "tribunales"
   | "estudiantes"
-  // ✅ NUEVOS (ROL 2 – Complexivo)
+  // ✅ (siguen existiendo por si luego los reactivas)
   | "casosEstudio"
   | "entregasCaso"
   | "planEvaluacion"
@@ -23,7 +23,7 @@ export type MenuItem = {
   label: string;
   to: string;
   roles: RolId[];
-  icon: IconName; // ✅ requerido
+  icon: IconName;
 };
 
 export type MenuSection = {
@@ -78,18 +78,22 @@ export const MENU_SECTIONS: MenuSection[] = [
       // ✅ Tribunales (rol 2)
       { label: "Tribunales", to: "/tribunales", roles: [2], icon: "tribunales" },
 
-      // (pendientes si aún no tienes pages)
-      { label: "Calificaciones", to: "/calificaciones", roles: [2], icon: "rubricas" },
-      { label: "Actas firmadas", to: "/actas-firmadas", roles: [2], icon: "acta" },
-      { label: "Período (lectura)", to: "/periodo", roles: [2], icon: "periodos" },
-
-      // ✅ NUEVOS: módulos complexivo rol 2
+      // ✅ Casos (se queda)
       { label: "Casos de estudio", to: "/casos-estudio", roles: [2], icon: "casosEstudio" },
-      { label: "Entregas de caso", to: "/entregas-caso", roles: [2], icon: "entregasCaso" },
-      { label: "Plan de evaluación", to: "/plan-evaluacion", roles: [2], icon: "planEvaluacion" },
-      { label: "Calificadores generales", to: "/calificadores-generales", roles: [2], icon: "calificadores" },
-      { label: "Nota teórico", to: "/nota-teorico", roles: [2], icon: "notaTeorico" },
-      { label: "Ponderaciones examen", to: "/ponderaciones-examen", roles: [2], icon: "ponderaciones" },
+
+      // (si esta page existe)
+      { label: "Calificaciones", to: "/calificaciones", roles: [2], icon: "rubricas" },
+
+      // (si esta page existe)
+      { label: "Actas firmadas", to: "/actas-firmadas", roles: [2], icon: "acta" },
+
+      // ❌ QUITADO del sidebar:
+      // { label: "Período (lectura)", to: "/periodo", roles: [2], icon: "periodos" },
+      // { label: "Entregas de caso", to: "/entregas-caso", roles: [2], icon: "entregasCaso" },
+      // { label: "Plan de evaluación", to: "/plan-evaluacion", roles: [2], icon: "planEvaluacion" },
+      // { label: "Calificadores generales", to: "/calificadores-generales", roles: [2], icon: "calificadores" },
+      // { label: "Nota teórico", to: "/nota-teorico", roles: [2], icon: "notaTeorico" },
+      // { label: "Ponderaciones examen", to: "/ponderaciones-examen", roles: [2], icon: "ponderaciones" },
     ],
   },
 

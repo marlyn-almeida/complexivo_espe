@@ -1,32 +1,56 @@
+// src/pages/dashboard/DashboardBase.tsx
 import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./DashboardPortal.css";
 
 import logo from "../../assets/escudo.png";
 
+/* =========================
+   TIPOS
+   ========================= */
+
+export type DashIcon =
+  | "carreras"
+  | "periodos"
+  | "carrera_periodo"
+  | "rubricas"
+  | "docentes"
+  // ✅ ROL 2
+  | "estudiantes"
+  | "tribunales"
+  | "casosEstudio"
+  | "franjas"
+  // ✅ opcional
+  | "acta";
+
 export type DashItem = {
   label: string;
   to: string;
-  icon: "carreras" | "periodos" | "carrera_periodo" | "rubricas" | "docentes";
+  icon: DashIcon;
 };
 
-type DashboardBaseProps = {
-  items: DashItem[];
-  role?: "SUPER_ADMIN" | "DIRECTOR" | "DOCENTE";
-};
+export type StatTone = "neutral" | "success" | "info" | "warn";
 
-type StatTone = "neutral" | "success" | "info" | "warn";
-
-type StatCard = {
+export type StatCard = {
   value: number | string;
   label: string;
   tone: StatTone;
 };
 
+type DashboardBaseProps = {
+  items: DashItem[];
+  role?: "SUPER_ADMIN" | "DIRECTOR" | "DOCENTE";
+  stats?: StatCard[]; // ✅ ahora se pasan desde cada dashboard
+};
+
+/* =========================
+   ICONOS
+   ========================= */
+
 function Icon({
   name,
 }: {
-  name: DashItem["icon"] | "stats" | "shield" | "close";
+  name: DashIcon | "stats" | "shield" | "close";
 }) {
   switch (name) {
     case "carreras":
@@ -38,6 +62,7 @@ function Icon({
           />
         </svg>
       );
+
     case "periodos":
       return (
         <svg viewBox="0 0 24 24" className="portalSvg" aria-hidden="true">
@@ -47,6 +72,7 @@ function Icon({
           />
         </svg>
       );
+
     case "carrera_periodo":
       return (
         <svg viewBox="0 0 24 24" className="portalSvg" aria-hidden="true">
@@ -56,6 +82,7 @@ function Icon({
           />
         </svg>
       );
+
     case "rubricas":
       return (
         <svg viewBox="0 0 24 24" className="portalSvg" aria-hidden="true">
@@ -65,6 +92,7 @@ function Icon({
           />
         </svg>
       );
+
     case "docentes":
       return (
         <svg viewBox="0 0 24 24" className="portalSvg" aria-hidden="true">
@@ -74,6 +102,69 @@ function Icon({
           />
         </svg>
       );
+
+    /* =========================
+       ✅ ICONOS ROL 2
+       ========================= */
+
+    case "estudiantes":
+      return (
+        <svg viewBox="0 0 24 24" className="portalSvg" aria-hidden="true">
+          <path
+            d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4zm8 9v-1.7c0-2.4-3.2-4.3-7.2-4.3h-1.6C7.2 15 4 16.9 4 19.3V21h16z"
+            fill="currentColor"
+          />
+        </svg>
+      );
+
+    case "tribunales":
+      return (
+        <svg viewBox="0 0 24 24" className="portalSvg" aria-hidden="true">
+          <path
+            d="M12 2 4 6v6c0 5 3.4 9.4 8 10 4.6-.6 8-5 8-10V6l-8-4Zm-2 14-3-3 1.4-1.4L10 13.2l5.6-5.6L17 9l-7 7Z"
+            fill="currentColor"
+          />
+        </svg>
+      );
+
+    case "casosEstudio":
+      return (
+        <svg viewBox="0 0 24 24" className="portalSvg" aria-hidden="true">
+          <path
+            d="M6 2h9l3 3v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm8 1.5V6h2.5L14 3.5Z"
+            fill="currentColor"
+          />
+          <path
+            d="M7 10h8v2H7v-2Zm0 4h6v2H7v-2Z"
+            fill="currentColor"
+          />
+        </svg>
+      );
+
+    case "franjas":
+      return (
+        <svg viewBox="0 0 24 24" className="portalSvg" aria-hidden="true">
+          <path
+            d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm1 11h5v-2h-4V7h-2v6Z"
+            fill="currentColor"
+          />
+        </svg>
+      );
+
+    case "acta":
+      return (
+        <svg viewBox="0 0 24 24" className="portalSvg" aria-hidden="true">
+          <path
+            d="M6 2h9l3 3v17a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm8 1.5V6h2.5L14 3.5ZM7 11h10v2H7v-2Zm0 4h10v2H7v-2Z"
+            fill="currentColor"
+          />
+        </svg>
+      );
+
+    /* =========================
+       UI: stats / seguridad / cerrar
+       ========================= */
+
     case "stats":
       return (
         <svg viewBox="0 0 24 24" className="portalSvgSm" aria-hidden="true">
@@ -83,6 +174,7 @@ function Icon({
           />
         </svg>
       );
+
     case "shield":
       return (
         <svg viewBox="0 0 24 24" className="portalSvgSm" aria-hidden="true">
@@ -92,6 +184,7 @@ function Icon({
           />
         </svg>
       );
+
     case "close":
       return (
         <svg viewBox="0 0 24 24" className="portalSvgSm" aria-hidden="true">
@@ -101,27 +194,36 @@ function Icon({
           />
         </svg>
       );
+
     default:
       return null;
   }
 }
 
+/* =========================
+   COMPONENTE
+   ========================= */
+
 export default function DashboardBase({
   items,
   role = "SUPER_ADMIN",
+  stats,
 }: DashboardBaseProps) {
   const navigate = useNavigate();
   const [showSecurityTip, setShowSecurityTip] = useState(true);
 
-  const stats: StatCard[] = useMemo(
+  // Fallback: si no envías stats desde el dashboard del rol, muestra placeholders.
+  const fallbackStats: StatCard[] = useMemo(
     () => [
-      { value: 0, label: "Docentes", tone: "neutral" },
-      { value: 0, label: "Carreras", tone: "success" },
-      { value: 0, label: "Períodos", tone: "info" },
-      { value: 0, label: "Rúbricas", tone: "warn" },
+      { value: "—", label: "Indicador 1", tone: "neutral" },
+      { value: "—", label: "Indicador 2", tone: "success" },
+      { value: "—", label: "Indicador 3", tone: "info" },
+      { value: "—", label: "Indicador 4", tone: "warn" },
     ],
     []
   );
+
+  const finalStats = stats ?? fallbackStats;
 
   return (
     <div className={`portalWrap portal--${role.toLowerCase()}`}>
@@ -129,16 +231,12 @@ export default function DashboardBase({
       <section className="portalHero" aria-label="Encabezado del sistema">
         <img src={logo} alt="ESPE" className="portalHeroLogo" />
         <div className="portalHeroText">
-          <h1 className="portalHeroTitle">
-            SISTEMA DE GESTIÓN DE EXÁMENES COMPLEXIVOS
-          </h1>
-          <p className="portalHeroSubtitle">
-            Gestión integral de tribunales y evaluaciones
-          </p>
+          <h1 className="portalHeroTitle">SISTEMA DE GESTIÓN DE EXÁMENES COMPLEXIVOS</h1>
+          <p className="portalHeroSubtitle">Gestión integral de tribunales y evaluaciones</p>
         </div>
       </section>
 
-      {/* Recomendación seguridad (más grande) */}
+      {/* Recomendación seguridad */}
       {showSecurityTip && (
         <section className="portalAlert portalAlert--big" aria-label="Recomendación de seguridad">
           <div className="portalAlertLeft">
@@ -147,14 +245,9 @@ export default function DashboardBase({
             </span>
 
             <div className="portalAlertText">
-              <b>Recomendación de seguridad:</b> Por tu seguridad, te
-              recomendamos cambiar tu contraseña periódicamente.{" "}
-              <button
-                type="button"
-                className="portalAlertLink"
-                onClick={() => navigate("/perfil")}
-
-              >
+              <b>Recomendación de seguridad:</b> Por tu seguridad, te recomendamos cambiar tu
+              contraseña periódicamente.{" "}
+              <button type="button" className="portalAlertLink" onClick={() => navigate("/perfil")}>
                 Ir a mi perfil
               </button>
             </div>
@@ -171,7 +264,7 @@ export default function DashboardBase({
         </section>
       )}
 
-      {/* 1) Accesos rápidos en su caja */}
+      {/* Accesos rápidos */}
       <section className="portalBox" aria-label="Accesos rápidos">
         <div className="portalBoxHead">
           <h2 className="portalSectionTitle">Accesos rápidos</h2>
@@ -195,7 +288,7 @@ export default function DashboardBase({
         </div>
       </section>
 
-      {/* 2) Estadísticas en otra caja */}
+      {/* Estadísticas */}
       <section className="portalBox" aria-label="Estadísticas del sistema">
         <div className="portalStatsHead">
           <div className="portalStatsTitle">
@@ -207,7 +300,7 @@ export default function DashboardBase({
         </div>
 
         <div className="portalStatsGrid">
-          {stats.map((s) => (
+          {finalStats.map((s) => (
             <div key={s.label} className={`portalStat portalStat--${s.tone}`}>
               <div className="portalStatValue">{s.value}</div>
               <div className="portalStatLabel">{s.label}</div>

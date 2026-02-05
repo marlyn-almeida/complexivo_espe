@@ -284,3 +284,119 @@
   .portalSectionTitle { font-size: 19px; }
   .portalStatsGrid { grid-template-columns: 1fr; }
 }
+/* =========================================================
+   ✅ ACCESOS RÁPIDOS – VERSIÓN SUAVE / ACADÉMICA
+   ========================================================= */
+
+/* Base del tile */
+.portalTile {
+  background: #ffffff;
+  border: 1px solid rgba(0,0,0,0.08);
+  box-shadow: 0 6px 14px rgba(0,0,0,0.04);
+  transition: transform 0.12s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.portalTile:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 22px rgba(0,0,0,0.08);
+  border-color: rgba(10,79,40,0.25);
+}
+
+/* Texto siempre sobrio */
+.portalLabel {
+  color: #0a4f28;
+  font-weight: 800;
+}
+
+/* SVG color institucional */
+.portalSvg {
+  color: #0a4f28;
+}
+
+/* IconBox general más suave */
+.portalIconBox {
+  background: #f4f7f5;
+  border: 1px solid rgba(10,79,40,0.12);
+}
+
+/* =========================================================
+   COLORES POR MÓDULO (SUAVES)
+   ========================================================= */
+
+/* Docentes – verde muy claro */
+.portalTile--docentes {
+  background: #eef6f1;
+}
+.portalTile--docentes .portalIconBox {
+  background: #dfeee7;
+}
+
+/* Estudiantes – azul muy claro */
+.portalTile--estudiantes {
+  background: #eef3fb;
+}
+.portalTile--estudiantes .portalIconBox {
+  background: #e2e9f6;
+}
+.portalTile--estudiantes .portalSvg {
+  color: #1e3a8a;
+}
+
+/* Tribunales – morado grisáceo claro */
+.portalTile--tribunales {
+  background: #f2eef8;
+}
+.portalTile--tribunales .portalIconBox {
+  background: #e8e2f3;
+}
+.portalTile--tribunales .portalSvg {
+  color: #5b21b6;
+}
+
+/* Casos de estudio – ámbar MUY suave */
+.portalTile--casosEstudio {
+  background: #fff6e8;
+}
+.portalTile--casosEstudio .portalIconBox {
+  background: #ffedd2;
+}
+.portalTile--casosEstudio .portalSvg {
+  color: #b45309;
+}
+
+/* Franjas horarias – teal claro */
+.portalTile--franjas {
+  background: #eaf6f4;
+}
+.portalTile--franjas .portalIconBox {
+  background: #dcf1ed;
+}
+.portalTile--franjas .portalSvg {
+  color: #0f766e;
+}
+
+/* Actas – gris claro */
+.portalTile--acta {
+  background: #f3f4f6;
+}
+.portalTile--acta .portalIconBox {
+  background: #e5e7eb;
+}
+.portalTile--acta .portalSvg {
+  color: #374151;
+}
+
+/* =========================================================
+   Ajuste hover fino (sin brillo fuerte)
+   ========================================================= */
+.portalTile--docentes:hover,
+.portalTile--estudiantes:hover,
+.portalTile--tribunales:hover,
+.portalTile--casosEstudio:hover,
+.portalTile--franjas:hover,
+.portalTile--acta:hover {
+  background-image: linear-gradient(
+    rgba(10,79,40,0.03),
+    rgba(10,79,40,0.03)
+  );
+}

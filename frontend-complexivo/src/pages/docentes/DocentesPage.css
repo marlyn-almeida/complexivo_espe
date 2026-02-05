@@ -1033,3 +1033,81 @@
     grid-template-columns: 1fr;
   }
 }
+/* =========================================================
+   ✅ PATCH DOCENTES: bordes más redondeados + tooltip adelante
+   Pegar al FINAL de DocentesPage.css
+   ========================================================= */
+
+/* --- 1) Bordes más redondeados (estilo más moderno) --- */
+.docentesPage .hero { border-radius: 18px; }
+.docentesPage .heroLogo { border-radius: 14px; }
+
+.docentesPage .box { border-radius: 18px; }
+.docentesPage .sectionTitleIcon { border-radius: 14px; }
+
+.docentesPage .summaryBox { border-radius: 18px; }
+
+.docentesPage .search { border-radius: 12px; }
+.docentesPage .select { border-radius: 14px; }
+.docentesPage .chipClear { border-radius: 14px; }
+
+.docentesPage .tableWrap { border-radius: 16px; }
+.docentesPage .iconBtn { border-radius: 12px; }
+.docentesPage .badgeActive,
+.docentesPage .badgeInactive { border-radius: 999px; } /* se mantiene pill */
+
+.docentesPage .chipCode { border-radius: 12px; }
+.docentesPage .chipPill { border-radius: 999px; }
+
+.docentesPage .btnGhost { border-radius: 12px; }
+.docentesPage .btnPrimary { border-radius: 12px; }
+
+.dmCard { border-radius: 18px; }
+.dmHeaderIcon { border-radius: 14px; }
+.dmClose { border-radius: 12px; }
+.dmField { border-radius: 16px; }
+.dmBtnGhost { border-radius: 12px; }
+
+/* --- 2) TABLE WRAP: igual que Estudiantes (scroll + tooltips visibles) --- */
+/* OJO: tu CSS tenía overflow duplicado. Esto lo corrige. */
+.docentesPage .tableWrap {
+  overflow: auto;        /* ✅ mantiene scroll */
+  position: relative;    /* ✅ crea stacking context */
+  z-index: 1;            /* ✅ base */
+}
+
+/* La tabla también con z-index base */
+.docentesPage .table {
+  position: relative;
+  z-index: 1;
+}
+
+/* --- 3) Acciones: que el tooltip NO se recorte y salga adelante --- */
+.docentesPage .tdActions {
+  overflow: visible !important; /* ✅ clave */
+  position: relative;
+  z-index: 5;
+}
+
+.docentesPage .actions {
+  overflow: visible;
+}
+
+/* Botón sube de capa en hover */
+.docentesPage .iconBtn {
+  z-index: 10;
+}
+
+.docentesPage .iconBtn:hover {
+  z-index: 9999; /* ✅ se pone por encima de celdas */
+}
+
+/* Tooltip por encima de TODO (tabla + contenedor) */
+.docentesPage .tooltip {
+  z-index: 999999;
+}
+
+/* --- 4) Si algún td general recorta, reforzamos la celda de acciones --- */
+.docentesPage .table tbody td.tdActions {
+  overflow: visible !important;
+}
