@@ -31,8 +31,8 @@ type RubricaComponente = {
   id_rubrica: number;
   nombre_componente: string;
   tipo_componente: "ESCRITA" | "ORAL" | "OTRO";
-  ponderacion: number | string; // puede venir "40,00"
-  orden: number | string; // puede venir string
+  ponderacion: number | string;
+  orden: number | string;
   estado: number | boolean | string;
 };
 
@@ -72,13 +72,30 @@ function isActivo(v: any) {
   return toNum(v, 0) === 1;
 }
 
+/** ✅ unwrap robusto para arrays: soporta [], {data:[]}, {ok:true,data:[]} */
+function unwrapArray<T = any>(payload: any): T[] {
+  if (!payload) return [];
+  if (Array.isArray(payload)) return payload as T[];
+
+  // { ok:true, data:[...] }
+  if (payload.ok && Array.isArray(payload.data)) return payload.data as T[];
+
+  // { data:[...] }
+  if (Array.isArray(payload.data)) return payload.data as T[];
+
+  // { ok:true, data:{ ok:true, data:[...] } } o { data:{ data:[...] } }
+  if (payload.ok && payload.data && Array.isArray(payload.data.data)) return payload.data.data as T[];
+  if (payload.data && Array.isArray(payload.data.data)) return payload.data.data as T[];
+
+  return [];
+}
+
 export default function RubricaEditorPage() {
   const { idRubrica } = useParams();
   const rid = Number(idRubrica);
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(false);
-
   const [rubrica, setRubrica] = useState<Rubrica | null>(null);
 
   // Info general
@@ -94,10 +111,8 @@ export default function RubricaEditorPage() {
   // Criterios por componente
   const [criteriosByComp, setCriteriosByComp] = useState<Record<number, RubricaCriterio[]>>({});
 
-  // Celdas por criterio: { criterioId: { nivelId: celda } }
-  const [celdasByCriterio, setCeldasByCriterio] = useState<
-    Record<number, Record<number, RubricaCriterioNivel>>
-  >({});
+  // Celdas por criterio
+  const [celdasByCriterio, setCeldasByCriterio] = useState<Record<number, Record<number, RubricaCriterioNivel>>>({});
 
   // Drafts: `${criterioId}-${nivelId}`
   const [draftCell, setDraftCell] = useState<Record<string, string>>({});
@@ -105,7 +120,7 @@ export default function RubricaEditorPage() {
   // Debounce timers
   const saveTimers = useRef<Record<string, any>>({});
 
-  // ✅ Toast (abajo-derecha via CSS .reToastBL)
+  // Toast
   const [toast, setToast] = useState<{ type: ToastType; message: string } | null>(null);
   const toastTimer = useRef<any>(null);
 
@@ -115,7 +130,6 @@ export default function RubricaEditorPage() {
     toastTimer.current = setTimeout(() => setToast(null), 2600);
   };
 
-  // ✅ VOLVER SIEMPRE AL VIEW DEL PERIODO (RubricasVerPage)
   function goBack() {
     const pid = rubrica?.id_periodo;
     if (pid) navigate(`/rubricas/periodo/${pid}`);
@@ -136,21 +150,19 @@ export default function RubricaEditorPage() {
       .sort((a, b) => toNum(a.orden, 0) - toNum(b.orden, 0));
   }, [componentes]);
 
-  // ✅ Total ponderación SIEMPRE correcto aunque venga "40,00"
   const totalPonderacionActiva = useMemo(() => {
     return componentesActivos.reduce((acc, c) => acc + toNum(c.ponderacion, 0), 0);
   }, [componentesActivos]);
 
   // ---------------------------
-  // LOADERS (SIN DOBLE SET QUE CAUSA "PARPADEO")
+  // LOADERS
   // ---------------------------
   const loadRubrica = async () => {
     const res = await axiosClient.get(`/rubricas/${rid}`);
-    const r = res.data as Rubrica;
+    // puede venir {ok:true,data:{...}} o directo
+    const r = (res.data?.data ?? res.data) as Rubrica;
 
     setRubrica(r);
-
-    // ✅ set por defecto con fallback (evita "sin nombre" raro si llega null/undefined)
     setNombreRubrica((r?.nombre_rubrica ?? "").toString());
     setDescRubrica((r?.descripcion_rubrica ?? "").toString());
   };
@@ -159,13 +171,14 @@ export default function RubricaEditorPage() {
     const res = await axiosClient.get(`/rubricas/${rid}/niveles`, {
       params: { includeInactive: true },
     });
-    const arr = (res.data ?? []) as RubricaNivel[];
+
+    const arr = unwrapArray<RubricaNivel>(res.data);
 
     const normalized = arr.map((n) => ({
       ...n,
-      estado: toNum((n as any).estado, 1), // ✅ normaliza estado
-      valor_nivel: toNum(n.valor_nivel, 0),
-      orden_nivel: toNum(n.orden_nivel, 0),
+      estado: toNum((n as any).estado, 1),
+      valor_nivel: toNum((n as any).valor_nivel, 0),
+      orden_nivel: toNum((n as any).orden_nivel, 0),
     }));
 
     setNiveles(normalized);
@@ -176,13 +189,14 @@ export default function RubricaEditorPage() {
     const res = await axiosClient.get(`/rubricas/${rid}/componentes`, {
       params: { includeInactive: true },
     });
-    const arr = (res.data ?? []) as RubricaComponente[];
+
+    const arr = unwrapArray<RubricaComponente>(res.data);
 
     const normalized = arr.map((c) => ({
       ...c,
-      estado: toNum((c as any).estado, 1), // ✅ normaliza estado
-      ponderacion: toNum(c.ponderacion, 0),
-      orden: toNum(c.orden, 0),
+      estado: toNum((c as any).estado, 1),
+      ponderacion: toNum((c as any).ponderacion, 0),
+      orden: toNum((c as any).orden, 0),
     }));
 
     setComponentes(normalized);
@@ -193,7 +207,8 @@ export default function RubricaEditorPage() {
     const res = await axiosClient.get(`/componentes/${idComp}/criterios`, {
       params: { includeInactive: true },
     });
-    const arr = (res.data ?? []) as RubricaCriterio[];
+
+    const arr = unwrapArray<RubricaCriterio>(res.data);
 
     const normalized = arr.map((x) => ({
       ...x,
@@ -209,7 +224,8 @@ export default function RubricaEditorPage() {
     const res = await axiosClient.get(`/criterios/${criterioId}/niveles`, {
       params: { includeInactive: true },
     });
-    const arr = (res.data ?? []) as RubricaCriterioNivel[];
+
+    const arr = unwrapArray<RubricaCriterioNivel>(res.data);
 
     const map: Record<number, RubricaCriterioNivel> = {};
     for (const rcn of arr) {
@@ -226,12 +242,10 @@ export default function RubricaEditorPage() {
     try {
       const [_r, _n, comps] = await Promise.all([loadRubrica(), loadNiveles(), loadComponentes()]);
 
-      // criterios
       const criteriosArrays = await Promise.all(
-        comps.map((c) => loadCriteriosDeComponente(c.id_rubrica_componente))
+        (comps ?? []).map((c) => loadCriteriosDeComponente(c.id_rubrica_componente))
       );
 
-      // celdas
       const allCriterios = criteriosArrays.flat();
       await Promise.all(allCriterios.map((cr) => loadCeldasDeCriterio(cr.id_rubrica_criterio)));
     } catch (e) {
@@ -256,7 +270,6 @@ export default function RubricaEditorPage() {
       setLoading(true);
       await axiosClient.put(`/rubricas/${rid}`, {
         nombre_rubrica: nombreRubrica.trim(),
-        // ✅ evita null si tu backend no lo quiere (si lo acepta, igual funciona)
         descripcion_rubrica: descRubrica.trim() ? descRubrica.trim() : "",
         ponderacion_global: 100,
       });
@@ -405,11 +418,7 @@ export default function RubricaEditorPage() {
     }
   };
 
-  const updateCriterio = async (
-    compId: number,
-    criterio: RubricaCriterio,
-    patch: Partial<RubricaCriterio>
-  ) => {
+  const updateCriterio = async (compId: number, criterio: RubricaCriterio, patch: Partial<RubricaCriterio>) => {
     try {
       await axiosClient.put(`/componentes/${compId}/criterios/${criterio.id_rubrica_criterio}`, {
         nombre_criterio: (patch.nombre_criterio ?? criterio.nombre_criterio) ?? "",
@@ -426,9 +435,7 @@ export default function RubricaEditorPage() {
   const deleteCriterio = async (compId: number, criterioId: number) => {
     if (!confirm("¿Eliminar este criterio?")) return;
     try {
-      await axiosClient.patch(`/componentes/${compId}/criterios/${criterioId}/estado`, {
-        estado: false,
-      });
+      await axiosClient.patch(`/componentes/${compId}/criterios/${criterioId}/estado`, { estado: false });
       await loadCriteriosDeComponente(compId);
       showToast("success", "Criterio eliminado");
     } catch (e) {
@@ -475,7 +482,6 @@ export default function RubricaEditorPage() {
   return (
     <div className="wrap rubricaEditorPage">
       <div className="containerFull">
-        {/* HERO */}
         <div className="hero">
           <div className="heroLeft">
             <img className="heroLogo" src={escudoESPE} alt="ESPE" />
@@ -490,7 +496,6 @@ export default function RubricaEditorPage() {
           </button>
         </div>
 
-        {/* BOX */}
         <div className="box">
           <div className="boxHead">
             <div className="sectionTitle">
@@ -505,9 +510,7 @@ export default function RubricaEditorPage() {
             </div>
           </div>
 
-          {/* TOP GRID */}
           <div className="reTopGrid">
-            {/* Info general */}
             <div className="reCard">
               <div className="reCardHead">Información General</div>
               <div className="reCardBody">
@@ -531,7 +534,6 @@ export default function RubricaEditorPage() {
               </div>
             </div>
 
-            {/* Niveles */}
             <div className="reCard">
               <div className="reCardHead between">
                 <div>Niveles de Calificación</div>
@@ -600,7 +602,6 @@ export default function RubricaEditorPage() {
             </div>
           </div>
 
-          {/* COMPONENTES */}
           <div className="reSectionTitle">Componentes y Criterios</div>
 
           {componentesActivos.map((comp, idx) => {
@@ -630,7 +631,9 @@ export default function RubricaEditorPage() {
                         onChange={(e) =>
                           setComponentes((prev) =>
                             prev.map((x) =>
-                              x.id_rubrica_componente === comp.id_rubrica_componente ? { ...x, nombre_componente: e.target.value } : x
+                              x.id_rubrica_componente === comp.id_rubrica_componente
+                                ? { ...x, nombre_componente: e.target.value }
+                                : x
                             )
                           )
                         }
@@ -647,7 +650,9 @@ export default function RubricaEditorPage() {
                         onChange={(e) =>
                           setComponentes((prev) =>
                             prev.map((x) =>
-                              x.id_rubrica_componente === comp.id_rubrica_componente ? { ...x, ponderacion: toNum(e.target.value, 0) } : x
+                              x.id_rubrica_componente === comp.id_rubrica_componente
+                                ? { ...x, ponderacion: toNum(e.target.value, 0) }
+                                : x
                             )
                           )
                         }
@@ -656,7 +661,6 @@ export default function RubricaEditorPage() {
                     </div>
                   </div>
 
-                  {/* Tabla criterios */}
                   <div className="reTableWrap">
                     <table className="reTable">
                       <thead>
@@ -691,7 +695,9 @@ export default function RubricaEditorPage() {
                                     setCriteriosByComp((prev) => ({
                                       ...prev,
                                       [comp.id_rubrica_componente]: (prev[comp.id_rubrica_componente] ?? []).map((x) =>
-                                        x.id_rubrica_criterio === cr.id_rubrica_criterio ? { ...x, nombre_criterio: e.target.value } : x
+                                        x.id_rubrica_criterio === cr.id_rubrica_criterio
+                                          ? { ...x, nombre_criterio: e.target.value }
+                                          : x
                                       ),
                                     }))
                                   }
@@ -754,7 +760,6 @@ export default function RubricaEditorPage() {
             </button>
           </div>
 
-          {/* FOOTER */}
           <div className="reFooter">
             <button className="reBtn reBtnPrimary" onClick={saveRubrica} disabled={loading} type="button">
               <Save className="iconSm" /> Guardar rúbrica
@@ -769,7 +774,6 @@ export default function RubricaEditorPage() {
         </div>
       </div>
 
-      {/* ✅ Toast abajo-derecha (usa el CSS .reToastBL) */}
       {toast ? (
         <div className={`reToastBL ${toast.type}`} onClick={() => setToast(null)} role="status" aria-live="polite">
           <div className="reToastMsg">{toast.message}</div>
