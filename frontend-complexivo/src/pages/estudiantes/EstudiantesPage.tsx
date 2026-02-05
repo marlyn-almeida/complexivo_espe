@@ -19,7 +19,6 @@ import {
   ToggleRight,
   Search,
   Upload,
-  Download,
   Filter,
   X,
   User,
@@ -249,9 +248,12 @@ export default function EstudiantesPage() {
         if (!q) return true;
 
         const ced = onlyDigits(String((e as any).cedula ?? ""));
+        const username = String((e as any).nombre_usuario ?? "").toLowerCase();
+
         return (
           (e.id_institucional_estudiante || "").toLowerCase().includes(q) ||
           ced.toLowerCase().includes(q) ||
+          username.includes(q) ||
           (e.nombres_estudiante || "").toLowerCase().includes(q) ||
           (e.apellidos_estudiante || "").toLowerCase().includes(q) ||
           (e.correo_estudiante || "").toLowerCase().includes(q)
@@ -304,15 +306,7 @@ export default function EstudiantesPage() {
               Importar
             </button>
 
-            <button
-              className="heroBtn ghost"
-              onClick={() => showToast("Abre Importar y descarga la plantilla.", "info")}
-              disabled={loading}
-              title="Descargar plantilla"
-            >
-              <Download className="heroBtnIcon" />
-              Plantilla
-            </button>
+            {/* ✅ QUITADO: Botón Plantilla (ya está dentro de Importar) */}
 
             <button className="heroBtn primary" onClick={openCreate} disabled={loading}>
               <Plus className="heroBtnIcon" />
@@ -375,7 +369,7 @@ export default function EstudiantesPage() {
               <Search className="searchIcon" />
               <input
                 className="search"
-                placeholder="Buscar por ID institucional, cédula, nombres, apellidos o correo..."
+                placeholder="Buscar por ID institucional, usuario, cédula, nombres, apellidos o correo..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 disabled={!selectedCP}
@@ -428,6 +422,13 @@ export default function EstudiantesPage() {
                     </span>
                   </th>
 
+                  {/* ✅ NUEVO: Username */}
+                  <th className="thCenter thUser">
+                    <span className="thFlex">
+                      <User size={16} /> Usuario
+                    </span>
+                  </th>
+
                   <th className="thName thCenter">
                     <span className="thFlex">
                       <User size={16} /> Estudiante
@@ -457,13 +458,13 @@ export default function EstudiantesPage() {
               <tbody>
                 {!selectedCP ? (
                   <tr>
-                    <td colSpan={6} className="emptyCell">
+                    <td colSpan={7} className="emptyCell">
                       <div className="empty">Seleccione una Carrera–Período para ver estudiantes.</div>
                     </td>
                   </tr>
                 ) : loading ? (
                   <tr>
-                    <td colSpan={6} className="emptyCell">
+                    <td colSpan={7} className="emptyCell">
                       <div className="empty">Cargando...</div>
                     </td>
                   </tr>
@@ -471,6 +472,7 @@ export default function EstudiantesPage() {
                   pageData.map((e) => {
                     const activo = isActivo(e.estado);
                     const cedula = onlyDigits(String((e as any).cedula ?? "")) || "-";
+                    const username = String((e as any).nombre_usuario ?? "-");
 
                     return (
                       <tr key={e.id_estudiante}>
@@ -479,6 +481,9 @@ export default function EstudiantesPage() {
                         </td>
 
                         <td className="mono tdCenter">{cedula}</td>
+
+                        {/* ✅ NUEVO: Username */}
+                        <td className="tdCenter mono">{username}</td>
 
                         <td className="tdCenter tdName">
                           <div className="nameMain">
@@ -529,7 +534,7 @@ export default function EstudiantesPage() {
                   })
                 ) : (
                   <tr>
-                    <td colSpan={6} className="emptyCell">
+                    <td colSpan={7} className="emptyCell">
                       <div className="empty">No hay estudiantes para mostrar.</div>
                     </td>
                   </tr>
@@ -571,7 +576,7 @@ export default function EstudiantesPage() {
       {showViewModal && viewEstudiante && (
         <EstudianteViewModal
           estudiante={viewEstudiante}
-          selectedCPLabel={selectedCPLabel} // ✅ FIX: tu modal espera selectedCPLabel
+          selectedCPLabel={selectedCPLabel}
           onClose={closeView}
         />
       )}
@@ -580,7 +585,7 @@ export default function EstudiantesPage() {
         open={showImportModal}
         carreraPeriodos={carreraPeriodos}
         importingExternal={importingExternal}
-        setImportingExternal={setImportingExternal} // ✅ FIX: tu modal lo exige
+        setImportingExternal={setImportingExternal}
         onClose={closeImportModal}
         onToast={(msg, type) => showToast(msg, type ?? "info")}
         onImported={async () => {

@@ -1,5 +1,16 @@
 import type { Estudiante } from "../../types/estudiante";
-import { BadgeCheck, BadgeX, Eye, Hash, Mail, Phone, User, GraduationCap } from "lucide-react";
+import {
+  BadgeCheck,
+  BadgeX,
+  Eye,
+  Hash,
+  Mail,
+  Phone,
+  User,
+  GraduationCap,
+  AtSign,
+  IdCard,
+} from "lucide-react";
 import "./EstudianteViewModal.css";
 
 function onlyDigits(v: string) {
@@ -12,17 +23,23 @@ export default function EstudianteViewModal({
   onClose,
 }: {
   estudiante: Estudiante;
-  selectedCPLabel?: string; // ✅ coincide con tu Page
+  selectedCPLabel?: string;
   onClose: () => void;
 }) {
   const fullName =
     `${estudiante.apellidos_estudiante || ""} ${estudiante.nombres_estudiante || ""}`.trim() || "-";
 
   const idInst = (estudiante.id_institucional_estudiante || "-").toUpperCase();
+
+  // ✅ NUEVO
+  const username = String((estudiante as any).nombre_usuario ?? "-") || "-";
+
+  // ✅ NUEVO
+  const cedula = onlyDigits(String((estudiante as any).cedula ?? "")) || "-";
+
   const correo = estudiante.correo_estudiante || "-";
   const telefono = onlyDigits(estudiante.telefono_estudiante || "") || "-";
 
-  // ✅ Prioridad: lo que calcula tu Page (porque viene de carreraPeriodos)
   const cp =
     selectedCPLabel ||
     ((estudiante as any).nombre_carrera && (estudiante as any).codigo_periodo
@@ -77,7 +94,15 @@ export default function EstudianteViewModal({
                 <span className="dmMiniItem">
                   <Hash size={14} /> <span className="mono">{idInst}</span>
                 </span>
+
                 <span className="dmMiniDot">•</span>
+
+                <span className="dmMiniItem">
+                  <AtSign size={14} /> <span className="mono">{username}</span>
+                </span>
+
+                <span className="dmMiniDot">•</span>
+
                 <span className="dmMiniItem">
                   <Mail size={14} /> <span className="dmEllipsis">{correo}</span>
                 </span>
@@ -91,6 +116,20 @@ export default function EstudianteViewModal({
                 <Hash size={16} /> ID institucional
               </div>
               <div className="dmValue mono">{idInst}</div>
+            </div>
+
+            <div className="dmField">
+              <div className="dmLabel">
+                <AtSign size={16} /> Usuario
+              </div>
+              <div className="dmValue mono">{username}</div>
+            </div>
+
+            <div className="dmField">
+              <div className="dmLabel">
+                <IdCard size={16} /> Cédula
+              </div>
+              <div className="dmValue mono">{cedula}</div>
             </div>
 
             <div className="dmField">

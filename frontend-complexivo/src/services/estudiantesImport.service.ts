@@ -9,9 +9,9 @@ function normalizeKey(v: any): string {
     .trim()
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "") // sin tildes
+    .replace(/[\u0300-\u036f]/g, "")
     .replace(/\s+/g, " ")
-    .replace(/[._-]+/g, " "); // separadores -> espacios
+    .replace(/[._-]+/g, " ");
 }
 
 function asString(v: any): string {
@@ -23,19 +23,24 @@ function onlyDigits(v: any): string {
 }
 
 /**
- * ✅ Headers “bonitos” (NO nombres de BD)
- * - ID Institucional
- * - Cédula
- * - Nombres
- * - Apellidos
- * - Correo
- * - Teléfono
+ * ✅ Headers amigables (NO BD)
  */
-const FRIENDLY_HEADERS = ["ID Institucional", "Cédula", "Nombres", "Apellidos", "Correo", "Teléfono"];
+const FRIENDLY_HEADERS = [
+  "ID Institucional",
+  "Usuario",
+  "Cédula",
+  "Nombres",
+  "Apellidos",
+  "Correo",
+  "Teléfono",
+];
 
-/** Mapea posibles nombres que el usuario pueda poner en Excel */
 const KEY_ALIASES: Record<string, string[]> = {
-  idInst: ["id institucional", "id", "identificacion", "usuario", "id estudiante", "codigo", "matricula"],
+  idInst: ["id institucional", "id", "identificacion", "id estudiante", "codigo", "matricula"],
+
+  // ✅ NUEVO: usuario
+  usuario: ["usuario", "username", "user", "nombre de usuario", "nickname", "cuenta"],
+
   cedula: ["cedula", "c i", "ci", "documento", "numero de cedula", "nro cedula"],
   nombres: ["nombres", "nombre", "nombres estudiante"],
   apellidos: ["apellidos", "apellido", "apellidos estudiante"],
@@ -54,7 +59,6 @@ function pickByAliases(row: RawRow, aliases: string[]): any {
   return "";
 }
 
-/** ✅ Plantilla CSV con headers bonitos */
 export function downloadPlantillaEstudiantesCSV() {
   const csv = `${FRIENDLY_HEADERS.join(",")}\n`;
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -68,27 +72,20 @@ export function downloadPlantillaEstudiantesCSV() {
   URL.revokeObjectURL(url);
 }
 
-/** ✅ Plantilla EXCEL con headers bonitos */
 export function downloadPlantillaEstudiantesXLSX() {
   const ws = XLSX.utils.aoa_to_sheet([FRIENDLY_HEADERS]);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Estudiantes");
-
   XLSX.writeFile(wb, "plantilla_estudiantes.xlsx");
 }
 
-/**
- * ✅ Parser Excel/CSV
- * - NO trae nombre_carrera/codigo_periodo
- * - id_carrera_periodo se asigna desde el modal (selected CP)
- */
 export async function parseExcelEstudiantes(
   file: File
 ): Promise<
   Array<
     EstudianteCreateDTO & {
       __rowNumber: number;
-      cedula: string; // forzado
+      cedula: string;
     }
   >
 > {
@@ -110,17 +107,22 @@ export async function parseExcelEstudiantes(
 
   for (let i = 0; i < json.length; i++) {
     const row = json[i];
-    const rowNumber = i + 2; // fila 1 = header
+    const rowNumber = i + 2;
 
     const idInst = asString(pickByAliases(row, KEY_ALIASES.idInst));
+    const usuario = asString(pickByAliases(row, KEY_ALIASES.usuario)); // ✅ NUEVO
     const cedula = onlyDigits(pickByAliases(row, KEY_ALIASES.cedula));
     const nombres = asString(pickByAliases(row, KEY_ALIASES.nombres));
     const apellidos = asString(pickByAliases(row, KEY_ALIASES.apellidos));
     const correo = asString(pickByAliases(row, KEY_ALIASES.correo));
     const telefono = asString(pickByAliases(row, KEY_ALIASES.telefono));
 
-    // ✅ Validaciones mínimas (según tu BD)
     if (!idInst) throw new Error(`Fila ${rowNumber}: falta "ID Institucional".`);
+
+    // ✅ usuario obligatorio (como backend)
+    if (!usuario) throw new Error(`Fila ${rowNumber}: falta "Usuario".`);
+    if (/\s/.test(usuario)) throw new Error(`Fila ${rowNumber}: "Usuario" no debe contener espacios.`);
+    if (usuario.length < 4) throw new Error(`Fila ${rowNumber}: "Usuario" mínimo 4 caracteres.`);
 
     if (!cedula) throw new Error(`Fila ${rowNumber}: falta "Cédula".`);
     if (!/^\d+$/.test(cedula)) throw new Error(`Fila ${rowNumber}: "Cédula" solo debe contener números.`);
@@ -133,11 +135,10 @@ export async function parseExcelEstudiantes(
 
     out.push({
       __rowNumber: rowNumber,
-
-      // ✅ se setea desde el modal, aquí va dummy
-      id_carrera_periodo: 0,
+      id_carrera_periodo: 0, // se setea desde el modal
 
       id_institucional_estudiante: idInst,
+      nombre_usuario: usuario, // ✅ NUEVO
       cedula,
 
       nombres_estudiante: nombres,

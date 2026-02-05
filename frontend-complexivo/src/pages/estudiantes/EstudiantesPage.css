@@ -379,15 +379,24 @@
   border-radius: 12px;
   border: 1px solid rgba(0, 0, 0, 0.08);
   margin-top: 12px;
-  overflow: visible; /* tooltips */
+
+  /* ✅ IMPORTANTE: mantener scroll y permitir tooltip por z-index */
+  overflow: auto;
+  position: relative;
+  z-index: 1;
 }
 
 .estudiantesPage .table {
   width: 100%;
   border-collapse: collapse;
   background: #fff;
-  min-width: 980px;
+
+  /* ✅ un poco más por la nueva columna Usuario */
+  min-width: 1120px;
+
   table-layout: fixed;
+  position: relative;
+  z-index: 1;
 }
 
 .estudiantesPage .table thead th {
@@ -420,6 +429,11 @@
   width: 160px;
 }
 .estudiantesPage .thActions {
+  width: 200px;
+}
+
+/* ✅ NUEVO: ancho para columna Usuario */
+.estudiantesPage .thUser {
   width: 200px;
 }
 
@@ -487,7 +501,9 @@
 .estudiantesPage .tdActions {
   text-align: center;
   white-space: nowrap;
-  overflow: visible;
+  overflow: visible !important; /* ✅ clave: que NO recorte el tooltip */
+  position: relative;
+  z-index: 5;
 }
 
 .estudiantesPage .actions {
@@ -512,11 +528,17 @@
   cursor: pointer;
   transition: background 0.15s ease, border-color 0.15s ease, transform 0.08s ease, box-shadow 0.15s ease;
   overflow: visible;
+
+  /* ✅ stacking base */
+  z-index: 10;
 }
 
 .estudiantesPage .iconBtn:hover {
   transform: translateY(-1px);
   box-shadow: 0 8px 14px rgba(0, 0, 0, 0.06);
+
+  /* ✅ al hover sube por encima de la tabla */
+  z-index: 9999;
 }
 
 .estudiantesPage .iconBtn:active {
@@ -584,7 +606,9 @@
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.12s ease, transform 0.12s ease;
-  z-index: 99999;
+
+  /* ✅ por encima de todo */
+  z-index: 999999;
 }
 
 .estudiantesPage .tooltip::after {
@@ -708,4 +732,13 @@
 .estudiantesPage .table tbody tr:nth-child(odd):hover,
 .estudiantesPage .table tbody tr:nth-child(even):hover {
   background: rgba(0, 0, 0, 0.03) !important;
+}
+
+/* ===============================
+   FIX EXTRA: el overflow hidden del td general recorta tooltips
+   - NO quitamos ellipsis global
+   - pero reforzamos tdActions como visible
+   =============================== */
+.estudiantesPage .table tbody td.tdActions {
+  overflow: visible !important;
 }

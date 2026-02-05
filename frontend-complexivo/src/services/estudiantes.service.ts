@@ -13,10 +13,11 @@ export type EstudianteListParams = {
 export type EstudianteCreateDTO = {
   id_carrera_periodo: number;
 
-  // "username" conceptual
   id_institucional_estudiante: string;
 
-  // ✅ nuevo
+  // ✅ NUEVO (username para login o identificación)
+  nombre_usuario: string;
+
   cedula: string;
 
   nombres_estudiante: string;
@@ -34,7 +35,6 @@ export const estudiantesService = {
     const res = await axiosClient.get<Estudiante[]>("/estudiantes", {
       params: {
         carreraPeriodoId: params?.carreraPeriodoId,
-        // tú ya lo estabas enviando así, lo dejo igual
         includeInactive: params?.includeInactive ? 1 : 0,
         q: params?.q?.trim() || undefined,
         page: params?.page ?? 1,

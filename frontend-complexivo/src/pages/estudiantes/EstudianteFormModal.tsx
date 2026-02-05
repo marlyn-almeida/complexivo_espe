@@ -15,6 +15,7 @@ import {
   GraduationCap,
   BadgeInfo,
   IdCard,
+  AtSign,
 } from "lucide-react";
 
 import "./EstudianteModal.css";
@@ -34,6 +35,25 @@ function safeUpper(v?: string | null) {
   return x ? x.toUpperCase() : "";
 }
 
+function normalizeUsername(v: string) {
+  // username sin espacios, minúsculas, sin tildes, solo [a-z0-9._-]
+  return String(v ?? "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, "")
+    .replace(/[^a-z0-9._-]/g, "");
+}
+
+function suggestUsername(idInst: string, cedula: string) {
+  const a = normalizeUsername(idInst);
+  if (a && a.length >= 4) return a.slice(0, 30);
+  const c = onlyDigits(cedula);
+  if (c && c.length >= 4) return `u${c.slice(-8)}`; // ej: u12345678
+  return "";
+}
+
 export default function EstudianteFormModal({
   mode,
   estudiante,
@@ -46,7 +66,6 @@ export default function EstudianteFormModal({
   mode: "create" | "edit";
   estudiante: Estudiante | null;
   carreraPeriodos: CarreraPeriodo[];
-  // ✅ este nombre coincide con el Page que te pasé
   selectedCarreraPeriodoId?: number;
   onClose: () => void;
   onSaved: () => void | Promise<void>;
@@ -60,6 +79,7 @@ export default function EstudianteFormModal({
 
   const [cpId, setCpId] = useState<number | "">("");
   const [idInst, setIdInst] = useState("");
+  const [username, setUsername] = useState(""); // ✅ NUEVO
   const [cedula, setCedula] = useState("");
   const [nombres, setNombres] = useState("");
   const [apellidos, setApellidos] = useState("");
@@ -80,6 +100,7 @@ export default function EstudianteFormModal({
     if (isEdit && estudiante) {
       setCpId(Number((estudiante as any).id_carrera_periodo) || "");
       setIdInst(safeUpper((estudiante as any).id_institucional_estudiante));
+      setUsername(String((estudiante as any).nombre_usuario ?? "")); // ✅ NUEVO
       setCedula(onlyDigits(String((estudiante as any).cedula ?? "")));
       setNombres(String((estudiante as any).nombres_estudiante ?? ""));
       setApellidos(String((estudiante as any).apellidos_estudiante ?? ""));
@@ -98,6 +119,7 @@ export default function EstudianteFormModal({
 
     setCpId(initCp || "");
     setIdInst("");
+    setUsername("");
     setCedula("");
     setNombres("");
     setApellidos("");
@@ -106,13 +128,33 @@ export default function EstudianteFormModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, estudiante, selectedCarreraPeriodoId, cpOptions.length]);
 
+  // ✅ Autocompleta username cuando se está creando (sin molestar al editar)
+  useEffect(() => {
+    if (isEdit) return;
+    // si el usuario ya escribió algo, no lo piso
+    if (username.trim()) return;
+
+    const sug = suggestUsername(idInst, cedula);
+    if (sug) setUsername(sug);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idInst, cedula, isEdit]);
+
   function validate(): string | null {
     if (!cpId) return "Carrera–Período es obligatorio.";
 
     if (!idInst.trim()) return "ID institucional es obligatorio.";
     if (safeUpper(idInst).length < 4) return "ID institucional inválido.";
 
-    // ✅ BD: usualmente obligatorio
+    // ✅ usuario obligatorio
+    if (!username.trim()) return "Usuario es obligatorio.";
+    const u = normalizeUsername(username);
+    if (u.length < 4) return "Usuario inválido (mínimo 4).";
+    if (/\s/.test(username)) return "Usuario no debe contener espacios.";
+    if (u !== username.trim().toLowerCase()) {
+      // no lo fuerzo, solo aviso para que lo ajusten
+      // pero igual lo vamos a normalizar al enviar
+    }
+
     if (!cedula.trim()) return "Cédula es obligatoria.";
     if (onlyDigits(cedula).length < 10) return "Cédula debe tener al menos 10 dígitos.";
 
@@ -150,10 +192,13 @@ export default function EstudianteFormModal({
     try {
       setSaving(true);
 
-      // ✅ payload alineado a BD (incluye cedula)
       const payload = {
         id_carrera_periodo: Number(cpId),
         id_institucional_estudiante: safeUpper(idInst),
+
+        // ✅ NUEVO
+        nombre_usuario: normalizeUsername(username),
+
         cedula: onlyDigits(cedula),
         nombres_estudiante: nombres.trim(),
         apellidos_estudiante: apellidos.trim(),
@@ -247,7 +292,22 @@ export default function EstudianteFormModal({
                 <input
                   value={idInst}
                   onChange={(e) => setIdInst(e.target.value)}
-                  placeholder="Ej: ESPE-2025-00123"
+                  placeholder="Ej: L00999999"
+                  disabled={saving}
+                />
+              </div>
+            </div>
+
+            {/* Usuario (username) */}
+            <div className="dmInput">
+              <label>
+                <AtSign size={14} /> Usuario <span className="req">*</span>
+              </label>
+              <div className="dmInputBox">
+                <input
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Ej: mfalmeida"
                   disabled={saving}
                 />
               </div>
