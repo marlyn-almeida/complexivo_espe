@@ -1,3 +1,5 @@
+// src/types/entregaCaso.ts
+
 export type EntregaCaso = {
   id_estudiante_caso_entrega: number;
   id_estudiante: number;
@@ -14,6 +16,7 @@ export type EntregaCaso = {
 };
 
 export type EntregaCasoCreate = {
+  id_estudiante: number;        // ✅ ESTE ES EL CAMPO QUE FALTABA
   id_caso_estudio: number;
   archivo: File;
   observacion?: string;
