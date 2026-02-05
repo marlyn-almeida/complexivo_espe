@@ -75,6 +75,11 @@ async function getById(id_rubrica) {
   return rows[0] || null;
 }
 
+/** ✅ Alias para compatibilidad con código viejo: rubricaRepo.findById(...) */
+async function findById(id_rubrica) {
+  return getById(id_rubrica);
+}
+
 async function create({ id_periodo, nombre_rubrica, descripcion_rubrica, ponderacion_global, estado }) {
   const [r] = await pool.query(
     `
@@ -131,8 +136,12 @@ async function changeEstado(id_rubrica, estado01) {
 }
 
 /* =========================================================
-   ✅ COMPONENTES
+   ✅ COMPONENTES (según tu BD real)
    Tabla: rubrica_componente
+   Campos reales (según tu front y tu data):
+   - tipo_componente (ej: OTRO)
+   - ponderacion (74.00, 40.00)
+   - orden (1,2)
    ========================================================= */
 
 async function listComponentes(id_rubrica, { includeInactive = false } = {}) {
@@ -142,14 +151,16 @@ async function listComponentes(id_rubrica, { includeInactive = false } = {}) {
       id_rubrica_componente,
       id_rubrica,
       nombre_componente,
-      ponderacion_pct,
+      tipo_componente,
+      ponderacion,
+      orden,
       estado,
       created_at,
       updated_at
     FROM rubrica_componente
     WHERE id_rubrica = ?
       AND (? = TRUE OR estado = 1)
-    ORDER BY id_rubrica_componente ASC
+    ORDER BY orden ASC, id_rubrica_componente ASC
     `,
     [id_rubrica, includeInactive]
   );
@@ -160,6 +171,7 @@ module.exports = {
   list,
   getByPeriodo,
   getById,
+  findById, // ✅ clave para que no reviente niveles
   create,
   update,
   changeEstado,
