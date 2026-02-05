@@ -1,57 +1,86 @@
+// ✅ src/pages/estudiantes/EstudiantesImportModal.tsx
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { CarreraPeriodo } from "../../types/carreraPeriodo";
-
 import { estudiantesService } from "../../services/estudiantes.service";
 
 import {
   downloadPlantillaEstudiantesCSV,
+  // ✅ si tienes XLSX, úsalo; si no, quita este import y el botón XLSX
+  downloadPlantillaEstudiantesXLSX,
   parseExcelEstudiantes,
-  resolveCarreraPeriodoIdByNombreCarreraCodigoPeriodo,
 } from "../../services/estudiantesImport.service";
 
-import { Download, FileSpreadsheet, Info, Upload, GraduationCap, X } from "lucide-react";
+import {
+  Download,
+  FileSpreadsheet,
+  Info,
+  Upload,
+  GraduationCap,
+  X,
+  AlertTriangle,
+} from "lucide-react";
+
+// ✅ REUSA el mismo CSS de Docentes
+import "../docentes/DocentesImportModal.css";
 
 type ToastType = "success" | "error" | "info";
+type Issue = { rowNum: number; label: string; reason: string };
+
+function onlyDigits(v: any) {
+  return String(v ?? "").replace(/\D+/g, "");
+}
+
+function isValidCedulaMin(ced: string) {
+  const d = onlyDigits(ced);
+  return d.length >= 10;
+}
 
 export default function EstudiantesImportModal({
   open,
   carreraPeriodos,
-  loadingCarreraPeriodos,
+  loadingCarreraPeriodos = false,
   importingExternal = false,
+  setImportingExternal,
   onClose,
   onToast,
   onImported,
 }: {
   open: boolean;
   carreraPeriodos: CarreraPeriodo[];
-  loadingCarreraPeriodos: boolean;
+  loadingCarreraPeriodos?: boolean;
   importingExternal?: boolean;
+  setImportingExternal: (v: boolean) => void;
   onClose: () => void;
   onToast: (msg: string, type?: ToastType) => void;
-  onImported?: () => void;
+  onImported?: () => void | Promise<void>;
 }) {
   const fileRef = useRef<HTMLInputElement | null>(null);
 
+  const [cpId, setCpId] = useState<number | "">("");
   const [importing, setImporting] = useState(false);
 
-  const [parseStats, setParseStats] = useState<{
-    totalRows: number;
-    valid: number;
-    invalid: number;
-  } | null>(null);
-
-  const [parseIssues, setParseIssues] = useState<Array<{ rowNum: number; label: string; reason: string }>>([]);
+  const [stats, setStats] = useState<{ total: number; ok: number; omitidos: number } | null>(null);
+  const [issues, setIssues] = useState<Issue[]>([]);
 
   const busy = importing || importingExternal;
 
+  // ✅ NO filtrar por estado: si tu API no manda "estado" esto quedaba vacío.
   const cps = useMemo(() => (carreraPeriodos ?? []).slice(), [carreraPeriodos]);
 
   useEffect(() => {
     if (!open) return;
-    setParseStats(null);
-    setParseIssues([]);
-  }, [open]);
+
+    setIssues([]);
+    setStats(null);
+
+    // ✅ setear el primero disponible
+    if (cps.length) {
+      setCpId((prev) => (prev ? prev : Number((cps[0] as any).id_carrera_periodo)));
+    } else {
+      setCpId("");
+    }
+  }, [open, cps]);
 
   if (!open) return null;
 
@@ -59,14 +88,36 @@ export default function EstudiantesImportModal({
     if (!busy) onClose();
   }
 
+  function labelCP(cp: any) {
+    // ✅ robusto: usa lo que venga
+    const carrera = (cp.nombre_carrera ?? cp.codigo_carrera) || "Carrera";
+    const periodo = (cp.codigo_periodo ?? cp.descripcion_periodo) || "Período";
+
+    return `${carrera} — ${periodo}`;
+  }
+
+  function extractBackendMsg(err: any) {
+    const msg = err?.response?.data?.message;
+    const list = err?.response?.data?.errors;
+    if (Array.isArray(list) && list.length && list[0]?.msg) return String(list[0].msg);
+    if (typeof msg === "string" && msg.trim()) return msg;
+    return err?.message || "Error al crear el estudiante.";
+  }
+
   function onDownloadCSV() {
     downloadPlantillaEstudiantesCSV();
-    onToast("Plantilla CSV descargada.", "success");
+    onToast("Plantilla descargada (CSV).", "success");
+  }
+
+  function onDownloadXLSX() {
+    // ⚠️ Si no tienes esta función, elimina este botón y el import.
+    downloadPlantillaEstudiantesXLSX();
+    onToast("Plantilla descargada (Excel).", "success");
   }
 
   function onClickImport() {
-    if (!cps.length) {
-      onToast("Primero carga Carrera–Período.", "info");
+    if (!cpId) {
+      onToast("Selecciona un Carrera–Período antes de importar.", "info");
       return;
     }
     fileRef.current?.click();
@@ -77,20 +128,14 @@ export default function EstudiantesImportModal({
     e.target.value = "";
     if (!file) return;
 
-    setParseStats(null);
-    setParseIssues([]);
+    setIssues([]);
+    setStats(null);
 
     try {
       setImporting(true);
+      setImportingExternal(true);
 
       const rows = await parseExcelEstudiantes(file);
-
-      // stats simples
-      setParseStats({
-        totalRows: rows.length,
-        valid: rows.length,
-        invalid: 0,
-      });
 
       if (!rows.length) {
         onToast("No hay filas válidas para importar.", "info");
@@ -98,55 +143,85 @@ export default function EstudiantesImportModal({
       }
 
       let ok = 0;
-      const issues: Array<{ rowNum: number; label: string; reason: string }> = [];
+      const om: Issue[] = [];
 
-      for (const r of rows) {
-        const idCP = resolveCarreraPeriodoIdByNombreCarreraCodigoPeriodo(r.__nombre_carrera, r.__codigo_periodo, cps);
+      for (const r of rows as any[]) {
+        const rowNum = Number(r.__rowNumber ?? 0) || 0;
 
-        if (!idCP) {
-          issues.push({
-            rowNum: r.__rowNumber,
-            label: `${r.id_institucional_estudiante} — ${r.__nombre_carrera} / ${r.__codigo_periodo}`,
-            reason: "No existe Carrera–Período para la carrera y período indicados.",
+        // ✅ Tu parser puede mapear desde headers “bonitos” a estas keys internas,
+        // pero aquí NO mostramos nada de BD en pantalla.
+        const idInst = String(r.id_institucional_estudiante ?? "").trim();
+        const cedulaRaw = String(r.cedula ?? "").trim();
+        const cedula = onlyDigits(cedulaRaw);
+
+        const nombres = String(r.nombres_estudiante ?? "").trim();
+        const apellidos = String(r.apellidos_estudiante ?? "").trim();
+
+        const correo = r.correo_estudiante ?? null;
+        const telefono = r.telefono_estudiante ?? null;
+
+        const labelBase =
+          `${idInst || "SIN-ID"} — ${nombres} ${apellidos}`.trim() || `Fila ${rowNum || ""}`;
+
+        // ✅ VALIDACIONES (sin mostrar nombres de columnas)
+        if (!idInst || !nombres || !apellidos) {
+          om.push({
+            rowNum,
+            label: labelBase,
+            reason: "Faltan datos obligatorios (identificación y nombres).",
+          });
+          continue;
+        }
+
+        if (!cedula) {
+          om.push({ rowNum, label: labelBase, reason: "La cédula es obligatoria." });
+          continue;
+        }
+
+        if (!isValidCedulaMin(cedula)) {
+          om.push({
+            rowNum,
+            label: labelBase,
+            reason: "Cédula inválida (mínimo 10 dígitos).",
           });
           continue;
         }
 
         try {
           await estudiantesService.create({
-            id_carrera_periodo: idCP,
-            id_institucional_estudiante: r.id_institucional_estudiante,
-            nombres_estudiante: r.nombres_estudiante,
-            apellidos_estudiante: r.apellidos_estudiante,
-            correo_estudiante: r.correo_estudiante,
-            telefono_estudiante: r.telefono_estudiante,
+            id_carrera_periodo: Number(cpId),
+            id_institucional_estudiante: idInst,
+            cedula,
+            nombres_estudiante: nombres,
+            apellidos_estudiante: apellidos,
+            correo_estudiante: correo,
+            telefono_estudiante: telefono,
           } as any);
+
           ok++;
         } catch (err: any) {
-          issues.push({
-            rowNum: r.__rowNumber,
-            label: `${r.id_institucional_estudiante} — ${r.nombres_estudiante} ${r.apellidos_estudiante}`,
-            reason: err?.response?.data?.message || "Error al crear el estudiante en el backend.",
-          });
+          om.push({ rowNum, label: labelBase, reason: extractBackendMsg(err) });
         }
       }
 
-      setParseIssues(issues);
+      setIssues(om);
+      setStats({ total: rows.length, ok, omitidos: om.length });
 
-      if (issues.length === 0) onToast(`Importación completa: ${ok} importados.`, "success");
-      else onToast(`Importación terminada: ${ok} importados, ${issues.length} omitidos.`, "info");
+      if (om.length === 0) onToast(`Importación completa: ${ok} importados.`, "success");
+      else onToast(`Importación terminada: ${ok} importados, ${om.length} omitidos.`, "info");
 
-      onImported?.();
+      await onImported?.();
     } catch (err: any) {
       onToast(err?.message || "Error al importar estudiantes", "error");
     } finally {
       setImporting(false);
+      setImportingExternal(false);
     }
   }
 
   return (
-    <div className="modalOverlay" onMouseDown={close}>
-      <div className="modalCard modalPro" onMouseDown={(e) => e.stopPropagation()}>
+    <div className="dmOverlay" onMouseDown={close}>
+      <div className="dmCard dmWide" onMouseDown={(e) => e.stopPropagation()}>
         <input
           ref={fileRef}
           type="file"
@@ -155,105 +230,147 @@ export default function EstudiantesImportModal({
           onChange={onFileSelected}
         />
 
-        <div className="modalHeader">
-          <div className="modalHeaderLeft">
-            <div className="modalHeaderIcon">
+        {/* Header */}
+        <div className="dmHeader">
+          <div className="dmHeaderLeft">
+            <div className="dmHeaderIcon">
               <FileSpreadsheet size={18} />
             </div>
-            <div>
-              <div className="modalHeaderTitle">Importar estudiantes</div>
-              <div className="modalHeaderSub">Carga masiva desde Excel/CSV con validaciones</div>
+            <div className="dmHeaderText">
+              <div className="dmTitle">Importar estudiantes</div>
+              <div className="dmSub">Carga masiva desde Excel/CSV</div>
             </div>
           </div>
 
-          <button className="modalClose" onClick={close} aria-label="Cerrar" disabled={busy}>
-            <X />
+          <button className="dmClose" onClick={close} aria-label="Cerrar" disabled={busy}>
+            <X size={18} />
           </button>
         </div>
 
-        <div className="modalDivider" />
-
-        <div className="modalBody">
-          <div className="importTopRow">
-            <div className="importTopLeft">
-              <div className="importLabel">
-                <GraduationCap size={16} /> Carrera–Período (referencia)
+        <div className="dmBody">
+          {/* ✅ TOP GRID: Carrera–Período | Plantillas */}
+          <div className="dimTopGrid">
+            {/* Carrera–Período */}
+            <div className="dimCard">
+              <div className="dimCardHead">
+                <div className="dimCardTitle">
+                  <GraduationCap size={16} /> Carrera–Período <span className="dimReq">*</span>
+                </div>
               </div>
 
-              <div className="mutedSmall">
-                El archivo debe traer <b>nombre_carrera</b> y <b>codigo_periodo</b>. Con eso se resuelve el ID.
+              <div className="dimRow">
+                <select
+                  className="select"
+                  value={cpId}
+                  onChange={(e) => setCpId(e.target.value ? Number(e.target.value) : "")}
+                  disabled={busy || loadingCarreraPeriodos || !cps.length}
+                >
+                  {!cps.length ? (
+                    <option value="">No hay Carrera–Período disponibles</option>
+                  ) : (
+                    cps.map((cp: any) => (
+                      <option key={cp.id_carrera_periodo} value={cp.id_carrera_periodo}>
+                        {labelCP(cp)}
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
+
+              <div className="dimHint">
+                <Info size={16} />
+                <span>Selecciona el Carrera–Período al que se asignará la importación.</span>
               </div>
             </div>
 
-            <div className="importTopRight">
-              <div className="importLabel">
-                <Download size={16} /> Plantilla
+            {/* Plantillas */}
+            <div className="dimCard">
+              <div className="dimCardHead">
+                <div className="dimCardTitle">
+                  <Download size={16} /> Plantillas
+                </div>
               </div>
-              <div className="importBtnRow">
-                <button className="btnGhost" onClick={onDownloadCSV} disabled={busy}>
+
+              <div className="dimTemplateBtns" style={{ marginTop: 10 }}>
+                <button className="dimTemplateBtn" onClick={onDownloadCSV} disabled={busy} title="Descargar CSV">
                   <Download size={16} />
-                  CSV
+                  <span>CSV</span>
                 </button>
+
+                <button className="dimTemplateBtn" onClick={onDownloadXLSX} disabled={busy} title="Descargar Excel">
+                  <Download size={16} />
+                  <span>EXCEL</span>
+                </button>
+              </div>
+
+              <div className="dimHint" style={{ marginTop: 10 }}>
+                <Info size={16} />
+                <span>Descarga y llena la plantilla con el formato correcto.</span>
               </div>
             </div>
           </div>
 
-          <div className="importStepBox">
-            <div className="importStepHead">
-              <div className="importStepTitle">
-                <Upload size={18} />
-                Importar archivo
+          {/* Importar */}
+          <div className="dimCard" style={{ marginTop: 12 }}>
+            <div className="dimCardHead">
+              <div className="dimCardTitle">
+                <Upload size={16} /> Importar archivo
               </div>
-              <button className="btnPrimary" onClick={onClickImport} disabled={busy || loadingCarreraPeriodos}>
+            </div>
+
+            <div className="dimRow" style={{ alignItems: "center" }}>
+              <button className="btnPrimary" onClick={onClickImport} disabled={busy || !cpId}>
                 <Upload size={16} />
                 {busy ? "Importando..." : "Seleccionar archivo"}
               </button>
+
+              <div className="dimSmall">
+                Formatos: <b>Excel</b> o <b>CSV</b>
+              </div>
             </div>
 
-            <div className="importHint">
-              Formatos permitidos: <b>.xlsx</b>, <b>.xls</b>, <b>.csv</b>. Se valida correo y que exista Carrera–Período.
-            </div>
-          </div>
-
-          <div className="infoBox" style={{ marginTop: 12 }}>
-            <Info />
-            <div className="infoText">
-              El import continúa aunque algunas filas fallen. Al final verás un resumen y los motivos de omitidos.
+            <div className="dimNote">
+              <Info size={16} />
+              <span>El proceso continúa aunque algunas filas fallen.</span>
             </div>
           </div>
 
-          {parseStats && (
-            <div className="importBlock">
-              <h4 className="importH4">Resumen del archivo</h4>
-              <div className="chipRow">
-                <div className="chip">
-                  Filas procesadas: <b>{parseStats.totalRows}</b>
-                </div>
-                <div className="chip">
-                  Importadas: <b>{parseStats.valid - parseIssues.length}</b>
-                </div>
-                <div className="chip">
-                  Omitidas: <b>{parseIssues.length}</b>
-                </div>
+          {/* Resumen */}
+          {stats && (
+            <div className="dimSection">
+              <div className="dimSectionTitle">Resumen de importación</div>
+              <div className="dimChips">
+                <span className="dimChip">
+                  Total: <b>{stats.total}</b>
+                </span>
+                <span className="dimChip dimChipOk">
+                  Importados: <b>{stats.ok}</b>
+                </span>
+                <span className="dimChip dimChipWarn">
+                  Omitidos: <b>{stats.omitidos}</b>
+                </span>
               </div>
             </div>
           )}
 
-          {!!parseIssues.length && (
-            <div className="importBlock">
-              <h4 className="importH4">Filas omitidas (hasta 20)</h4>
+          {/* Omitidos */}
+          {!!issues.length && (
+            <div className="dimSection">
+              <div className="dimSectionTitle">
+                <AlertTriangle size={16} /> Filas omitidas (hasta 20)
+              </div>
 
-              <div className="tableBox">
-                <table className="table importTableMini">
+              <div className="dimTableWrap">
+                <table className="dimTable">
                   <thead>
                     <tr>
-                      <th>Fila</th>
+                      <th style={{ width: 90 }}>Fila</th>
                       <th>Registro</th>
                       <th>Motivo</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {parseIssues.slice(0, 20).map((x, i) => (
+                    {issues.slice(0, 20).map((x, i) => (
                       <tr key={i}>
                         <td>{x.rowNum}</td>
                         <td>{x.label}</td>
@@ -264,12 +381,16 @@ export default function EstudiantesImportModal({
                 </table>
               </div>
 
-              {parseIssues.length > 20 && <div className="mutedSmall">Mostrando 20 de {parseIssues.length} omitidos.</div>}
+              {issues.length > 20 && (
+                <div className="dimSmall" style={{ marginTop: 8 }}>
+                  Mostrando 20 de {issues.length} omitidos.
+                </div>
+              )}
             </div>
           )}
 
-          <div className="modalFooter">
-            <button className="btnGhost" onClick={close} disabled={busy}>
+          <div className="dmFooter">
+            <button className="dmBtnGhost" onClick={close} disabled={busy}>
               Cerrar
             </button>
           </div>

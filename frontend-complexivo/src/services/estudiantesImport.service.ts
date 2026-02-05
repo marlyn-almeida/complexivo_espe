@@ -1,35 +1,62 @@
-// src/services/estudiantesImport.service.ts
+// ✅ src/services/estudiantesImport.service.ts
 import * as XLSX from "xlsx";
-import type { CarreraPeriodo } from "../types/carreraPeriodo";
 import type { EstudianteCreateDTO } from "./estudiantes.service";
 
 type RawRow = Record<string, any>;
 
-function normalizeText(v: any): string {
+function normalizeKey(v: any): string {
   return String(v ?? "")
     .trim()
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
+    .replace(/[\u0300-\u036f]/g, "") // sin tildes
+    .replace(/\s+/g, " ")
+    .replace(/[._-]+/g, " "); // separadores -> espacios
 }
 
 function asString(v: any): string {
   return String(v ?? "").trim();
 }
 
+function onlyDigits(v: any): string {
+  return String(v ?? "").replace(/\D+/g, "").trim();
+}
+
+/**
+ * ✅ Headers “bonitos” (NO nombres de BD)
+ * - ID Institucional
+ * - Cédula
+ * - Nombres
+ * - Apellidos
+ * - Correo
+ * - Teléfono
+ */
+const FRIENDLY_HEADERS = ["ID Institucional", "Cédula", "Nombres", "Apellidos", "Correo", "Teléfono"];
+
+/** Mapea posibles nombres que el usuario pueda poner en Excel */
+const KEY_ALIASES: Record<string, string[]> = {
+  idInst: ["id institucional", "id", "identificacion", "usuario", "id estudiante", "codigo", "matricula"],
+  cedula: ["cedula", "c i", "ci", "documento", "numero de cedula", "nro cedula"],
+  nombres: ["nombres", "nombre", "nombres estudiante"],
+  apellidos: ["apellidos", "apellido", "apellidos estudiante"],
+  correo: ["correo", "email", "e mail", "mail"],
+  telefono: ["telefono", "teléfono", "celular", "movil", "móvil"],
+};
+
+function pickByAliases(row: RawRow, aliases: string[]): any {
+  const keys = Object.keys(row);
+  for (const k of keys) {
+    const nk = normalizeKey(k);
+    for (const a of aliases) {
+      if (nk === normalizeKey(a)) return row[k];
+    }
+  }
+  return "";
+}
+
+/** ✅ Plantilla CSV con headers bonitos */
 export function downloadPlantillaEstudiantesCSV() {
-  const headers = [
-    "nombre_carrera",
-    "codigo_periodo",
-    "id_institucional_estudiante",
-    "nombres_estudiante",
-    "apellidos_estudiante",
-    "correo_estudiante",
-    "telefono_estudiante",
-  ];
-
-  const csv = `${headers.join(",")}\n`;
-
+  const csv = `${FRIENDLY_HEADERS.join(",")}\n`;
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
 
@@ -41,33 +68,27 @@ export function downloadPlantillaEstudiantesCSV() {
   URL.revokeObjectURL(url);
 }
 
-export function resolveCarreraPeriodoIdByNombreCarreraCodigoPeriodo(
-  nombreCarrera: string,
-  codigoPeriodo: string,
-  cps: CarreraPeriodo[]
-): number | null {
-  const nc = normalizeText(nombreCarrera);
-  const cp = normalizeText(codigoPeriodo);
+/** ✅ Plantilla EXCEL con headers bonitos */
+export function downloadPlantillaEstudiantesXLSX() {
+  const ws = XLSX.utils.aoa_to_sheet([FRIENDLY_HEADERS]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Estudiantes");
 
-  if (!nc || !cp) return null;
-
-  const found = cps.find((x) => {
-    const xCarrera = normalizeText((x as any).nombre_carrera ?? "");
-    const xPeriodo = normalizeText((x as any).codigo_periodo ?? "");
-    return xCarrera === nc && xPeriodo === cp;
-  });
-
-  return found ? Number((found as any).id_carrera_periodo) : null;
+  XLSX.writeFile(wb, "plantilla_estudiantes.xlsx");
 }
 
+/**
+ * ✅ Parser Excel/CSV
+ * - NO trae nombre_carrera/codigo_periodo
+ * - id_carrera_periodo se asigna desde el modal (selected CP)
+ */
 export async function parseExcelEstudiantes(
   file: File
 ): Promise<
   Array<
     EstudianteCreateDTO & {
       __rowNumber: number;
-      __nombre_carrera: string;
-      __codigo_periodo: string;
+      cedula: string; // forzado
     }
   >
 > {
@@ -75,7 +96,7 @@ export async function parseExcelEstudiantes(
   const wb = XLSX.read(buf, { type: "array" });
 
   const sheetName = wb.SheetNames[0];
-  if (!sheetName) throw new Error("El Excel no tiene hojas.");
+  if (!sheetName) throw new Error("El archivo no tiene hojas.");
 
   const ws = wb.Sheets[sheetName];
   const json: RawRow[] = XLSX.utils.sheet_to_json(ws, {
@@ -83,60 +104,47 @@ export async function parseExcelEstudiantes(
     raw: false,
   });
 
-  if (!json.length) throw new Error("El Excel no tiene filas.");
-
-  // Mapeo flexible de headers (por si vienen con mayúsculas/espacios)
-  const pick = (row: RawRow, key: string) => {
-    const nk = normalizeText(key);
-    const keys = Object.keys(row);
-    const foundKey = keys.find((k) => normalizeText(k) === nk);
-    return foundKey ? row[foundKey] : "";
-  };
+  if (!json.length) throw new Error("El archivo no tiene filas.");
 
   const out: any[] = [];
 
   for (let i = 0; i < json.length; i++) {
     const row = json[i];
-    const rowNumber = i + 2; // porque la fila 1 es header
+    const rowNumber = i + 2; // fila 1 = header
 
-    const nombre_carrera = asString(pick(row, "nombre_carrera"));
-    const codigo_periodo = asString(pick(row, "codigo_periodo"));
+    const idInst = asString(pickByAliases(row, KEY_ALIASES.idInst));
+    const cedula = onlyDigits(pickByAliases(row, KEY_ALIASES.cedula));
+    const nombres = asString(pickByAliases(row, KEY_ALIASES.nombres));
+    const apellidos = asString(pickByAliases(row, KEY_ALIASES.apellidos));
+    const correo = asString(pickByAliases(row, KEY_ALIASES.correo));
+    const telefono = asString(pickByAliases(row, KEY_ALIASES.telefono));
 
-    const id_institucional_estudiante = asString(pick(row, "id_institucional_estudiante"));
-    const nombres_estudiante = asString(pick(row, "nombres_estudiante"));
-    const apellidos_estudiante = asString(pick(row, "apellidos_estudiante"));
+    // ✅ Validaciones mínimas (según tu BD)
+    if (!idInst) throw new Error(`Fila ${rowNumber}: falta "ID Institucional".`);
 
-    const correo_estudiante = asString(pick(row, "correo_estudiante"));
-    const telefono_estudiante = asString(pick(row, "telefono_estudiante"));
+    if (!cedula) throw new Error(`Fila ${rowNumber}: falta "Cédula".`);
+    if (!/^\d+$/.test(cedula)) throw new Error(`Fila ${rowNumber}: "Cédula" solo debe contener números.`);
+    if (cedula.length < 10) throw new Error(`Fila ${rowNumber}: "Cédula" inválida (mínimo 10 dígitos).`);
 
-    // Validaciones mínimas
-    if (!nombre_carrera || !codigo_periodo) {
-      throw new Error(`Fila ${rowNumber}: faltan nombre_carrera o codigo_periodo.`);
-    }
-    if (!id_institucional_estudiante) {
-      throw new Error(`Fila ${rowNumber}: id_institucional_estudiante es obligatorio.`);
-    }
-    if (!nombres_estudiante || nombres_estudiante.length < 3) {
-      throw new Error(`Fila ${rowNumber}: nombres_estudiante inválido (mínimo 3).`);
-    }
-    if (!apellidos_estudiante || apellidos_estudiante.length < 3) {
-      throw new Error(`Fila ${rowNumber}: apellidos_estudiante inválido (mínimo 3).`);
-    }
-    if (correo_estudiante && !/^\S+@\S+\.\S+$/.test(correo_estudiante)) {
-      throw new Error(`Fila ${rowNumber}: correo_estudiante no válido.`);
-    }
+    if (!nombres || nombres.length < 3) throw new Error(`Fila ${rowNumber}: "Nombres" inválido (mínimo 3).`);
+    if (!apellidos || apellidos.length < 3) throw new Error(`Fila ${rowNumber}: "Apellidos" inválido (mínimo 3).`);
+
+    if (correo && !/^\S+@\S+\.\S+$/.test(correo)) throw new Error(`Fila ${rowNumber}: "Correo" no válido.`);
 
     out.push({
       __rowNumber: rowNumber,
-      __nombre_carrera: nombre_carrera,
-      __codigo_periodo: codigo_periodo,
-      // id_carrera_periodo se resuelve afuera (con cps)
+
+      // ✅ se setea desde el modal, aquí va dummy
       id_carrera_periodo: 0,
-      id_institucional_estudiante,
-      nombres_estudiante,
-      apellidos_estudiante,
-      correo_estudiante: correo_estudiante || undefined,
-      telefono_estudiante: telefono_estudiante || undefined,
+
+      id_institucional_estudiante: idInst,
+      cedula,
+
+      nombres_estudiante: nombres,
+      apellidos_estudiante: apellidos,
+
+      correo_estudiante: correo || undefined,
+      telefono_estudiante: telefono || undefined,
     });
   }
 

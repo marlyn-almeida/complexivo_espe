@@ -1,3 +1,4 @@
+// src/repositories/estudiante.repo.js
 const pool = require("../config/db");
 
 async function carreraPeriodoExists(id_carrera_periodo) {
@@ -46,13 +47,14 @@ async function findAll({
   if (q && q.trim()) {
     where.push(`(
       e.id_institucional_estudiante LIKE ? OR
+      e.nombre_usuario LIKE ? OR
       e.cedula LIKE ? OR
       e.nombres_estudiante LIKE ? OR
       e.apellidos_estudiante LIKE ? OR
       IFNULL(e.correo_estudiante,'') LIKE ?
     )`);
     const like = `%${q.trim()}%`;
-    params.push(like, like, like, like, like);
+    params.push(like, like, like, like, like, like);
   }
 
   // ✅ Scope rol 2: solo estudiantes de la carrera del usuario
@@ -68,6 +70,7 @@ async function findAll({
       e.id_estudiante,
       e.id_carrera_periodo,
       e.id_institucional_estudiante,
+      e.nombre_usuario,
       e.cedula,
       e.nombres_estudiante,
       e.apellidos_estudiante,
@@ -101,6 +104,7 @@ async function findById(id) {
       e.id_estudiante,
       e.id_carrera_periodo,
       e.id_institucional_estudiante,
+      e.nombre_usuario,
       e.cedula,
       e.nombres_estudiante,
       e.apellidos_estudiante,
@@ -140,14 +144,27 @@ async function findByCedulaInCarreraPeriodo(id_carrera_periodo, cedula) {
   return r[0] || null;
 }
 
+// ✅ NUEVO: duplicado username por carrera_periodo (NO global)
+async function findByUsernameInCarreraPeriodo(id_carrera_periodo, nombre_usuario) {
+  const [r] = await pool.query(
+    `SELECT id_estudiante, id_carrera_periodo, nombre_usuario
+     FROM estudiante
+     WHERE id_carrera_periodo=? AND nombre_usuario=?
+     LIMIT 1`,
+    [id_carrera_periodo, nombre_usuario]
+  );
+  return r[0] || null;
+}
+
 async function create(d) {
   const [res] = await pool.query(
     `INSERT INTO estudiante
-      (id_carrera_periodo, id_institucional_estudiante, cedula, nombres_estudiante, apellidos_estudiante, correo_estudiante, telefono_estudiante, estado)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 1)`,
+      (id_carrera_periodo, id_institucional_estudiante, nombre_usuario, cedula, nombres_estudiante, apellidos_estudiante, correo_estudiante, telefono_estudiante, estado)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)`,
     [
       d.id_carrera_periodo,
       d.id_institucional_estudiante,
+      d.nombre_usuario,
       d.cedula,
       d.nombres_estudiante,
       d.apellidos_estudiante,
@@ -163,6 +180,7 @@ async function update(id, d) {
     `UPDATE estudiante
      SET id_carrera_periodo=?,
          id_institucional_estudiante=?,
+         nombre_usuario=?,
          cedula=?,
          nombres_estudiante=?,
          apellidos_estudiante=?,
@@ -172,6 +190,7 @@ async function update(id, d) {
     [
       d.id_carrera_periodo,
       d.id_institucional_estudiante,
+      d.nombre_usuario,
       d.cedula,
       d.nombres_estudiante,
       d.apellidos_estudiante,
@@ -198,6 +217,7 @@ module.exports = {
   findById,
   findByInstitucionalInCarreraPeriodo,
   findByCedulaInCarreraPeriodo,
+  findByUsernameInCarreraPeriodo, // ✅ NUEVO
   create,
   update,
   setEstado,

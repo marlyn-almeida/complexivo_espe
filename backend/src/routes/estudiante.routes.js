@@ -1,3 +1,4 @@
+// src/routes/estudiante.routes.js
 const router = require("express").Router();
 const { body, param, query } = require("express-validator");
 const validate = require("../middlewares/validate.middleware");
@@ -26,10 +27,24 @@ router.get(
   ctrl.get
 );
 
+// ✅ CREATE
 router.post(
   "/",
   body("id_carrera_periodo").isInt({ min: 1 }).toInt(),
+
   body("id_institucional_estudiante").isString().trim().notEmpty(),
+
+  // ✅ NUEVO: username (nombre_usuario)
+  body("nombre_usuario")
+    .isString()
+    .trim()
+    .notEmpty()
+    .withMessage("El nombre de usuario es obligatorio")
+    .matches(/^\S+$/)
+    .withMessage("El nombre de usuario no debe contener espacios")
+    .isLength({ min: 4 })
+    .withMessage("El nombre de usuario debe tener al menos 4 caracteres"),
+
   body("cedula")
     .isString()
     .trim()
@@ -37,6 +52,7 @@ router.post(
     .withMessage("La cédula es obligatoria")
     .matches(/^\d{10,}$/)
     .withMessage("La cédula debe tener solo dígitos (mínimo 10)"),
+
   body("nombres_estudiante").isString().trim().notEmpty(),
   body("apellidos_estudiante").isString().trim().notEmpty(),
   body("correo_estudiante").optional({ nullable: true }).isEmail(),
@@ -45,11 +61,25 @@ router.post(
   ctrl.create
 );
 
+// ✅ UPDATE
 router.put(
   "/:id",
   param("id").isInt({ min: 1 }).toInt(),
   body("id_carrera_periodo").isInt({ min: 1 }).toInt(),
+
   body("id_institucional_estudiante").isString().trim().notEmpty(),
+
+  // ✅ NUEVO: username (nombre_usuario)
+  body("nombre_usuario")
+    .isString()
+    .trim()
+    .notEmpty()
+    .withMessage("El nombre de usuario es obligatorio")
+    .matches(/^\S+$/)
+    .withMessage("El nombre de usuario no debe contener espacios")
+    .isLength({ min: 4 })
+    .withMessage("El nombre de usuario debe tener al menos 4 caracteres"),
+
   body("cedula")
     .isString()
     .trim()
@@ -57,6 +87,7 @@ router.put(
     .withMessage("La cédula es obligatoria")
     .matches(/^\d{10,}$/)
     .withMessage("La cédula debe tener solo dígitos (mínimo 10)"),
+
   body("nombres_estudiante").isString().trim().notEmpty(),
   body("apellidos_estudiante").isString().trim().notEmpty(),
   body("correo_estudiante").optional({ nullable: true }).isEmail(),

@@ -1,11 +1,21 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type { Estudiante } from "../../types/estudiante";
 import type { CarreraPeriodo } from "../../types/carreraPeriodo";
 
 import { estudiantesService } from "../../services/estudiantes.service";
 
-import { Mail, Phone, Hash, User, Save, X, GraduationCap, BadgeInfo } from "lucide-react";
+import {
+  Mail,
+  Phone,
+  Hash,
+  User,
+  Save,
+  X,
+  GraduationCap,
+  BadgeInfo,
+  IdCard,
+} from "lucide-react";
 
 import "./EstudianteModal.css";
 
@@ -28,7 +38,7 @@ export default function EstudianteFormModal({
   mode,
   estudiante,
   carreraPeriodos,
-  defaultCarreraPeriodoId,
+  selectedCarreraPeriodoId,
   onClose,
   onSaved,
   onToast,
@@ -36,7 +46,8 @@ export default function EstudianteFormModal({
   mode: "create" | "edit";
   estudiante: Estudiante | null;
   carreraPeriodos: CarreraPeriodo[];
-  defaultCarreraPeriodoId?: number | "";
+  // ✅ este nombre coincide con el Page que te pasé
+  selectedCarreraPeriodoId?: number;
   onClose: () => void;
   onSaved: () => void | Promise<void>;
   onToast: (msg: string, type?: ToastType) => void;
@@ -49,35 +60,61 @@ export default function EstudianteFormModal({
 
   const [cpId, setCpId] = useState<number | "">("");
   const [idInst, setIdInst] = useState("");
+  const [cedula, setCedula] = useState("");
   const [nombres, setNombres] = useState("");
   const [apellidos, setApellidos] = useState("");
   const [correo, setCorreo] = useState("");
   const [telefono, setTelefono] = useState("");
 
+  const cpOptions = useMemo(() => {
+    return (carreraPeriodos ?? []).slice().sort((a: any, b: any) => {
+      const aCarrera = String(a?.nombre_carrera ?? "");
+      const bCarrera = String(b?.nombre_carrera ?? "");
+      const aPeriodo = String(a?.codigo_periodo ?? a?.descripcion_periodo ?? "");
+      const bPeriodo = String(b?.codigo_periodo ?? b?.descripcion_periodo ?? "");
+      return `${aCarrera} ${aPeriodo}`.localeCompare(`${bCarrera} ${bPeriodo}`, "es");
+    });
+  }, [carreraPeriodos]);
+
   useEffect(() => {
     if (isEdit && estudiante) {
-      setCpId(Number(estudiante.id_carrera_periodo) || "");
-      setIdInst(safeUpper(estudiante.id_institucional_estudiante));
-      setNombres(estudiante.nombres_estudiante || "");
-      setApellidos(estudiante.apellidos_estudiante || "");
-      setCorreo(estudiante.correo_estudiante || "");
-      setTelefono(onlyDigits(estudiante.telefono_estudiante || ""));
+      setCpId(Number((estudiante as any).id_carrera_periodo) || "");
+      setIdInst(safeUpper((estudiante as any).id_institucional_estudiante));
+      setCedula(onlyDigits(String((estudiante as any).cedula ?? "")));
+      setNombres(String((estudiante as any).nombres_estudiante ?? ""));
+      setApellidos(String((estudiante as any).apellidos_estudiante ?? ""));
+      setCorreo(String((estudiante as any).correo_estudiante ?? ""));
+      setTelefono(onlyDigits(String((estudiante as any).telefono_estudiante ?? "")));
       return;
     }
 
     // create
-    setCpId(defaultCarreraPeriodoId ?? "");
+    const initCp =
+      selectedCarreraPeriodoId && Number(selectedCarreraPeriodoId) > 0
+        ? Number(selectedCarreraPeriodoId)
+        : cpOptions.length
+        ? Number((cpOptions[0] as any).id_carrera_periodo)
+        : "";
+
+    setCpId(initCp || "");
     setIdInst("");
+    setCedula("");
     setNombres("");
     setApellidos("");
     setCorreo("");
     setTelefono("");
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, estudiante, defaultCarreraPeriodoId]);
+  }, [mode, estudiante, selectedCarreraPeriodoId, cpOptions.length]);
 
   function validate(): string | null {
     if (!cpId) return "Carrera–Período es obligatorio.";
+
     if (!idInst.trim()) return "ID institucional es obligatorio.";
+    if (safeUpper(idInst).length < 4) return "ID institucional inválido.";
+
+    // ✅ BD: usualmente obligatorio
+    if (!cedula.trim()) return "Cédula es obligatoria.";
+    if (onlyDigits(cedula).length < 10) return "Cédula debe tener al menos 10 dígitos.";
 
     if (!nombres.trim()) return "Nombres es obligatorio.";
     if (nombres.trim().length < 3) return "Nombres debe tener al menos 3 caracteres.";
@@ -93,11 +130,13 @@ export default function EstudianteFormModal({
   function extractBackendError(err: any) {
     const msg = err?.response?.data?.message;
     const list = err?.response?.data?.errors;
+
     if (Array.isArray(list) && list.length) {
       const first = list[0];
       if (first?.msg) return String(first.msg);
     }
     if (typeof msg === "string" && msg.trim()) return msg;
+
     return "No se pudo guardar el estudiante.";
   }
 
@@ -111,9 +150,11 @@ export default function EstudianteFormModal({
     try {
       setSaving(true);
 
+      // ✅ payload alineado a BD (incluye cedula)
       const payload = {
         id_carrera_periodo: Number(cpId),
         id_institucional_estudiante: safeUpper(idInst),
+        cedula: onlyDigits(cedula),
         nombres_estudiante: nombres.trim(),
         apellidos_estudiante: apellidos.trim(),
         correo_estudiante: correo.trim() ? correo.trim() : null,
@@ -128,7 +169,7 @@ export default function EstudianteFormModal({
           onToast("No se encontró el estudiante para editar.", "error");
           return;
         }
-        await estudiantesService.update(estudiante.id_estudiante, payload as any);
+        await estudiantesService.update((estudiante as any).id_estudiante, payload as any);
         onToast("Estudiante actualizado correctamente.", "success");
       }
 
@@ -171,16 +212,20 @@ export default function EstudianteFormModal({
           </div>
 
           <div className="dmFormGrid">
-            {/* Carrera-Periodo */}
+            {/* Carrera–Período */}
             <div className="dmInput dmSpan2">
               <label>
                 <GraduationCap size={14} /> Carrera–Período <span className="req">*</span>
               </label>
 
               <div className="dmSelectBox">
-                <select value={cpId} onChange={(e) => setCpId(e.target.value ? Number(e.target.value) : "")} disabled={saving}>
+                <select
+                  value={cpId}
+                  onChange={(e) => setCpId(e.target.value ? Number(e.target.value) : "")}
+                  disabled={saving}
+                >
                   <option value="">Seleccione Carrera–Período</option>
-                  {carreraPeriodos.map((cp: any) => {
+                  {cpOptions.map((cp: any) => {
                     const carrera = cp.nombre_carrera ?? `Carrera ${cp.id_carrera}`;
                     const periodo = cp.codigo_periodo ?? cp.descripcion_periodo ?? `Período ${cp.id_periodo}`;
                     return (
@@ -194,7 +239,7 @@ export default function EstudianteFormModal({
             </div>
 
             {/* ID institucional */}
-            <div className="dmInput dmSpan2">
+            <div className="dmInput">
               <label>
                 <Hash size={14} /> ID institucional <span className="req">*</span>
               </label>
@@ -208,13 +253,33 @@ export default function EstudianteFormModal({
               </div>
             </div>
 
+            {/* Cédula */}
+            <div className="dmInput">
+              <label>
+                <IdCard size={14} /> Cédula <span className="req">*</span>
+              </label>
+              <div className="dmInputBox">
+                <input
+                  value={cedula}
+                  onChange={(e) => setCedula(onlyDigits(e.target.value))}
+                  placeholder="10 dígitos"
+                  disabled={saving}
+                />
+              </div>
+            </div>
+
             {/* Nombres */}
             <div className="dmInput">
               <label>
                 <User size={14} /> Nombres <span className="req">*</span>
               </label>
               <div className="dmInputBox">
-                <input value={nombres} onChange={(e) => setNombres(e.target.value)} placeholder="Ej: María Fernanda" disabled={saving} />
+                <input
+                  value={nombres}
+                  onChange={(e) => setNombres(e.target.value)}
+                  placeholder="Ej: María Fernanda"
+                  disabled={saving}
+                />
               </div>
             </div>
 
@@ -224,7 +289,12 @@ export default function EstudianteFormModal({
                 <User size={14} /> Apellidos <span className="req">*</span>
               </label>
               <div className="dmInputBox">
-                <input value={apellidos} onChange={(e) => setApellidos(e.target.value)} placeholder="Ej: Almeida Quiroz" disabled={saving} />
+                <input
+                  value={apellidos}
+                  onChange={(e) => setApellidos(e.target.value)}
+                  placeholder="Ej: Almeida Quiroz"
+                  disabled={saving}
+                />
               </div>
             </div>
 
@@ -234,7 +304,12 @@ export default function EstudianteFormModal({
                 <Mail size={14} /> Correo
               </label>
               <div className="dmInputBox">
-                <input value={correo} onChange={(e) => setCorreo(e.target.value)} placeholder="correo@espe.edu.ec" disabled={saving} />
+                <input
+                  value={correo}
+                  onChange={(e) => setCorreo(e.target.value)}
+                  placeholder="correo@espe.edu.ec"
+                  disabled={saving}
+                />
               </div>
             </div>
 

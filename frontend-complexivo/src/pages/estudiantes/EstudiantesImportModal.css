@@ -1,0 +1,176 @@
+/* ✅ src/pages/estudiantes/EstudiantesImportModal.css */
+/* Usa dmOverlay / dmCard / dmHeader / dmBody / dmFooter de tu DocenteModal.css */
+
+.eimCard {
+  border: 1px solid rgba(0,0,0,0.10);
+  border-radius: 14px;
+  padding: 12px;
+  background: #fff;
+}
+
+.eimCardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.eimCardTitle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 900;
+  color: rgba(0,0,0,0.82);
+}
+
+.eimRow {
+  margin-top: 10px;
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+  flex-wrap: wrap;
+}
+
+.eimTemplateBtns {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.eimTemplateBtn {
+  height: 40px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.12);
+  background: #fff;
+  font-weight: 900;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.eimTemplateBtn:hover { background: rgba(0,0,0,0.03); }
+.eimTemplateBtn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.eimHint {
+  margin-top: 10px;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(0,0,0,0.03);
+  border: 1px solid rgba(0,0,0,0.08);
+  color: rgba(0,0,0,0.68);
+  font-size: 13.5px;
+}
+
+.eimSmall {
+  margin-top: 10px;
+  color: rgba(0,0,0,0.60);
+  font-size: 13.5px;
+}
+
+.eimNote {
+  margin-top: 10px;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(2,132,199,0.06);
+  border: 1px solid rgba(2,132,199,0.16);
+  color: rgba(0,0,0,0.70);
+  font-size: 13.5px;
+}
+
+.eimSection {
+  margin-top: 14px;
+}
+
+.eimSectionTitle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 950;
+  color: rgba(0,0,0,0.82);
+  font-size: 15px;
+}
+
+.eimChips {
+  margin-top: 10px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.eimChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-weight: 900;
+  font-size: 12.5px;
+  border: 1px solid rgba(0,0,0,0.10);
+  background: #fff;
+}
+
+.eimChipOk {
+  border-color: rgba(10,79,40,0.20);
+  background: rgba(10,79,40,0.06);
+  color: #0a4f28;
+}
+
+.eimChipWarn {
+  border-color: rgba(245,158,11,0.25);
+  background: rgba(245,158,11,0.10);
+  color: rgba(0,0,0,0.75);
+}
+
+.eimTableWrap {
+  margin-top: 10px;
+  border: 1px solid rgba(0,0,0,0.10);
+  border-radius: 12px;
+  overflow: auto;
+}
+
+.eimTable {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 740px;
+  background: #fff;
+}
+
+.eimTable thead th {
+  text-align: center;
+  font-size: 13px;
+  font-weight: 950;
+  color: rgba(255,255,255,0.96);
+  background: linear-gradient(135deg, #0b5a3a, #064e2c);
+  padding: 10px;
+}
+
+.eimTable tbody td {
+  text-align: center;
+  padding: 10px;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  font-size: 14px;
+  color: rgba(0,0,0,0.74);
+}
+
+/* ✅ 2 recuadros arriba */
+.eimTopGrid {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  gap: 12px;
+  margin-top: 0;
+}
+
+@media (max-width: 900px) {
+  .eimTopGrid {
+    grid-template-columns: 1fr;
+  }
+}

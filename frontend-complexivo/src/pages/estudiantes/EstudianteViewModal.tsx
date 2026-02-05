@@ -8,11 +8,11 @@ function onlyDigits(v: string) {
 
 export default function EstudianteViewModal({
   estudiante,
-  carreraPeriodoLabel,
+  selectedCPLabel,
   onClose,
 }: {
   estudiante: Estudiante;
-  carreraPeriodoLabel?: string; // opcional (si lo calculas en la page)
+  selectedCPLabel?: string; // ✅ coincide con tu Page
   onClose: () => void;
 }) {
   const fullName =
@@ -22,10 +22,11 @@ export default function EstudianteViewModal({
   const correo = estudiante.correo_estudiante || "-";
   const telefono = onlyDigits(estudiante.telefono_estudiante || "") || "-";
 
+  // ✅ Prioridad: lo que calcula tu Page (porque viene de carreraPeriodos)
   const cp =
-    carreraPeriodoLabel ||
-    (estudiante.nombre_carrera && estudiante.codigo_periodo
-      ? `${estudiante.nombre_carrera} — ${estudiante.codigo_periodo}`
+    selectedCPLabel ||
+    ((estudiante as any).nombre_carrera && (estudiante as any).codigo_periodo
+      ? `${(estudiante as any).nombre_carrera} — ${(estudiante as any).codigo_periodo}`
       : estudiante.id_carrera_periodo
       ? `ID: ${estudiante.id_carrera_periodo}`
       : "-");
@@ -40,7 +41,7 @@ export default function EstudianteViewModal({
             <div className="dmHeaderIcon">
               <Eye size={18} />
             </div>
-            <div>
+            <div className="dmHeaderText">
               <div className="dmTitle">Detalle de estudiante</div>
               <div className="dmSub">Información registrada del estudiante</div>
             </div>

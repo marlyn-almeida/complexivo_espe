@@ -1,0 +1,68 @@
+/* ===============================
+   VIEW MODAL – ESTUDIANTE
+   Solo estilos específicos
+   (los dm* base vienen de DocenteModal.css)
+   =============================== */
+
+/* Ajuste leve al avatar para diferenciar estudiante */
+.dmAvatar {
+  background: rgba(10, 79, 40, 0.10);
+  color: #0a4f28;
+}
+
+/* Nombre un poco más compacto que Docente */
+.dmName {
+  font-size: 16.5px;
+  font-weight: 950;
+}
+
+/* Mini info (ID / correo) */
+.dmMiniItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dmMiniDot {
+  opacity: 0.4;
+}
+
+/* Texto largo (correo, carrera–periodo) */
+.dmWrap {
+  word-break: break-word;
+  line-height: 1.4;
+}
+
+/* Badge estado dentro del grid */
+.dmBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.dmBadgeOk {
+  background: #e4f2ea;
+  color: #0a4f28;
+}
+
+.dmBadgeOff {
+  background: #f0f0f0;
+  color: #555;
+}
+
+/* Ajuste sutil del grid (más aire visual) */
+.dmGrid {
+  gap: 16px;
+}
+
+/* Responsive fino para estudiante */
+@media (max-width: 600px) {
+  .dmName {
+    font-size: 15.5px;
+  }
+}

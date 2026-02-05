@@ -1,3 +1,4 @@
+// src/services/estudiante.service.js
 const repo = require("../repositories/estudiante.repo");
 
 function isRol2(user) {
@@ -68,7 +69,7 @@ async function create(payload, user) {
     }
   }
 
-  // ✅ duplicado por carrera_periodo
+  // ✅ duplicado por carrera_periodo (institucional)
   const dupInst = await repo.findByInstitucionalInCarreraPeriodo(
     payload.id_carrera_periodo,
     payload.id_institucional_estudiante
@@ -79,13 +80,24 @@ async function create(payload, user) {
     throw err;
   }
 
-  // ✅ duplicado por carrera_periodo
+  // ✅ duplicado por carrera_periodo (cedula)
   const dupCed = await repo.findByCedulaInCarreraPeriodo(
     payload.id_carrera_periodo,
     payload.cedula
   );
   if (dupCed) {
     const err = new Error("Ya existe un estudiante con esa cédula en esta carrera/periodo");
+    err.status = 409;
+    throw err;
+  }
+
+  // ✅ NUEVO: duplicado por carrera_periodo (username)
+  const dupUser = await repo.findByUsernameInCarreraPeriodo(
+    payload.id_carrera_periodo,
+    payload.nombre_usuario
+  );
+  if (dupUser) {
+    const err = new Error("Ya existe un estudiante con ese nombre de usuario en esta carrera/periodo");
     err.status = 409;
     throw err;
   }
@@ -131,6 +143,17 @@ async function update(id, payload, user) {
   const dupCed = await repo.findByCedulaInCarreraPeriodo(payload.id_carrera_periodo, payload.cedula);
   if (dupCed && Number(dupCed.id_estudiante) !== Number(id)) {
     const err = new Error("Ya existe un estudiante con esa cédula en esta carrera/periodo");
+    err.status = 409;
+    throw err;
+  }
+
+  // ✅ NUEVO: duplicado username por cp (excluyendo el mismo id)
+  const dupUser = await repo.findByUsernameInCarreraPeriodo(
+    payload.id_carrera_periodo,
+    payload.nombre_usuario
+  );
+  if (dupUser && Number(dupUser.id_estudiante) !== Number(id)) {
+    const err = new Error("Ya existe un estudiante con ese nombre de usuario en esta carrera/periodo");
     err.status = 409;
     throw err;
   }
