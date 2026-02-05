@@ -233,7 +233,8 @@ async function findNotaTeoricoByEstudianteCp(id_estudiante, id_carrera_periodo) 
   return r[0] || null;
 }
 
-// Caso asignado al estudiante (vía tribunal_estudiante -> tribunal -> caso_estudio)
+// ✅ Caso asignado al estudiante (vía tribunal_estudiante -> tribunal -> caso_estudio)
+// CORREGIDO: caso_estudio NO tiene archivo_pdf, tiene archivo_nombre y archivo_path
 async function findCasoAsignadoByEstudianteCp(id_estudiante, id_carrera_periodo) {
   const [r] = await pool.query(
     `SELECT
@@ -241,7 +242,8 @@ async function findCasoAsignadoByEstudianteCp(id_estudiante, id_carrera_periodo)
       ce.numero_caso,
       ce.titulo,
       ce.descripcion,
-      ce.archivo_pdf,
+      ce.archivo_nombre,
+      ce.archivo_path,
       t.id_tribunal
      FROM tribunal_estudiante te
      JOIN tribunal t ON t.id_tribunal = te.id_tribunal
@@ -254,16 +256,21 @@ async function findCasoAsignadoByEstudianteCp(id_estudiante, id_carrera_periodo)
   return r[0] || null;
 }
 
-// Entrega del estudiante por caso
+// ✅ Entrega del estudiante por caso
+// CORREGIDO: tabla estudiante_caso_entrega usa id_estudiante_caso_entrega, archivo_nombre, archivo_path
 async function findEntregaByEstudianteCaso(id_estudiante, id_caso_estudio) {
   const [r] = await pool.query(
     `SELECT
-      id_entrega,
+      id_estudiante_caso_entrega,
       id_estudiante,
       id_caso_estudio,
-      archivo_pdf,
+      archivo_nombre,
+      archivo_path,
+      fecha_entrega,
       observacion,
-      created_at
+      estado,
+      created_at,
+      updated_at
      FROM estudiante_caso_entrega
      WHERE id_estudiante=? AND id_caso_estudio=?
      ORDER BY created_at DESC
