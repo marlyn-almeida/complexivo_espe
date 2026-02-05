@@ -1,36 +1,53 @@
 /* Layout.css */
+
+/* Shell general */
 .app-shell {
   min-height: 100vh;
-  background: var(--bg-main);
+  background: var(--bg-main, #eef0f2);
 }
 
-/* Contenedor principal */
+/* Contenedor principal (sidebar + contenido) */
 .app-main {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  transition: margin-left var(--transition-base);
+  transition: margin-left 0.25s ease;
 }
 
-/* padding del contenido */
+/* ================================
+   CONTENIDO PRINCIPAL
+   🔥 CLAVE DEL PROBLEMA DEL ANCHO
+   ================================ */
 .app-content {
   flex: 1;
   overflow: auto;
+
+  /* padding visual correcto */
   padding: 18px 16px;
+
+  /* 🔑 ESTO evita que se "encajone" */
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
+/* ================================
+   DESKTOP
+   ================================ */
 @media (min-width: 768px) {
   .app-content {
     padding: 22px 28px;
   }
 
-  /* En desktop, si sidebar está abierto (o pinned) empuja el contenido */
+  /* Sidebar empuja el contenido */
   .app-main.with-sidebar {
-    margin-left: 280px; /* debe coincidir con el width del sidebar */
+    margin-left: 280px; /* mismo ancho del sidebar */
   }
 }
 
-/* En móvil NO empujes el contenido (sidebar va overlay) */
+/* ================================
+   MÓVIL (sidebar overlay)
+   ================================ */
 @media (max-width: 767px) {
   .app-main.with-sidebar {
     margin-left: 0;
