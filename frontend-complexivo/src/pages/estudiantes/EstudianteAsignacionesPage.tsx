@@ -31,6 +31,13 @@ function clamp20(n: number) {
   return Math.max(0, Math.min(20, n));
 }
 
+function safeDateLabel(v?: string | null) {
+  if (!v) return "";
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleString();
+}
+
 export default function EstudianteAsignacionesPage() {
   const navigate = useNavigate();
   const { idEstudiante } = useParams();
@@ -56,7 +63,7 @@ export default function EstudianteAsignacionesPage() {
     [caso]
   );
 
-  // Entrega existente
+  // Entrega existente (tabla estudiante_caso_entrega)
   const [entrega, setEntrega] = useState<any>(null);
 
   // Upload
@@ -96,17 +103,21 @@ export default function EstudianteAsignacionesPage() {
     try {
       setLoading(true);
 
-      const data = await estudiantesService.getAsignaciones(id);
+      // ✅ soporta ambas respuestas:
+      // a) { ok:true, data:{...} }
+      // b) {...} directo
+      const res: any = await estudiantesService.getAsignaciones(id);
+      const payload = res?.data ?? res;
 
-      setEstudiante(data.estudiante ?? null);
-      setCaso(data.caso ?? null);
-      setEntrega(data.entrega ?? null);
+      setEstudiante(payload?.estudiante ?? null);
+      setCaso(payload?.caso ?? null);
+      setEntrega(payload?.entrega ?? null);
 
-      if (data.nota_teorico?.nota_teorico_20 != null) {
-        const v = Number(data.nota_teorico.nota_teorico_20);
+      if (payload?.nota_teorico?.nota_teorico_20 != null) {
+        const v = Number(payload.nota_teorico.nota_teorico_20);
         setNotaLoaded(v);
         setNotaValue(String(v).replace(".", ","));
-        setNotaObs(String(data.nota_teorico.observacion ?? ""));
+        setNotaObs(String(payload.nota_teorico.observacion ?? ""));
       } else {
         setNotaLoaded(null);
         setNotaValue("");
@@ -173,7 +184,7 @@ export default function EstudianteAsignacionesPage() {
     try {
       setLoading(true);
 
-      // ✅ AQUÍ VA EL CAMBIO: ahora mandamos id_estudiante
+      // ✅ AQUÍ VA EL CAMBIO REAL (sin inventar campos)
       await entregasCasoService.subir({
         id_estudiante: id,
         id_caso_estudio: idCasoEstudio,
@@ -191,10 +202,14 @@ export default function EstudianteAsignacionesPage() {
     }
   }
 
-  // ⚠️ Descargas:
-  // Para descargar el PDF original del caso y la entrega, necesitas endpoints de descarga.
-  function onDownloadDisabled() {
-    showToast("Descarga pendiente de endpoint en backend.", "info");
+  // ✅ Descargas simples (si archivo_path ya es URL pública o ruta servida por tu backend)
+  function openPath(path?: string | null) {
+    const p = String(path || "").trim();
+    if (!p) {
+      showToast("No hay archivo disponible para descargar.", "info");
+      return;
+    }
+    window.open(p, "_blank", "noopener,noreferrer");
   }
 
   return (
@@ -298,9 +313,17 @@ export default function EstudianteAsignacionesPage() {
                         {caso.titulo || `Caso ID ${caso.id_caso_estudio}`}
                       </div>
                       <div className="fileMeta">{caso.descripcion ? caso.descripcion : "Caso disponible."}</div>
+                      <div className="fileMeta">
+                        {caso.archivo_nombre ? `Archivo: ${caso.archivo_nombre}` : ""}
+                      </div>
                     </div>
 
-                    <button className="btnGhost" onClick={onDownloadDisabled} disabled={loading}>
+                    <button
+                      className="btnGhost"
+                      onClick={() => openPath(caso.archivo_path)}
+                      disabled={loading || !caso?.archivo_path}
+                      title={!caso?.archivo_path ? "No hay archivo_path disponible" : ""}
+                    >
                       <Download size={16} />
                       Caso PDF
                     </button>
@@ -314,16 +337,27 @@ export default function EstudianteAsignacionesPage() {
               <div className="subBlock" style={{ marginTop: 12 }}>
                 <div className="subTitle">Entrega registrada</div>
 
-                {entrega?.id_entrega ? (
+                {entrega?.id_estudiante_caso_entrega ? (
                   <div className="fileRow">
                     <div className="fileInfo">
-                      <div className="fileName">{entrega.archivo_pdf || "Entrega PDF registrada"}</div>
+                      <div className="fileName">
+                        {entrega.archivo_nombre || "Entrega PDF registrada"}
+                      </div>
                       <div className="fileMeta">
-                        {entrega.created_at ? `Subida: ${new Date(entrega.created_at).toLocaleString()}` : "Fecha no disponible"}
+                        {entrega.fecha_entrega
+                          ? `Entregada: ${safeDateLabel(entrega.fecha_entrega)}`
+                          : entrega.created_at
+                          ? `Subida: ${safeDateLabel(entrega.created_at)}`
+                          : "Fecha no disponible"}
                       </div>
                     </div>
 
-                    <button className="btnGhost" onClick={onDownloadDisabled} disabled={loading}>
+                    <button
+                      className="btnGhost"
+                      onClick={() => openPath(entrega.archivo_path)}
+                      disabled={loading || !entrega?.archivo_path}
+                      title={!entrega?.archivo_path ? "No hay archivo_path disponible" : ""}
+                    >
                       <FileDown size={16} />
                       Ver/Descargar
                     </button>

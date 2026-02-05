@@ -1,7 +1,8 @@
+// src/services/entregas_caso.service.js
 const repo = require("../repositories/entregas_caso.repo");
 
 async function get(cp, id_estudiante, id_caso_estudio) {
-  // opcional: validar alcance, pero GET puede mostrar null sin problema
+  // Puede devolver null sin problema
   return repo.getEntrega(id_estudiante, id_caso_estudio);
 }
 
@@ -15,6 +16,7 @@ async function upsert(cp, body) {
     throw e;
   }
 
+  // ✅ repo devuelve el registro
   return repo.upsertEntrega(body);
 }
 

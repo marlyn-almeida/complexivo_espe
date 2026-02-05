@@ -1,4 +1,3 @@
-// src/services/entregasCaso.service.ts
 import axiosClient from "../api/axiosClient";
 import type { EntregaCaso, EntregaCasoCreate } from "../types/entregaCaso";
 
@@ -13,6 +12,8 @@ export const entregasCasoService = {
     const { data } = await axiosClient.post("/entregas-caso", formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
-    return data;
+
+    // backend devuelve { ok:true, data: EntregaCaso }
+    return data.data;
   },
 };

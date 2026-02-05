@@ -16,8 +16,9 @@ export type EntregaCaso = {
 };
 
 export type EntregaCasoCreate = {
-  id_estudiante: number;        // ✅ ESTE ES EL CAMPO QUE FALTABA
+  id_estudiante: number; // ✅ NUEVO
   id_caso_estudio: number;
   archivo: File;
   observacion?: string;
 };
+

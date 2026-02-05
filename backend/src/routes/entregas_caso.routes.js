@@ -7,13 +7,12 @@ const ctrl = require("../controllers/entregas_caso.controller");
 
 const multer = require("multer");
 
-// ✅ Upload en memoria (como casos de estudio)
+// ✅ Para recibir req.file.buffer
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 15 * 1024 * 1024 }, // 15MB
 });
 
-// ✅ GET entrega por estudiante y caso
 router.get(
   "/:id_estudiante/:id_caso_estudio",
   authorize(["ADMIN", "DOCENTE"]),
@@ -23,12 +22,11 @@ router.get(
   ctrl.get
 );
 
-// ✅ POST subida PDF (multipart)
-// FormData: id_estudiante, id_caso_estudio, archivo, observacion?
+// ✅ RECIBE PDF desde el front (FormData: archivo)
 router.post(
   "/",
   authorize(["ADMIN"]),
-  upload.single("archivo"), // 👈 FormData debe mandar "archivo"
+  upload.single("archivo"),
   body("id_estudiante").isInt({ min: 1 }).toInt(),
   body("id_caso_estudio").isInt({ min: 1 }).toInt(),
   body("observacion").optional().isString().isLength({ max: 400 }),

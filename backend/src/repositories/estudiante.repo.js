@@ -211,7 +211,7 @@ async function setEstado(id, estado) {
 }
 
 // ===============================
-// ✅ NUEVO: ASIGNACIONES (ROL 2)
+// ✅ ASIGNACIONES (ROL 2)
 // ===============================
 
 // Nota teórica por estudiante + carrera_periodo
@@ -233,8 +233,7 @@ async function findNotaTeoricoByEstudianteCp(id_estudiante, id_carrera_periodo) 
   return r[0] || null;
 }
 
-// ✅ Caso asignado al estudiante (vía tribunal_estudiante -> tribunal -> caso_estudio)
-// CORREGIDO: caso_estudio NO tiene archivo_pdf, tiene archivo_nombre y archivo_path
+// ✅ Caso asignado al estudiante (usa columnas reales: archivo_nombre / archivo_path)
 async function findCasoAsignadoByEstudianteCp(id_estudiante, id_carrera_periodo) {
   const [r] = await pool.query(
     `SELECT
@@ -250,14 +249,14 @@ async function findCasoAsignadoByEstudianteCp(id_estudiante, id_carrera_periodo)
      JOIN caso_estudio ce ON ce.id_caso_estudio = t.id_caso_estudio
      WHERE te.id_estudiante=?
        AND t.id_carrera_periodo=?
+       AND t.id_caso_estudio IS NOT NULL
      LIMIT 1`,
     [id_estudiante, id_carrera_periodo]
   );
   return r[0] || null;
 }
 
-// ✅ Entrega del estudiante por caso
-// CORREGIDO: tabla estudiante_caso_entrega usa id_estudiante_caso_entrega, archivo_nombre, archivo_path
+// ✅ Entrega del estudiante por caso (usa columnas reales)
 async function findEntregaByEstudianteCaso(id_estudiante, id_caso_estudio) {
   const [r] = await pool.query(
     `SELECT
@@ -272,8 +271,8 @@ async function findEntregaByEstudianteCaso(id_estudiante, id_caso_estudio) {
       created_at,
       updated_at
      FROM estudiante_caso_entrega
-     WHERE id_estudiante=? AND id_caso_estudio=?
-     ORDER BY created_at DESC
+     WHERE id_estudiante=? AND id_caso_estudio=? AND estado=1
+     ORDER BY COALESCE(updated_at, created_at) DESC
      LIMIT 1`,
     [id_estudiante, id_caso_estudio]
   );
@@ -292,7 +291,7 @@ module.exports = {
   update,
   setEstado,
 
-  // ✅ NUEVO exports
+  // ✅ ASIGNACIONES
   findNotaTeoricoByEstudianteCp,
   findCasoAsignadoByEstudianteCp,
   findEntregaByEstudianteCaso,
