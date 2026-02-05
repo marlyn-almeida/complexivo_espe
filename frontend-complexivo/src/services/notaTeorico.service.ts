@@ -1,14 +1,37 @@
+// src/services/notaTeorico.service.ts
 import axiosClient from "../api/axiosClient";
-import type { NotaTeorico, NotaTeoricoUpsert } from "../types/notaTeorico";
+
+export type NotaTeorico = {
+  id_nota_teorico?: number;
+  id_estudiante: number;
+  id_carrera_periodo?: number;
+  nota_teorico_20: number;
+  observacion?: string | null;
+  id_docente_registra?: number;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type NotaTeoricoUpsertDTO = {
+  id_estudiante: number;
+  nota_teorico_20: number;
+  observacion?: string | null;
+};
 
 export const notaTeoricoService = {
-  list: async (): Promise<NotaTeorico[]> => {
-    const { data } = await axiosClient.get("/nota-teorico");
-    return data;
+  // ✅ GET /api/nota-teorico/:id_estudiante
+  get: async (id_estudiante: number): Promise<NotaTeorico | null> => {
+    const res = await axiosClient.get<NotaTeorico | null>(`/nota-teorico/${id_estudiante}`);
+    return res.data ?? null;
   },
 
-  upsert: async (payload: NotaTeoricoUpsert): Promise<NotaTeorico> => {
-    const { data } = await axiosClient.post("/nota-teorico", payload);
-    return data;
+  // ✅ POST /api/nota-teorico (UPSERT)
+  upsert: async (payload: NotaTeoricoUpsertDTO): Promise<NotaTeorico> => {
+    const res = await axiosClient.post<NotaTeorico>(`/nota-teorico`, {
+      id_estudiante: payload.id_estudiante,
+      nota_teorico_20: payload.nota_teorico_20,
+      observacion: payload.observacion ?? null,
+    });
+    return res.data;
   },
 };

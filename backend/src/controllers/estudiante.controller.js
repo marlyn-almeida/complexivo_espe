@@ -1,3 +1,4 @@
+// src/controllers/estudiante.controller.js
 const service = require("../services/estudiante.service");
 
 async function list(req, res, next) {
@@ -40,4 +41,13 @@ async function changeEstado(req, res, next) {
   }
 }
 
-module.exports = { list, get, create, update, changeEstado };
+// ✅ NUEVO: Asignaciones (payload completo para la pantalla)
+async function asignaciones(req, res, next) {
+  try {
+    res.json(await service.asignaciones(req.params.id, req.user, req.ctx));
+  } catch (e) {
+    next(e);
+  }
+}
+
+module.exports = { list, get, create, update, changeEstado, asignaciones };

@@ -14,6 +14,7 @@ import {
   BadgeCheck,
   AlertTriangle,
   Download,
+  FileDown,
 } from "lucide-react";
 
 import escudoESPE from "../../assets/escudo.png";
@@ -43,20 +44,23 @@ export default function EstudianteAsignacionesPage() {
   // Cabecera
   const [estudiante, setEstudiante] = useState<any>(null);
 
-  // Nota teórica (aquí usamos LIST porque tu service no tiene getByEstudiante)
+  // Nota teórica
   const [notaValue, setNotaValue] = useState("");
+  const [notaObs, setNotaObs] = useState("");
   const [notaLoaded, setNotaLoaded] = useState<number | null>(null);
 
-  // Entrega
+  // Caso asignado
+  const [caso, setCaso] = useState<any>(null);
+  const idCasoEstudio = useMemo(
+    () => (caso?.id_caso_estudio ? Number(caso.id_caso_estudio) : null),
+    [caso]
+  );
+
+  // Entrega existente
+  const [entrega, setEntrega] = useState<any>(null);
+
+  // Upload
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-
-  // ⚠️ Importante: para subir necesitas id_caso_estudio
-  // Si aún no tienes un endpoint que lo devuelva por estudiante, por ahora queda null.
-  const [idCasoEstudio, setIdCasoEstudio] = useState<number | null>(null);
-
-  // Si en tu backend ya tienes algún endpoint que devuelva el caso asignado al estudiante,
-  // aquí luego lo conectamos y asignamos:
-  // setIdCasoEstudio(data.id_caso_estudio)
 
   const [toast, setToast] = useState<{ msg: string; type: ToastType } | null>(null);
 
@@ -92,33 +96,22 @@ export default function EstudianteAsignacionesPage() {
     try {
       setLoading(true);
 
-      // 1) estudiante
-      const est = await estudiantesService.get(id);
-      setEstudiante(est);
+      const data = await estudiantesService.getAsignaciones(id);
 
-      // 2) nota teórica: tu service solo tiene list()
-      // Asumimos que list() ya viene filtrado por ctx (carrera_periodo) del rol 2
-      // y contiene registros con id_estudiante.
-      const notas = await notaTeoricoService.list();
-      const n = (notas ?? []).find((x: any) => Number(x.id_estudiante) === id);
+      setEstudiante(data.estudiante ?? null);
+      setCaso(data.caso ?? null);
+      setEntrega(data.entrega ?? null);
 
-      if (n?.nota_teorico_20 != null) {
-        const v = Number(n.nota_teorico_20);
+      if (data.nota_teorico?.nota_teorico_20 != null) {
+        const v = Number(data.nota_teorico.nota_teorico_20);
         setNotaLoaded(v);
         setNotaValue(String(v).replace(".", ","));
+        setNotaObs(String(data.nota_teorico.observacion ?? ""));
       } else {
         setNotaLoaded(null);
         setNotaValue("");
+        setNotaObs("");
       }
-
-      // 3) Caso asignado + PDF original + entrega:
-      // ⚠️ Aquí depende de tu backend.
-      // Como aún NO compartiste un service GET de entregas-caso, dejamos solo el upload.
-      // Cuando me pegues el endpoint para consultar (por estudiante), lo conectamos.
-      //
-      // Por ahora solo dejamos idCasoEstudio = null y lo mostraremos como "no asignado".
-
-      setIdCasoEstudio(null);
     } catch (err: any) {
       showToast(extractBackendMsg(err), "error");
     } finally {
@@ -135,9 +128,11 @@ export default function EstudianteAsignacionesPage() {
 
     try {
       setLoading(true);
+
       await notaTeoricoService.upsert({
         id_estudiante: id,
         nota_teorico_20: n,
+        observacion: notaObs?.trim() || null,
       } as any);
 
       showToast("Nota teórica guardada.", "success");
@@ -177,21 +172,29 @@ export default function EstudianteAsignacionesPage() {
 
     try {
       setLoading(true);
+
+      // ✅ AQUÍ VA EL CAMBIO: ahora mandamos id_estudiante
       await entregasCasoService.subir({
+        id_estudiante: id,
         id_caso_estudio: idCasoEstudio,
         archivo: selectedFile,
         observacion: `Entrega del estudiante ${id}`,
-      });
+      } as any);
 
       setSelectedFile(null);
       showToast("Entrega subida correctamente.", "success");
-      // aquí luego recargaremos info de entrega/caso cuando exista GET
       await loadAll();
     } catch (err: any) {
       showToast(extractBackendMsg(err), "error");
     } finally {
       setLoading(false);
     }
+  }
+
+  // ⚠️ Descargas:
+  // Para descargar el PDF original del caso y la entrega, necesitas endpoints de descarga.
+  function onDownloadDisabled() {
+    showToast("Descarga pendiente de endpoint en backend.", "info");
   }
 
   return (
@@ -255,6 +258,17 @@ export default function EstudianteAsignacionesPage() {
                 </button>
               </div>
 
+              <label className="fieldLabel" style={{ marginTop: 10 }}>
+                Observación (opcional)
+              </label>
+              <textarea
+                className="textarea"
+                placeholder="Ej: Revisión de contenido teórico."
+                value={notaObs}
+                onChange={(e) => setNotaObs(e.target.value)}
+                disabled={loading}
+              />
+
               <div className="hint">
                 <AlertTriangle size={16} />
                 <span>La nota teórica se registra desde esta pantalla.</span>
@@ -272,20 +286,23 @@ export default function EstudianteAsignacionesPage() {
             </div>
 
             <div className="cardBody">
+              {/* CASO ASIGNADO */}
               <div className="subBlock">
                 <div className="subTitle">Caso asignado</div>
 
-                {/* ⚠️ Cuando conectemos GET, aquí mostraremos el caso real + botón descargar */}
-                {idCasoEstudio ? (
+                {caso?.id_caso_estudio ? (
                   <div className="fileRow">
                     <div className="fileInfo">
-                      <div className="fileName">Caso asignado ID: {idCasoEstudio}</div>
-                      <div className="fileMeta">PDF original disponible al conectar consulta.</div>
+                      <div className="fileName">
+                        {caso.numero_caso ? `${caso.numero_caso} — ` : ""}
+                        {caso.titulo || `Caso ID ${caso.id_caso_estudio}`}
+                      </div>
+                      <div className="fileMeta">{caso.descripcion ? caso.descripcion : "Caso disponible."}</div>
                     </div>
 
-                    <button className="btnGhost" disabled title="Pendiente de endpoint de descarga">
+                    <button className="btnGhost" onClick={onDownloadDisabled} disabled={loading}>
                       <Download size={16} />
-                      Descargar
+                      Caso PDF
                     </button>
                   </div>
                 ) : (
@@ -293,6 +310,30 @@ export default function EstudianteAsignacionesPage() {
                 )}
               </div>
 
+              {/* ENTREGA EXISTENTE */}
+              <div className="subBlock" style={{ marginTop: 12 }}>
+                <div className="subTitle">Entrega registrada</div>
+
+                {entrega?.id_entrega ? (
+                  <div className="fileRow">
+                    <div className="fileInfo">
+                      <div className="fileName">{entrega.archivo_pdf || "Entrega PDF registrada"}</div>
+                      <div className="fileMeta">
+                        {entrega.created_at ? `Subida: ${new Date(entrega.created_at).toLocaleString()}` : "Fecha no disponible"}
+                      </div>
+                    </div>
+
+                    <button className="btnGhost" onClick={onDownloadDisabled} disabled={loading}>
+                      <FileDown size={16} />
+                      Ver/Descargar
+                    </button>
+                  </div>
+                ) : (
+                  <div className="muted">Sin entrega registrada.</div>
+                )}
+              </div>
+
+              {/* SUBIR NUEVO PDF */}
               <div className="subBlock" style={{ marginTop: 12 }}>
                 <div className="subTitle">Subir PDF resuelto</div>
 
@@ -311,7 +352,12 @@ export default function EstudianteAsignacionesPage() {
 
                   <div className="filePicked">{selectedFile ? selectedFile.name : "Ningún archivo seleccionado"}</div>
 
-                  <button className="btnPrimary" onClick={onUploadEntrega} disabled={loading || !selectedFile || !idCasoEstudio}>
+                  <button
+                    className="btnPrimary"
+                    onClick={onUploadEntrega}
+                    disabled={loading || !selectedFile || !idCasoEstudio}
+                    title={!idCasoEstudio ? "Primero debe existir un caso asignado" : ""}
+                  >
                     <FileUp size={16} />
                     Subir
                   </button>

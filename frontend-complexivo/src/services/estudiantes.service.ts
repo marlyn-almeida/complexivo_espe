@@ -12,7 +12,6 @@ export type EstudianteListParams = {
 
 export type EstudianteCreateDTO = {
   id_carrera_periodo: number;
-
   id_institucional_estudiante: string;
 
   // ✅ NUEVO (username para login o identificación)
@@ -27,6 +26,42 @@ export type EstudianteCreateDTO = {
 };
 
 export type EstudianteUpdateDTO = EstudianteCreateDTO;
+
+// ✅ Tipos del payload de asignaciones (lo que devuelve /estudiantes/:id/asignaciones)
+export type NotaTeoricoAsignacion = {
+  id_nota_teorico?: number;
+  id_estudiante: number;
+  id_carrera_periodo: number;
+  nota_teorico_20: number;
+  observacion?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type CasoAsignado = {
+  id_caso_estudio: number;
+  numero_caso?: string | null;
+  titulo?: string | null;
+  descripcion?: string | null;
+  archivo_pdf?: string | null;
+  id_tribunal?: number;
+};
+
+export type EntregaCaso = {
+  id_entrega: number;
+  id_estudiante: number;
+  id_caso_estudio: number;
+  archivo_pdf?: string | null;
+  observacion?: string | null;
+  created_at?: string;
+};
+
+export type EstudianteAsignacionesPayload = {
+  estudiante: Estudiante;
+  nota_teorico: NotaTeoricoAsignacion | null;
+  caso: CasoAsignado | null;
+  entrega: EntregaCaso | null;
+};
 
 export const estudiantesService = {
   list: async (params?: EstudianteListParams): Promise<Estudiante[]> => {
@@ -47,6 +82,12 @@ export const estudiantesService = {
 
   get: async (id: number): Promise<Estudiante> => {
     const res = await axiosClient.get<Estudiante>(`/estudiantes/${id}`);
+    return res.data;
+  },
+
+  // ✅ NUEVO: Trae todo lo necesario para la pantalla Asignaciones
+  getAsignaciones: async (id: number): Promise<EstudianteAsignacionesPayload> => {
+    const res = await axiosClient.get<EstudianteAsignacionesPayload>(`/estudiantes/${id}/asignaciones`);
     return res.data;
   },
 

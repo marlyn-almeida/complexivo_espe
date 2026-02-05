@@ -300,3 +300,23 @@
 .toast-success { border-color: rgba(20, 122, 74, 0.35); }
 .toast-error { border-color: rgba(220, 38, 38, 0.35); }
 .toast-info { border-color: rgba(59, 130, 246, 0.35); }
+.textarea {
+  width: 100%;
+  min-height: 86px;
+  resize: vertical;
+
+  border-radius: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(15, 23, 42, 0.14);
+  outline: none;
+
+  font-weight: 700;
+  font-family: inherit;
+  color: rgba(15, 23, 42, 0.92);
+  background: #fff;
+}
+
+.textarea:focus {
+  border-color: rgba(20, 122, 74, 0.45);
+  box-shadow: 0 0 0 3px rgba(20, 122, 74, 0.12);
+}

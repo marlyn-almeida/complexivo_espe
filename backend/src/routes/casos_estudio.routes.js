@@ -11,9 +11,11 @@ const multer = require("multer");
 // ✅ Para poder usar req.file.buffer (como tu controller)
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 15 * 1024 * 1024 }, // 15MB (ajusta si quieres)
+  limits: { fileSize: 15 * 1024 * 1024 }, // 15MB
 });
 
+// ✅ LISTAR casos
+// GET /api/casos-estudio?includeInactive=true|false
 router.get(
   "/",
   authorize(["ADMIN"]),
@@ -23,6 +25,8 @@ router.get(
   ctrl.list
 );
 
+// ✅ CREAR caso (con PDF)
+// POST /api/casos-estudio  (FormData con "archivo")
 router.post(
   "/",
   authorize(["ADMIN"]),
@@ -35,6 +39,8 @@ router.post(
   ctrl.create
 );
 
+// ✅ UPDATE caso (PDF opcional)
+// PUT /api/casos-estudio/:id_caso_estudio
 router.put(
   "/:id_caso_estudio",
   authorize(["ADMIN"]),
@@ -49,6 +55,7 @@ router.put(
 );
 
 // ✅ PATCH estado (ACTIVAR/DESACTIVAR)
+// PATCH /api/casos-estudio/:id_caso_estudio/estado
 router.patch(
   "/:id_caso_estudio/estado",
   authorize(["ADMIN"]),

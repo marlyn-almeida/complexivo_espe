@@ -144,7 +144,7 @@ async function findByCedulaInCarreraPeriodo(id_carrera_periodo, cedula) {
   return r[0] || null;
 }
 
-// ✅ NUEVO: duplicado username por carrera_periodo (NO global)
+// ✅ duplicado username por carrera_periodo (NO global)
 async function findByUsernameInCarreraPeriodo(id_carrera_periodo, nombre_usuario) {
   const [r] = await pool.query(
     `SELECT id_estudiante, id_carrera_periodo, nombre_usuario
@@ -210,6 +210,69 @@ async function setEstado(id, estado) {
   return findById(id);
 }
 
+// ===============================
+// ✅ NUEVO: ASIGNACIONES (ROL 2)
+// ===============================
+
+// Nota teórica por estudiante + carrera_periodo
+async function findNotaTeoricoByEstudianteCp(id_estudiante, id_carrera_periodo) {
+  const [r] = await pool.query(
+    `SELECT
+      id_nota_teorico,
+      id_estudiante,
+      id_carrera_periodo,
+      nota_teorico_20,
+      observacion,
+      created_at,
+      updated_at
+     FROM nota_teorico_estudiante
+     WHERE id_estudiante=? AND id_carrera_periodo=?
+     LIMIT 1`,
+    [id_estudiante, id_carrera_periodo]
+  );
+  return r[0] || null;
+}
+
+// Caso asignado al estudiante (vía tribunal_estudiante -> tribunal -> caso_estudio)
+async function findCasoAsignadoByEstudianteCp(id_estudiante, id_carrera_periodo) {
+  const [r] = await pool.query(
+    `SELECT
+      ce.id_caso_estudio,
+      ce.numero_caso,
+      ce.titulo,
+      ce.descripcion,
+      ce.archivo_pdf,
+      t.id_tribunal
+     FROM tribunal_estudiante te
+     JOIN tribunal t ON t.id_tribunal = te.id_tribunal
+     JOIN caso_estudio ce ON ce.id_caso_estudio = t.id_caso_estudio
+     WHERE te.id_estudiante=?
+       AND t.id_carrera_periodo=?
+     LIMIT 1`,
+    [id_estudiante, id_carrera_periodo]
+  );
+  return r[0] || null;
+}
+
+// Entrega del estudiante por caso
+async function findEntregaByEstudianteCaso(id_estudiante, id_caso_estudio) {
+  const [r] = await pool.query(
+    `SELECT
+      id_entrega,
+      id_estudiante,
+      id_caso_estudio,
+      archivo_pdf,
+      observacion,
+      created_at
+     FROM estudiante_caso_entrega
+     WHERE id_estudiante=? AND id_caso_estudio=?
+     ORDER BY created_at DESC
+     LIMIT 1`,
+    [id_estudiante, id_caso_estudio]
+  );
+  return r[0] || null;
+}
+
 module.exports = {
   carreraPeriodoExists,
   carreraPeriodoBelongsToCarrera,
@@ -217,8 +280,13 @@ module.exports = {
   findById,
   findByInstitucionalInCarreraPeriodo,
   findByCedulaInCarreraPeriodo,
-  findByUsernameInCarreraPeriodo, // ✅ NUEVO
+  findByUsernameInCarreraPeriodo,
   create,
   update,
   setEstado,
+
+  // ✅ NUEVO exports
+  findNotaTeoricoByEstudianteCp,
+  findCasoAsignadoByEstudianteCp,
+  findEntregaByEstudianteCaso,
 };

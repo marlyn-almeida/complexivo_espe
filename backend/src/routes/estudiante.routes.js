@@ -20,6 +20,14 @@ router.get(
   ctrl.list
 );
 
+// ✅ NUEVO: Asignaciones del estudiante (ROL 2)
+router.get(
+  "/:id/asignaciones",
+  param("id").isInt({ min: 1 }).toInt(),
+  validate,
+  ctrl.asignaciones
+);
+
 router.get(
   "/:id",
   param("id").isInt({ min: 1 }).toInt(),
