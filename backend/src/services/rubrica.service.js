@@ -1,95 +1,108 @@
 const repo = require("../repositories/rubrica.repo");
 
-async function list({ includeInactive = false, periodoId = null }) {
-  return repo.findAll({ includeInactive, periodoId });
+function normalizeEstado(v) {
+  return v === true || Number(v) === 1 ? 1 : 0;
 }
 
-async function get(id) {
-  const row = await repo.findById(id);
-  if (!row) {
-    const e = new Error("Rúbrica no encontrada");
-    e.status = 404;
-    throw e;
-  }
-  return row;
+async function list({ includeInactive = false, periodoId = null } = {}) {
+  return repo.list({ includeInactive, periodoId });
 }
 
 async function getByPeriodo(id_periodo) {
-  const pid = Number(id_periodo);
-  if (!(await repo.periodoExists(pid))) {
-    const e = new Error("periodo_academico no existe");
-    e.status = 422;
-    throw e;
-  }
-  const row = await repo.findByPeriodo(pid);
-  if (!row) {
-    const e = new Error("No existe rúbrica para este período");
-    e.status = 404;
-    throw e;
-  }
-  return row;
+  return repo.getByPeriodo(id_periodo);
 }
 
-// crea si no existe. Si existe, devuelve la misma.
-async function ensureByPeriodo(id_periodo, payload = {}) {
-  const pid = Number(id_periodo);
-
-  if (!(await repo.periodoExists(pid))) {
-    const e = new Error("periodo_academico no existe");
-    e.status = 422;
-    throw e;
+async function ensureByPeriodo(id_periodo, body) {
+  // Si ya existe => devolver la existente
+  const existing = await repo.getByPeriodo(id_periodo);
+  if (existing) {
+    return { __created: false, rubrica: existing };
   }
 
-  const existing = await repo.findByPeriodo(pid);
-  if (existing) return { created: false, rubrica: existing };
+  const payload = {
+    id_periodo,
+    nombre_rubrica: (body.nombre_rubrica || "Rúbrica del Período").trim(),
+    descripcion_rubrica: body.descripcion_rubrica ? String(body.descripcion_rubrica).trim() : null,
+    ponderacion_global:
+      body.ponderacion_global !== undefined && body.ponderacion_global !== null
+        ? Number(body.ponderacion_global)
+        : 100,
+    estado: 1,
+  };
 
-  const nombre = (payload.nombre_rubrica && String(payload.nombre_rubrica).trim())
-    ? String(payload.nombre_rubrica).trim()
-    : `Rúbrica del período #${pid}`;
-
-  const descripcion = payload.descripcion_rubrica ?? null;
-  const ponderacion = payload.ponderacion_global ?? 50.0;
-
-  const created = await repo.create({
-    id_periodo: pid,
-    nombre_rubrica: nombre,
-    descripcion_rubrica: descripcion,
-    ponderacion_global: ponderacion,
-  });
-
-  return { created: true, rubrica: created };
+  const id = await repo.create(payload);
+  const created = await repo.getById(id);
+  return { __created: true, rubrica: created };
 }
 
-async function update(id, payload) {
-  await get(id);
+async function get(id_rubrica) {
+  return repo.getById(id_rubrica);
+}
 
-  const nombre = String(payload.nombre_rubrica || "").trim();
-  if (!nombre) {
-    const e = new Error("nombre_rubrica es obligatorio");
-    e.status = 422;
-    throw e;
+async function update(id_rubrica, patch) {
+  const exists = await repo.getById(id_rubrica);
+  if (!exists) {
+    const err = new Error("Rúbrica no encontrada");
+    err.status = 404;
+    throw err;
   }
 
-  const out = await repo.update(id, {
-    nombre_rubrica: nombre,
-    descripcion_rubrica: payload.descripcion_rubrica ?? null,
-    ponderacion_global: payload.ponderacion_global ?? 50.0,
-  });
+  const clean = {
+    nombre_rubrica: patch.nombre_rubrica !== undefined ? String(patch.nombre_rubrica).trim() : undefined,
+    descripcion_rubrica:
+      patch.descripcion_rubrica !== undefined
+        ? patch.descripcion_rubrica === null
+          ? null
+          : String(patch.descripcion_rubrica).trim()
+        : undefined,
+    ponderacion_global:
+      patch.ponderacion_global !== undefined && patch.ponderacion_global !== null
+        ? Number(patch.ponderacion_global)
+        : undefined,
+  };
 
-  return out;
+  const ok = await repo.update(id_rubrica, clean);
+  if (!ok) {
+    const err = new Error("No se pudo actualizar la rúbrica");
+    err.status = 400;
+    throw err;
+  }
+  return true;
 }
 
-async function changeEstado(id, estado) {
-  await get(id);
-  await repo.setEstado(id, estado ? 1 : 0);
-  return { updated: true };
+async function changeEstado(id_rubrica, estadoBool) {
+  const exists = await repo.getById(id_rubrica);
+  if (!exists) {
+    const err = new Error("Rúbrica no encontrada");
+    err.status = 404;
+    throw err;
+  }
+
+  const ok = await repo.changeEstado(id_rubrica, normalizeEstado(estadoBool));
+  if (!ok) {
+    const err = new Error("No se pudo cambiar el estado");
+    err.status = 400;
+    throw err;
+  }
+  return true;
+}
+
+async function listComponentes(id_rubrica, { includeInactive = false } = {}) {
+  const r = await repo.getById(id_rubrica);
+  if (!r) {
+    const err = new Error("Rúbrica no encontrada");
+    err.status = 404;
+    throw err;
+  }
+  return repo.listComponentes(id_rubrica, { includeInactive });
 }
 
 module.exports = {
   list,
-  get,
   getByPeriodo,
   ensureByPeriodo,
+  get,
   update,
   changeEstado,
+  listComponentes,
 };

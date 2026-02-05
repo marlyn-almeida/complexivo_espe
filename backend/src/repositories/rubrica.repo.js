@@ -1,75 +1,167 @@
-const db = require("../config/db");
+const pool = require("../config/db");
 
-exports.findAll = async ({ includeInactive = false, periodoId = null }) => {
+async function list({ includeInactive = false, periodoId = null } = {}) {
+  const where = [];
   const params = [];
-  let sql = `SELECT r.* FROM rubrica r WHERE 1=1`;
 
-  if (!includeInactive) sql += ` AND r.estado = 1`;
   if (periodoId) {
-    sql += ` AND r.id_periodo = ?`;
+    where.push("r.id_periodo = ?");
     params.push(Number(periodoId));
   }
 
-  sql += ` ORDER BY r.id_periodo DESC`;
+  if (!includeInactive) {
+    where.push("r.estado = 1");
+  }
 
-  const [rows] = await db.query(sql, params);
+  const sql = `
+    SELECT
+      r.id_rubrica,
+      r.id_periodo,
+      r.ponderacion_global,
+      r.nombre_rubrica,
+      r.descripcion_rubrica,
+      r.estado,
+      r.created_at,
+      r.updated_at
+    FROM rubrica r
+    ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
+    ORDER BY r.id_rubrica ASC
+  `;
+
+  const [rows] = await pool.query(sql, params);
   return rows;
-};
+}
 
-exports.findById = async (id) => {
-  const [rows] = await db.query(
-    `SELECT * FROM rubrica WHERE id_rubrica = ? LIMIT 1`,
-    [Number(id)]
+async function getByPeriodo(id_periodo) {
+  const [rows] = await pool.query(
+    `
+    SELECT
+      id_rubrica,
+      id_periodo,
+      ponderacion_global,
+      nombre_rubrica,
+      descripcion_rubrica,
+      estado,
+      created_at,
+      updated_at
+    FROM rubrica
+    WHERE id_periodo = ?
+      AND estado = 1
+    LIMIT 1
+    `,
+    [id_periodo]
   );
   return rows[0] || null;
-};
+}
 
-exports.findByPeriodo = async (id_periodo) => {
-  const [rows] = await db.query(
-    `SELECT * FROM rubrica WHERE id_periodo = ? LIMIT 1`,
-    [Number(id_periodo)]
+async function getById(id_rubrica) {
+  const [rows] = await pool.query(
+    `
+    SELECT
+      id_rubrica,
+      id_periodo,
+      ponderacion_global,
+      nombre_rubrica,
+      descripcion_rubrica,
+      estado,
+      created_at,
+      updated_at
+    FROM rubrica
+    WHERE id_rubrica = ?
+    LIMIT 1
+    `,
+    [id_rubrica]
   );
   return rows[0] || null;
-};
+}
 
-exports.create = async (d) => {
-  const [res] = await db.query(
-    `INSERT INTO rubrica (id_periodo, ponderacion_global, nombre_rubrica, descripcion_rubrica, estado)
-     VALUES (?,?,?,?,1)`,
-    [
-      d.id_periodo,
-      d.ponderacion_global,
-      d.nombre_rubrica,
-      d.descripcion_rubrica,
-    ]
+async function create({ id_periodo, nombre_rubrica, descripcion_rubrica, ponderacion_global, estado }) {
+  const [r] = await pool.query(
+    `
+    INSERT INTO rubrica
+      (id_periodo, nombre_rubrica, descripcion_rubrica, ponderacion_global, estado)
+    VALUES (?,?,?,?,?)
+    `,
+    [id_periodo, nombre_rubrica, descripcion_rubrica || null, ponderacion_global ?? 100, estado ?? 1]
   );
-  return exports.findById(res.insertId);
-};
+  return r.insertId;
+}
 
-exports.update = async (id, d) => {
-  await db.query(
-    `UPDATE rubrica
-     SET ponderacion_global=?,
-         nombre_rubrica=?,
-         descripcion_rubrica=?,
-         updated_at=CURRENT_TIMESTAMP
-     WHERE id_rubrica=?`,
-    [d.ponderacion_global, d.nombre_rubrica, d.descripcion_rubrica, Number(id)]
-  );
-  return exports.findById(id);
-};
+async function update(id_rubrica, patch) {
+  const fields = [];
+  const values = [];
 
-exports.setEstado = async (id, estado) => {
-  await db.query(
-    `UPDATE rubrica SET estado=?, updated_at=CURRENT_TIMESTAMP WHERE id_rubrica=?`,
-    [estado ? 1 : 0, Number(id)]
-  );
-};
+  if (patch.nombre_rubrica !== undefined) {
+    fields.push("nombre_rubrica = ?");
+    values.push(patch.nombre_rubrica);
+  }
+  if (patch.descripcion_rubrica !== undefined) {
+    fields.push("descripcion_rubrica = ?");
+    values.push(patch.descripcion_rubrica || null);
+  }
+  if (patch.ponderacion_global !== undefined) {
+    fields.push("ponderacion_global = ?");
+    values.push(patch.ponderacion_global);
+  }
 
-exports.periodoExists = async (id_periodo) => {
-  const [rows] = await db.query(
-    `SELECT 1 FROM periodo_academico WHERE id_periodo=? LIMIT 1`,
-    [Number(id_periodo)]
+  if (!fields.length) return 0;
+
+  values.push(id_rubrica);
+  const [r] = await pool.query(
+    `
+    UPDATE rubrica
+    SET ${fields.join(", ")}, updated_at = CURRENT_TIMESTAMP
+    WHERE id_rubrica = ?
+    `,
+    values
   );
-  return rows.length > 0;
+  return r.affectedRows;
+}
+
+async function changeEstado(id_rubrica, estado01) {
+  const [r] = await pool.query(
+    `
+    UPDATE rubrica
+    SET estado = ?, updated_at = CURRENT_TIMESTAMP
+    WHERE id_rubrica = ?
+    `,
+    [estado01 ? 1 : 0, id_rubrica]
+  );
+  return r.affectedRows;
+}
+
+/* =========================================================
+   ✅ COMPONENTES
+   Tabla: rubrica_componente
+   ========================================================= */
+
+async function listComponentes(id_rubrica, { includeInactive = false } = {}) {
+  const [rows] = await pool.query(
+    `
+    SELECT
+      id_rubrica_componente,
+      id_rubrica,
+      nombre_componente,
+      ponderacion_pct,
+      estado,
+      created_at,
+      updated_at
+    FROM rubrica_componente
+    WHERE id_rubrica = ?
+      AND (? = TRUE OR estado = 1)
+    ORDER BY id_rubrica_componente ASC
+    `,
+    [id_rubrica, includeInactive]
+  );
+  return rows;
+}
+
+module.exports = {
+  list,
+  getByPeriodo,
+  getById,
+  create,
+  update,
+  changeEstado,
+  listComponentes,
 };

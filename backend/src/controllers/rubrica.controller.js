@@ -1,58 +1,99 @@
-const service = require("../services/rubrica.service");
+const svc = require("../services/rubrica.service");
 
-exports.list = async (req, res, next) => {
+async function list(req, res, next) {
   try {
-    const includeInactive = !!req.query.includeInactive;
+    const includeInactive = req.query.includeInactive === true;
     const periodoId = req.query.periodoId ? Number(req.query.periodoId) : null;
-    const data = await service.list({ includeInactive, periodoId });
-    res.json(data);
-  } catch (e) {
-    next(e);
-  }
-};
 
-exports.get = async (req, res, next) => {
-  try {
-    const data = await service.get(Number(req.params.id));
-    res.json(data);
+    const data = await svc.list({ includeInactive, periodoId });
+    res.json({ ok: true, data });
   } catch (e) {
     next(e);
   }
-};
+}
 
-exports.getByPeriodo = async (req, res, next) => {
+async function getByPeriodo(req, res, next) {
   try {
-    const data = await service.getByPeriodo(Number(req.params.idPeriodo));
-    res.json(data);
-  } catch (e) {
-    next(e);
-  }
-};
+    const id_periodo = Number(req.params.idPeriodo);
+    const data = await svc.getByPeriodo(id_periodo);
 
-// crea si no existe (1 por período)
-exports.ensureByPeriodo = async (req, res, next) => {
-  try {
-    const out = await service.ensureByPeriodo(Number(req.params.idPeriodo), req.body);
-    res.status(out.created ? 201 : 200).json(out);
-  } catch (e) {
-    next(e);
-  }
-};
+    if (!data) {
+      const err = new Error("Rúbrica no encontrada para el período");
+      err.status = 404;
+      throw err;
+    }
 
-exports.update = async (req, res, next) => {
-  try {
-    const updated = await service.update(Number(req.params.id), req.body);
-    res.json(updated);
+    res.json({ ok: true, data });
   } catch (e) {
     next(e);
   }
-};
+}
 
-exports.changeEstado = async (req, res, next) => {
+async function ensureByPeriodo(req, res, next) {
   try {
-    const out = await service.changeEstado(Number(req.params.id), req.body.estado);
-    res.json(out);
+    const id_periodo = Number(req.params.idPeriodo);
+    const data = await svc.ensureByPeriodo(id_periodo, req.body || {});
+    // idempotente: si ya existe devuelve 200, si crea devuelve 201
+    res.status(data.__created ? 201 : 200).json({ ok: true, data: data.rubrica });
   } catch (e) {
     next(e);
   }
+}
+
+async function get(req, res, next) {
+  try {
+    const id_rubrica = Number(req.params.id);
+    const data = await svc.get(id_rubrica);
+
+    if (!data) {
+      const err = new Error("Rúbrica no encontrada");
+      err.status = 404;
+      throw err;
+    }
+
+    res.json({ ok: true, data });
+  } catch (e) {
+    next(e);
+  }
+}
+
+async function update(req, res, next) {
+  try {
+    const id_rubrica = Number(req.params.id);
+    await svc.update(id_rubrica, req.body || {});
+    res.json({ ok: true });
+  } catch (e) {
+    next(e);
+  }
+}
+
+async function changeEstado(req, res, next) {
+  try {
+    const id_rubrica = Number(req.params.id);
+    await svc.changeEstado(id_rubrica, req.body.estado === true);
+    res.json({ ok: true });
+  } catch (e) {
+    next(e);
+  }
+}
+
+async function listComponentes(req, res, next) {
+  try {
+    const id_rubrica = Number(req.params.id);
+    const includeInactive = req.query.includeInactive === true;
+    const data = await svc.listComponentes(id_rubrica, { includeInactive });
+    res.json({ ok: true, data });
+  } catch (e) {
+    next(e);
+  }
+}
+
+module.exports = {
+  list,
+  getByPeriodo,
+  ensureByPeriodo,
+  get,
+  update,
+  changeEstado,
+  listComponentes,
 };

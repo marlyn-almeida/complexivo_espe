@@ -110,6 +110,63 @@ function MenuIcon({ name }: { name: IconName }) {
         </svg>
       );
 
+    /* ==========================
+       ✅ NUEVOS ÍCONOS ROL 2
+       (simples y monocromos)
+       ========================== */
+
+    // Casos de estudio: documento + lupa
+    case "casosEstudio":
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M6 2h9l3 3v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm8 1.5V6h2.5L14 3.5Z" />
+          <path d="M7 10h8v2H7v-2Zm0 4h6v2H7v-2Z" />
+        </svg>
+      );
+
+    // Entregas de caso: flecha/subida
+    case "entregasCaso":
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 3l5 5h-3v6h-4V8H7l5-5Z" />
+          <path d="M5 19a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4h-2v4H7v-4H5v4Z" />
+        </svg>
+      );
+
+    // Plan de evaluación: clipboard/checklist
+    case "planEvaluacion":
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M9 2h6a2 2 0 0 1 2 2v1h2a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2V4a2 2 0 0 1 2-2Zm6 3V4H9v1h6Z" />
+          <path d="M7 10h10v2H7v-2Zm0 4h10v2H7v-2Z" />
+        </svg>
+      );
+
+    // Calificadores generales: estrella/medalla
+    case "calificadores":
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 2l2.6 5.4 6 .9-4.3 4.2 1 6-5.3-2.8-5.3 2.8 1-6L3.4 8.3l6-.9L12 2Z" />
+        </svg>
+      );
+
+    // Nota teórico: libro
+    case "notaTeorico":
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M6 3h10a2 2 0 0 1 2 2v16a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2V5a2 2 0 0 1 2-2Zm0 4h12v2H6V7Zm0 4h12v2H6v-2Z" />
+        </svg>
+      );
+
+    // Ponderaciones: %
+    case "ponderaciones":
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M7 17a2 2 0 1 0 0-4a2 2 0 0 0 0 4Zm10-6a2 2 0 1 0 0-4a2 2 0 0 0 0 4Z" />
+          <path d="M7 19 17 5h2L9 19H7Z" />
+        </svg>
+      );
+
     default:
       return null;
   }

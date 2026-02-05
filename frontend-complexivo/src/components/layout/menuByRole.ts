@@ -10,7 +10,14 @@ export type IconName =
   | "docentes"
   | "acta"
   | "tribunales"
-  | "estudiantes";
+  | "estudiantes"
+  // ✅ NUEVOS (ROL 2 – Complexivo)
+  | "casosEstudio"
+  | "entregasCaso"
+  | "planEvaluacion"
+  | "calificadores"
+  | "notaTeorico"
+  | "ponderaciones";
 
 export type MenuItem = {
   label: string;
@@ -44,12 +51,7 @@ export const MENU_SECTIONS: MenuSection[] = [
     roles: [1],
     items: [
       { label: "Carreras", to: "/carreras", roles: [1], icon: "carreras" },
-      {
-        label: "Períodos académicos",
-        to: "/periodos",
-        roles: [1],
-        icon: "periodos",
-      },
+      { label: "Períodos académicos", to: "/periodos", roles: [1], icon: "periodos" },
       { label: "Rúbricas", to: "/rubricas", roles: [1], icon: "rubricas" },
     ],
   },
@@ -59,12 +61,7 @@ export const MENU_SECTIONS: MenuSection[] = [
     roles: [1],
     items: [
       { label: "Docentes", to: "/docentes", roles: [1], icon: "docentes" },
-      {
-        label: "Plantillas Acta Word",
-        to: "/plantillas-acta",
-        roles: [1],
-        icon: "acta",
-      },
+      { label: "Plantillas Acta Word", to: "/plantillas-acta", roles: [1], icon: "acta" },
     ],
   },
 
@@ -78,13 +75,21 @@ export const MENU_SECTIONS: MenuSection[] = [
       { label: "Docentes", to: "/docentes", roles: [2], icon: "docentes" },
       { label: "Estudiantes", to: "/estudiantes", roles: [2], icon: "estudiantes" },
 
-      // ✅ AQUÍ: Tribunales de vuelta para rol 2
+      // ✅ Tribunales (rol 2)
       { label: "Tribunales", to: "/tribunales", roles: [2], icon: "tribunales" },
 
+      // (pendientes si aún no tienes pages)
       { label: "Calificaciones", to: "/calificaciones", roles: [2], icon: "rubricas" },
       { label: "Actas firmadas", to: "/actas-firmadas", roles: [2], icon: "acta" },
       { label: "Período (lectura)", to: "/periodo", roles: [2], icon: "periodos" },
-      { label: "Casos de estudio", to: "/casos-estudio", roles: [2], icon: "carreras" },
+
+      // ✅ NUEVOS: módulos complexivo rol 2
+      { label: "Casos de estudio", to: "/casos-estudio", roles: [2], icon: "casosEstudio" },
+      { label: "Entregas de caso", to: "/entregas-caso", roles: [2], icon: "entregasCaso" },
+      { label: "Plan de evaluación", to: "/plan-evaluacion", roles: [2], icon: "planEvaluacion" },
+      { label: "Calificadores generales", to: "/calificadores-generales", roles: [2], icon: "calificadores" },
+      { label: "Nota teórico", to: "/nota-teorico", roles: [2], icon: "notaTeorico" },
+      { label: "Ponderaciones examen", to: "/ponderaciones-examen", roles: [2], icon: "ponderaciones" },
     ],
   },
 

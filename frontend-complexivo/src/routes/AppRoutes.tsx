@@ -16,7 +16,7 @@ import CarreraAdminsPage from "../pages/carreras/CarreraAdminsPage";
 
 import DocentesPage from "../pages/docentes/DocentesPage";
 import EstudiantesPage from "../pages/estudiantes/EstudiantesPage";
-import EstudianteAsignacionesPage from "../pages/estudiantes/EstudianteAsignacionesPage"; // ✅ NUEVO
+import EstudianteAsignacionesPage from "../pages/estudiantes/EstudianteAsignacionesPage";
 import PerfilPage from "../pages/perfil/PerfilPage";
 
 import RubricasPeriodoPage from "../pages/rubrica/RubricasPeriodoPage";
@@ -31,6 +31,15 @@ import PlantillasActaWordPage from "../pages/plantillasActa/PlantillasActaWordPa
 
 import ProtectedRoute from "../components/auth/ProtectedRoute";
 import { dashboardByRole, getActiveRole, getToken } from "../utils/auth";
+
+// ✅ NUEVAS PÁGINAS (ROL 2)
+// Si aún no existen, crea archivos simples o usa Placeholder abajo.
+import CasosEstudioPage from "../pages/casosEstudio/CasosEstudioPage";
+import EntregasCasoPage from "../pages/entregasCaso/EntregasCasoPage";
+import PlanEvaluacionPage from "../pages/planEvaluacion/PlanEvaluacionPage";
+import CalificadoresGeneralesPage from "../pages/calificadoresGenerales/CalificadoresGeneralesPage";
+import NotaTeoricoPage from "../pages/notaTeorico/NotaTeoricoPage";
+import PonderacionesExamenPage from "../pages/ponderacionesExamen/PonderacionesExamenPage";
 
 // Redirige desde "/" al dashboard del rol activo
 function HomeRedirect() {
@@ -126,7 +135,6 @@ export default function AppRoutes() {
             }
           />
 
-          {/* ✅ VER / GESTIONAR carreras asignadas al periodo */}
           <Route
             path="/periodos/:id/carreras"
             element={
@@ -194,12 +202,61 @@ export default function AppRoutes() {
             }
           />
 
-          {/* ✅ NUEVO: Asignaciones por estudiante (ROL 2) */}
           <Route
             path="/estudiantes/:idEstudiante/asignaciones"
             element={
               <ProtectedRoute allowRoles={[2]}>
                 <EstudianteAsignacionesPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* ✅ NUEVOS MÓDULOS DEL COMPLEXIVO (ROL 2) */}
+          <Route
+            path="/casos-estudio"
+            element={
+              <ProtectedRoute allowRoles={[2]}>
+                <CasosEstudioPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/entregas-caso"
+            element={
+              <ProtectedRoute allowRoles={[2]}>
+                <EntregasCasoPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/plan-evaluacion"
+            element={
+              <ProtectedRoute allowRoles={[2]}>
+                <PlanEvaluacionPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/calificadores-generales"
+            element={
+              <ProtectedRoute allowRoles={[2]}>
+                <CalificadoresGeneralesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/nota-teorico"
+            element={
+              <ProtectedRoute allowRoles={[2]}>
+                <NotaTeoricoPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ponderaciones-examen"
+            element={
+              <ProtectedRoute allowRoles={[2]}>
+                <PonderacionesExamenPage />
               </ProtectedRoute>
             }
           />

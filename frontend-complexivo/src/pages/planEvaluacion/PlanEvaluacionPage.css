@@ -1,0 +1,353 @@
+/* src/pages/planEvaluacion/PlanEvaluacionPage.css */
+
+.planPage {
+  width: 100%;
+  padding: 16px 18px 28px;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Liberation Sans";
+}
+
+.muted { color: rgba(0,0,0,.58); }
+.small { font-size: 12.5px; }
+
+/* HERO */
+.planPage .hero {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+
+  background: linear-gradient(90deg, #0b6034 0%, #147a4a 100%);
+  border-radius: 14px;
+  padding: 14px 16px;
+  border: 1px solid rgba(255,255,255,.18);
+  box-shadow: 0 10px 24px rgba(0,0,0,.1);
+}
+
+.planPage .heroTitle {
+  margin:0;
+  color:#fff;
+  font-weight:900;
+  font-size:22px;
+  line-height:1.1;
+}
+
+.planPage .heroSubtitle {
+  margin:6px 0 0;
+  color: rgba(255,255,255,.86);
+  font-size: 13px;
+}
+
+/* BOX */
+.planPage .box {
+  margin-top: 14px;
+  background:#fff;
+  border:1px solid rgba(0,0,0,.09);
+  border-radius:14px;
+  padding:16px 16px 18px;
+  box-shadow:0 8px 18px rgba(0,0,0,.05);
+}
+
+.planPage .boxHead {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+  padding-bottom:10px;
+}
+
+.planPage .sectionTitle {
+  display:inline-flex;
+  align-items:center;
+  gap:10px;
+  font-weight:900;
+  color: rgba(0,0,0,.82);
+}
+
+.planPage .sectionTitleIcon {
+  width:34px;
+  height:34px;
+  border-radius:12px;
+  background: rgba(10,79,40,.1);
+  border:1px solid rgba(10,79,40,.18);
+  display:grid;
+  place-items:center;
+  color:#0a4f28;
+}
+
+/* FILTERS */
+.planPage .filtersRow {
+  display:flex;
+  align-items:center;
+  gap:12px;
+  flex-wrap:wrap;
+}
+
+.planPage .select {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,.12);
+  outline: none;
+  background: #fff;
+  min-width: 280px;
+  font-size: 14.5px;
+}
+
+.planPage .select:focus {
+  border-color: rgba(10,79,40,.35);
+  box-shadow: 0 0 0 4px rgba(10,79,40,.12);
+}
+
+/* FORM */
+.planPage .formGrid {
+  display:grid;
+  grid-template-columns: 1fr;
+  gap:12px;
+  margin-top: 6px;
+}
+
+.planPage .field label {
+  display:block;
+  font-weight:900;
+  font-size:12px;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  color: rgba(0,0,0,.55);
+  margin-bottom:6px;
+}
+
+.planPage .field input,
+.planPage .field textarea,
+.planPage .field select {
+  width:100%;
+  border:1px solid rgba(0,0,0,.12);
+  border-radius:12px;
+  padding:10px 12px;
+  font-size:14.5px;
+  outline:none;
+  background:#fff;
+}
+
+.planPage .field textarea {
+  min-height: 92px;
+  resize: vertical;
+}
+
+.planPage .field input:focus,
+.planPage .field textarea:focus,
+.planPage .field select:focus {
+  border-color: rgba(10,79,40,.35);
+  box-shadow: 0 0 0 4px rgba(10,79,40,.12);
+}
+
+.planPage .fieldFull { grid-column: 1 / -1; }
+
+/* ITEMS */
+.planPage .sumRow { margin-top: 6px; }
+.planPage .sumChip {
+  display:inline-flex;
+  gap:8px;
+  align-items:center;
+  padding:8px 12px;
+  border-radius:999px;
+  font-weight:900;
+  border:1px solid rgba(0,0,0,.12);
+  background:#fbfbfb;
+}
+
+.planPage .sumChip.bad {
+  border-color: rgba(180,20,20,.22);
+  background: rgba(180,20,20,.06);
+}
+
+.planPage .itemsStack {
+  display:grid;
+  gap:12px;
+  margin-top: 12px;
+}
+
+.planPage .itemCard {
+  border:1px solid rgba(10,79,40,.22);
+  border-left: 4px solid rgba(10,79,40,.75);
+  border-radius: 12px;
+  padding: 12px;
+  background:#fff;
+}
+
+.planPage .itemHead {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+}
+
+.planPage .itemTitle {
+  font-weight: 950;
+  color: rgba(0,0,0,.82);
+}
+
+.planPage .itemGrid {
+  margin-top: 12px;
+  display:grid;
+  grid-template-columns: 1.3fr 1fr 0.6fr;
+  gap:12px;
+}
+
+@media (max-width: 980px) {
+  .planPage .itemGrid { grid-template-columns: 1fr; }
+}
+
+.planPage .califBadge {
+  border:1px solid rgba(10,79,40,.22);
+  background: rgba(10,79,40,.08);
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-weight: 900;
+  color: rgba(0,0,0,.75);
+}
+
+.planPage .califRow { margin-top: 8px; }
+
+/* RUBRICA BOXES */
+.planPage .distBox {
+  margin-top: 10px;
+  border: 1px solid rgba(10,79,40,.18);
+  background: rgba(10,79,40,.06);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.planPage .distTitle {
+  font-weight: 900;
+  color: rgba(0,0,0,.78);
+  margin-bottom: 8px;
+}
+
+.planPage .distLines { display:grid; gap:6px; }
+.planPage .distLine {
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  align-items:baseline;
+  font-size: 13.5px;
+  color: rgba(0,0,0,.75);
+}
+
+.planPage .compBox {
+  margin-top: 10px;
+  border: 1px solid rgba(0,0,0,.10);
+  background: #fff;
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.planPage .compTitle {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-weight: 950;
+  color: rgba(0,0,0,.78);
+  margin-bottom: 10px;
+}
+
+.planPage .compList { display:grid; gap:10px; }
+
+.planPage .compRow {
+  display:grid;
+  grid-template-columns: 1fr 280px;
+  gap: 10px;
+  align-items:center;
+  border: 1px solid rgba(0,0,0,.08);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #fbfbfb;
+}
+
+@media (max-width: 860px) {
+  .planPage .compRow { grid-template-columns: 1fr; }
+}
+
+.planPage .compName { font-weight: 950; color: rgba(0,0,0,.82); }
+.planPage .compSub { margin-top: 4px; font-size: 12.5px; color: rgba(0,0,0,.55); }
+
+/* EMPTY */
+.planPage .empty {
+  display:grid;
+  place-items:center;
+  padding: 26px 12px;
+  color: rgba(0,0,0,.6);
+  border:1px dashed rgba(0,0,0,.14);
+  border-radius: 12px;
+}
+
+/* BUTTONS */
+.planPage .btnPrimary {
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(10,79,40,.28);
+  background: #0a4f28;
+  color: #fff;
+  font-weight: 900;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.planPage .btnPrimary:disabled { opacity:.6; cursor:not-allowed; }
+
+.planPage .btnGhost {
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(0,0,0,.14);
+  background: #fff;
+  font-weight: 900;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.planPage .btnGhost:hover { background: rgba(0,0,0,.03); }
+.planPage .btnGhost:disabled { opacity:.6; cursor:not-allowed; }
+
+.planPage .btnDanger {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid rgba(180,20,20,.25);
+  background: rgba(180,20,20,.10);
+  color: rgba(180,20,20,.95);
+  cursor: pointer;
+  display:grid;
+  place-items:center;
+}
+.planPage .btnDanger:hover { background: rgba(180,20,20,.14); }
+
+/* FOOTER */
+.planPage .footerBar {
+  margin-top: 14px;
+  display:flex;
+  justify-content:flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* TOAST */
+.planPage .toast {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 99999;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-weight: 900;
+  max-width: 420px;
+  color: #111;
+  background: #fff;
+  border: 1px solid rgba(0,0,0,.12);
+  box-shadow: 0 10px 25px rgba(0,0,0,.15);
+}
+.planPage .toast-success { background:#eaf7ee; border-color: rgba(6,118,71,.35); }
+.planPage .toast-error { background:#fdecec; border-color: rgba(180,35,24,.35); }
+.planPage .toast-info { background:#eef5ff; border-color: rgba(2,132,199,.35); }
