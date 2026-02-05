@@ -3,7 +3,7 @@ const { body, param, query } = require("express-validator");
 const validate = require("../middlewares/validate.middleware");
 const ctrl = require("../controllers/rubrica.controller");
 
-// LISTAR (opcional, admin)
+// LISTAR (opcional filtros)
 router.get(
   "/",
   query("includeInactive").optional().isBoolean().toBoolean(),
@@ -25,9 +25,9 @@ router.get(
 router.post(
   "/periodo/:idPeriodo",
   param("idPeriodo").isInt({ min: 1 }).toInt(),
-  body("nombre_rubrica").optional().isString().trim(),
-  body("descripcion_rubrica").optional().isString().trim(),
-  body("ponderacion_global").optional().isDecimal(),
+  body("nombre_rubrica").optional().isString().trim().isLength({ min: 1, max: 200 }),
+  body("descripcion_rubrica").optional().isString().trim().isLength({ max: 600 }),
+  body("ponderacion_global").optional().isFloat({ min: 0, max: 100 }).toFloat(),
   validate,
   ctrl.ensureByPeriodo
 );
@@ -44,9 +44,9 @@ router.get(
 router.put(
   "/:id",
   param("id").isInt({ min: 1 }).toInt(),
-  body("nombre_rubrica").isString().trim().notEmpty(),
-  body("descripcion_rubrica").optional().isString().trim(),
-  body("ponderacion_global").optional().isDecimal(),
+  body("nombre_rubrica").isString().trim().notEmpty().isLength({ max: 200 }),
+  body("descripcion_rubrica").optional().isString().trim().isLength({ max: 600 }),
+  body("ponderacion_global").optional().isFloat({ min: 0, max: 100 }).toFloat(),
   validate,
   ctrl.update
 );
@@ -58,6 +58,15 @@ router.patch(
   body("estado").isBoolean().toBoolean(),
   validate,
   ctrl.changeEstado
+);
+
+// ✅ NUEVO: LISTAR COMPONENTES DE LA RÚBRICA
+router.get(
+  "/:id/componentes",
+  param("id").isInt({ min: 1 }).toInt(),
+  query("includeInactive").optional().isBoolean().toBoolean(),
+  validate,
+  ctrl.listComponentes
 );
 
 module.exports = router;
