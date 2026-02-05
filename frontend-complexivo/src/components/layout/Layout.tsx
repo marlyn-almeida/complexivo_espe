@@ -19,13 +19,11 @@ export default function Layout() {
   }, []);
 
   const toggleSidebar = () => {
-    // si está anclado, no lo cierres con el burger
     if (pinned) return;
     setSidebarOpen((p) => !p);
   };
 
   const closeSidebar = () => {
-    // si está anclado, no cierres por overlay
     if (pinned) return;
     setSidebarOpen(false);
   };
@@ -34,7 +32,7 @@ export default function Layout() {
     setPinned((p) => {
       const next = !p;
       localStorage.setItem(PIN_KEY, next ? "1" : "0");
-      if (next) setSidebarOpen(true); // al anclar, se queda abierto
+      if (next) setSidebarOpen(true);
       return next;
     });
   };
@@ -50,6 +48,8 @@ export default function Layout() {
 
       <div className={`app-main ${(sidebarOpen || pinned) ? "with-sidebar" : ""}`}>
         <Topbar onToggleSidebar={toggleSidebar} />
+
+        {/* 🔑 ESTE main es el que controla el ancho real */}
         <main className="app-content">
           <Outlet />
         </main>

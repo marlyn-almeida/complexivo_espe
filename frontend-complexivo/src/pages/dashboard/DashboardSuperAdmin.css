@@ -1,0 +1,658 @@
+/* =========================================================
+   DASHBOARD SUPER ADMIN (PORTAL) — FULL WIDTH (IGUAL A TU FOTO BUENA)
+   ========================================================= */
+
+/* 🔥 IMPORTANTE:
+   El layout ya tiene padding en .app-content.
+   Si aquí ponemos max-width y margin auto, se “encajona”.
+*/
+
+/* Base */
+.portalWrap {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+
+  /* Puedes dejar este padding si te gusta el aire interno */
+  padding: 18px 18px 28px;
+}
+
+/* ✅ CLAVE REAL: FULL WIDTH SIN ENCAJONAR */
+.portalContainer {
+  width: 100%;
+  max-width: none;  /* ❌ NO limitar */
+  margin: 0;        /* ❌ NO centrar con auto */
+  box-sizing: border-box;
+}
+
+/* HERO (ancho completo) */
+.portalHero {
+  width: 100%;
+  box-sizing: border-box;
+
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  background: #0a4f28;
+  border-radius: 14px;
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
+}
+
+.portalHeroLogo {
+  height: 54px;
+  width: auto;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.20));
+}
+
+.portalHeroText { min-width: 0; }
+
+.portalHeroTitle {
+  margin: 0;
+  color: #fff;
+  font-weight: 900;
+  font-size: 24px;
+  line-height: 1.1;
+  letter-spacing: 0.2px;
+}
+
+.portalHeroSubtitle {
+  margin: 6px 0 0;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 13.5px;
+}
+
+/* ALERTA (ancho completo) */
+.portalAlert {
+  width: 100%;
+  box-sizing: border-box;
+
+  margin-top: 12px;
+  background: #dfeee7;
+  border: 1px solid rgba(10, 79, 40, 0.22);
+  border-radius: 14px;
+  padding: 14px 14px;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.portalAlertLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.portalAlertIcon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: rgba(10, 79, 40, 0.14);
+  color: #0a4f28;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+
+.portalAlertText {
+  color: rgba(0, 0, 0, 0.78);
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.portalAlertText b {
+  font-weight: 900;
+  color: rgba(0, 0, 0, 0.82);
+}
+
+.portalAlertLink {
+  border: none;
+  background: transparent;
+  color: #0a4f28;
+  font-weight: 900;
+  cursor: pointer;
+  padding: 0;
+}
+.portalAlertLink:hover { text-decoration: underline; }
+
+.portalAlertClose {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: rgba(0, 0, 0, 0.55);
+  padding: 6px;
+  border-radius: 10px;
+}
+.portalAlertClose:hover { background: rgba(0, 0, 0, 0.04); }
+
+/* CAJAS (ancho completo) */
+.portalBox {
+  width: 100%;
+  box-sizing: border-box;
+
+  margin-top: 14px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.09);
+  border-radius: 14px;
+  padding: 16px 16px 18px;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.05);
+}
+
+.portalBoxHead { margin-bottom: 10px; }
+
+.portalSectionTitle {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 900;
+  color: rgba(0, 0, 0, 0.78);
+}
+
+/* ===============================
+   ACCESOS RÁPIDOS (5 en fila)
+   =============================== */
+.portalGrid {
+  width: 100%;
+  box-sizing: border-box;
+
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  align-items: stretch;
+}
+
+.portalTile {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+
+  padding: 12px 10px;
+  border-radius: 12px;
+
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.04);
+
+  cursor: pointer;
+  text-align: center;
+
+  transition: transform 0.12s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.portalTile:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 22px rgba(0, 0, 0, 0.08);
+  border-color: rgba(10, 79, 40, 0.25);
+}
+
+.portalTile:active { transform: translateY(0); }
+.portalTile:focus { outline: none; }
+.portalTile:focus-visible {
+  outline: 3px solid rgba(10, 79, 40, 0.20);
+  outline-offset: 2px;
+}
+
+/* IconBox */
+.portalIconBox {
+  width: 98px;
+  height: 98px;
+  margin: 0 auto 10px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 18px;
+  border: 1px solid rgba(10, 79, 40, 0.12);
+  background: #f4f7f5;
+}
+
+.portalSvg {
+  width: 48px;
+  height: 48px;
+  color: #0a4f28;
+}
+
+.portalLabel {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #0a4f28;
+}
+
+/* Colores por tile (Super Admin) */
+.portalTile--carreras { background: #eef3ff; }
+.portalTile--carreras .portalIconBox { background: rgba(30, 64, 175, 0.10); border-color: rgba(30,64,175,0.12); }
+.portalTile--carreras .portalSvg { color: #1e40af; }
+
+.portalTile--periodos { background: #eef8f1; }
+.portalTile--periodos .portalIconBox { background: rgba(10, 79, 40, 0.10); border-color: rgba(10,79,40,0.16); }
+.portalTile--periodos .portalSvg { color: #0a4f28; }
+
+.portalTile--rubricas { background: #fff6ea; }
+.portalTile--rubricas .portalIconBox { background: rgba(180, 83, 9, 0.10); border-color: rgba(180,83,9,0.14); }
+.portalTile--rubricas .portalSvg { color: #b45309; }
+
+.portalTile--docentes { background: #f4f0ff; }
+.portalTile--docentes .portalIconBox { background: rgba(91, 33, 182, 0.10); border-color: rgba(91,33,182,0.14); }
+.portalTile--docentes .portalSvg { color: #5b21b6; }
+
+.portalTile--plantillas { background: #f3f4f6; }
+.portalTile--plantillas .portalIconBox { background: rgba(55, 65, 81, 0.08); border-color: rgba(55,65,81,0.14); }
+.portalTile--plantillas .portalSvg { color: #374151; }
+
+/* ===============================
+   ESTADÍSTICAS (5 en fila)
+   =============================== */
+.portalStatsHead { padding: 2px 2px 12px; }
+
+.portalStatsTitle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 900;
+  color: rgba(0, 0, 0, 0.70);
+  font-size: 15.5px;
+}
+
+.portalStatsTitleIcon {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  background: rgba(10, 79, 40, 0.12);
+  color: #0a4f28;
+  display: grid;
+  place-items: center;
+}
+
+.portalSvgSm { width: 18px; height: 18px; }
+
+/* ✅ 5 métricas en una fila */
+.portalStatsGrid {
+  width: 100%;
+  box-sizing: border-box;
+
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.portalStat {
+  min-width: 0;
+  border-radius: 14px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  padding: 16px 10px;
+  text-align: center;
+  background: #f7f7f7;
+}
+
+.portalStatValue {
+  font-size: 48px;
+  font-weight: 900;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.portalStatLabel {
+  font-size: 15px;
+  color: rgba(0, 0, 0, 0.62);
+  font-weight: 800;
+}
+
+/* Colores métricas */
+.portalStat--success { background: #d7f0da; }
+.portalStat--success .portalStatValue { color: #1e9c4a; }
+
+.portalStat--info { background: #d8eef6; }
+.portalStat--info .portalStatValue { color: #1aa0b8; }
+
+.portalStat--warn { background: #fff0d9; }
+.portalStat--warn .portalStatValue { color: #c98200; }
+
+.portalStat--purple { background: #efeaff; }
+.portalStat--purple .portalStatValue { color: #5b21b6; }
+
+.portalStat--gray { background: #f3f4f6; }
+.portalStat--gray .portalStatValue { color: #374151; }
+
+/* ===============================
+   RESPONSIVE
+   =============================== */
+@media (max-width: 1200px) {
+  .portalGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .portalStatsGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 900px) {
+  .portalGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .portalStatsGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 640px) {
+  .portalWrap { padding: 14px; }
+  .portalBox { padding: 14px 12px; }
+  .portalIconBox { width: 92px; height: 92px; }
+  .portalSvg { width: 44px; height: 44px; }
+  .portalSectionTitle { font-size: 19px; }
+  .portalStatsGrid { grid-template-columns: 1fr; }
+
+  .portalHero {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .portalHeroTitle { font-size: 19px; }
+  .portalAlertText { font-size: 14.5px; }
+}
+/* ===============================
+   🔥 OVERRIDE FINAL (FULL WIDTH REAL)
+   PÉGALO AL FINAL DEL ARCHIVO
+   =============================== */
+
+.portalWrap {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.portalContainer {
+  width: 100% !important;
+  max-width: 100% !important; /* mata el 1180/1600 */
+  margin: 0 !important;       /* mata el auto */
+}
+
+.portalHero,
+.portalAlert,
+.portalBox {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+/* ===============================
+   ✅ SOLO MÉTRICAS: 5 EN FILA + COLORES
+   (NO TOCA EL ANCHO GENERAL)
+   PÉGALO AL FINAL
+   =============================== */
+
+/* 5 en una fila SIEMPRE (mientras haya espacio) */
+.portalStatsGrid {
+  display: grid !important;
+  grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+}
+
+/* Para que el texto no rompa el grid */
+.portalStat {
+  min-width: 0 !important;
+}
+
+/* Colores por métrica (cada una distinta) */
+.portalStat--success {
+  background: #d7f0da !important;
+  border-color: rgba(30, 156, 74, 0.25) !important;
+}
+.portalStat--success .portalStatValue {
+  color: #1e9c4a !important;
+}
+
+.portalStat--info {
+  background: #d8eef6 !important;
+  border-color: rgba(26, 160, 184, 0.25) !important;
+}
+.portalStat--info .portalStatValue {
+  color: #1aa0b8 !important;
+}
+
+.portalStat--warn {
+  background: #fff0d9 !important;
+  border-color: rgba(201, 130, 0, 0.25) !important;
+}
+.portalStat--warn .portalStatValue {
+  color: #c98200 !important;
+}
+
+/* ✅ estas 2 te faltaban */
+.portalStat--purple {
+  background: #efeaff !important;
+  border-color: rgba(91, 33, 182, 0.22) !important;
+}
+.portalStat--purple .portalStatValue {
+  color: #5b21b6 !important;
+}
+
+.portalStat--gray {
+  background: #f3f4f6 !important;
+  border-color: rgba(55, 65, 81, 0.20) !important;
+}
+.portalStat--gray .portalStatValue {
+  color: #374151 !important;
+}
+
+/* Responsive SOLO para métricas (por si en pantallas pequeñas no cabe) */
+@media (max-width: 1200px) {
+  .portalStatsGrid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+}
+@media (max-width: 900px) {
+  .portalStatsGrid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+}
+@media (max-width: 640px) {
+  .portalStatsGrid { grid-template-columns: 1fr !important; }
+}
+/* =========================================================
+   ✅ OVERRIDE SOLO COLORES ACCESOS RÁPIDOS (NO TOCA ANCHO)
+   PÉGALO AL FINAL DEL ARCHIVO
+   ========================================================= */
+
+/* Asegura que el color por tile gane a la base */
+.portalTile--carreras,
+.portalTile--periodos,
+.portalTile--rubricas,
+.portalTile--docentes,
+.portalTile--plantillas {
+  background: #fff !important;
+}
+
+/* Carreras (azul suave) */
+.portalTile--carreras {
+  background: #e7f0ff !important;
+  border-color: rgba(30, 64, 175, 0.18) !important;
+}
+.portalTile--carreras .portalIconBox {
+  background: rgba(30, 64, 175, 0.14) !important;
+  border-color: rgba(30, 64, 175, 0.20) !important;
+}
+.portalTile--carreras .portalSvg {
+  color: #1e40af !important;
+}
+
+/* Períodos (verde suave) */
+.portalTile--periodos {
+  background: #e6f7ee !important;
+  border-color: rgba(10, 79, 40, 0.18) !important;
+}
+.portalTile--periodos .portalIconBox {
+  background: rgba(10, 79, 40, 0.14) !important;
+  border-color: rgba(10, 79, 40, 0.20) !important;
+}
+.portalTile--periodos .portalSvg {
+  color: #0a4f28 !important;
+}
+
+/* Rúbricas (ámbar suave) */
+.portalTile--rubricas {
+  background: #fff1dc !important;
+  border-color: rgba(201, 130, 0, 0.18) !important;
+}
+.portalTile--rubricas .portalIconBox {
+  background: rgba(201, 130, 0, 0.14) !important;
+  border-color: rgba(201, 130, 0, 0.20) !important;
+}
+.portalTile--rubricas .portalSvg {
+  color: #b45309 !important;
+}
+
+/* Docentes (morado suave) */
+.portalTile--docentes {
+  background: #efeaff !important;
+  border-color: rgba(91, 33, 182, 0.18) !important;
+}
+.portalTile--docentes .portalIconBox {
+  background: rgba(91, 33, 182, 0.14) !important;
+  border-color: rgba(91, 33, 182, 0.20) !important;
+}
+.portalTile--docentes .portalSvg {
+  color: #5b21b6 !important;
+}
+
+/* Plantillas (gris suave) */
+.portalTile--plantillas {
+  background: #f3f4f6 !important;
+  border-color: rgba(55, 65, 81, 0.18) !important;
+}
+.portalTile--plantillas .portalIconBox {
+  background: rgba(55, 65, 81, 0.10) !important;
+  border-color: rgba(55, 65, 81, 0.20) !important;
+}
+.portalTile--plantillas .portalSvg {
+  color: #374151 !important;
+}
+
+/* Hover: mantiene el color del tile, solo levanta un poco */
+.portalTile--carreras:hover,
+.portalTile--periodos:hover,
+.portalTile--rubricas:hover,
+.portalTile--docentes:hover,
+.portalTile--plantillas:hover {
+  filter: brightness(0.985) !important;
+}
+/* =========================================================
+   ✅ OVERRIDE FINAL: COLORES COHERENTES (ACCESOS + MÉTRICAS)
+   NO TOCA ANCHO / NO TOCA GRID / NO TOCA TAMAÑOS
+   PÉGALO AL FINAL DEL ARCHIVO
+   ========================================================= */
+
+/* ---------- 1) ACCESOS RÁPIDOS (Tiles) ---------- */
+/* Carreras = AZUL */
+.portalTile.portalTile--carreras {
+  background: #e7f0ff !important;
+  border-color: rgba(30, 64, 175, 0.18) !important;
+}
+.portalTile.portalTile--carreras .portalIconBox {
+  background: rgba(30, 64, 175, 0.14) !important;
+  border-color: rgba(30, 64, 175, 0.20) !important;
+}
+.portalTile.portalTile--carreras .portalSvg {
+  color: #1e40af !important;
+}
+
+/* Períodos = VERDE */
+.portalTile.portalTile--periodos {
+  background: #e6f7ee !important;
+  border-color: rgba(10, 79, 40, 0.18) !important;
+}
+.portalTile.portalTile--periodos .portalIconBox {
+  background: rgba(10, 79, 40, 0.14) !important;
+  border-color: rgba(10, 79, 40, 0.20) !important;
+}
+.portalTile.portalTile--periodos .portalSvg {
+  color: #0a4f28 !important;
+}
+
+/* Rúbricas = ÁMBAR */
+.portalTile.portalTile--rubricas {
+  background: #fff1dc !important;
+  border-color: rgba(201, 130, 0, 0.18) !important;
+}
+.portalTile.portalTile--rubricas .portalIconBox {
+  background: rgba(201, 130, 0, 0.14) !important;
+  border-color: rgba(201, 130, 0, 0.20) !important;
+}
+.portalTile.portalTile--rubricas .portalSvg {
+  color: #b45309 !important;
+}
+
+/* Docentes = MORADO */
+.portalTile.portalTile--docentes {
+  background: #efeaff !important;
+  border-color: rgba(91, 33, 182, 0.18) !important;
+}
+.portalTile.portalTile--docentes .portalIconBox {
+  background: rgba(91, 33, 182, 0.14) !important;
+  border-color: rgba(91, 33, 182, 0.20) !important;
+}
+.portalTile.portalTile--docentes .portalSvg {
+  color: #5b21b6 !important;
+}
+
+/* Plantillas = GRIS */
+.portalTile.portalTile--plantillas {
+  background: #f3f4f6 !important;
+  border-color: rgba(55, 65, 81, 0.18) !important;
+}
+.portalTile.portalTile--plantillas .portalIconBox {
+  background: rgba(55, 65, 81, 0.10) !important;
+  border-color: rgba(55, 65, 81, 0.20) !important;
+}
+.portalTile.portalTile--plantillas .portalSvg {
+  color: #374151 !important;
+}
+
+/* Hover: NO cambia de color, solo un “lift” suave */
+.portalTile.portalTile--carreras:hover,
+.portalTile.portalTile--periodos:hover,
+.portalTile.portalTile--rubricas:hover,
+.portalTile.portalTile--docentes:hover,
+.portalTile.portalTile--plantillas:hover {
+  filter: brightness(0.985) !important;
+}
+
+/* ---------- 2) MÉTRICAS (Stats) ---------- */
+/* OJO: en tu TSX usas estas clases:
+   success, info, warn, purple, gray
+   Aquí las hacemos COHERENTES con los tiles.
+*/
+
+/* Carreras (success) = AZUL */
+.portalStat.portalStat--success {
+  background: #e7f0ff !important;
+  border-color: rgba(30, 64, 175, 0.18) !important;
+}
+.portalStat.portalStat--success .portalStatValue {
+  color: #1e40af !important;
+}
+
+/* Períodos (info) = VERDE */
+.portalStat.portalStat--info {
+  background: #e6f7ee !important;
+  border-color: rgba(10, 79, 40, 0.18) !important;
+}
+.portalStat.portalStat--info .portalStatValue {
+  color: #0a4f28 !important;
+}
+
+/* Rúbricas (warn) = ÁMBAR */
+.portalStat.portalStat--warn {
+  background: #fff1dc !important;
+  border-color: rgba(201, 130, 0, 0.18) !important;
+}
+.portalStat.portalStat--warn .portalStatValue {
+  color: #b45309 !important;
+}
+
+/* Docentes (purple) = MORADO */
+.portalStat.portalStat--purple {
+  background: #efeaff !important;
+  border-color: rgba(91, 33, 182, 0.18) !important;
+}
+.portalStat.portalStat--purple .portalStatValue {
+  color: #5b21b6 !important;
+}
+
+/* Plantillas (gray) = GRIS */
+.portalStat.portalStat--gray {
+  background: #f3f4f6 !important;
+  border-color: rgba(55, 65, 81, 0.18) !important;
+}
+.portalStat.portalStat--gray .portalStatValue {
+  color: #374151 !important;
+}
