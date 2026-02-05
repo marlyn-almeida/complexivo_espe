@@ -28,6 +28,9 @@ import TribunalesPage from "../pages/tribunales/TribunalesPage";
 import MisTribunalesPage from "../pages/docentes/MisTribunalesPage";
 import PlantillasActaWordPage from "../pages/plantillasActa/PlantillasActaWordPage";
 
+// ✅ NUEVO: Casos de estudio (rol 2)
+import CasosEstudioPage from "../pages/casosEstudio/CasosEstudioPage";
+
 import ProtectedRoute from "../components/auth/ProtectedRoute";
 import { dashboardByRole, getActiveRole, getToken } from "../utils/auth";
 
@@ -189,6 +192,16 @@ export default function AppRoutes() {
             element={
               <ProtectedRoute allowRoles={[2]}>
                 <EstudiantesPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* ✅ NUEVO: Casos de estudio */}
+          <Route
+            path="/casos-estudio"
+            element={
+              <ProtectedRoute allowRoles={[2]}>
+                <CasosEstudioPage />
               </ProtectedRoute>
             }
           />

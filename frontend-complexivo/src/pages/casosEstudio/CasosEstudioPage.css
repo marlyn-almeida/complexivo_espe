@@ -1,0 +1,595 @@
+/* ✅ src/pages/casosEstudio/CasosEstudioPage.css */
+
+.wrap {
+  padding: 16px 18px 28px;
+}
+
+.casosEstudioPage {
+  width: 100%;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Liberation Sans";
+}
+
+/* HERO */
+.casosEstudioPage .hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
+  background: linear-gradient(90deg, #0b6034 0%, #147a4a 100%);
+  border-radius: 14px;
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.1);
+}
+
+.casosEstudioPage .heroLeft {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.casosEstudioPage .heroLogo {
+  width: 46px;
+  height: 46px;
+  object-fit: contain;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  flex: 0 0 auto;
+}
+
+.casosEstudioPage .heroText {
+  min-width: 0;
+}
+
+.casosEstudioPage .heroTitle {
+  margin: 0;
+  color: #fff;
+  font-weight: 900;
+  font-size: 22px;
+  line-height: 1.1;
+  letter-spacing: 0.2px;
+}
+
+.casosEstudioPage .heroSubtitle {
+  margin: 6px 0 0;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 13px;
+}
+
+.casosEstudioPage .heroHint {
+  margin-top: 8px;
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  padding: 6px 10px;
+  border-radius: 999px;
+  width: fit-content;
+}
+
+.casosEstudioPage .heroActions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.casosEstudioPage .heroBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font-weight: 900;
+  padding: 10px 14px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.08s ease, border-color 0.15s ease;
+  white-space: nowrap;
+}
+
+.casosEstudioPage .heroBtnIcon {
+  width: 18px;
+  height: 18px;
+}
+
+.casosEstudioPage .heroBtn.primary {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.55);
+}
+
+.casosEstudioPage .heroBtn.ghost {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.casosEstudioPage .heroBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.6);
+  transform: translateY(-1px);
+}
+
+.casosEstudioPage .heroBtn:active {
+  transform: translateY(0);
+}
+
+.casosEstudioPage .heroBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* BOX */
+.casosEstudioPage .box {
+  margin-top: 14px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.09);
+  border-radius: 14px;
+  padding: 16px 16px 18px;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.05);
+}
+
+.casosEstudioPage .boxHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-bottom: 10px;
+}
+
+.casosEstudioPage .boxRight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.casosEstudioPage .sectionTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 900;
+  color: rgba(0, 0, 0, 0.82);
+}
+
+.casosEstudioPage .sectionTitleIcon {
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  background: rgba(10, 79, 40, 0.1);
+  border: 1px solid rgba(10, 79, 40, 0.18);
+  display: grid;
+  place-items: center;
+  color: #0a4f28;
+}
+
+/* SUMMARY */
+.casosEstudioPage .summaryBoxes {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.casosEstudioPage .summaryBox {
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: #fbfbfb;
+  border-radius: 14px;
+  padding: 10px 12px;
+  min-width: 120px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.casosEstudioPage .summaryLabel {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.55);
+  font-weight: 700;
+}
+
+.casosEstudioPage .summaryValue {
+  font-size: 16px;
+  font-weight: 900;
+  color: rgba(0, 0, 0, 0.82);
+}
+
+/* FILTERS */
+.casosEstudioPage .filtersRow {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.casosEstudioPage .searchWrap {
+  position: relative;
+  width: min(520px, 100%);
+  flex: 1 1 420px;
+}
+
+.casosEstudioPage .searchIcon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.casosEstudioPage .search {
+  width: 100%;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  padding: 0 12px 0 40px;
+  outline: none;
+  font-weight: 400;
+  font-size: 14.5px;
+}
+
+.casosEstudioPage .search:focus {
+  border-color: rgba(10, 79, 40, 0.35);
+  box-shadow: 0 0 0 4px rgba(10, 79, 40, 0.12);
+}
+
+.casosEstudioPage .filterWrap {
+  position: relative;
+  min-width: 320px;
+  flex: 1 1 320px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.casosEstudioPage .filterIcon {
+  width: 18px;
+  height: 18px;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.casosEstudioPage .select {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  outline: none;
+  background: white;
+  min-width: 180px;
+  font-weight: 400;
+  width: 100%;
+  font-size: 14.5px;
+}
+
+.casosEstudioPage .select:focus {
+  border-color: rgba(10, 79, 40, 0.35);
+  box-shadow: 0 0 0 4px rgba(10, 79, 40, 0.12);
+}
+
+.casosEstudioPage .chipClear {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: #fff;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.casosEstudioPage .chipClear:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+/* TABLE */
+.casosEstudioPage .tableWrap {
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  margin-top: 12px;
+  overflow: auto;
+  position: relative;
+  z-index: 1;
+}
+
+.casosEstudioPage .table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  min-width: 1120px;
+  table-layout: fixed;
+  position: relative;
+  z-index: 1;
+}
+
+.casosEstudioPage .table thead th {
+  text-align: center;
+  font-size: 13.5px;
+  font-weight: 950;
+  color: rgba(255, 255, 255, 0.96);
+  background: #0b6034;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  padding: 12px 10px;
+  white-space: nowrap;
+}
+
+.casosEstudioPage .table tbody td {
+  text-align: center;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  padding: 10px 10px;
+  vertical-align: middle;
+  font-size: 14.5px;
+  color: rgba(0, 0, 0, 0.72);
+  font-weight: 400;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.casosEstudioPage .thActions {
+  width: 220px;
+}
+
+.casosEstudioPage .nameMain {
+  font-weight: 850;
+  color: rgba(0, 0, 0, 0.86);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.casosEstudioPage .mailCell {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.casosEstudioPage .chipCode {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  background: rgba(59, 130, 246, 0.1);
+  color: rgba(0, 0, 0, 0.78);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+/* ACTIONS + TOOLTIP (igual que Estudiantes) */
+.casosEstudioPage .tdActions {
+  text-align: center;
+  white-space: nowrap;
+  overflow: visible !important;
+  position: relative;
+  z-index: 5;
+}
+
+.casosEstudioPage .actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  overflow: visible;
+}
+
+.casosEstudioPage .iconBtn {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.10);
+  background: #fff;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.08s ease, box-shadow 0.15s ease;
+  overflow: visible;
+  z-index: 10;
+  text-decoration: none;
+}
+
+.casosEstudioPage .iconBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 14px rgba(0, 0, 0, 0.06);
+  z-index: 9999;
+}
+
+.casosEstudioPage .iconBtn:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.casosEstudioPage .iconAction {
+  width: 18px;
+  height: 18px;
+}
+
+.casosEstudioPage .iconBtn_neutral {
+  color: #2563eb;
+  background: rgba(37, 99, 235, 0.10);
+  border-color: rgba(37, 99, 235, 0.28);
+}
+.casosEstudioPage .iconBtn_neutral:hover {
+  background: rgba(37, 99, 235, 0.16);
+  border-color: rgba(37, 99, 235, 0.35);
+}
+
+.casosEstudioPage .iconBtn_primary {
+  color: #0a4f28;
+  background: rgba(10, 79, 40, 0.10);
+  border-color: rgba(10, 79, 40, 0.26);
+}
+.casosEstudioPage .iconBtn_primary:hover {
+  background: rgba(10, 79, 40, 0.16);
+  border-color: rgba(10, 79, 40, 0.35);
+}
+
+.casosEstudioPage .iconBtn_purple {
+  color: #6f42c1;
+  background: rgba(111, 66, 193, 0.12);
+  border-color: rgba(111, 66, 193, 0.28);
+}
+.casosEstudioPage .iconBtn_purple:hover {
+  background: rgba(111, 66, 193, 0.18);
+  border-color: rgba(111, 66, 193, 0.35);
+}
+
+.casosEstudioPage .tooltip {
+  position: absolute;
+  top: -46px;
+  left: 50%;
+  transform: translateX(-50%) translateY(6px);
+  background: rgba(20, 20, 20, 0.94);
+  color: #fff;
+  font-weight: 800;
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease, transform 0.12s ease;
+  z-index: 999999;
+}
+
+.casosEstudioPage .tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 6px 6px 0 6px;
+  border-style: solid;
+  border-color: rgba(20, 20, 20, 0.94) transparent transparent transparent;
+}
+
+.casosEstudioPage .iconBtn:hover .tooltip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* empty */
+.casosEstudioPage .emptyCell {
+  padding: 34px 16px !important;
+}
+
+.casosEstudioPage .empty {
+  display: grid;
+  place-items: center;
+  gap: 10px;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+/* pagination */
+.casosEstudioPage .paginationRow {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  align-items: center;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+.casosEstudioPage .paginationText {
+  font-weight: 800;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.casosEstudioPage .btnGhost {
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  background: #fff;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.casosEstudioPage .btnGhost:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.casosEstudioPage .btnGhost:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* TOAST */
+.casosEstudioPage .toast {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 99999;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-weight: 900;
+  max-width: 420px;
+  color: #111;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+.casosEstudioPage .toast-success {
+  background: #eaf7ee;
+  border-color: rgba(6, 118, 71, 0.35);
+}
+
+.casosEstudioPage .toast-error {
+  background: #fdecec;
+  border-color: rgba(180, 35, 24, 0.35);
+}
+
+.casosEstudioPage .toast-info {
+  background: #eef5ff;
+  border-color: rgba(2, 132, 199, 0.35);
+}
+
+@media (max-width: 820px) {
+  .casosEstudioPage .hero {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .casosEstudioPage .heroTitle {
+    font-size: 19px;
+  }
+  .casosEstudioPage .actions {
+    gap: 8px;
+  }
+  .casosEstudioPage .table {
+    table-layout: auto;
+  }
+}
+
+/* SIN ZEBRA */
+.casosEstudioPage .table tbody tr,
+.casosEstudioPage .table tbody tr:nth-child(odd),
+.casosEstudioPage .table tbody tr:nth-child(even) {
+  background: #fff !important;
+}
+
+.casosEstudioPage .table tbody tr:hover,
+.casosEstudioPage .table tbody tr:nth-child(odd):hover,
+.casosEstudioPage .table tbody tr:nth-child(even):hover {
+  background: rgba(0, 0, 0, 0.03) !important;
+}
+
+.casosEstudioPage .table tbody td.tdActions {
+  overflow: visible !important;
+}

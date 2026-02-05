@@ -23,7 +23,14 @@ async function getById(id_caso_estudio) {
 }
 
 async function create(data) {
-  const { id_carrera_periodo, numero_caso, titulo, descripcion, archivo_nombre, archivo_path } = data;
+  const {
+    id_carrera_periodo,
+    numero_caso,
+    titulo,
+    descripcion,
+    archivo_nombre,
+    archivo_path,
+  } = data;
 
   const [r] = await pool.query(
     `
@@ -31,13 +38,29 @@ async function create(data) {
     (id_carrera_periodo, numero_caso, titulo, descripcion, archivo_nombre, archivo_path)
     VALUES (?,?,?,?,?,?)
     `,
-    [id_carrera_periodo, numero_caso, titulo || null, descripcion || null, archivo_nombre, archivo_path]
+    [
+      id_carrera_periodo,
+      numero_caso,
+      titulo,
+      descripcion,
+      archivo_nombre,
+      archivo_path,
+    ]
   );
+
   return r.insertId;
 }
 
 async function update(id_caso_estudio, data) {
-  const allowed = ["numero_caso", "titulo", "descripcion", "archivo_nombre", "archivo_path", "estado"];
+  const allowed = [
+    "numero_caso",
+    "titulo",
+    "descripcion",
+    "archivo_nombre",
+    "archivo_path",
+    "estado",
+  ];
+
   const fields = [];
   const values = [];
 
@@ -47,14 +70,21 @@ async function update(id_caso_estudio, data) {
       values.push(k === "estado" ? (data[k] ? 1 : 0) : data[k]);
     }
   }
+
   if (!fields.length) return 0;
 
   values.push(id_caso_estudio);
 
   const [r] = await pool.query(
-    `UPDATE caso_estudio SET ${fields.join(", ")}, updated_at = CURRENT_TIMESTAMP WHERE id_caso_estudio = ?`,
+    `
+    UPDATE caso_estudio
+    SET ${fields.join(", ")},
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id_caso_estudio = ?
+    `,
     values
   );
+
   return r.affectedRows;
 }
 
