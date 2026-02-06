@@ -17,9 +17,9 @@ export type TribunalCreateDTO = {
   descripcion_tribunal?: string;
 
   docentes: {
-    presidente: number;   // id_carrera_docente
-    integrante1: number;  // id_carrera_docente
-    integrante2: number;  // id_carrera_docente
+    presidente: number; // id_carrera_docente
+    integrante1: number;
+    integrante2: number;
   };
 };
 
@@ -42,8 +42,8 @@ export const tribunalesService = {
     const res = await axiosClient.get<Tribunal[]>("/tribunales", {
       params: {
         carreraPeriodoId: params?.carreraPeriodoId,
-        // ✅ FIX: enviar boolean (backend usa toBoolean())
-        includeInactive: Boolean(params?.includeInactive),
+        // ✅ backend espera boolean string para isBoolean + query.includeInactive === "true"
+        includeInactive: params?.includeInactive ? "true" : "false",
         q: params?.q?.trim() || undefined,
         page: params?.page ?? 1,
         limit,
@@ -58,42 +58,31 @@ export const tribunalesService = {
     return res.data;
   },
 
-  create: async (payload: TribunalCreateDTO): Promise<Tribunal> => {
+  create: async (payload: TribunalCreateDTO) => {
     const body = {
       ...payload,
-      caso: typeof payload.caso === "number" && Number.isFinite(payload.caso) ? payload.caso : undefined,
+      caso: typeof payload.caso === "number" ? payload.caso : undefined,
       descripcion_tribunal: payload.descripcion_tribunal?.trim() || undefined,
-      nombre_tribunal: payload.nombre_tribunal.trim(),
     };
 
-    const res = await axiosClient.post<Tribunal>("/tribunales", body);
+    const res = await axiosClient.post("/tribunales", body);
     return res.data;
   },
 
-  update: async (id: number, payload: TribunalUpdateDTO): Promise<Tribunal> => {
+  update: async (id: number, payload: TribunalUpdateDTO) => {
     const body = {
       ...payload,
-      caso: typeof payload.caso === "number" && Number.isFinite(payload.caso) ? payload.caso : undefined,
+      caso: typeof payload.caso === "number" ? payload.caso : undefined,
       descripcion_tribunal: payload.descripcion_tribunal?.trim() || undefined,
-      nombre_tribunal: payload.nombre_tribunal.trim(),
     };
 
-    const res = await axiosClient.put<Tribunal>(`/tribunales/${id}`, body);
+    const res = await axiosClient.put(`/tribunales/${id}`, body);
     return res.data;
   },
 
-  toggleEstado: async (id: number, currentEstado: Estado01): Promise<Tribunal> => {
+  toggleEstado: async (id: number, currentEstado: Estado01) => {
     const nuevo: Estado01 = currentEstado === 1 ? 0 : 1;
-    const res = await axiosClient.patch<Tribunal>(`/tribunales/${id}/estado`, { estado: nuevo === 1 });
-    // ✅ OJO: backend espera boolean (en route: body("estado").isBoolean().toBoolean())
+    const res = await axiosClient.patch(`/tribunales/${id}/estado`, { estado: nuevo });
     return res.data;
-  },
-
-  // ✅ NUEVO (ROL 3): ver tribunales del docente logueado
-  misTribunales: async (includeInactive = false): Promise<Tribunal[]> => {
-    const res = await axiosClient.get<Tribunal[]>("/tribunales/mis-tribunales", {
-      params: { includeInactive: Boolean(includeInactive) },
-    });
-    return res.data ?? [];
   },
 };

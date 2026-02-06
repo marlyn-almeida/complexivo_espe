@@ -1,8 +1,8 @@
+// src/controllers/franja_horario.controller.js
 const service = require("../services/franja_horario.service");
 
 async function list(req, res, next) {
   try {
-    // pasamos query + scope (si existe)
     res.json(await service.list(req.query, req.user?.scope || null));
   } catch (e) {
     next(e);

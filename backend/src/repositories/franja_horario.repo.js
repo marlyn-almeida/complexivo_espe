@@ -1,3 +1,4 @@
+// src/repositories/franja_horario.repo.js
 const pool = require("../config/db");
 
 async function carreraPeriodoExists(id_carrera_periodo) {
@@ -8,7 +9,6 @@ async function carreraPeriodoExists(id_carrera_periodo) {
   return r.length > 0;
 }
 
-// ✅ valida que ese carrera_periodo pertenezca a la carrera del scope (Rol2)
 async function carreraPeriodoBelongsToCarrera(id_carrera_periodo, id_carrera) {
   const [r] = await pool.query(
     `SELECT 1
@@ -19,11 +19,12 @@ async function carreraPeriodoBelongsToCarrera(id_carrera_periodo, id_carrera) {
   return r.length > 0;
 }
 
-// ✅ overlap estándar
+// ✅ overlap POR LABORATORIO (no global)
 async function overlapExists(d, excludeId = null) {
   const params = [
     d.id_carrera_periodo,
     d.fecha,
+    d.laboratorio,
     d.hora_fin,     // nueva_hora_fin
     d.hora_inicio   // nueva_hora_inicio
   ];
@@ -33,6 +34,7 @@ async function overlapExists(d, excludeId = null) {
     FROM franja_horario
     WHERE id_carrera_periodo=?
       AND fecha=?
+      AND laboratorio=?
       AND estado=1
       AND (hora_inicio < ? AND hora_fin > ?)
   `;
@@ -46,16 +48,15 @@ async function overlapExists(d, excludeId = null) {
   return r.length > 0;
 }
 
-// ✅ findAll con filtro por carrera (scope)
-async function findAll({ includeInactive=false, carreraPeriodoId=null, fecha=null, scopeCarreraId=null } = {}) {
+async function findAll({ includeInactive=false, carreraPeriodoId=null, fecha=null, laboratorio=null, scopeCarreraId=null } = {}) {
   const where = [];
   const params = [];
 
   if (!includeInactive) where.push("f.estado=1");
   if (carreraPeriodoId) { where.push("f.id_carrera_periodo=?"); params.push(+carreraPeriodoId); }
   if (fecha) { where.push("f.fecha=?"); params.push(fecha); }
+  if (laboratorio) { where.push("f.laboratorio=?"); params.push(laboratorio); }
 
-  // 👇 si viene scope, amarra a la carrera por join
   if (scopeCarreraId) { where.push("c.id_carrera=?"); params.push(+scopeCarreraId); }
 
   const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";

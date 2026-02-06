@@ -26,7 +26,7 @@ module.exports = {
     }
   },
 
-  // ✅ NUEVO: rol 3 (docente) -> ver sus asignaciones (agenda)
+  // ✅ rol 3 (docente) -> ver sus asignaciones (agenda)
   misAsignaciones: async (req, res, n) => {
     try {
       res.json(await s.misAsignaciones(req.query, req.user));

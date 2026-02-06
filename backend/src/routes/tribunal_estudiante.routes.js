@@ -5,7 +5,7 @@ const validate = require("../middlewares/validate.middleware");
 const ctrl = require("../controllers/tribunal_estudiante.controller");
 const { auth, authorize } = require("../middlewares/auth.middleware");
 
-// ✅ NUEVO: Mis asignaciones (ROL 3)
+// ✅ ROL 3: Mis asignaciones (agenda)
 router.get(
   "/mis-asignaciones",
   auth,
@@ -15,6 +15,7 @@ router.get(
   ctrl.misAsignaciones
 );
 
+// ✅ LISTAR
 router.get(
   "/",
   query("includeInactive").optional().isBoolean().toBoolean(),
@@ -23,15 +24,18 @@ router.get(
   ctrl.list
 );
 
+// ✅ CREAR asignación (ahora incluye caso_estudio)
 router.post(
   "/",
   body("id_tribunal").isInt({ min: 1 }).toInt(),
   body("id_estudiante").isInt({ min: 1 }).toInt(),
   body("id_franja_horario").isInt({ min: 1 }).toInt(),
+  body("id_caso_estudio").isInt({ min: 1 }).toInt(), // ✅ NUEVO
   validate,
   ctrl.create
 );
 
+// ✅ Activar/Desactivar
 router.patch(
   "/:id/estado",
   param("id").isInt({ min: 1 }).toInt(),

@@ -1,3 +1,4 @@
+// src/repositories/casos_estudio.repo.js
 const pool = require("../config/db");
 
 async function listByCP(id_carrera_periodo, { includeInactive = false } = {}) {
@@ -23,14 +24,7 @@ async function getById(id_caso_estudio) {
 }
 
 async function create(data) {
-  const {
-    id_carrera_periodo,
-    numero_caso,
-    titulo,
-    descripcion,
-    archivo_nombre,
-    archivo_path,
-  } = data;
+  const { id_carrera_periodo, numero_caso, titulo, descripcion, archivo_nombre, archivo_path } = data;
 
   const [r] = await pool.query(
     `
@@ -38,35 +32,21 @@ async function create(data) {
     (id_carrera_periodo, numero_caso, titulo, descripcion, archivo_nombre, archivo_path)
     VALUES (?,?,?,?,?,?)
     `,
-    [
-      id_carrera_periodo,
-      numero_caso,
-      titulo,
-      descripcion,
-      archivo_nombre,
-      archivo_path,
-    ]
+    [id_carrera_periodo, numero_caso, titulo, descripcion, archivo_nombre, archivo_path]
   );
 
   return r.insertId;
 }
 
 async function update(id_caso_estudio, data) {
-  const allowed = [
-    "numero_caso",
-    "titulo",
-    "descripcion",
-    "archivo_nombre",
-    "archivo_path",
-    "estado",
-  ];
+  const allowed = ["numero_caso", "titulo", "descripcion", "archivo_nombre", "archivo_path", "estado"];
 
   const fields = [];
   const values = [];
 
   for (const k of allowed) {
     if (data[k] !== undefined) {
-      fields.push(`${k} = ?`);
+      fields.push(`${k} = ?`); // ✅ fix
       values.push(k === "estado" ? (data[k] ? 1 : 0) : data[k]);
     }
   }

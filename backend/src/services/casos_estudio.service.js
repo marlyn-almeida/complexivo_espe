@@ -1,3 +1,4 @@
+// src/services/casos_estudio.service.js
 const repo = require("../repositories/casos_estudio.repo");
 
 async function list(reqCtxCp, includeInactive) {

@@ -1,7 +1,7 @@
+// src/services/franja_horario.service.js
 const repo = require("../repositories/franja_horario.repo");
 
 function toMinutes(hhmmss) {
-  // "HH:MM" o "HH:MM:SS"
   const [h, m, s] = hhmmss.split(":").map(Number);
   return (h * 60) + (m || 0) + ((s || 0) / 60);
 }
@@ -14,27 +14,15 @@ function validarHoras(hi, hf) {
   }
 }
 
-function enforceScopeCarreraPeriodo(scope, id_carrera_periodo) {
-  // Solo aplica a Rol2 (DIRECTOR/APOYO) que trae scope.id_carrera
-  if (!scope?.id_carrera) return null;
-  if (!id_carrera_periodo) {
-    const e = new Error("Debe seleccionar un Carrera–Período");
-    e.status = 422;
-    throw e;
-  }
-  return repo.carreraPeriodoBelongsToCarrera(id_carrera_periodo, scope.id_carrera);
-}
-
 async function list(query = {}, scope = null) {
-  // ✅ aquí includeInactive ya viene boolean por express-validator
   const includeInactive = query.includeInactive === true;
-
   const scopeCarreraId = scope?.id_carrera ? +scope.id_carrera : null;
 
   return repo.findAll({
     includeInactive,
     carreraPeriodoId: query.carreraPeriodoId || null,
     fecha: query.fecha || null,
+    laboratorio: query.laboratorio || null,
     scopeCarreraId
   });
 }
@@ -47,7 +35,6 @@ async function get(id, scope = null) {
     throw e;
   }
 
-  // ✅ si hay scope, valida que pertenece a su carrera (por su carrera_periodo)
   if (scope?.id_carrera) {
     const ok = await repo.carreraPeriodoBelongsToCarrera(f.id_carrera_periodo, scope.id_carrera);
     if (!ok) {
@@ -70,7 +57,6 @@ async function create(d, scope = null) {
     throw e;
   }
 
-  // ✅ scope (Rol2)
   if (scope?.id_carrera) {
     const okScope = await repo.carreraPeriodoBelongsToCarrera(d.id_carrera_periodo, scope.id_carrera);
     if (!okScope) {
@@ -82,7 +68,7 @@ async function create(d, scope = null) {
 
   const overlap = await repo.overlapExists(d);
   if (overlap) {
-    const e = new Error("Existe cruce de horario en la misma fecha y carrera");
+    const e = new Error("Existe cruce de horario en la misma fecha, carrera y laboratorio");
     e.status = 409;
     throw e;
   }
@@ -91,7 +77,7 @@ async function create(d, scope = null) {
 }
 
 async function update(id, d, scope = null) {
-  await get(id, scope); // ya valida existencia + scope
+  await get(id, scope);
   validarHoras(d.hora_inicio, d.hora_fin);
 
   const okCP = await repo.carreraPeriodoExists(d.id_carrera_periodo);
@@ -112,7 +98,7 @@ async function update(id, d, scope = null) {
 
   const overlap = await repo.overlapExists(d, id);
   if (overlap) {
-    const e = new Error("Existe cruce de horario en la misma fecha y carrera");
+    const e = new Error("Existe cruce de horario en la misma fecha, carrera y laboratorio");
     e.status = 409;
     throw e;
   }
@@ -121,7 +107,7 @@ async function update(id, d, scope = null) {
 }
 
 async function changeEstado(id, estado, scope = null) {
-  await get(id, scope); // valida scope también
+  await get(id, scope);
   return repo.setEstado(id, estado);
 }
 

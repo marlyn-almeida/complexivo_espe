@@ -1,3 +1,4 @@
+// src/routes/franja_horario.routes.js
 const router = require("express").Router();
 const { body, param, query } = require("express-validator");
 const validate = require("../middlewares/validate.middleware");
@@ -12,18 +13,28 @@ router.get(
   "/",
   query("includeInactive")
     .optional()
-    .isBoolean().withMessage("includeInactive debe ser boolean (true/false)")
+    .isBoolean()
+    .withMessage("includeInactive debe ser boolean (true/false)")
     .toBoolean(),
 
   query("carreraPeriodoId")
     .optional()
-    .isInt({ min: 1 }).withMessage("carreraPeriodoId debe ser entero >= 1")
+    .isInt({ min: 1 })
+    .withMessage("carreraPeriodoId debe ser entero >= 1")
     .toInt(),
 
-  // ✅ mejora: fecha estricta DATE (no datetime)
   query("fecha")
     .optional()
-    .matches(DATE_YYYY_MM_DD).withMessage("fecha debe tener formato YYYY-MM-DD"),
+    .matches(DATE_YYYY_MM_DD)
+    .withMessage("fecha debe tener formato YYYY-MM-DD"),
+
+  // ✅ opcional: filtrar por laboratorio
+  query("laboratorio")
+    .optional()
+    .isString()
+    .trim()
+    .notEmpty()
+    .withMessage("laboratorio debe ser string"),
 
   validate,
   ctrl.list
@@ -32,7 +43,8 @@ router.get(
 router.get(
   "/:id",
   param("id")
-    .isInt({ min: 1 }).withMessage("id debe ser entero >= 1")
+    .isInt({ min: 1 })
+    .withMessage("id debe ser entero >= 1")
     .toInt(),
   validate,
   ctrl.get
@@ -41,23 +53,28 @@ router.get(
 router.post(
   "/",
   body("id_carrera_periodo")
-    .isInt({ min: 1 }).withMessage("id_carrera_periodo debe ser entero >= 1")
+    .isInt({ min: 1 })
+    .withMessage("id_carrera_periodo debe ser entero >= 1")
     .toInt(),
 
-  // ✅ mejora: fecha estricta DATE (no datetime)
   body("fecha")
-    .matches(DATE_YYYY_MM_DD).withMessage("fecha debe tener formato YYYY-MM-DD"),
+    .matches(DATE_YYYY_MM_DD)
+    .withMessage("fecha debe tener formato YYYY-MM-DD"),
 
   body("hora_inicio")
-    .matches(TIME_HH_MM_SS).withMessage("hora_inicio debe ser HH:MM o HH:MM:SS"),
+    .matches(TIME_HH_MM_SS)
+    .withMessage("hora_inicio debe ser HH:MM o HH:MM:SS"),
 
   body("hora_fin")
-    .matches(TIME_HH_MM_SS).withMessage("hora_fin debe ser HH:MM o HH:MM:SS"),
+    .matches(TIME_HH_MM_SS)
+    .withMessage("hora_fin debe ser HH:MM o HH:MM:SS"),
 
   body("laboratorio")
-    .isString().withMessage("laboratorio debe ser string")
+    .isString()
+    .withMessage("laboratorio debe ser string")
     .trim()
-    .notEmpty().withMessage("laboratorio es requerido"),
+    .notEmpty()
+    .withMessage("laboratorio es requerido"),
 
   validate,
   ctrl.create
@@ -66,27 +83,33 @@ router.post(
 router.put(
   "/:id",
   param("id")
-    .isInt({ min: 1 }).withMessage("id debe ser entero >= 1")
+    .isInt({ min: 1 })
+    .withMessage("id debe ser entero >= 1")
     .toInt(),
 
   body("id_carrera_periodo")
-    .isInt({ min: 1 }).withMessage("id_carrera_periodo debe ser entero >= 1")
+    .isInt({ min: 1 })
+    .withMessage("id_carrera_periodo debe ser entero >= 1")
     .toInt(),
 
-  // ✅ mejora: fecha estricta DATE (no datetime)
   body("fecha")
-    .matches(DATE_YYYY_MM_DD).withMessage("fecha debe tener formato YYYY-MM-DD"),
+    .matches(DATE_YYYY_MM_DD)
+    .withMessage("fecha debe tener formato YYYY-MM-DD"),
 
   body("hora_inicio")
-    .matches(TIME_HH_MM_SS).withMessage("hora_inicio debe ser HH:MM o HH:MM:SS"),
+    .matches(TIME_HH_MM_SS)
+    .withMessage("hora_inicio debe ser HH:MM o HH:MM:SS"),
 
   body("hora_fin")
-    .matches(TIME_HH_MM_SS).withMessage("hora_fin debe ser HH:MM o HH:MM:SS"),
+    .matches(TIME_HH_MM_SS)
+    .withMessage("hora_fin debe ser HH:MM o HH:MM:SS"),
 
   body("laboratorio")
-    .isString().withMessage("laboratorio debe ser string")
+    .isString()
+    .withMessage("laboratorio debe ser string")
     .trim()
-    .notEmpty().withMessage("laboratorio es requerido"),
+    .notEmpty()
+    .withMessage("laboratorio es requerido"),
 
   validate,
   ctrl.update
@@ -95,11 +118,13 @@ router.put(
 router.patch(
   "/:id/estado",
   param("id")
-    .isInt({ min: 1 }).withMessage("id debe ser entero >= 1")
+    .isInt({ min: 1 })
+    .withMessage("id debe ser entero >= 1")
     .toInt(),
 
   body("estado")
-    .isBoolean().withMessage("estado debe ser boolean (true/false)")
+    .isBoolean()
+    .withMessage("estado debe ser boolean (true/false)")
     .toBoolean(),
 
   validate,

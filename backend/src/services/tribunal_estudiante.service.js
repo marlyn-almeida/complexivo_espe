@@ -12,6 +12,7 @@ function isRol3(user) {
 }
 
 async function list(query = {}, scope = null) {
+  // ✅ includeInactive ya viene boolean por toBoolean(), pero lo soportamos igual
   const includeInactive =
     query.includeInactive === true ||
     query.includeInactive === 1 ||
@@ -27,48 +28,90 @@ async function list(query = {}, scope = null) {
 }
 
 async function create(d, scope = null) {
+  // 1) tribunal existe
   const t = await repo.getTribunal(d.id_tribunal);
   if (!t) throw err("Tribunal no existe", 422);
 
-  // ✅ scope (rol 2): el tribunal debe ser de su carrera
+  // 2) scope (rol 2): tribunal debe ser de su carrera
   if (scope?.id_carrera) {
     const carreraIdTribunal = await repo.getTribunalCarreraId(d.id_tribunal);
     if (!carreraIdTribunal) throw err("No se pudo obtener la carrera del tribunal", 422);
     if (+carreraIdTribunal !== +scope.id_carrera) throw err("No autorizado para operar en otra carrera", 403);
   }
 
+  // 3) estudiante existe
   const est = await repo.getEstudiante(d.id_estudiante);
   if (!est) throw err("Estudiante no existe", 422);
 
-  const fr = await repo.getFranja(d.id_franja_horario);
+  // 4) franja existe (FULL para validar cruces)
+  const fr = await repo.getFranjaFull(d.id_franja_horario);
   if (!fr) throw err("Franja horaria no existe", 422);
 
-  // coherencia carrera_periodo
+  // 5) caso existe y pertenece a cp
+  const caso = await repo.getCasoEstudio(d.id_caso_estudio);
+  if (!caso) throw err("Caso de estudio no existe", 422);
+
+  // 6) coherencia carrera_periodo
   if (+est.id_carrera_periodo !== +t.id_carrera_periodo) {
     throw err("El estudiante no pertenece a la misma carrera_periodo del tribunal", 422);
   }
   if (+fr.id_carrera_periodo !== +t.id_carrera_periodo) {
     throw err("La franja no pertenece a la misma carrera_periodo del tribunal", 422);
   }
+  if (+caso.id_carrera_periodo !== +t.id_carrera_periodo) {
+    throw err("El caso de estudio no pertenece a la misma carrera_periodo del tribunal", 422);
+  }
 
-  // duplicado por estudiante
+  // 7) duplicado por estudiante en el mismo tribunal
   const dup = await repo.existsAsignacion(d.id_tribunal, d.id_estudiante);
   if (dup) throw err("El estudiante ya está asignado a este tribunal", 409);
 
-  // ✅ nuevo: duplicado por franja dentro del mismo tribunal (agenda)
+  // 8) A) bloqueo global de franja (si esa es tu regla)
+  const franjaOcupada = await repo.existsFranjaOcupadaGlobal(d.id_franja_horario);
+  if (franjaOcupada) {
+    throw err("Esa franja ya está ocupada (laboratorio/horario reservado)", 409);
+  }
+
+  // 9) (opcional) evitar que el mismo tribunal use misma franja dos veces
   const dupFranja = await repo.existsFranjaEnTribunal(d.id_tribunal, d.id_franja_horario);
   if (dupFranja) throw err("Esa franja ya está ocupada en este tribunal", 409);
 
-  return repo.create(d);
+  // 10) B) bloqueo por docentes del tribunal (cruce de horas)
+  const docentes = await repo.getDocentesByTribunal(d.id_tribunal); // [{id_docente, designacion}]
+  for (const doc of docentes) {
+    const conflicto = await repo.existsConflictoHorarioDocente({
+      id_docente: doc.id_docente,
+      fecha: fr.fecha,
+      hora_inicio: fr.hora_inicio,
+      hora_fin: fr.hora_fin,
+    });
+
+    if (conflicto) {
+      throw err(
+        `Conflicto de agenda: el docente (${doc.designacion}) ya tiene una asignación que se cruza con esta franja`,
+        409
+      );
+    }
+  }
+
+  // ✅ crear (ahora incluye id_caso_estudio)
+  return repo.create({
+    id_tribunal: d.id_tribunal,
+    id_estudiante: d.id_estudiante,
+    id_franja_horario: d.id_franja_horario,
+    id_caso_estudio: d.id_caso_estudio,
+  });
 }
 
 async function changeEstado(id, estado, scope = null) {
+  // (si quieres, aquí también se puede validar scope por carrera con joins,
+  // pero lo dejamos igual que tu base)
   const r = await repo.setEstado(id, estado);
   if (!r) throw err("Asignación tribunal_estudiante no encontrada", 404);
   return r;
 }
 
-// ✅ NUEVO: Mis asignaciones (ROL 3)
+// ✅ Mis asignaciones (ROL 3)
 async function misAsignaciones(query = {}, user) {
   if (!isRol3(user)) throw err("Acceso denegado", 403);
 
@@ -77,7 +120,6 @@ async function misAsignaciones(query = {}, user) {
     query.includeInactive === 1 ||
     query.includeInactive === "true";
 
-  // En tu JWT: req.user.id = id_docente
   return repo.findMisAsignaciones({
     id_docente: Number(user.id),
     includeInactive,

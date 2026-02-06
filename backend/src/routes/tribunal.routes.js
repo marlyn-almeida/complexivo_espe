@@ -5,7 +5,7 @@ const validate = require("../middlewares/validate.middleware");
 const ctrl = require("../controllers/tribunal.controller");
 const { auth, authorize } = require("../middlewares/auth.middleware");
 
-// ✅ NUEVO: Mis tribunales (ROL 3)
+// ✅ Mis tribunales (ROL 3)
 router.get(
   "/mis-tribunales",
   auth,
@@ -33,7 +33,6 @@ router.get(
 router.post(
   "/",
   body("id_carrera_periodo").isInt({ min: 1 }).toInt(),
-  body("caso").optional({ values: "falsy" }).isInt({ min: 1 }).toInt(),
   body("nombre_tribunal").isString().trim().notEmpty(),
   body("descripcion_tribunal").optional().isString().trim(),
   body("docentes.presidente").isInt({ min: 1 }).toInt(),
@@ -47,7 +46,6 @@ router.put(
   "/:id",
   param("id").isInt({ min: 1 }).toInt(),
   body("id_carrera_periodo").isInt({ min: 1 }).toInt(),
-  body("caso").optional({ values: "falsy" }).isInt({ min: 1 }).toInt(),
   body("nombre_tribunal").isString().trim().notEmpty(),
   body("descripcion_tribunal").optional().isString().trim(),
   body("docentes").optional().isObject(),

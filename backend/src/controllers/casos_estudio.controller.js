@@ -1,3 +1,4 @@
+// src/controllers/casos_estudio.controller.js
 const svc = require("../services/casos_estudio.service");
 const path = require("path");
 const fs = require("fs");
@@ -11,7 +12,7 @@ if (!fs.existsSync(UPLOAD_DIR)) {
 async function list(req, res, next) {
   try {
     const cp = Number(req.ctx.id_carrera_periodo);
-    const includeInactive = req.query.includeInactive === true;
+    const includeInactive = Boolean(req.query.includeInactive); // ✅ fix
     const data = await svc.list(cp, includeInactive);
     res.json({ ok: true, data });
   } catch (e) {
@@ -31,7 +32,7 @@ async function create(req, res, next) {
       });
     }
 
-    const filename = `${Date.now()}_${req.file.originalname}`;
+    const filename = `${Date.now()}_${req.file.originalname}`; // ✅ fix
     const filepath = path.join(UPLOAD_DIR, filename);
 
     fs.writeFileSync(filepath, req.file.buffer);
@@ -41,7 +42,7 @@ async function create(req, res, next) {
       titulo: req.body.titulo ? String(req.body.titulo) : null,
       descripcion: req.body.descripcion ? String(req.body.descripcion) : null,
       archivo_nombre: req.file.originalname,
-      archivo_path: `/uploads/casos-estudio/${filename}`,
+      archivo_path: `/uploads/casos-estudio/${filename}`, // ✅ fix
     };
 
     const id = await svc.create(cp, payload);
@@ -63,12 +64,12 @@ async function update(req, res, next) {
     };
 
     if (req.file) {
-      const filename = `${Date.now()}_${req.file.originalname}`;
+      const filename = `${Date.now()}_${req.file.originalname}`; // ✅ fix
       const filepath = path.join(UPLOAD_DIR, filename);
       fs.writeFileSync(filepath, req.file.buffer);
 
       patch.archivo_nombre = req.file.originalname;
-      patch.archivo_path = `/uploads/casos-estudio/${filename}`;
+      patch.archivo_path = `/uploads/casos-estudio/${filename}`; // ✅ fix
     }
 
     await svc.update(cp, id_caso_estudio, patch);

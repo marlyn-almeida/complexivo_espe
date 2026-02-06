@@ -10,6 +10,8 @@ import {
   CalendarPlus,
   Users,
   AlertTriangle,
+  Save,
+  X,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import "./TribunalesPage.css";
@@ -24,9 +26,11 @@ import type { CarreraDocente } from "../../types/carreraDocente";
 import { carreraPeriodoService } from "../../services/carreraPeriodo.service";
 import { estudiantesService } from "../../services/estudiantes.service";
 import { franjaHorarioService } from "../../services/franjasHorarias.service";
-import { tribunalesService } from "../../services/tribunales.service";
+import { tribunalesService, type TribunalCreateDTO, type TribunalUpdateDTO } from "../../services/tribunales.service";
 import { tribunalEstudiantesService } from "../../services/tribunalEstudiantes.service";
 import { carreraDocenteService } from "../../services/carreraDocente.service";
+import { docentesService } from "../../services/docentes.service";
+import { carrerasService } from "../../services/carreras.service";
 
 import { planEvaluacionService } from "../../services/planEvaluacion.service";
 import { calificadoresGeneralesService } from "../../services/calificadoresGenerales.service";
@@ -34,7 +38,6 @@ import { calificadoresGeneralesService } from "../../services/calificadoresGener
 import TribunalAsignacionesModal from "./TribunalAsignacionesModal";
 import TribunalViewModal from "./TribunalViewModal";
 
-// ✅ CLAVE: guardar CP activo para que axiosClient mande header x-carrera-periodo-id
 import { setActiveCarreraPeriodoId } from "../../api/axiosClient";
 
 const PAGE_SIZE = 10;
@@ -44,6 +47,16 @@ type ToastType = "success" | "error" | "info";
 type AsignacionFormState = {
   id_estudiante: number | "";
   id_franja_horario: number | "";
+};
+
+type TribunalFormState = {
+  nombre_tribunal: string;
+  caso: string; // string para input
+  descripcion_tribunal: string;
+
+  presidente: number | "";
+  integrante1: number | "";
+  integrante2: number | "";
 };
 
 export default function TribunalesPage() {
@@ -76,6 +89,21 @@ export default function TribunalesPage() {
   const [showViewModal, setShowViewModal] = useState(false);
   const [viewTribunal, setViewTribunal] = useState<Tribunal | null>(null);
 
+  // ===== MODAL CREAR/EDITAR TRIBUNAL =====
+  const [showFormModal, setShowFormModal] = useState(false);
+  const [editing, setEditing] = useState<Tribunal | null>(null);
+  const [savingTribunal, setSavingTribunal] = useState(false);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+  const [tribunalForm, setTribunalForm] = useState<TribunalFormState>({
+    nombre_tribunal: "",
+    caso: "",
+    descripcion_tribunal: "",
+    presidente: "",
+    integrante1: "",
+    integrante2: "",
+  });
+
   // ===== MODAL ASIGNACIÓN =====
   const [showAsignModal, setShowAsignModal] = useState(false);
   const [activeTribunalForAsign, setActiveTribunalForAsign] = useState<Tribunal | null>(null);
@@ -106,7 +134,7 @@ export default function TribunalesPage() {
   }
 
   function selectedCPLabel(): string {
-    const cp = carreraPeriodos.find((x) => Number(x.id_carrera_periodo) === Number(selectedCP));
+    const cp = carreraPeriodos.find((x: any) => Number(x.id_carrera_periodo) === Number(selectedCP));
     if (!cp) return "";
     const carrera = (cp as any).nombre_carrera ?? "Carrera";
     const periodo = (cp as any).codigo_periodo ?? (cp as any).descripcion_periodo ?? "Período";
@@ -127,7 +155,7 @@ export default function TribunalesPage() {
   useEffect(() => {
     if (selectedCP) {
       loadAll();
-      loadDocentesByCP();
+      loadDocentesByCP(); // ✅ asegura carrera_docente para selects
       loadPlanAndCalificadores();
     } else {
       setTribunales([]);
@@ -140,35 +168,29 @@ export default function TribunalesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCP, mostrarInactivos]);
 
-  // ✅ Importante: usa CP guardado si existe
   async function loadCarreraPeriodos() {
     try {
       setLoading(true);
       const cps = await carreraPeriodoService.list(false);
-      setCarreraPeriodos(cps);
+      setCarreraPeriodos(cps ?? []);
 
-      // 1) intentar CP guardado
       const savedRaw = localStorage.getItem("active_carrera_periodo_id");
       const saved = savedRaw ? Number(savedRaw) : 0;
 
       const savedExists =
         saved > 0 &&
-        cps.some(
-          (x: any) => Number(x.id_carrera_periodo) === saved && Boolean((x as any).estado)
-        );
+        (cps ?? []).some((x: any) => Number(x.id_carrera_periodo) === saved && Boolean((x as any).estado));
 
       if (savedExists) {
         setSelectedCP(saved);
-        setActiveCarreraPeriodoId(saved); // ✅ header para todo el sistema
+        setActiveCarreraPeriodoId(saved);
         return;
       }
 
-      // 2) fallback: primer CP activo
       const first = (cps ?? []).find((x: any) => Boolean((x as any).estado)) ?? (cps ?? [])[0];
-
       if (first) {
-        setSelectedCP((first as any).id_carrera_periodo);
-        setActiveCarreraPeriodoId((first as any).id_carrera_periodo);
+        setSelectedCP(Number((first as any).id_carrera_periodo));
+        setActiveCarreraPeriodoId(Number((first as any).id_carrera_periodo));
       } else {
         setSelectedCP("");
         setActiveCarreraPeriodoId(null);
@@ -183,26 +205,88 @@ export default function TribunalesPage() {
     }
   }
 
+  /**
+   * ✅ Calificadores/Tribunales requieren carrera_docente.
+   * Si no existe, intenta autogenerar desde:
+   * carrera.id_departamento -> docentes por departamento -> POST /carreras-docentes
+   */
   async function loadDocentesByCP() {
     if (!selectedCP) return;
 
     try {
-      const cp = carreraPeriodos.find((x) => Number((x as any).id_carrera_periodo) === Number(selectedCP));
-      const carreraId = (cp as any)?.id_carrera;
+      const cp: any =
+        carreraPeriodos.find((x: any) => Number(x.id_carrera_periodo) === Number(selectedCP)) ?? null;
+
+      const carreraId =
+        Number(cp?.id_carrera) ||
+        Number(cp?.carreraId) ||
+        Number(cp?.carrera_id) ||
+        Number(cp?.carrera?.id_carrera) ||
+        0;
 
       if (!carreraId) {
         setDocentes([]);
+        showToast("No se pudo obtener id_carrera del Carrera–Período.", "error");
         return;
       }
 
-      const data = await carreraDocenteService.list({
+      // 1) intentar carrera_docente ya existente
+      let cds = await carreraDocenteService.list({ includeInactive: false, carreraId });
+      if ((cds ?? []).length > 0) {
+        setDocentes(cds ?? []);
+        return;
+      }
+
+      // 2) obtener dept desde carrera
+      const carreras = await carrerasService.list(false);
+      const carrera = (carreras ?? []).find((c: any) => Number(c.id_carrera) === Number(carreraId)) ?? null;
+
+      const deptId =
+        Number((carrera as any)?.id_departamento) ||
+        Number((carrera as any)?.departamento_id) ||
+        Number((carrera as any)?.departamento?.id_departamento) ||
+        0;
+
+      if (!deptId) {
+        setDocentes([]);
+        showToast("No hay docentes en carrera_docente y no pude obtener el departamento de la carrera.", "error");
+        return;
+      }
+
+      const depDocentes = await docentesService.list({
         includeInactive: false,
-        carreraId: Number(carreraId),
+        id_departamento: deptId,
+        page: 1,
+        limit: 200,
       });
 
-      setDocentes(data ?? []);
+      const activos = (depDocentes ?? []).filter((d: any) => Number(d.estado) === 1);
+      if (!activos.length) {
+        setDocentes([]);
+        showToast("No hay docentes activos en el departamento de esta carrera.", "error");
+        return;
+      }
+
+      // 👇 REQUIERE que exista carreraDocenteService.create en tu service TS
+      for (const d of activos) {
+        try {
+          await carreraDocenteService.create({
+            id_docente: Number((d as any).id_docente),
+            id_carrera: Number(carreraId),
+            tipo_admin: "DOCENTE",
+          });
+        } catch {
+          // ignorar ya existe
+        }
+      }
+
+      cds = await carreraDocenteService.list({ includeInactive: false, carreraId });
+      setDocentes(cds ?? []);
+
+      if ((cds ?? []).length) showToast("Docentes listos para Calificadores/Tribunales.", "success");
     } catch {
       setDocentes([]);
+      showToast("No se pudieron cargar docentes para Calificadores/Tribunales.", "error");
     }
   }
 
@@ -231,7 +315,6 @@ export default function TribunalesPage() {
   async function loadPlanAndCalificadores() {
     if (!selectedCP) return;
 
-    // PLAN
     try {
       setLoadingPlan(true);
       const p = await planEvaluacionService.getByCP(Number(selectedCP));
@@ -242,7 +325,6 @@ export default function TribunalesPage() {
       setLoadingPlan(false);
     }
 
-    // CALIFICADORES
     try {
       const rows = await calificadoresGeneralesService.list(Number(selectedCP), false);
       const ids = (rows ?? [])
@@ -262,23 +344,134 @@ export default function TribunalesPage() {
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
     return (tribunales ?? [])
-      .filter((t) => (mostrarInactivos ? true : isActivo((t as any).estado)))
-      .filter((t) => {
+      .filter((t: any) => (mostrarInactivos ? true : isActivo(t.estado)))
+      .filter((t: any) => {
         if (!q) return true;
         return (
-          String((t as any).nombre_tribunal || "").toLowerCase().includes(q) ||
-          String((t as any).caso ?? "").toLowerCase().includes(q)
+          String(t.nombre_tribunal || "").toLowerCase().includes(q) ||
+          String(t.caso ?? "").toLowerCase().includes(q)
         );
       });
   }, [tribunales, search, mostrarInactivos]);
 
   const total = filtered.length;
-  const activos = filtered.filter((x) => isActivo((x as any).estado)).length;
+  const activos = filtered.filter((x: any) => isActivo(x.estado)).length;
   const inactivos = total - activos;
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
   const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  // ===== MODAL CREAR/EDITAR =====
+  function resetTribunalForm() {
+    setTribunalForm({
+      nombre_tribunal: "",
+      caso: "",
+      descripcion_tribunal: "",
+      presidente: "",
+      integrante1: "",
+      integrante2: "",
+    });
+    setFormErrors({});
+  }
+
+  function openCreateModal() {
+    if (!selectedCP) return showToast("Seleccione Carrera–Período.", "error");
+    resetTribunalForm();
+    setEditing(null);
+    setShowFormModal(true);
+  }
+
+  function openEditModal(t: Tribunal) {
+    setEditing(t);
+    setFormErrors({});
+    setTribunalForm({
+      nombre_tribunal: String((t as any).nombre_tribunal || ""),
+      caso: (t as any).caso == null ? "" : String((t as any).caso),
+      descripcion_tribunal: String((t as any).descripcion_tribunal || ""),
+      // ⚠️ si tu backend NO devuelve ids docentes del tribunal, se quedan vacíos
+      presidente: "",
+      integrante1: "",
+      integrante2: "",
+    });
+    setShowFormModal(true);
+  }
+
+  function validateTribunalForm(): Record<string, string> {
+    const e: Record<string, string> = {};
+    if (!selectedCP) e.id_carrera_periodo = "Seleccione Carrera–Período.";
+    if (!tribunalForm.nombre_tribunal.trim()) e.nombre_tribunal = "Ingrese el nombre del tribunal.";
+    if (!tribunalForm.presidente) e.presidente = "Seleccione Presidente.";
+    if (!tribunalForm.integrante1) e.integrante1 = "Seleccione Integrante 1.";
+    if (!tribunalForm.integrante2) e.integrante2 = "Seleccione Integrante 2.";
+
+    const ids = [tribunalForm.presidente, tribunalForm.integrante1, tribunalForm.integrante2].filter(Boolean);
+    const uniq = new Set(ids as any[]);
+    if (ids.length && uniq.size !== ids.length) e.docentes = "No repitas el mismo docente en el tribunal.";
+
+    if (tribunalForm.caso.trim()) {
+      const n = Number(tribunalForm.caso);
+      if (!Number.isFinite(n) || n <= 0) e.caso = "Caso inválido (debe ser número positivo).";
+    }
+    return e;
+  }
+
+  async function onSaveTribunal() {
+    const e = validateTribunalForm();
+    setFormErrors(e);
+    if (Object.keys(e).length) {
+      showToast("Revisa el formulario del tribunal.", "error");
+      return;
+    }
+
+    try {
+      setSavingTribunal(true);
+
+      const casoNum =
+        tribunalForm.caso.trim() && Number.isFinite(Number(tribunalForm.caso)) ? Number(tribunalForm.caso) : undefined;
+
+      if (!editing) {
+        const payload: TribunalCreateDTO = {
+          id_carrera_periodo: Number(selectedCP),
+          nombre_tribunal: tribunalForm.nombre_tribunal.trim(),
+          caso: casoNum,
+          descripcion_tribunal: tribunalForm.descripcion_tribunal.trim() || undefined,
+          docentes: {
+            presidente: Number(tribunalForm.presidente),
+            integrante1: Number(tribunalForm.integrante1),
+            integrante2: Number(tribunalForm.integrante2),
+          },
+        };
+
+        await tribunalesService.create(payload);
+        showToast("Tribunal creado.", "success");
+      } else {
+        const payload: TribunalUpdateDTO = {
+          id_carrera_periodo: Number(selectedCP),
+          nombre_tribunal: tribunalForm.nombre_tribunal.trim(),
+          caso: casoNum,
+          descripcion_tribunal: tribunalForm.descripcion_tribunal.trim() || undefined,
+          docentes: {
+            presidente: Number(tribunalForm.presidente),
+            integrante1: Number(tribunalForm.integrante1),
+            integrante2: Number(tribunalForm.integrante2),
+          },
+        };
+
+        await tribunalesService.update(Number((editing as any).id_tribunal), payload);
+        showToast("Tribunal actualizado.", "success");
+      }
+
+      setShowFormModal(false);
+      resetTribunalForm();
+      await loadAll();
+    } catch (err: any) {
+      const msg = err?.data?.message || err?.response?.data?.message || err?.userMessage || "No se pudo guardar el tribunal.";
+      showToast(String(msg), "error");
+    } finally {
+      setSavingTribunal(false);
+    }
+  }
 
   // ===== ASIGNACIÓN Tribunal–Estudiante =====
   async function openAsignaciones(t: Tribunal) {
@@ -291,7 +484,7 @@ export default function TribunalesPage() {
 
       const [a, est, fr] = await Promise.all([
         tribunalEstudiantesService.list({
-          tribunalId: (t as any).id_tribunal,
+          tribunalId: Number((t as any).id_tribunal),
           includeInactive: true,
           page: 1,
           limit: 100,
@@ -358,7 +551,7 @@ export default function TribunalesPage() {
       setAsignaciones(a ?? []);
       setAsignForm({ id_estudiante: "", id_franja_horario: "" });
     } catch (err: any) {
-      const msg = err?.response?.data?.message || "No se pudo crear la asignación.";
+      const msg = err?.response?.data?.message || err?.userMessage || "No se pudo crear la asignación.";
       showToast(String(msg), "error");
     } finally {
       setLoading(false);
@@ -370,10 +563,7 @@ export default function TribunalesPage() {
       setLoading(true);
       const current = estado01((row as any).estado);
 
-      await tribunalEstudiantesService.toggleEstado(
-        Number((row as any).id_tribunal_estudiante),
-        current as 0 | 1
-      );
+      await tribunalEstudiantesService.toggleEstado(Number((row as any).id_tribunal_estudiante), current as 0 | 1);
 
       showToast(current === 1 ? "Asignación desactivada." : "Asignación activada.", "success");
 
@@ -409,11 +599,10 @@ export default function TribunalesPage() {
     }
   }
 
-  // ===== GUARDAR CALIFICADORES GENERALES (3 slots usando POST/DELETE) =====
+  // ===== GUARDAR CALIFICADORES GENERALES =====
   function toNum(v: number | ""): number | null {
     return typeof v === "number" && v > 0 ? v : null;
   }
-
   function uniqueNonEmpty(ids: Array<number | null>) {
     const nums = ids.filter((x): x is number => typeof x === "number" && x > 0);
     return Array.from(new Set(nums));
@@ -446,18 +635,13 @@ export default function TribunalesPage() {
       const toRemove = currentActive.filter((x: any) => !desiredIds.has(x.id_carrera_docente));
       const toAdd = desired.filter((id) => !currentIds.has(id));
 
-      for (const r of toRemove) {
-        await calificadoresGeneralesService.remove(Number(r.id_cp_calificador_general));
-      }
-
-      for (const id_carrera_docente of toAdd) {
-        await calificadoresGeneralesService.create(Number(selectedCP), { id_carrera_docente });
-      }
+      for (const r of toRemove) await calificadoresGeneralesService.remove(Number(r.id_cp_calificador_general));
+      for (const id_carrera_docente of toAdd) await calificadoresGeneralesService.create(Number(selectedCP), { id_carrera_docente });
 
       showToast("Calificadores generales guardados.", "success");
       await loadPlanAndCalificadores();
     } catch (err: any) {
-      const msg = err?.response?.data?.message || "No se pudo guardar calificadores generales.";
+      const msg = err?.response?.data?.message || err?.userMessage || "No se pudo guardar calificadores generales.";
       showToast(String(msg), "error");
     } finally {
       setSavingCG(false);
@@ -482,10 +666,7 @@ export default function TribunalesPage() {
         </div>
 
         <div className="heroActions">
-          <button
-            className="heroBtn primary"
-            onClick={() => showToast("Formulario de creación pendiente de conectar (modal).", "info")}
-          >
+          <button className="heroBtn primary" onClick={openCreateModal}>
             <Plus className="heroBtnIcon" /> Añadir Tribunal
           </button>
         </div>
@@ -510,15 +691,13 @@ export default function TribunalesPage() {
               onChange={(e) => {
                 const next = e.target.value ? Number(e.target.value) : "";
                 setSelectedCP(next);
-                setActiveCarreraPeriodoId(typeof next === "number" ? next : null); // ✅ CLAVE
+                setActiveCarreraPeriodoId(typeof next === "number" ? next : null);
               }}
             >
               <option value="">Seleccione Carrera–Período...</option>
               {carreraPeriodos.map((cp: any) => (
                 <option key={cp.id_carrera_periodo} value={cp.id_carrera_periodo}>
-                  {(cp.nombre_carrera ?? "Carrera") +
-                    " — " +
-                    (cp.codigo_periodo ?? cp.descripcion_periodo ?? "Período")}
+                  {(cp.nombre_carrera ?? "Carrera") + " — " + (cp.codigo_periodo ?? cp.descripcion_periodo ?? "Período")}
                 </option>
               ))}
             </select>
@@ -540,38 +719,14 @@ export default function TribunalesPage() {
           </button>
 
           <label className="toggle">
-            <input
-              type="checkbox"
-              checked={mostrarInactivos}
-              onChange={(e) => setMostrarInactivos(e.target.checked)}
-            />
+            <input type="checkbox" checked={mostrarInactivos} onChange={(e) => setMostrarInactivos(e.target.checked)} />
             <span className="slider" />
             <span className="toggleText">Mostrar inactivos</span>
           </label>
         </div>
-
-        {/* SUMMARY */}
-        <div className="summaryRow" style={{ marginTop: 10 }}>
-          <div className="summaryBoxes">
-            <div className="summaryBox">
-              <span className="summaryLabel">Total</span>
-              <span className="summaryValue">{total}</span>
-            </div>
-
-            <div className="summaryBox active">
-              <span className="summaryLabel">Activos</span>
-              <span className="summaryValue">{activos}</span>
-            </div>
-
-            <div className="summaryBox inactive">
-              <span className="summaryLabel">Inactivos</span>
-              <span className="summaryValue">{inactivos}</span>
-            </div>
-          </div>
-        </div>
       </div>
 
-      {/* ✅ TOP GRID (Plan + Calificadores) */}
+      {/* TOP GRID (Plan + Calificadores) */}
       <div className="topGrid">
         {/* PLAN */}
         <div className="box">
@@ -592,11 +747,7 @@ export default function TribunalesPage() {
                 <AlertTriangle size={20} />
               </div>
               <div>No se ha configurado un Plan de Evaluación para esta carrera y período.</div>
-              <button
-                className="btnWarn"
-                onClick={() => navigate(`/plan-evaluacion?cp=${selectedCP}`)}
-                disabled={!selectedCP}
-              >
+              <button className="btnWarn" onClick={() => navigate(`/plan-evaluacion?cp=${selectedCP}`)} disabled={!selectedCP}>
                 Configurar Plan Ahora
               </button>
             </div>
@@ -606,11 +757,7 @@ export default function TribunalesPage() {
                 Plan activo: <b>{plan.nombre_plan ?? "Plan de evaluación"}</b>
               </p>
               {plan.descripcion_plan ? <p className="muted">{plan.descripcion_plan}</p> : null}
-              <button
-                className="btnGhost"
-                onClick={() => navigate(`/plan-evaluacion?cp=${selectedCP}`)}
-                disabled={!selectedCP}
-              >
+              <button className="btnGhost" onClick={() => navigate(`/plan-evaluacion?cp=${selectedCP}`)} disabled={!selectedCP}>
                 Ver / Editar Plan
               </button>
             </div>
@@ -631,11 +778,7 @@ export default function TribunalesPage() {
           <div className="cgGrid">
             <div className="cgRow">
               <div className="cgLabel">Calificador General 1</div>
-              <select
-                className="select"
-                value={cg1}
-                onChange={(e) => setCg1(e.target.value ? Number(e.target.value) : "")}
-              >
+              <select className="select" value={cg1} onChange={(e) => setCg1(e.target.value ? Number(e.target.value) : "")}>
                 <option value="">-- Sin asignar --</option>
                 {docentes.map((cd: any) => (
                   <option key={cd.id_carrera_docente} value={cd.id_carrera_docente}>
@@ -647,11 +790,7 @@ export default function TribunalesPage() {
 
             <div className="cgRow">
               <div className="cgLabel">Calificador General 2</div>
-              <select
-                className="select"
-                value={cg2}
-                onChange={(e) => setCg2(e.target.value ? Number(e.target.value) : "")}
-              >
+              <select className="select" value={cg2} onChange={(e) => setCg2(e.target.value ? Number(e.target.value) : "")}>
                 <option value="">-- Sin asignar --</option>
                 {docentes.map((cd: any) => (
                   <option key={cd.id_carrera_docente} value={cd.id_carrera_docente}>
@@ -663,11 +802,7 @@ export default function TribunalesPage() {
 
             <div className="cgRow">
               <div className="cgLabel">Calificador General 3</div>
-              <select
-                className="select"
-                value={cg3}
-                onChange={(e) => setCg3(e.target.value ? Number(e.target.value) : "")}
-              >
+              <select className="select" value={cg3} onChange={(e) => setCg3(e.target.value ? Number(e.target.value) : "")}>
                 <option value="">-- Sin asignar --</option>
                 {docentes.map((cd: any) => (
                   <option key={cd.id_carrera_docente} value={cd.id_carrera_docente}>
@@ -677,11 +812,7 @@ export default function TribunalesPage() {
               </select>
             </div>
 
-            <button
-              className="btnPrimary btnBlock"
-              onClick={onSaveCalificadoresGenerales}
-              disabled={!selectedCP || savingCG}
-            >
+            <button className="btnPrimary btnBlock" onClick={onSaveCalificadoresGenerales} disabled={!selectedCP || savingCG}>
               {savingCG ? "Guardando..." : "Guardar Calificadores Generales"}
             </button>
           </div>
@@ -723,15 +854,11 @@ export default function TribunalesPage() {
                     <tr key={t.id_tribunal}>
                       <td>
                         <div className="tdTitle">{t.nombre_tribunal}</div>
-                        <div className="tdSub">
-                          {t.nombre_carrera ? `${t.nombre_carrera} — ${t.codigo_periodo ?? ""}` : "—"}
-                        </div>
+                        <div className="tdSub">{t.nombre_carrera ? `${t.nombre_carrera} — ${t.codigo_periodo ?? ""}` : "—"}</div>
                       </td>
                       <td>{t.caso == null ? <span className="muted">—</span> : t.caso}</td>
                       <td>
-                        <span className={`badge ${activo ? "badgeActive" : "badgeInactive"}`}>
-                          {activo ? "Activo" : "Inactivo"}
-                        </span>
+                        <span className={`badge ${activo ? "badgeActive" : "badgeInactive"}`}>{activo ? "Activo" : "Inactivo"}</span>
                       </td>
                       <td className="tdActions">
                         <div className="actions">
@@ -740,10 +867,7 @@ export default function TribunalesPage() {
                             <span className="tooltip">Ver</span>
                           </button>
 
-                          <button
-                            className="iconBtn iconBtn_purple"
-                            onClick={() => showToast("Edición pendiente de conectar (modal).", "info")}
-                          >
+                          <button className="iconBtn iconBtn_purple" onClick={() => openEditModal(t)}>
                             <Pencil className="iconAction" />
                             <span className="tooltip">Editar</span>
                           </button>
@@ -768,27 +892,135 @@ export default function TribunalesPage() {
         </div>
 
         <div className="paginationRow">
-          <button
-            className="btnGhost"
-            disabled={currentPage <= 1}
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-          >
+          <button className="btnGhost" disabled={currentPage <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
             Anterior
           </button>
           <span className="paginationText">
             Página <b>{currentPage}</b> de <b>{totalPages}</b>
           </span>
-          <button
-            className="btnGhost"
-            disabled={currentPage >= totalPages}
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-          >
+          <button className="btnGhost" disabled={currentPage >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
             Siguiente
           </button>
         </div>
       </div>
 
-      {/* ✅ MODAL VIEW */}
+      {/* MODAL CREAR/EDITAR */}
+      {showFormModal && (
+        <div className="modalOverlay" onMouseDown={() => setShowFormModal(false)}>
+          <div className="modalCard modalWide" onMouseDown={(e) => e.stopPropagation()}>
+            <div className="modalHeader">
+              <h3 className="modalTitle">{editing ? "Editar Tribunal" : "Crear Tribunal"}</h3>
+              <button className="btnClose" onClick={() => setShowFormModal(false)} aria-label="Cerrar">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="modalBody">
+              <div className="grid2">
+                <div className="field full">
+                  <label className="fieldLabel">Nombre del tribunal</label>
+                  <input
+                    className="input"
+                    value={tribunalForm.nombre_tribunal}
+                    onChange={(e) => setTribunalForm((p) => ({ ...p, nombre_tribunal: e.target.value }))}
+                    placeholder="Ej: Tribunal 1"
+                  />
+                  {formErrors.nombre_tribunal ? <p className="error">{formErrors.nombre_tribunal}</p> : null}
+                </div>
+
+                <div className="field">
+                  <label className="fieldLabel">Caso (opcional)</label>
+                  <input
+                    className="input"
+                    value={tribunalForm.caso}
+                    onChange={(e) => setTribunalForm((p) => ({ ...p, caso: e.target.value }))}
+                    placeholder="Ej: 1"
+                  />
+                  {formErrors.caso ? <p className="error">{formErrors.caso}</p> : null}
+                </div>
+
+                <div className="field full">
+                  <label className="fieldLabel">Descripción (opcional)</label>
+                  <textarea
+                    className="textarea"
+                    rows={3}
+                    value={tribunalForm.descripcion_tribunal}
+                    onChange={(e) => setTribunalForm((p) => ({ ...p, descripcion_tribunal: e.target.value }))}
+                    placeholder="Descripción del tribunal..."
+                  />
+                </div>
+
+                <div className="field">
+                  <label className="fieldLabel">Presidente</label>
+                  <select
+                    className="select"
+                    value={tribunalForm.presidente}
+                    onChange={(e) => setTribunalForm((p) => ({ ...p, presidente: e.target.value ? Number(e.target.value) : "" }))}
+                  >
+                    <option value="">Seleccione...</option>
+                    {docentes.map((cd: any) => (
+                      <option key={cd.id_carrera_docente} value={cd.id_carrera_docente}>
+                        {(cd.apellidos_docente ?? "") + " " + (cd.nombres_docente ?? "")}
+                      </option>
+                    ))}
+                  </select>
+                  {formErrors.presidente ? <p className="error">{formErrors.presidente}</p> : null}
+                </div>
+
+                <div className="field">
+                  <label className="fieldLabel">Integrante 1</label>
+                  <select
+                    className="select"
+                    value={tribunalForm.integrante1}
+                    onChange={(e) => setTribunalForm((p) => ({ ...p, integrante1: e.target.value ? Number(e.target.value) : "" }))}
+                  >
+                    <option value="">Seleccione...</option>
+                    {docentes.map((cd: any) => (
+                      <option key={cd.id_carrera_docente} value={cd.id_carrera_docente}>
+                        {(cd.apellidos_docente ?? "") + " " + (cd.nombres_docente ?? "")}
+                      </option>
+                    ))}
+                  </select>
+                  {formErrors.integrante1 ? <p className="error">{formErrors.integrante1}</p> : null}
+                </div>
+
+                <div className="field">
+                  <label className="fieldLabel">Integrante 2</label>
+                  <select
+                    className="select"
+                    value={tribunalForm.integrante2}
+                    onChange={(e) => setTribunalForm((p) => ({ ...p, integrante2: e.target.value ? Number(e.target.value) : "" }))}
+                  >
+                    <option value="">Seleccione...</option>
+                    {docentes.map((cd: any) => (
+                      <option key={cd.id_carrera_docente} value={cd.id_carrera_docente}>
+                        {(cd.apellidos_docente ?? "") + " " + (cd.nombres_docente ?? "")}
+                      </option>
+                    ))}
+                  </select>
+                  {formErrors.integrante2 ? <p className="error">{formErrors.integrante2}</p> : null}
+                </div>
+
+                {formErrors.docentes ? <p className="error">{formErrors.docentes}</p> : null}
+
+                <div className="field full">
+                  <button className="btnPrimary" onClick={onSaveTribunal} disabled={savingTribunal}>
+                    <Save size={18} /> {savingTribunal ? "Guardando..." : "Guardar Tribunal"}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="modalFooter">
+              <button className="btnGhost" onClick={() => setShowFormModal(false)} disabled={savingTribunal}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL VIEW */}
       <TribunalViewModal
         open={showViewModal}
         onClose={() => setShowViewModal(false)}

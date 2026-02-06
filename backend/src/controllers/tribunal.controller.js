@@ -4,7 +4,6 @@ const s = require("../services/tribunal.service");
 module.exports = {
   list: async (req, res, next) => {
     try {
-      // ✅ FIX: manda el usuario completo, NO req.user.scope
       res.json(await s.list(req.query, req.user || null));
     } catch (e) {
       next(e);

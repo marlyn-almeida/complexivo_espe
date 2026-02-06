@@ -8,7 +8,7 @@ const ctrl = require("../controllers/casos_estudio.controller");
 
 const multer = require("multer");
 
-// ✅ Para poder usar req.file.buffer (como tu controller)
+// ✅ Para poder usar req.file.buffer
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 15 * 1024 * 1024 }, // 15MB
@@ -31,7 +31,7 @@ router.post(
   "/",
   authorize(["ADMIN"]),
   attachCarreraPeriodoCtx,
-  upload.single("archivo"), // 👈 el FormData debe mandar "archivo"
+  upload.single("archivo"),
   body("numero_caso").isInt({ min: 1 }).toInt(),
   body("titulo").optional().isString().isLength({ max: 150 }),
   body("descripcion").optional().isString().isLength({ max: 500 }),
@@ -45,7 +45,7 @@ router.put(
   "/:id_caso_estudio",
   authorize(["ADMIN"]),
   attachCarreraPeriodoCtx,
-  upload.single("archivo"), // 👈 opcional en update
+  upload.single("archivo"),
   param("id_caso_estudio").isInt({ min: 1 }).toInt(),
   body("numero_caso").optional().isInt({ min: 1 }).toInt(),
   body("titulo").optional().isString().isLength({ max: 150 }),
@@ -54,7 +54,7 @@ router.put(
   ctrl.update
 );
 
-// ✅ PATCH estado (ACTIVAR/DESACTIVAR)
+// ✅ PATCH estado
 // PATCH /api/casos-estudio/:id_caso_estudio/estado
 router.patch(
   "/:id_caso_estudio/estado",
