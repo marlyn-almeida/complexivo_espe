@@ -12,10 +12,24 @@
   max-width: 100%;
 }
 
+.carrerasPage {
+  width: 100%;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans",
+    "Liberation Sans";
+}
+
 /* ===============================
-   HERO
+   ICONOS
    =============================== */
-.hero {
+.carrerasPage .iconSm {
+  width: 18px;
+  height: 18px;
+}
+
+/* ===============================
+   HERO (igual Docentes)
+   =============================== */
+.carrerasPage .hero {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -25,25 +39,32 @@
   border-radius: 14px;
   padding: 14px 16px;
   border: 1px solid rgba(255, 255, 255, 0.18);
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.10);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.1);
 }
 
-.heroLeft {
+.carrerasPage .heroLeft {
   display: flex;
   align-items: center;
   gap: 14px;
   min-width: 0;
 }
 
-.heroLogo {
-  height: 42px;
-  width: auto;
-  filter: drop-shadow(0 3px 10px rgba(0,0,0,0.18));
+.carrerasPage .heroLogo {
+  width: 46px;
+  height: 46px;
+  object-fit: contain;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  flex: 0 0 auto;
 }
 
-.heroText { min-width: 0; }
+.carrerasPage .heroText {
+  min-width: 0;
+}
 
-.heroTitle {
+.carrerasPage .heroTitle {
   margin: 0;
   color: #fff;
   font-weight: 900;
@@ -52,18 +73,18 @@
   letter-spacing: 0.2px;
 }
 
-.heroSubtitle {
+.carrerasPage .heroSubtitle {
   margin: 6px 0 0;
-  color: rgba(255,255,255,0.86);
+  color: rgba(255, 255, 255, 0.86);
   font-size: 13px;
 }
 
-.heroBtn {
+.carrerasPage .heroBtn {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  border: 1px solid rgba(255,255,255,0.45);
-  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.06);
   color: #fff;
   font-weight: 900;
   padding: 10px 14px;
@@ -73,91 +94,97 @@
   white-space: nowrap;
 }
 
-.heroBtn:hover {
-  background: rgba(255,255,255,0.10);
-  border-color: rgba(255,255,255,0.60);
+.carrerasPage .heroBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.6);
   transform: translateY(-1px);
 }
 
-.heroBtn:active { transform: translateY(0); }
+.carrerasPage .heroBtn:active {
+  transform: translateY(0);
+}
 
 /* ===============================
-   BOX
+   BOX (igual Docentes)
    =============================== */
-.box {
+.carrerasPage .box {
   margin-top: 14px;
   background: #fff;
   border: 1px solid rgba(0, 0, 0, 0.09);
   border-radius: 14px;
   padding: 16px 16px 18px;
-  box-shadow: 0 8px 18px rgba(0,0,0,0.05);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.05);
 }
 
-.boxHead {
+.carrerasPage .boxHead {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
-  margin-bottom: 12px;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-bottom: 10px;
+  margin-bottom: 6px;
 }
 
-.sectionTitle {
+.carrerasPage .sectionTitle {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  font-size: 20px;
   font-weight: 900;
-  color: rgba(0,0,0,0.78);
+  color: rgba(0, 0, 0, 0.82);
+  font-size: 20px;
   white-space: nowrap;
 }
 
-.sectionTitleIcon {
-  width: 32px;
-  height: 32px;
-  border-radius: 10px;
-  background: rgba(10,79,40,0.12);
-  color: #0a4f28;
+.carrerasPage .sectionTitleIcon {
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  background: rgba(10, 79, 40, 0.1);
+  border: 1px solid rgba(10, 79, 40, 0.18);
   display: grid;
   place-items: center;
+  color: #0a4f28;
 }
 
 /* ===============================
-   SEARCH
+   SEARCH (igual Docentes)
    =============================== */
-.searchWrap {
+.carrerasPage .searchWrap {
   position: relative;
   width: min(520px, 100%);
 }
 
-.searchIcon {
+.carrerasPage .searchIcon {
   position: absolute;
   left: 12px;
   top: 50%;
   transform: translateY(-50%);
   width: 18px;
   height: 18px;
-  color: rgba(0,0,0,0.45);
+  color: rgba(0, 0, 0, 0.45);
 }
 
-.search {
+.carrerasPage .search {
   width: 100%;
   height: 40px;
   border-radius: 10px;
-  border: 1px solid rgba(0,0,0,0.12);
+  border: 1px solid rgba(0, 0, 0, 0.12);
   padding: 0 12px 0 40px;
   outline: none;
   font-weight: 400;
+  font-size: 14.5px;
 }
 
-.search:focus {
-  border-color: rgba(10,79,40,0.35);
-  box-shadow: 0 0 0 4px rgba(10,79,40,0.12);
+.carrerasPage .search:focus {
+  border-color: rgba(10, 79, 40, 0.35);
+  box-shadow: 0 0 0 4px rgba(10, 79, 40, 0.12);
 }
 
 /* ===============================
-   SUMMARY
+   SUMMARY (igual Docentes)
    =============================== */
-.summaryRow {
+.carrerasPage .summaryRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -166,14 +193,14 @@
   margin-top: 8px;
 }
 
-.summaryBoxes {
+.carrerasPage .summaryBoxes {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
 }
 
-.summaryBox {
-  border: 1px solid rgba(0,0,0,0.10);
+.carrerasPage .summaryBox {
+  border: 1px solid rgba(0, 0, 0, 0.1);
   background: #fbfbfb;
   border-radius: 14px;
   padding: 10px 12px;
@@ -183,59 +210,60 @@
   gap: 2px;
 }
 
-/* OJO: en TSX usas summaryLabel/summaryValue */
-.summaryLabel {
+.carrerasPage .summaryLabel {
   font-size: 12px;
-  color: rgba(0,0,0,0.55);
+  color: rgba(0, 0, 0, 0.55);
   font-weight: 700;
 }
 
-.summaryValue {
+.carrerasPage .summaryValue {
   font-size: 16px;
   font-weight: 900;
-  color: rgba(0,0,0,0.82);
+  color: rgba(0, 0, 0, 0.82);
 }
 
-.summaryBox.active {
-  border-color: rgba(10,79,40,0.18);
-  background: rgba(10,79,40,0.06);
+.carrerasPage .summaryBox.active {
+  border-color: rgba(10, 79, 40, 0.18);
+  background: rgba(10, 79, 40, 0.06);
 }
 
-.summaryBox.inactive {
-  border-color: rgba(180,20,20,0.18);
-  background: rgba(180,20,20,0.05);
+.carrerasPage .summaryBox.inactive {
+  border-color: rgba(180, 20, 20, 0.18);
+  background: rgba(180, 20, 20, 0.05);
 }
 
-.summaryActions {
+.carrerasPage .summaryActions {
   display: flex;
   gap: 10px;
   align-items: center;
   flex-wrap: wrap;
 }
 
-/* Toggle */
-.toggle {
+/* Toggle (igual Docentes) */
+.carrerasPage .toggle {
   display: flex;
   align-items: center;
   gap: 10px;
   user-select: none;
   font-weight: 700;
-  color: rgba(0,0,0,0.72);
+  color: rgba(0, 0, 0, 0.72);
 }
 
-.toggle input { display: none; }
+.carrerasPage .toggle input {
+  display: none;
+}
 
-.slider {
+.carrerasPage .slider {
   width: 44px;
   height: 26px;
   border-radius: 999px;
-  border: 1px solid rgba(0,0,0,0.12);
+  border: 1px solid rgba(0, 0, 0, 0.12);
   background: #e5e7eb;
   position: relative;
-  transition: background .2s ease;
+  transition: background 0.2s ease;
 }
 
-.slider::after {
+.carrerasPage .slider::after {
   content: "";
   width: 20px;
   height: 20px;
@@ -244,231 +272,319 @@
   position: absolute;
   top: 2px;
   left: 2px;
-  transition: transform .2s ease;
-  box-shadow: 0 6px 18px rgba(0,0,0,.12);
+  transition: transform 0.2s ease;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
 }
 
-.toggle input:checked + .slider {
-  background: rgba(10,79,40,0.90);
+.carrerasPage .toggle input:checked + .slider {
+  background: rgba(10, 79, 40, 0.9);
 }
 
-.toggle input:checked + .slider::after {
+.carrerasPage .toggle input:checked + .slider::after {
   transform: translateX(18px);
 }
 
-.toggleText {
+.carrerasPage .toggleText {
   font-size: 13px;
-  color: rgba(0,0,0,0.55);
+  color: rgba(0, 0, 0, 0.55);
   font-weight: 700;
 }
 
 /* ===============================
-   FILTERS
+   FILTERS (como Docentes, sin obligarte a cambiar TSX)
    =============================== */
-.filtersRow {
+.carrerasPage .filtersRow {
   display: flex;
   gap: 10px;
   margin-top: 12px;
   flex-wrap: wrap;
+  align-items: center;
 }
 
-.select {
+.carrerasPage .select {
   padding: 10px 12px;
   border-radius: 12px;
-  border: 1px solid rgba(0,0,0,0.12);
+  border: 1px solid rgba(0, 0, 0, 0.12);
   outline: none;
   background: white;
   min-width: 180px;
   font-weight: 400;
+  font-size: 14.5px;
+}
+
+.carrerasPage .select:focus {
+  border-color: rgba(10, 79, 40, 0.35);
+  box-shadow: 0 0 0 4px rgba(10, 79, 40, 0.12);
 }
 
 /* ===============================
-   TABLE WRAP
+   TABLE WRAP (scroll + tooltips visibles)
    =============================== */
-.tableWrap {
-  overflow: auto;
+.carrerasPage .tableWrap {
   border-radius: 12px;
-  border: 1px solid rgba(0,0,0,0.08);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  margin-top: 12px;
+
+  /* ✅ scroll horizontal cuando haga falta */
+  overflow: auto;
+
+  /* ✅ stacking context para tooltips */
+  position: relative;
+  z-index: 1;
 }
 
-/* tabla */
-.table {
+.carrerasPage .table {
   width: 100%;
   border-collapse: collapse;
   background: #fff;
   min-width: 980px;
+
+  /* mejor control de celdas */
+  table-layout: fixed;
+
+  position: relative;
+  z-index: 1;
 }
 
-.table thead th {
-  text-align: left;
-  font-size: 14px;
-  font-weight: 800;
-  color: rgba(0,0,0,0.72);
-  background: #f6f7f9;
-  border-bottom: 1px solid rgba(0,0,0,0.08);
-  padding: 12px 12px;
+/* ✅ HEAD: verde sólido (igual Docentes) */
+.carrerasPage .table thead th {
+  text-align: center;
+  font-size: 13.5px;
+  font-weight: 950;
+  color: rgba(255, 255, 255, 0.96);
+  background: #0b6034;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  padding: 12px 10px;
+  white-space: nowrap;
 }
 
-.thInline {
+.carrerasPage .thInline {
   display: inline-flex;
   align-items: center;
   gap: 8px;
 }
 
-.table tbody td {
-  border-bottom: 1px solid rgba(0,0,0,0.06);
-  padding: 12px 12px;
+.carrerasPage .table tbody td {
+  text-align: center;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  padding: 10px 10px;
   vertical-align: middle;
-  font-size: 14px;
-  color: rgba(0,0,0,0.72);
+  font-size: 14.5px;
+  color: rgba(0, 0, 0, 0.72);
   font-weight: 400;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* columns */
-.thNum, .tdNum { width: 56px; }
-.thState { width: 160px; }
-.thActions { width: 220px; }
-.thName { width: 380px; }
+/* widths (mantengo tus clases) */
+.carrerasPage .thNum,
+.carrerasPage .tdNum {
+  width: 56px;
+}
 
-.tdNum { color: rgba(0,0,0,0.58); }
+.carrerasPage .thState {
+  width: 160px;
+}
+
+.carrerasPage .thActions {
+  width: 220px;
+}
+
+.carrerasPage .thName {
+  width: 380px;
+}
+
+/* Número */
+.carrerasPage .tdNum {
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 900;
+  background: rgba(11, 96, 52, 0.92);
+  border-right: 1px solid rgba(255, 255, 255, 0.12);
+}
 
 /* NAME */
-.nameMain {
-  font-weight: 600;
-  color: rgba(0,0,0,0.82);
+.carrerasPage .nameMain {
+  font-weight: 850;
+  color: rgba(0, 0, 0, 0.86);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
-.nameSub {
+.carrerasPage .nameSub {
   margin-top: 4px;
-  font-size: 12.5px;
-  color: rgba(0,0,0,0.52);
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.56);
   font-weight: 400;
 }
 
 /* CHIPS */
-.chipCode {
+.carrerasPage .chipCode {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 6px 10px;
-  border-radius: 10px;
-  border: 1px solid rgba(59,130,246,0.25);
-  background: rgba(59,130,246,0.10);
-  color: rgba(0,0,0,0.78);
-  font-weight: 600;
+  border-radius: 12px;
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  background: rgba(59, 130, 246, 0.1);
+  color: rgba(0, 0, 0, 0.78);
+  font-weight: 800;
   letter-spacing: 0.02em;
   white-space: nowrap;
 }
 
-.chipMod {
+.carrerasPage .chipMod {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   padding: 6px 12px;
   border-radius: 999px;
-  border: 1px solid rgba(10,79,40,0.22);
-  background: rgba(10,79,40,0.08);
+  border: 1px solid rgba(10, 79, 40, 0.22);
+  background: rgba(10, 79, 40, 0.08);
   color: #0a4f28;
-  font-weight: 600;
+  font-weight: 800;
   white-space: nowrap;
 }
 
 /* cell with icon */
-.cellWithIcon {
+.carrerasPage .cellWithIcon {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
+  max-width: 100%;
 }
 
-.cellIcon {
+.carrerasPage .cellIcon {
   width: 16px;
   height: 16px;
-  color: rgba(0,0,0,0.45);
+  color: rgba(0, 0, 0, 0.55);
 }
 
 /* BADGES */
-.badgeActive,
-.badgeInactive {
+.carrerasPage .badgeActive,
+.carrerasPage .badgeInactive {
   display: inline-flex;
   justify-content: center;
   align-items: center;
+  gap: 8px;
   min-width: 108px;
   padding: 8px 12px;
   border-radius: 999px;
-  font-weight: 600;
-  border: 1px solid rgba(0,0,0,0.10);
+  font-weight: 900;
+  border: 1px solid rgba(0, 0, 0, 0.1);
   white-space: nowrap;
 }
 
-.badgeActive {
+.carrerasPage .badgeActive {
   background: #dfeee7;
   color: #0a4f28;
-  border-color: rgba(10,79,40,0.18);
+  border-color: rgba(10, 79, 40, 0.18);
 }
 
-.badgeInactive {
+.carrerasPage .badgeInactive {
   background: #f0f0f0;
-  color: rgba(0,0,0,0.65);
+  color: rgba(0, 0, 0, 0.65);
 }
 
-/* ACTIONS + TOOLTIP */
-.tdActions {
-  text-align: right;
-  padding-right: 14px;
+/* ===============================
+   ACTIONS + TOOLTIP (igual Docentes)
+   =============================== */
+.carrerasPage .tdActions {
+  text-align: center;
+  white-space: nowrap;
+  overflow: visible !important;
+  position: relative;
+  z-index: 5;
 }
 
-.actions {
+.carrerasPage .actions {
   display: inline-flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: center;
   gap: 10px;
   flex-wrap: nowrap;
+  overflow: visible;
 }
 
-.iconBtn {
+.carrerasPage .iconBtn {
   position: relative;
   width: 38px;
   height: 38px;
-  border-radius: 10px;
-  border: 1px solid rgba(0,0,0,0.12);
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.10);
   background: #fff;
   display: grid;
   place-items: center;
   cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease, transform 0.08s ease;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.08s ease, box-shadow 0.15s ease;
+  overflow: visible;
+  z-index: 10;
 }
 
-.iconBtn:hover {
-  background: rgba(0,0,0,0.04);
+.carrerasPage .iconBtn:hover {
   transform: translateY(-1px);
+  box-shadow: 0 8px 14px rgba(0, 0, 0, 0.06);
+  z-index: 9999;
 }
 
-.iconBtn:active { transform: translateY(0); }
-
-.iconBtn_neutral { color: rgba(0,0,0,0.70); }
-
-.iconBtn_primary {
-  color: #0a4f28;
-  background: rgba(10,79,40,0.10);
-  border-color: rgba(10,79,40,0.30);
+.carrerasPage .iconBtn:active {
+  transform: translateY(0);
+  box-shadow: none;
 }
 
-.iconBtn_danger {
-  color: rgba(180,20,20,0.95);
-  background: rgba(180,20,20,0.08);
-  border-color: rgba(180,20,20,0.30);
+.carrerasPage .iconAction {
+  width: 18px;
+  height: 18px;
 }
 
-.iconAction { width: 18px; height: 18px; }
+/* ✅ VER (azul soft) */
+.carrerasPage .iconBtn_neutral {
+  color: #2563eb;
+  background: rgba(37, 99, 235, 0.10);
+  border-color: rgba(37, 99, 235, 0.28);
+}
+.carrerasPage .iconBtn_neutral:hover {
+  background: rgba(37, 99, 235, 0.16);
+  border-color: rgba(37, 99, 235, 0.35);
+}
 
-.tooltip {
+/* ✅ EDITAR (morado soft) */
+.carrerasPage .iconBtn_primary {
+  color: #6f42c1;
+  background: rgba(111, 66, 193, 0.12);
+  border-color: rgba(111, 66, 193, 0.28);
+}
+.carrerasPage .iconBtn_primary:hover {
+  background: rgba(111, 66, 193, 0.18);
+  border-color: rgba(111, 66, 193, 0.35);
+}
+
+/* ✅ ACTIVAR/DESACTIVAR:
+   - cuando estado=1 usas iconBtn_danger (lo dejamos naranja soft)
+   - cuando estado=0 usas iconBtn_primary (morado soft) */
+.carrerasPage .iconBtn_danger {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.14);
+  border-color: rgba(245, 158, 11, 0.30);
+}
+.carrerasPage .iconBtn_danger:hover {
+  background: rgba(245, 158, 11, 0.20);
+  border-color: rgba(245, 158, 11, 0.38);
+}
+
+/* Tooltip arriba (no se corta) */
+.carrerasPage .tooltip {
   position: absolute;
   top: -46px;
   left: 50%;
   transform: translateX(-50%) translateY(6px);
-  background: rgba(20,20,20,0.94);
+  background: rgba(20, 20, 20, 0.94);
   color: #fff;
-  font-weight: 700;
+  font-weight: 800;
   font-size: 12px;
   padding: 6px 10px;
   border-radius: 10px;
@@ -476,10 +592,10 @@
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.12s ease, transform 0.12s ease;
-  z-index: 50;
+  z-index: 999999;
 }
 
-.tooltip::after {
+.carrerasPage .tooltip::after {
   content: "";
   position: absolute;
   top: 100%;
@@ -487,28 +603,34 @@
   transform: translateX(-50%);
   border-width: 6px 6px 0 6px;
   border-style: solid;
-  border-color: rgba(20,20,20,0.94) transparent transparent transparent;
+  border-color: rgba(20, 20, 20, 0.94) transparent transparent transparent;
 }
 
-.iconBtn:hover .tooltip {
+.carrerasPage .iconBtn:hover .tooltip {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
 }
 
 /* EMPTY */
-.emptyCell { padding: 34px 16px !important; }
+.carrerasPage .emptyCell {
+  padding: 34px 16px !important;
+}
 
-.empty {
+.carrerasPage .empty {
   display: grid;
   place-items: center;
   gap: 10px;
-  color: rgba(0,0,0,0.60);
+  color: rgba(0, 0, 0, 0.6);
 }
 
-.emptyText { font-size: 14.5px; }
+.carrerasPage .emptyText {
+  font-size: 14.5px;
+}
 
-/* PAGINATION */
-.paginationRow {
+/* ===============================
+   PAGINATION (igual Docentes)
+   =============================== */
+.carrerasPage .paginationRow {
   display: flex;
   justify-content: center;
   gap: 12px;
@@ -517,55 +639,58 @@
   flex-wrap: wrap;
 }
 
-.paginationText {
-  font-weight: 700;
-  color: rgba(0,0,0,0.55);
+.carrerasPage .paginationText {
+  font-weight: 800;
+  color: rgba(0, 0, 0, 0.55);
 }
 
-.btnGhost {
+.carrerasPage .btnGhost {
   height: 40px;
   padding: 0 14px;
-  border-radius: 10px;
-  border: 1px solid rgba(0,0,0,0.14);
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.14);
   background: #fff;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.btnGhost:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-
-.btnPrimary {
-  height: 40px;
-  padding: 0 14px;
-  border-radius: 10px;
-  border: 1px solid rgba(10,79,40,0.28);
-  background: #0a4f28;
-  color: #fff;
   font-weight: 800;
   cursor: pointer;
 }
 
-.btnPrimary:hover { filter: brightness(1.03); }
+.carrerasPage .btnGhost:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.carrerasPage .btnGhost:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.carrerasPage .btnPrimary {
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(10, 79, 40, 0.28);
+  background: #0a4f28;
+  color: #fff;
+  font-weight: 900;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.carrerasPage .btnPrimary:hover {
+  filter: brightness(1.03);
+}
 
 /* helper + error */
-.helperText {
+.carrerasPage .helperText,
+.carrerasPage .helperTextBig {
   margin-top: 8px;
   font-size: 14.5px;
   font-weight: 500;
   color: #0a4f28;
 }
 
-.helperTextBig {
-  margin-top: 8px;
-  font-size: 14.5px;
-  font-weight: 500;
-  color: #0a4f28;
-}
-
-.fieldError {
+.carrerasPage .fieldError {
   margin-top: 6px;
   font-size: 12.5px;
   font-weight: 700;
@@ -575,221 +700,221 @@
 /* ===============================
    MODALES (SCOPED)
    =============================== */
-
-.modalOverlay {
+.carrerasPage .modalOverlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.52);
+  background: rgba(0, 0, 0, 0.52);
   z-index: 9999;
   display: grid;
   place-items: center;
   padding: 18px;
 }
 
-/* Contenedor modal (tu TSX usa modalCard modalPro) */
 .carrerasPage .modalCard.modalPro,
 .carrerasPage .modalPro {
   width: min(880px, 100%);
   background: #fff;
-  border-radius: 14px;
-  border: 1px solid rgba(0,0,0,0.12);
-  box-shadow: 0 22px 60px rgba(0,0,0,0.22);
+  border-radius: 16px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.22);
   overflow: hidden;
 }
 
-/* header */
 .carrerasPage .modalHeader {
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 14px;
   padding: 14px 16px;
-  background: linear-gradient(90deg, rgba(10,79,40,0.08), rgba(10,79,40,0.02));
+  background: linear-gradient(90deg, rgba(10, 79, 40, 0.10), rgba(10, 79, 40, 0.03));
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
 }
 
-.carrerasPage .modalHeaderLeft{
-  display:flex;
-  align-items:center;
+.carrerasPage .modalHeaderLeft {
+  display: flex;
+  align-items: center;
   gap: 12px;
   min-width: 0;
 }
 
-.carrerasPage .modalHeaderIcon{
+.carrerasPage .modalHeaderIcon {
   width: 42px;
   height: 42px;
   border-radius: 12px;
-  background: rgba(10,79,40,0.12);
+  background: rgba(10, 79, 40, 0.12);
   color: #0a4f28;
-  display:grid;
-  place-items:center;
+  display: grid;
+  place-items: center;
   flex: 0 0 auto;
 }
 
-.carrerasPage .modalHeaderTitle{
+.carrerasPage .modalHeaderTitle {
   font-size: 16px;
   font-weight: 900;
-  color: rgba(0,0,0,0.82);
+  color: rgba(0, 0, 0, 0.84);
   line-height: 1.1;
 }
 
-.carrerasPage .modalHeaderSub{
+.carrerasPage .modalHeaderSub {
   margin-top: 4px;
   font-size: 13.5px;
+  color: rgba(0, 0, 0, 0.62);
   font-weight: 500;
-  color: rgba(0,0,0,0.60);
 }
 
-.modalDivider { height: 1px; background: rgba(0,0,0,0.10); }
-.modalBody { padding: 14px 16px 16px; }
+.carrerasPage .modalDivider {
+  height: 1px;
+  background: rgba(0, 0, 0, 0.10);
+}
 
-.carrerasPage .modalClose{
+.carrerasPage .modalBody {
+  padding: 14px 16px 16px;
+}
+
+.carrerasPage .modalClose {
   width: 38px;
   height: 38px;
-  border-radius: 10px;
-  border: 1px solid rgba(0,0,0,0.12);
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.14);
   background: #fff;
   cursor: pointer;
-  color: rgba(0,0,0,0.65);
+  color: rgba(0, 0, 0, 0.65);
   display: grid;
   place-items: center;
 }
 
-.carrerasPage .modalClose:hover { background: rgba(0,0,0,0.03); }
+.carrerasPage .modalClose:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
 
 /* form grid */
-.carrerasPage .formGrid{
-  display:grid;
+.carrerasPage .formGrid {
+  display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 
-.carrerasPage .field{ display:block; }
-.carrerasPage .fieldFull{ grid-column: 1 / -1; }
+.carrerasPage .field {
+  display: block;
+}
+.carrerasPage .fieldFull {
+  grid-column: 1 / -1;
+}
 
-/* ✅ LABELS (títulos) en MAYÚSCULAS */
-.carrerasPage .modalPro .label{
+/* labels */
+.carrerasPage .modalPro .label {
   display: block;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   font-weight: 800;
   font-size: 12.5px;
-  color: rgba(0,0,0,0.70);
+  color: rgba(0, 0, 0, 0.70);
   margin-bottom: 6px;
 }
 
-.req { color: rgba(180, 20, 20, 0.95); }
+.carrerasPage .req {
+  color: rgba(180, 20, 20, 0.95);
+}
 
-/* ✅ Inputs normales */
-.carrerasPage .modalPro .input{
+/* inputs */
+.carrerasPage .modalPro .input {
   width: 100%;
   height: 40px;
   border-radius: 10px;
-  border: 1px solid rgba(0,0,0,0.12);
+  border: 1px solid rgba(0, 0, 0, 0.12);
   padding: 0 12px;
   outline: none;
   font-weight: 400;
   font-size: 14.5px;
-  color: rgba(0,0,0,0.82);
+  color: rgba(0, 0, 0, 0.82);
   background: #fff;
   text-transform: none;
   letter-spacing: normal;
 }
 
-.carrerasPage .modalPro .input:focus{
-  border-color: rgba(10,79,40,0.35);
-  box-shadow: 0 0 0 4px rgba(10,79,40,0.12);
+.carrerasPage .modalPro .input:focus {
+  border-color: rgba(10, 79, 40, 0.35);
+  box-shadow: 0 0 0 4px rgba(10, 79, 40, 0.12);
 }
 
-.carrerasPage .modalPro .textarea{
+.carrerasPage .modalPro .textarea {
   width: 100%;
   border-radius: 10px;
-  border: 1px solid rgba(0,0,0,0.12);
+  border: 1px solid rgba(0, 0, 0, 0.12);
   padding: 10px 12px;
   outline: none;
   resize: vertical;
   font-weight: 400;
   font-size: 14.5px;
-  color: rgba(0,0,0,0.82);
+  color: rgba(0, 0, 0, 0.82);
   background: #fff;
-  text-transform: none;
-  letter-spacing: normal;
 }
 
-.carrerasPage .modalPro .textarea:focus{
-  border-color: rgba(10,79,40,0.35);
-  box-shadow: 0 0 0 4px rgba(10,79,40,0.12);
+.carrerasPage .modalPro .textarea:focus {
+  border-color: rgba(10, 79, 40, 0.35);
+  box-shadow: 0 0 0 4px rgba(10, 79, 40, 0.12);
 }
 
 /* footer modal */
-.carrerasPage .modalFooter{
-  display:flex;
-  justify-content:flex-end;
+.carrerasPage .modalFooter {
+  display: flex;
+  justify-content: flex-end;
   gap: 10px;
   margin-top: 14px;
   padding-top: 12px;
-  border-top: 1px solid rgba(0,0,0,0.08);
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 /* VIEW cards */
-.carrerasPage .viewCards{
-  display:grid;
+.carrerasPage .viewCards {
+  display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 
-.carrerasPage .vCard{
-  border: 1px solid rgba(0,0,0,0.10);
-  border-radius: 14px;
+.carrerasPage .vCard {
+  border: 1px solid rgba(0, 0, 0, 0.10);
+  border-radius: 16px;
   padding: 12px;
   background: #fff;
 }
 
-.carrerasPage .vCardFull{ grid-column: 1 / -1; }
+.carrerasPage .vCardFull {
+  grid-column: 1 / -1;
+}
 
-/* ✅ títulos view en MAYÚSCULAS */
-.carrerasPage .modalPro .vLabel{
-  display:flex;
-  align-items:center;
+.carrerasPage .modalPro .vLabel {
+  display: flex;
+  align-items: center;
   gap: 8px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  font-size: 12.5px;
-  font-weight: 800;
-  color: rgba(0,0,0,0.55);
+  font-size: 12px;
+  font-weight: 900;
+  color: rgba(0, 0, 0, 0.56);
 }
 
-.carrerasPage .vIcon{
+.carrerasPage .vIcon {
   width: 16px;
   height: 16px;
-  color: rgba(0,0,0,0.50);
+  opacity: 0.75;
 }
 
-/* ✅ valores view normales */
-.carrerasPage .modalPro .vValue{
+.carrerasPage .modalPro .vValue {
   margin-top: 8px;
   font-size: 14.5px;
-  font-weight: 400;
-  color: rgba(0,0,0,0.82);
+  font-weight: 500;
+  color: rgba(0, 0, 0, 0.84);
   word-break: break-word;
-  text-transform: none;
-  letter-spacing: normal;
 }
 
 /* ===============================
    MAYÚSCULAS SOLO DONDE QUIERES
-   (TABLA + CHIPS + ESTADO)
    =============================== */
-
-/* Tabla: Código / Modalidad / Estado en MAYÚSCULAS */
 .carrerasPage .table .chipCode,
 .carrerasPage .table .chipMod,
 .carrerasPage .table .badgeActive,
-.carrerasPage .table .badgeInactive {
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-/* Modal: chips/badges también en MAYÚSCULAS */
+.carrerasPage .table .badgeInactive,
 .carrerasPage .modalPro .chipCode,
 .carrerasPage .modalPro .chipMod,
 .carrerasPage .modalPro .badgeActive,
@@ -799,26 +924,97 @@
 }
 
 /* ===============================
+   TOAST
+   =============================== */
+.carrerasPage .toast {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 99999;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-weight: 900;
+  max-width: 420px;
+  color: #111;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+.carrerasPage .toast-success {
+  background: #eaf7ee;
+  border-color: rgba(6, 118, 71, 0.35);
+}
+
+.carrerasPage .toast-error {
+  background: #fdecec;
+  border-color: rgba(180, 35, 24, 0.35);
+}
+
+.carrerasPage .toast-info {
+  background: #eef5ff;
+  border-color: rgba(2, 132, 199, 0.35);
+}
+
+/* ===============================
    RESPONSIVE
    =============================== */
 @media (max-width: 820px) {
-  .hero { flex-direction: column; align-items: flex-start; }
-  .heroTitle { font-size: 19px; }
-  .actions { gap: 8px; }
+  .carrerasPage .hero {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .carrerasPage .heroTitle {
+    font-size: 19px;
+  }
+  .carrerasPage .actions {
+    gap: 8px;
+  }
 
-  .carrerasPage .formGrid { grid-template-columns: 1fr; }
-  .carrerasPage .viewCards { grid-template-columns: 1fr; }
+  .carrerasPage .table {
+    table-layout: auto;
+  }
+
+  .carrerasPage .formGrid {
+    grid-template-columns: 1fr;
+  }
+  .carrerasPage .viewCards {
+    grid-template-columns: 1fr;
+  }
 }
 
-/* ✅ FORZAR TABLA SIN ZEBRA (OVERRIDE GLOBAL) */
-.table tbody tr,
-.table tbody tr:nth-child(odd),
-.table tbody tr:nth-child(even) {
+/* FORZAR TABLA SIN ZEBRA (OVERRIDE) */
+.carrerasPage .table tbody tr,
+.carrerasPage .table tbody tr:nth-child(odd),
+.carrerasPage .table tbody tr:nth-child(even) {
   background: #fff !important;
 }
 
-.table tbody tr:hover,
-.table tbody tr:nth-child(odd):hover,
-.table tbody tr:nth-child(even):hover {
-  background: rgba(0,0,0,0.03) !important;
+.carrerasPage .table tbody tr:hover,
+.carrerasPage .table tbody tr:nth-child(odd):hover,
+.carrerasPage .table tbody tr:nth-child(even):hover {
+  background: rgba(0, 0, 0, 0.03) !important;
+}
+/* =========================================================
+   FIX FINAL — QUITAR COLUMNA VERDE DEL #
+   SOLO COLORES, NO TOCA TAMAÑOS
+   ========================================================= */
+
+/* Header del # sigue verde como los demás */
+.carrerasPage .table thead th.thNum {
+  background: #0b6034;
+  color: #fff;
+}
+
+/* ❌ Quitar fondo verde de las filas del # */
+.carrerasPage .table tbody td.tdNum {
+  background: transparent !important;
+  color: rgba(0, 0, 0, 0.72) !important;
+  font-weight: 600;
+  border-right: none !important;
+}
+
+/* Hover consistente (no verde) */
+.carrerasPage .table tbody tr:hover td.tdNum {
+  background: rgba(0, 0, 0, 0.03) !important;
 }

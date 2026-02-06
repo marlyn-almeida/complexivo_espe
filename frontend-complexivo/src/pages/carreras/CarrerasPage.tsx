@@ -30,7 +30,13 @@ import {
 import escudoESPE from "../../assets/escudo.png";
 import "./CarrerasPage.css";
 
-const MODALIDADES = ["EN_LÍNEA", "PRESENCIAL"];
+/**
+ * ✅ IMPORTANTÍSIMO:
+ * Los valores del SELECT deben ser "backend-safe".
+ * Normalmente backend manda EN_LINEA / PRESENCIAL.
+ */
+const MODALIDADES = ["EN_LINEA", "PRESENCIAL"] as const;
+
 const SEDES = ["Sangolquí (Matriz)", "Latacunga", "Santo Domingo", "IASA Sangolquí"];
 const PAGE_SIZE = 10;
 
@@ -127,6 +133,37 @@ export default function CarrerasPage() {
     setShowFormModal(true);
   }
 
+  /**
+   * ✅ Normaliza cualquier variante:
+   * "EN_LÍNEA", "EN LINEA", "EN_LINEA", "en_linea", etc -> "EN_LINEA"
+   * "PRESENCIAL" -> "PRESENCIAL"
+   */
+  function normalizeModalidad(input?: string | null) {
+    if (!input) return "";
+    let s = String(input).trim().toUpperCase();
+
+    // quita tildes
+    s = s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+    // unifica separadores
+    s = s.replace(/\s+/g, "_");
+
+    if (s.includes("LINEA")) return "EN_LINEA";
+    if (s.includes("PRESENCIAL")) return "PRESENCIAL";
+
+    // fallback
+    return s.replace(/[^A-Z_]/g, "");
+  }
+
+  // ✅ Etiqueta bonita para UI
+  function modalidadLabel(mod?: string | null) {
+    const s = normalizeModalidad(mod);
+    if (!s) return "-";
+    if (s === "EN_LINEA") return "EN LÍNEA";
+    if (s === "PRESENCIAL") return "PRESENCIAL";
+    return s.replaceAll("_", " ");
+  }
+
   function openEdit(c: Carrera) {
     setEditingCarrera(c);
     setForm({
@@ -134,7 +171,8 @@ export default function CarrerasPage() {
       codigo_carrera: c.codigo_carrera ?? "",
       descripcion_carrera: c.descripcion_carrera ?? "",
       id_departamento: String(c.id_departamento ?? ""),
-      modalidad: (c.modalidad ?? "") as string,
+      // ✅ aquí también normalizamos para que el select agarre el value correcto
+      modalidad: normalizeModalidad(c.modalidad ?? ""),
       sede: (c.sede ?? "") as string,
     });
     setErrors({});
@@ -166,15 +204,6 @@ export default function CarrerasPage() {
     return "Error al guardar carrera";
   }
 
-  // ✅ Acepta null/undefined
-  function modalidadLabel(mod?: string | null) {
-    if (!mod) return "-";
-    const s = String(mod).toUpperCase();
-    if (s.includes("LINEA")) return "EN LÍNEA";
-    if (s.includes("PRESENCIAL")) return "PRESENCIAL";
-    return s.replaceAll("_", " ");
-  }
-
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
 
@@ -188,12 +217,14 @@ export default function CarrerasPage() {
           (c.nombre_carrera || "").toLowerCase().includes(q) ||
           (c.codigo_carrera || "").toLowerCase().includes(q) ||
           (c.sede || "").toLowerCase().includes(q) ||
-          (c.modalidad || "").toLowerCase().includes(q) ||
+          // ✅ también lo hacemos robusto para búsqueda
+          modalidadLabel(c.modalidad ?? "").toLowerCase().includes(q) ||
           dept.includes(q)
         );
       })
       .filter((c) => (filtroDepartamento ? String(c.id_departamento) === filtroDepartamento : true))
-      .filter((c) => (filtroModalidad ? (c.modalidad || "") === filtroModalidad : true))
+      // ✅ AQUÍ ESTABA EL BUG: ahora comparamos normalizado
+      .filter((c) => (filtroModalidad ? normalizeModalidad(c.modalidad ?? "") === filtroModalidad : true))
       .filter((c) => (filtroSede ? (c.sede || "") === filtroSede : true))
       .sort((a, b) => (a.nombre_carrera || "").localeCompare(b.nombre_carrera || "", "es"));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -244,7 +275,8 @@ export default function CarrerasPage() {
         codigo_carrera: normalizeCodigo(form.codigo_carrera),
         descripcion_carrera: form.descripcion_carrera?.trim() || "",
         id_departamento: Number(form.id_departamento),
-        modalidad: form.modalidad,
+        // ✅ guardamos modalidad normalizada (backend-safe)
+        modalidad: normalizeModalidad(form.modalidad),
         sede: form.sede,
       };
 
@@ -277,7 +309,6 @@ export default function CarrerasPage() {
   // RENDER
   // ===========================
   return (
-    // ✅ scoping para que el CSS de los modales NO rompa otras cosas
     <div className="wrap carrerasPage">
       <div className="containerFull">
         {/* HERO */}
@@ -380,7 +411,11 @@ export default function CarrerasPage() {
               ))}
             </select>
 
-            <select className="select" value={filtroSede} onChange={(e) => setFiltroSede(e.target.value)}>
+            <select
+              className="select"
+              value={filtroSede}
+              onChange={(e) => setFiltroSede(e.target.value)}
+            >
               <option value="">Sede</option>
               {SEDES.map((s) => (
                 <option key={s} value={s}>
@@ -454,7 +489,9 @@ export default function CarrerasPage() {
 
                       <td>
                         <div className="nameMain">{c.nombre_carrera || "-"}</div>
-                        {c.descripcion_carrera?.trim() ? <div className="nameSub">{c.descripcion_carrera}</div> : null}
+                        {c.descripcion_carrera?.trim() ? (
+                          <div className="nameSub">{c.descripcion_carrera}</div>
+                        ) : null}
                       </td>
 
                       <td>
@@ -476,7 +513,11 @@ export default function CarrerasPage() {
                       </td>
 
                       <td>
-                        {c.estado ? <span className="badgeActive">Activo</span> : <span className="badgeInactive">Inactivo</span>}
+                        {c.estado ? (
+                          <span className="badgeActive">Activo</span>
+                        ) : (
+                          <span className="badgeInactive">Inactivo</span>
+                        )}
                       </td>
 
                       <td className="tdActions">
@@ -540,10 +581,7 @@ export default function CarrerasPage() {
           </div>
         </div>
 
-        {/* ===============================
-           MODAL FORM (PRO) — ARREGLADO
-           ✅ OJO: ahora usa modalCard + modalPro (contenedor real)
-           =============================== */}
+        {/* MODAL FORM */}
         {showFormModal && (
           <div className="modalOverlay" role="dialog" aria-modal="true">
             <div className="modalCard modalPro">
@@ -593,12 +631,7 @@ export default function CarrerasPage() {
                       onBlur={() => setForm((p) => ({ ...p, codigo_carrera: normalizeCodigo(p.codigo_carrera) }))}
                       style={errors.codigo_carrera ? { borderColor: "rgba(180,20,20,0.35)" } : undefined}
                     />
-
-                    {/* ✅ MÁS GRANDE y sin tanta negrita (lo controla CSS .helperTextBig) */}
-                    <div className="helperText helperTextBig">
-                      
-                    </div>
-
+                    <div className="helperText helperTextBig"></div>
                     {errors.codigo_carrera && <div className="fieldError">{errors.codigo_carrera}</div>}
                   </div>
 
@@ -686,10 +719,7 @@ export default function CarrerasPage() {
           </div>
         )}
 
-        {/* ===============================
-           MODAL VIEW (PRO) — ARREGLADO
-           ✅ Ahora títulos (vLabel) en negrita y valores (vValue) normal (CSS)
-           =============================== */}
+        {/* MODAL VIEW */}
         {showViewModal && viewCarrera && (
           <div className="modalOverlay" role="dialog" aria-modal="true">
             <div className="modalCard modalPro">
@@ -757,7 +787,11 @@ export default function CarrerasPage() {
                       {viewCarrera.estado ? <BadgeCheck className="vIcon" /> : <BadgeX className="vIcon" />} Estado
                     </div>
                     <div className="vValue">
-                      {viewCarrera.estado ? <span className="badgeActive">Activo</span> : <span className="badgeInactive">Inactivo</span>}
+                      {viewCarrera.estado ? (
+                        <span className="badgeActive">Activo</span>
+                      ) : (
+                        <span className="badgeInactive">Inactivo</span>
+                      )}
                     </div>
                   </div>
 
