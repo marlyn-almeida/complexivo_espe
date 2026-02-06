@@ -38,7 +38,7 @@ async function upsert(req, res, next) {
       throw err;
     }
 
-    // Validación básica (por si acaso)
+    // Validación básica
     const original = req.file.originalname || "entrega.pdf";
     const isPdf =
       req.file.mimetype === "application/pdf" ||
@@ -74,7 +74,6 @@ async function upsert(req, res, next) {
 
     const saved = await svc.upsert(cp, body);
 
-    // ✅ devuelve el registro (para que el front lo muestre)
     res.json({ ok: true, data: saved });
   } catch (e) {
     next(e);

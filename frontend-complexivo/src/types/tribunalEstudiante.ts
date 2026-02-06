@@ -12,13 +12,22 @@ export interface TribunalEstudiante {
   created_at?: string;
   updated_at?: string | null;
 
-  // joins (si tu repo los manda en list)
+  // joins estudiante
   nombres_estudiante?: string;
   apellidos_estudiante?: string;
   id_institucional_estudiante?: string;
 
+  // joins franja
   fecha?: string;
   hora_inicio?: string;
   hora_fin?: string;
   laboratorio?: string;
+
+  // ✅ joins caso (si tu backend lo incluye en list/findMisAsignaciones)
+  id_caso_estudio?: number;
+  numero_caso?: number;
+  titulo_caso?: string | null;
+
+  // opcional (agenda rol 3)
+  designacion?: string;
 }

@@ -1,3 +1,4 @@
+// server.js (o index.js) — COMPLETO
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
@@ -69,6 +70,12 @@ protectedApi.use("/franjas-horarias", require("./routes/franja_horario.routes"))
 protectedApi.use("/carreras-docentes", require("./routes/carrera_docente.routes"));
 protectedApi.use("/tribunales", require("./routes/tribunal.routes"));
 protectedApi.use("/tribunales-estudiantes", require("./routes/tribunal_estudiante.routes"));
+
+// ✅ NUEVO: 1 caso por estudiante (tabla estudiante_caso_asignacion)
+protectedApi.use(
+  "/estudiante-caso-asignacion",
+  require("./routes/estudiante_caso_asignacion.routes")
+);
 
 protectedApi.use("/calificaciones", require("./routes/calificacion.routes"));
 protectedApi.use("/actas", require("./routes/acta.routes"));

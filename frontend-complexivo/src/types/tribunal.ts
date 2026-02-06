@@ -1,13 +1,29 @@
+// src/types/tribunal.ts
+
 export type Estado01 = 0 | 1;
+
+export type TribunalDocenteDesignacion = "PRESIDENTE" | "INTEGRANTE_1" | "INTEGRANTE_2";
+
+export interface TribunalDocente {
+  id_tribunal_docente: number;
+  id_tribunal: number;
+  id_carrera_docente: number;
+  designacion: TribunalDocenteDesignacion;
+  estado: Estado01;
+
+  // joins de docente
+  id_docente?: number;
+  nombres_docente?: string;
+  apellidos_docente?: string;
+}
 
 export interface Tribunal {
   id_tribunal: number;
   id_carrera_periodo: number;
 
-  id_carrera_docente: number; // legacy: presidente
   caso?: number | null;
 
-  // ✅ requerido en backend -> no debe ser null en TS
+  // ✅ requerido en backend
   nombre_tribunal: string;
   descripcion_tribunal?: string | null;
 
@@ -22,5 +38,5 @@ export interface Tribunal {
   codigo_periodo?: string;
 
   // opcional: si usas /tribunales/:id que retorna docentes
-  docentes?: any[];
+  docentes?: TribunalDocente[];
 }

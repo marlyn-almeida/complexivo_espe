@@ -108,7 +108,10 @@ export default function TribunalesPage() {
   const [showAsignModal, setShowAsignModal] = useState(false);
   const [activeTribunalForAsign, setActiveTribunalForAsign] = useState<Tribunal | null>(null);
   const [asignaciones, setAsignaciones] = useState<TribunalEstudiante[]>([]);
-  const [estudiantes, setEstudiantes] = useState<Estudiante[]>([]);
+  const [estudiantesAll, setEstudiantesAll] = useState<Estudiante[]>([]);
+  const [eligibleEstudiantes, setEligibleEstudiantes] = useState<Estudiante[]>([]);
+  const [loadingEligible, setLoadingEligible] = useState(false);
+
   const [franjas, setFranjas] = useState<FranjaHorario[]>([]);
 
   // ===== FORM asignación =====
@@ -189,8 +192,9 @@ export default function TribunalesPage() {
 
       const first = (cps ?? []).find((x: any) => Boolean((x as any).estado)) ?? (cps ?? [])[0];
       if (first) {
-        setSelectedCP(Number((first as any).id_carrera_periodo));
-        setActiveCarreraPeriodoId(Number((first as any).id_carrera_periodo));
+        const id = Number((first as any).id_carrera_periodo);
+        setSelectedCP(id);
+        setActiveCarreraPeriodoId(id);
       } else {
         setSelectedCP("");
         setActiveCarreraPeriodoId(null);
@@ -466,7 +470,11 @@ export default function TribunalesPage() {
       resetTribunalForm();
       await loadAll();
     } catch (err: any) {
-      const msg = err?.data?.message || err?.response?.data?.message || err?.userMessage || "No se pudo guardar el tribunal.";
+      const msg =
+        err?.data?.message ||
+        err?.response?.data?.message ||
+        err?.userMessage ||
+        "No se pudo guardar el tribunal.";
       showToast(String(msg), "error");
     } finally {
       setSavingTribunal(false);
@@ -478,6 +486,8 @@ export default function TribunalesPage() {
     setActiveTribunalForAsign(t);
     setAsignForm({ id_estudiante: "", id_franja_horario: "" });
     setErrors({});
+    setEligibleEstudiantes([]);
+    setEstudiantesAll([]);
 
     try {
       setLoading(true);
@@ -486,27 +496,54 @@ export default function TribunalesPage() {
         tribunalEstudiantesService.list({
           tribunalId: Number((t as any).id_tribunal),
           includeInactive: true,
-          page: 1,
-          limit: 100,
         }),
         estudiantesService.list({
           carreraPeriodoId: Number((t as any).id_carrera_periodo),
           includeInactive: false,
           page: 1,
-          limit: 100,
+          limit: 200,
         }),
         franjaHorarioService.list({
           carreraPeriodoId: Number((t as any).id_carrera_periodo),
           includeInactive: false,
           page: 1,
-          limit: 100,
+          limit: 200,
         }),
       ]);
 
       setAsignaciones(a ?? []);
-      setEstudiantes(est ?? []);
+      setEstudiantesAll(est ?? []);
       setFranjas(fr ?? []);
       setShowAsignModal(true);
+
+      // ✅ FILTRO: solo estudiantes con caso asignado (para evitar 422 del backend)
+      setLoadingEligible(true);
+      try {
+        const results = await Promise.all(
+          (est ?? []).map(async (e) => {
+            try {
+              const asg = await estudiantesService.getAsignaciones(Number(e.id_estudiante));
+              return asg?.caso ? e : null;
+            } catch {
+              return null;
+            }
+          })
+        );
+        const elig = results.filter(Boolean) as Estudiante[];
+        setEligibleEstudiantes(elig);
+
+        // si el seleccionado no es elegible, reset
+        setAsignForm((p) => ({
+          ...p,
+          id_estudiante: elig.some((x) => Number(x.id_estudiante) === Number(p.id_estudiante)) ? p.id_estudiante : "",
+        }));
+
+        if (elig.length === 0) {
+          showToast("No hay estudiantes con caso asignado. Primero asigna caso al estudiante.", "info");
+        }
+      } finally {
+        setLoadingEligible(false);
+      }
     } catch {
       showToast("No se pudo cargar datos para asignación.", "error");
     } finally {
@@ -517,6 +554,17 @@ export default function TribunalesPage() {
   function validateAsignForm(): Record<string, string> {
     const e: Record<string, string> = {};
     if (!activeTribunalForAsign) e.tribunal = "No hay tribunal seleccionado.";
+
+    if (loadingEligible) {
+      e.id_estudiante = "Espere: verificando casos asignados...";
+      return e;
+    }
+
+    if (!eligibleEstudiantes.length) {
+      e.id_estudiante = "No hay estudiantes elegibles (sin caso asignado).";
+      return e;
+    }
+
     if (!asignForm.id_estudiante) e.id_estudiante = "Seleccione un estudiante.";
     if (!asignForm.id_franja_horario) e.id_franja_horario = "Seleccione una franja horaria.";
     return e;
@@ -545,8 +593,6 @@ export default function TribunalesPage() {
       const a = await tribunalEstudiantesService.list({
         tribunalId: Number((activeTribunalForAsign as any).id_tribunal),
         includeInactive: true,
-        page: 1,
-        limit: 100,
       });
       setAsignaciones(a ?? []);
       setAsignForm({ id_estudiante: "", id_franja_horario: "" });
@@ -571,8 +617,6 @@ export default function TribunalesPage() {
         const a = await tribunalEstudiantesService.list({
           tribunalId: Number((activeTribunalForAsign as any).id_tribunal),
           includeInactive: true,
-          page: 1,
-          limit: 100,
         });
         setAsignaciones(a ?? []);
       }
@@ -636,12 +680,14 @@ export default function TribunalesPage() {
       const toAdd = desired.filter((id) => !currentIds.has(id));
 
       for (const r of toRemove) await calificadoresGeneralesService.remove(Number(r.id_cp_calificador_general));
-      for (const id_carrera_docente of toAdd) await calificadoresGeneralesService.create(Number(selectedCP), { id_carrera_docente });
+      for (const id_carrera_docente of toAdd)
+        await calificadoresGeneralesService.create(Number(selectedCP), { id_carrera_docente });
 
       showToast("Calificadores generales guardados.", "success");
       await loadPlanAndCalificadores();
     } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.userMessage || "No se pudo guardar calificadores generales.";
+      const msg =
+        err?.response?.data?.message || err?.userMessage || "No se pudo guardar calificadores generales.";
       showToast(String(msg), "error");
     } finally {
       setSavingCG(false);
@@ -719,10 +765,18 @@ export default function TribunalesPage() {
           </button>
 
           <label className="toggle">
-            <input type="checkbox" checked={mostrarInactivos} onChange={(e) => setMostrarInactivos(e.target.checked)} />
+            <input
+              type="checkbox"
+              checked={mostrarInactivos}
+              onChange={(e) => setMostrarInactivos(e.target.checked)}
+            />
             <span className="slider" />
             <span className="toggleText">Mostrar inactivos</span>
           </label>
+        </div>
+
+        <div className="muted" style={{ marginTop: 10 }}>
+          Total: <b>{total}</b> · Activos: <b>{activos}</b> · Inactivos: <b>{inactivos}</b>
         </div>
       </div>
 
@@ -747,7 +801,11 @@ export default function TribunalesPage() {
                 <AlertTriangle size={20} />
               </div>
               <div>No se ha configurado un Plan de Evaluación para esta carrera y período.</div>
-              <button className="btnWarn" onClick={() => navigate(`/plan-evaluacion?cp=${selectedCP}`)} disabled={!selectedCP}>
+              <button
+                className="btnWarn"
+                onClick={() => navigate(`/plan-evaluacion?cp=${selectedCP}`)}
+                disabled={!selectedCP}
+              >
                 Configurar Plan Ahora
               </button>
             </div>
@@ -757,7 +815,11 @@ export default function TribunalesPage() {
                 Plan activo: <b>{plan.nombre_plan ?? "Plan de evaluación"}</b>
               </p>
               {plan.descripcion_plan ? <p className="muted">{plan.descripcion_plan}</p> : null}
-              <button className="btnGhost" onClick={() => navigate(`/plan-evaluacion?cp=${selectedCP}`)} disabled={!selectedCP}>
+              <button
+                className="btnGhost"
+                onClick={() => navigate(`/plan-evaluacion?cp=${selectedCP}`)}
+                disabled={!selectedCP}
+              >
                 Ver / Editar Plan
               </button>
             </div>
@@ -910,7 +972,7 @@ export default function TribunalesPage() {
           <div className="modalCard modalWide" onMouseDown={(e) => e.stopPropagation()}>
             <div className="modalHeader">
               <h3 className="modalTitle">{editing ? "Editar Tribunal" : "Crear Tribunal"}</h3>
-              <button className="btnClose" onClick={() => setShowFormModal(false)} aria-label="Cerrar">
+              <button className="btnClose" onClick={() => setShowFormModal(false)} aria-label="Cerrar" type="button">
                 <X size={18} />
               </button>
             </div>
@@ -1004,7 +1066,7 @@ export default function TribunalesPage() {
                 {formErrors.docentes ? <p className="error">{formErrors.docentes}</p> : null}
 
                 <div className="field full">
-                  <button className="btnPrimary" onClick={onSaveTribunal} disabled={savingTribunal}>
+                  <button className="btnPrimary" onClick={onSaveTribunal} disabled={savingTribunal} type="button">
                     <Save size={18} /> {savingTribunal ? "Guardando..." : "Guardar Tribunal"}
                   </button>
                 </div>
@@ -1012,7 +1074,7 @@ export default function TribunalesPage() {
             </div>
 
             <div className="modalFooter">
-              <button className="btnGhost" onClick={() => setShowFormModal(false)} disabled={savingTribunal}>
+              <button className="btnGhost" onClick={() => setShowFormModal(false)} disabled={savingTribunal} type="button">
                 Cancelar
               </button>
             </div>
@@ -1041,11 +1103,13 @@ export default function TribunalesPage() {
         activeTribunalForAsign={activeTribunalForAsign}
         asignForm={asignForm}
         setAsignForm={setAsignForm}
-        estudiantes={estudiantes}
+        // ✅ PASAMOS SOLO ELEGIBLES (con caso asignado)
+        estudiantes={eligibleEstudiantes}
         franjas={franjas}
         asignaciones={asignaciones}
         errors={errors}
-        loading={loading}
+        // loading incluye también verificación
+        loading={loading || loadingEligible}
         onCreateAsignacion={onCreateAsignacion}
         onToggleAsignEstado={onToggleAsignEstado}
         isActivo={isActivo}

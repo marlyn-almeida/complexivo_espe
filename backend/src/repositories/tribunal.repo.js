@@ -49,7 +49,6 @@ async function findAll({ includeInactive = false, carreraPeriodoId = null, scope
     SELECT
       t.id_tribunal,
       t.id_carrera_periodo,
-      t.id_carrera_docente,
       t.nombre_tribunal,
       t.descripcion_tribunal,
       t.estado,
@@ -104,19 +103,16 @@ async function createWithDocentes(d) {
   try {
     await conn.beginTransaction();
 
+    // ✅ FIX: tribunal YA NO guarda id_carrera_docente
     const [res] = await conn.query(
-      `INSERT INTO tribunal (id_carrera_periodo, id_carrera_docente, nombre_tribunal, descripcion_tribunal, estado)
-       VALUES (?, ?, ?, ?, 1)`,
-      [
-        d.id_carrera_periodo,
-        d.id_carrera_docente,
-        d.nombre_tribunal,
-        d.descripcion_tribunal ?? null,
-      ]
+      `INSERT INTO tribunal (id_carrera_periodo, nombre_tribunal, descripcion_tribunal, estado)
+       VALUES (?, ?, ?, 1)`,
+      [d.id_carrera_periodo, d.nombre_tribunal, d.descripcion_tribunal ?? null]
     );
 
     const tribunalId = res.insertId;
 
+    // ✅ docentes se guardan en tribunal_docente
     await conn.query(
       `INSERT INTO tribunal_docente (id_tribunal, id_carrera_docente, designacion, estado)
        VALUES ?`,
@@ -142,21 +138,17 @@ async function updateWithDocentes(id_tribunal, d) {
   try {
     await conn.beginTransaction();
 
+    // ✅ FIX: NO tocar id_carrera_docente
     await conn.query(
       `UPDATE tribunal
-       SET id_carrera_periodo=?, id_carrera_docente=?, nombre_tribunal=?, descripcion_tribunal=?
+       SET id_carrera_periodo=?, nombre_tribunal=?, descripcion_tribunal=?, updated_at=CURRENT_TIMESTAMP
        WHERE id_tribunal=?`,
-      [
-        d.id_carrera_periodo,
-        d.id_carrera_docente,
-        d.nombre_tribunal,
-        d.descripcion_tribunal ?? null,
-        id_tribunal,
-      ]
+      [d.id_carrera_periodo, d.nombre_tribunal, d.descripcion_tribunal ?? null, id_tribunal]
     );
 
     if (d.docentes) {
-      await conn.query(`DELETE FROM tribunal_docente WHERE id_tribunal=?`, [id_tribunal]);
+      // Mejor que DELETE: desactivar anteriores (mantiene historial)
+      await conn.query(`UPDATE tribunal_docente SET estado=0 WHERE id_tribunal=?`, [id_tribunal]);
 
       await conn.query(
         `INSERT INTO tribunal_docente (id_tribunal, id_carrera_docente, designacion, estado)

@@ -79,15 +79,15 @@ async function create(d, user) {
     throw e;
   }
 
-  // SOLO validar que existan y estén activos (pueden ser de otra carrera)
+  // validar que carrera_docente existan y estén activos
   const ids = [
     +d.docentes.presidente,
     +d.docentes.integrante1,
     +d.docentes.integrante2,
   ];
 
-  for (const id of ids) {
-    const cd = await repo.getCarreraIdByCarreraDocente(id);
+  for (const idCd of ids) {
+    const cd = await repo.getCarreraIdByCarreraDocente(idCd);
     if (!cd || Number(cd.estado) !== 1) {
       const e = new Error("carrera_docente inválido o inactivo");
       e.status = 422;
@@ -97,7 +97,6 @@ async function create(d, user) {
 
   const tribunalId = await repo.createWithDocentes({
     id_carrera_periodo: d.id_carrera_periodo,
-    id_carrera_docente: +d.docentes.presidente,
     nombre_tribunal: d.nombre_tribunal,
     descripcion_tribunal: d.descripcion_tribunal ?? null,
     docentes: d.docentes,
@@ -137,16 +136,11 @@ async function update(id, d, user) {
     }
   }
 
-  const idCarreraDocente = d.docentes
-    ? +d.docentes.presidente
-    : +d.id_carrera_docente;
-
   await repo.updateWithDocentes(id, {
     id_carrera_periodo: d.id_carrera_periodo,
-    id_carrera_docente: idCarreraDocente,
     nombre_tribunal: d.nombre_tribunal,
     descripcion_tribunal: d.descripcion_tribunal ?? null,
-    docentes: d.docentes,
+    docentes: d.docentes, // si no viene, NO toca tribunal_docente
   });
 
   const updated = await repo.findById(id);

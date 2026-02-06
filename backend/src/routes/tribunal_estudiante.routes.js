@@ -15,22 +15,25 @@ router.get(
   ctrl.misAsignaciones
 );
 
-// ✅ LISTAR
+// ✅ LISTAR (ADMIN y opcional SUPER_ADMIN si quieres)
 router.get(
   "/",
+  auth,
+  authorize([1, 2]), // si solo quieres rol2: pon [2]
   query("includeInactive").optional().isBoolean().toBoolean(),
   query("tribunalId").optional().isInt({ min: 1 }).toInt(),
   validate,
   ctrl.list
 );
 
-// ✅ CREAR asignación (ahora incluye caso_estudio)
+// ✅ CREAR asignación (SIN caso, el caso sale de estudiante_caso_asignacion)
 router.post(
   "/",
+  auth,
+  authorize([1, 2]), // si solo quieres rol2: pon [2]
   body("id_tribunal").isInt({ min: 1 }).toInt(),
   body("id_estudiante").isInt({ min: 1 }).toInt(),
   body("id_franja_horario").isInt({ min: 1 }).toInt(),
-  body("id_caso_estudio").isInt({ min: 1 }).toInt(), // ✅ NUEVO
   validate,
   ctrl.create
 );
@@ -38,6 +41,8 @@ router.post(
 // ✅ Activar/Desactivar
 router.patch(
   "/:id/estado",
+  auth,
+  authorize([1, 2]),
   param("id").isInt({ min: 1 }).toInt(),
   body("estado").isBoolean().toBoolean(),
   validate,
