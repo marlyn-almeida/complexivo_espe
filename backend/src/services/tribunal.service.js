@@ -34,7 +34,8 @@ function validarDocentes(docentes) {
 
 async function list(query = {}, user) {
   return repo.findAll({
-    includeInactive: query.includeInactive === "true",
+    // ✅ FIX: includeInactive ya viene boolean por toBoolean()
+    includeInactive: Boolean(query.includeInactive),
     carreraPeriodoId: query.carreraPeriodoId || null,
     scopeCarreraId: isRol2(user) ? user?.scope?.id_carrera : null,
   });
@@ -58,7 +59,7 @@ async function get(id, user) {
     }
   }
 
-  // opcional: incluir docentes asignados
+  // incluir docentes asignados
   t.docentes = await repo.findDocentesByTribunal(id);
   return t;
 }
@@ -203,7 +204,8 @@ async function misTribunales(query = {}, user) {
 
   return repo.findMisTribunales({
     id_docente: Number(user.id), // en tu JWT: id = id_docente
-    includeInactive: query.includeInactive === "true",
+    // ✅ FIX: includeInactive ya viene boolean por toBoolean()
+    includeInactive: Boolean(query.includeInactive),
   });
 }
 

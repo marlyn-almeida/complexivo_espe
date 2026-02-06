@@ -83,11 +83,11 @@ export default function TribunalViewModal({
 
           <div className="tvHeaderRight">
             {onOpenAsignaciones ? (
-              <button className="btnSecondary" onClick={() => onOpenAsignaciones(tribunal)}>
+              <button className="btnSecondary" onClick={() => onOpenAsignaciones(tribunal)} type="button">
                 Ver / administrar asignaciones
               </button>
             ) : null}
-            <button className="btnClose" onClick={onClose}>
+            <button className="btnClose" onClick={onClose} type="button">
               ✕
             </button>
           </div>
@@ -97,7 +97,7 @@ export default function TribunalViewModal({
           <div className="tvGrid">
             <div className="tvItem">
               <div className="tvKey">Nombre</div>
-              <div className="tvVal">{tribunal.nombre_tribunal || "—"}</div>
+              <div className="tvVal">{tribunal.nombre_tribunal?.trim() ? tribunal.nombre_tribunal : "—"}</div>
             </div>
 
             <div className="tvItem">
@@ -113,7 +113,9 @@ export default function TribunalViewModal({
             <div className="tvItem">
               <div className="tvKey">Estado</div>
               <div className="tvVal">
-                <span className={`badge ${activo ? "badgeActive" : "badgeInactive"}`}>{activo ? "Activo" : "Inactivo"}</span>
+                <span className={`badge ${activo ? "badgeActive" : "badgeInactive"}`}>
+                  {activo ? "Activo" : "Inactivo"}
+                </span>
               </div>
             </div>
 
@@ -132,7 +134,11 @@ export default function TribunalViewModal({
             </div>
 
             <label className="toggle tvToggle">
-              <input type="checkbox" checked={mostrarInactivas} onChange={(e) => setMostrarInactivas(e.target.checked)} />
+              <input
+                type="checkbox"
+                checked={mostrarInactivas}
+                onChange={(e) => setMostrarInactivas(e.target.checked)}
+              />
               <span className="slider" />
               <span className="toggleText">Mostrar inactivas</span>
             </label>
@@ -183,7 +189,9 @@ export default function TribunalViewModal({
                         </td>
                         <td>{franjaTxt}</td>
                         <td>
-                          <span className={`badge ${ok ? "badgeActive" : "badgeInactive"}`}>{ok ? "Activa" : "Inactiva"}</span>
+                          <span className={`badge ${ok ? "badgeActive" : "badgeInactive"}`}>
+                            {ok ? "Activa" : "Inactiva"}
+                          </span>
                         </td>
                       </tr>
                     );
@@ -199,7 +207,7 @@ export default function TribunalViewModal({
         </div>
 
         <div className="modalFooter">
-          <button className="btnPrimary" onClick={onClose}>
+          <button className="btnPrimary" onClick={onClose} type="button">
             Cerrar
           </button>
         </div>
