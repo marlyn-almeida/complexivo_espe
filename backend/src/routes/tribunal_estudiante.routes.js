@@ -2,7 +2,7 @@
 const router = require("express").Router();
 const { body, param, query } = require("express-validator");
 const validate = require("../middlewares/validate.middleware");
-const ctrl = require("../controllers/tribunal_estudiante.controller");
+const ctrl = require("../controllers/tribunal_estudiante.controller"); // ✅ ESTE
 const { auth, authorize } = require("../middlewares/auth.middleware");
 
 // ✅ ROL 3: Mis asignaciones (agenda)
@@ -15,22 +15,22 @@ router.get(
   ctrl.misAsignaciones
 );
 
-// ✅ LISTAR (ADMIN y opcional SUPER_ADMIN si quieres)
+// ✅ LISTAR
 router.get(
   "/",
   auth,
-  authorize([1, 2]), // si solo quieres rol2: pon [2]
+  authorize([1, 2]),
   query("includeInactive").optional().isBoolean().toBoolean(),
   query("tribunalId").optional().isInt({ min: 1 }).toInt(),
   validate,
   ctrl.list
 );
 
-// ✅ CREAR asignación (SIN caso, el caso sale de estudiante_caso_asignacion)
+// ✅ CREAR asignación
 router.post(
   "/",
   auth,
-  authorize([1, 2]), // si solo quieres rol2: pon [2]
+  authorize([1, 2]),
   body("id_tribunal").isInt({ min: 1 }).toInt(),
   body("id_estudiante").isInt({ min: 1 }).toInt(),
   body("id_franja_horario").isInt({ min: 1 }).toInt(),

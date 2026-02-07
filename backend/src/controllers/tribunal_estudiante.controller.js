@@ -2,36 +2,35 @@
 const s = require("../services/tribunal_estudiante.service");
 
 module.exports = {
-  list: async (req, res, n) => {
+  list: async (req, res, next) => {
     try {
-      res.json(await s.list(req.query, req.user?.scope || null));
+      res.json(await s.list(req.query, req.user || null));
     } catch (e) {
-      n(e);
+      next(e);
     }
   },
 
-  create: async (req, res, n) => {
+  create: async (req, res, next) => {
     try {
-      res.status(201).json(await s.create(req.body, req.user?.scope || null));
+      res.status(201).json(await s.create(req.body, req.user || null));
     } catch (e) {
-      n(e);
+      next(e);
     }
   },
 
-  changeEstado: async (req, res, n) => {
+  changeEstado: async (req, res, next) => {
     try {
-      res.json(await s.changeEstado(req.params.id, req.body.estado, req.user?.scope || null));
+      res.json(await s.changeEstado(req.params.id, req.body.estado, req.user || null));
     } catch (e) {
-      n(e);
+      next(e);
     }
   },
 
-  // ✅ rol 3 (docente) -> ver sus asignaciones (agenda)
-  misAsignaciones: async (req, res, n) => {
+  misAsignaciones: async (req, res, next) => {
     try {
       res.json(await s.misAsignaciones(req.query, req.user));
     } catch (e) {
-      n(e);
+      next(e);
     }
   },
 };

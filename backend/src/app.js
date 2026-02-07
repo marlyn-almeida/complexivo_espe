@@ -1,17 +1,23 @@
-// server.js (o index.js) — COMPLETO
+// server.js (o index.js) — COMPLETO (CORREGIDO)
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 
 const { auth } = require("./middlewares/auth.middleware");
 const { attachScope } = require("./middlewares/scope.middleware");
-const { attachCarreraPeriodoCtx } = require("./middlewares/ctx.middleware"); // ✅ NUEVO
+// ⛔ Ya NO lo ponemos global
+// const { attachCarreraPeriodoCtx } = require("./middlewares/ctx.middleware");
 
 const app = express();
 
-// Middlewares
+// =========================
+// Middlewares base
+// =========================
 app.use(cors());
 app.use(express.json());
+
+// ✅ Servir uploads (para links/previews de PDFs si lo necesitas)
+app.use("/uploads", express.static("uploads"));
 
 // =========================
 // RUTAS PÚBLICAS
@@ -24,15 +30,14 @@ app.get("/api/health", (req, res) => {
 });
 
 // =========================
-// RUTAS PROTEGIDAS (JWT + SCOPE rol 2 + CTX CP)
+// RUTAS PROTEGIDAS (JWT + Scope rol 2)
 // =========================
 const protectedApi = express.Router();
 
-// ✅ Orden correcto:
+// ✅ Global SOLO:
 // 1) auth → carga req.user
 // 2) attachScope → carga req.user.scope (solo ADMIN)
-// 3) attachCarreraPeriodoCtx → carga req.ctx.id_carrera_periodo (solo ADMIN)
-protectedApi.use(auth, attachScope, attachCarreraPeriodoCtx);
+protectedApi.use(auth, attachScope);
 
 // OJO: desde aquí todo requiere token
 protectedApi.use("/perfil", require("./routes/perfil.routes"));
@@ -47,7 +52,7 @@ protectedApi.use("/roles", require("./routes/rol.routes"));
 // =========================
 protectedApi.use("/docentes", require("./routes/docente.routes"));
 
-// ✅ NUEVO: Asignación de Roles a Docentes (solo SUPER_ADMIN)
+// ✅ Asignación de Roles a Docentes (solo SUPER_ADMIN)
 // Rutas:
 //   GET  /api/docentes/:id/roles
 //   PUT  /api/docentes/:id/roles
@@ -71,7 +76,7 @@ protectedApi.use("/carreras-docentes", require("./routes/carrera_docente.routes"
 protectedApi.use("/tribunales", require("./routes/tribunal.routes"));
 protectedApi.use("/tribunales-estudiantes", require("./routes/tribunal_estudiante.routes"));
 
-// ✅ NUEVO: 1 caso por estudiante (tabla estudiante_caso_asignacion)
+// ✅ 1 caso por estudiante (tabla estudiante_caso_asignacion)
 protectedApi.use(
   "/estudiante-caso-asignacion",
   require("./routes/estudiante_caso_asignacion.routes")
@@ -85,6 +90,7 @@ protectedApi.use("/plantillas-acta", require("./routes/plantillaActaWord.routes"
 
 // =========================
 // ✅ NUEVOS MÓDULOS (ROL 2)
+// (Aquí tus routes YA tienen attachCarreraPeriodoCtx adentro cuando corresponde)
 // =========================
 protectedApi.use("/casos-estudio", require("./routes/casos_estudio.routes"));
 protectedApi.use("/entregas-caso", require("./routes/entregas_caso.routes"));

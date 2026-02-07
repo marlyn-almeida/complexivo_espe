@@ -46,7 +46,7 @@ async function update(id_caso_estudio, data) {
 
   for (const k of allowed) {
     if (data[k] !== undefined) {
-      fields.push(`${k} = ?`); // ✅ fix
+      fields.push(`${k} = ?`);
       values.push(k === "estado" ? (data[k] ? 1 : 0) : data[k]);
     }
   }
@@ -68,4 +68,40 @@ async function update(id_caso_estudio, data) {
   return r.affectedRows;
 }
 
-module.exports = { listByCP, getById, create, update };
+/**
+ * ✅ Permiso DOCENTE (opcional recomendado):
+ * Permite descargar el caso si el docente tiene AL MENOS un estudiante asignado
+ * en sus tribunales cuyo caso_asignacion activo sea ese id_caso_estudio,
+ * y todo pertenece al mismo CP.
+ */
+async function docentePuedeVerCaso({ id_docente, id_caso_estudio, id_carrera_periodo }) {
+  const [rows] = await pool.query(
+    `
+    SELECT 1
+    FROM tribunal_docente td
+    JOIN carrera_docente cd ON cd.id_carrera_docente = td.id_carrera_docente
+    JOIN tribunal t ON t.id_tribunal = td.id_tribunal
+    JOIN tribunal_estudiante te ON te.id_tribunal = t.id_tribunal
+
+    JOIN estudiante e ON e.id_estudiante = te.id_estudiante
+
+    JOIN estudiante_caso_asignacion eca
+      ON eca.id_estudiante = e.id_estudiante
+     AND eca.estado = 1
+
+    WHERE cd.id_docente = ?
+      AND cd.estado = 1
+      AND td.estado = 1
+      AND te.estado = 1
+      AND t.id_carrera_periodo = ?
+      AND e.id_carrera_periodo = ?
+      AND eca.id_caso_estudio = ?
+    LIMIT 1
+    `,
+    [Number(id_docente), Number(id_carrera_periodo), Number(id_carrera_periodo), Number(id_caso_estudio)]
+  );
+
+  return !!rows.length;
+}
+
+module.exports = { listByCP, getById, create, update, docentePuedeVerCaso };

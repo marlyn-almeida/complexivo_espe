@@ -101,3 +101,9 @@
 @media (max-width: 720px){
   .tvGrid{ grid-template-columns: 1fr; }
 }
+/* botones PDF dentro de la tabla */
+.tvPdfBtns{
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}

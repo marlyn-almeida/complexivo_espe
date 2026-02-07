@@ -20,7 +20,7 @@ async function get(req, res, next) {
     const id_estudiante = Number(req.params.id_estudiante);
     const id_caso_estudio = Number(req.params.id_caso_estudio);
 
-    const data = await svc.get(cp, id_estudiante, id_caso_estudio);
+    const data = await svc.get(cp, id_estudiante, id_caso_estudio, req.user);
     res.json({ ok: true, data });
   } catch (e) {
     next(e);
@@ -72,12 +72,47 @@ async function upsert(req, res, next) {
       observacion,
     };
 
-    const saved = await svc.upsert(cp, body);
-
+    const saved = await svc.upsert(cp, body, req.user);
     res.json({ ok: true, data: saved });
   } catch (e) {
     next(e);
   }
 }
 
-module.exports = { get, upsert };
+// ✅ NUEVO: download del PDF de la entrega del estudiante
+async function download(req, res, next) {
+  try {
+    const cp = Number(req.ctx.id_carrera_periodo);
+    const id_estudiante = Number(req.params.id_estudiante);
+    const id_caso_estudio = Number(req.params.id_caso_estudio);
+
+    const entrega = await svc.getForDownload(cp, id_estudiante, id_caso_estudio, req.user);
+
+    if (!entrega?.archivo_path) {
+      const err = new Error("La entrega no tiene archivo PDF.");
+      err.status = 404;
+      throw err;
+    }
+
+    // archivo_path guardado como "/uploads/entregas-caso/xxxx.pdf"
+    const rel = String(entrega.archivo_path).replace(/^\/+/, "");
+    const abs = path.join(process.cwd(), rel);
+
+    if (!fs.existsSync(abs)) {
+      const err = new Error("Archivo no encontrado en el servidor.");
+      err.status = 404;
+      throw err;
+    }
+
+    // nombre sugerido
+    const suggested =
+      entrega.archivo_nombre ||
+      `entrega_${id_estudiante}_${id_caso_estudio}.pdf`;
+
+    res.download(abs, suggested);
+  } catch (e) {
+    next(e);
+  }
+}
+
+module.exports = { get, upsert, download };

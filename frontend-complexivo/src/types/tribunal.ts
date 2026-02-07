@@ -1,5 +1,3 @@
-// src/types/tribunal.ts
-
 export type Estado01 = 0 | 1;
 
 export type TribunalDocenteDesignacion = "PRESIDENTE" | "INTEGRANTE_1" | "INTEGRANTE_2";
@@ -20,8 +18,6 @@ export interface TribunalDocente {
 export interface Tribunal {
   id_tribunal: number;
   id_carrera_periodo: number;
-
-  caso?: number | null;
 
   // ✅ requerido en backend
   nombre_tribunal: string;

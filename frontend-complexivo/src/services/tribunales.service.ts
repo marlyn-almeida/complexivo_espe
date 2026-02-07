@@ -34,7 +34,6 @@ export type TribunalListParams = {
 export type TribunalCreateDTO = {
   id_carrera_periodo: number;
   nombre_tribunal: string;
-  caso?: number;
   descripcion_tribunal?: string;
   docentes: {
     presidente: number; // id_carrera_docente
@@ -46,7 +45,6 @@ export type TribunalCreateDTO = {
 export type TribunalUpdateDTO = {
   id_carrera_periodo: number;
   nombre_tribunal: string;
-  caso?: number;
   descripcion_tribunal?: string;
   docentes?: {
     presidente?: number;
@@ -80,7 +78,6 @@ export const tribunalesService = {
   create: async (payload: TribunalCreateDTO) => {
     const body = {
       ...payload,
-      caso: typeof payload.caso === "number" ? payload.caso : undefined,
       descripcion_tribunal: payload.descripcion_tribunal?.trim() || undefined,
     };
 
@@ -91,7 +88,6 @@ export const tribunalesService = {
   update: async (id: number, payload: TribunalUpdateDTO) => {
     const body = {
       ...payload,
-      caso: typeof payload.caso === "number" ? payload.caso : undefined,
       descripcion_tribunal: payload.descripcion_tribunal?.trim() || undefined,
     };
 

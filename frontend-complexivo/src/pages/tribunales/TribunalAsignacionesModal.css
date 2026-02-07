@@ -132,3 +132,42 @@
   background: rgba(0,0,0,0.03);
 }
 
+.asignBtnIcon:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* =========================
+   ✅ NUEVO: panel mini “Caso del estudiante”
+   ========================= */
+.asignMiniCard {
+  margin-top: 8px;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: rgba(0,0,0,0.02);
+}
+
+.asignMiniTitle {
+  font-size: 12px;
+  font-weight: 900;
+  opacity: 0.75;
+  margin-bottom: 4px;
+}
+
+.asignMiniText {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.asignMiniMuted {
+  font-size: 12px;
+  opacity: 0.75;
+  font-weight: 700;
+}
+
+.asignFootHint{
+  margin-top: 10px;
+  font-size: 12px;
+  opacity: 0.8;
+}

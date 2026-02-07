@@ -2,7 +2,7 @@
 const router = require("express").Router();
 const { body, param, query } = require("express-validator");
 const validate = require("../middlewares/validate.middleware");
-const { authorize } = require("../middlewares/auth.middleware");
+const { authorize, auth } = require("../middlewares/auth.middleware");
 const { attachCarreraPeriodoCtx } = require("../middlewares/ctx.middleware");
 const ctrl = require("../controllers/casos_estudio.controller");
 
@@ -15,20 +15,31 @@ const upload = multer({
 });
 
 // ✅ LISTAR casos
-// GET /api/casos-estudio?includeInactive=true|false
 router.get(
   "/",
-  authorize(["ADMIN"]),
+  auth,
+  authorize(["ADMIN", "DOCENTE"]),
   attachCarreraPeriodoCtx,
   query("includeInactive").optional().isBoolean().toBoolean(),
   validate,
   ctrl.list
 );
 
+// ✅ DOWNLOAD PDF del caso base
+router.get(
+  "/:id_caso_estudio/download",
+  auth,
+  authorize(["ADMIN", "DOCENTE"]),
+  attachCarreraPeriodoCtx,
+  param("id_caso_estudio").isInt({ min: 1 }).toInt(),
+  validate,
+  ctrl.download
+);
+
 // ✅ CREAR caso (con PDF)
-// POST /api/casos-estudio  (FormData con "archivo")
 router.post(
   "/",
+  auth,
   authorize(["ADMIN"]),
   attachCarreraPeriodoCtx,
   upload.single("archivo"),
@@ -40,9 +51,9 @@ router.post(
 );
 
 // ✅ UPDATE caso (PDF opcional)
-// PUT /api/casos-estudio/:id_caso_estudio
 router.put(
   "/:id_caso_estudio",
+  auth,
   authorize(["ADMIN"]),
   attachCarreraPeriodoCtx,
   upload.single("archivo"),
@@ -55,9 +66,9 @@ router.put(
 );
 
 // ✅ PATCH estado
-// PATCH /api/casos-estudio/:id_caso_estudio/estado
 router.patch(
   "/:id_caso_estudio/estado",
+  auth,
   authorize(["ADMIN"]),
   attachCarreraPeriodoCtx,
   param("id_caso_estudio").isInt({ min: 1 }).toInt(),

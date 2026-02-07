@@ -29,6 +29,9 @@ function unwrapObject(res: any): any {
 export type TribunalEstudianteListParams = {
   tribunalId?: number;
   includeInactive?: boolean;
+  // ✅ opcional (tu backend puede ignorarlo; no rompe)
+  page?: number;
+  limit?: number;
 };
 
 export type TribunalEstudianteCreateDTO = {
@@ -43,6 +46,8 @@ export const tribunalEstudiantesService = {
       params: {
         tribunalId: params?.tribunalId,
         includeInactive: params?.includeInactive ? "true" : "false",
+        page: params?.page,
+        limit: params?.limit,
       },
     });
     return unwrapArray(res);

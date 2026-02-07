@@ -54,14 +54,8 @@ async function create(d, scope = null) {
     throw err("La franja no pertenece a la misma carrera_periodo del tribunal", 422);
   }
 
-  // ✅ 6) el estudiante DEBE tener caso asignado (tu regla: 1 estudiante = 1 caso)
-  const casoAsig = await repo.getCasoAsignadoByEstudiante(d.id_estudiante);
-  if (!casoAsig || Number(casoAsig.estado_asignacion) !== 1) {
-    throw err("El estudiante no tiene un caso de estudio asignado", 422);
-  }
-  if (+casoAsig.id_carrera_periodo !== +t.id_carrera_periodo) {
-    throw err("El caso asignado no pertenece a la misma carrera_periodo del tribunal", 422);
-  }
+  // ✅ 6) (ELIMINADO) Ya NO exigimos caso asignado para crear asignación.
+  // El caso/entrega se mostrará si existe en listados/agenda.
 
   // 7) duplicado por estudiante en el mismo tribunal
   const dup = await repo.existsAsignacion(d.id_tribunal, d.id_estudiante);
@@ -95,7 +89,7 @@ async function create(d, scope = null) {
     }
   }
 
-  // ✅ crear (SIN caso en tribunal_estudiante)
+  // ✅ crear
   return repo.create({
     id_tribunal: d.id_tribunal,
     id_estudiante: d.id_estudiante,
@@ -104,6 +98,7 @@ async function create(d, scope = null) {
 }
 
 async function changeEstado(id, estado, scope = null) {
+  // (opcional) aquí podrías validar scope si quieres
   const r = await repo.setEstado(id, estado);
   if (!r) throw err("Asignación tribunal_estudiante no encontrada", 404);
   return r;

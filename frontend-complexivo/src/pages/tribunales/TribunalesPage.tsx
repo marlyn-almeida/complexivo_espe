@@ -1,4 +1,3 @@
-// src/pages/tribunales/TribunalesPage.tsx
 import { useEffect, useMemo, useState } from "react";
 import {
   Plus,
@@ -51,7 +50,6 @@ type AsignacionFormState = {
 
 type TribunalFormState = {
   nombre_tribunal: string;
-  caso: string; // string para input
   descripcion_tribunal: string;
 
   presidente: number | "";
@@ -97,7 +95,6 @@ export default function TribunalesPage() {
 
   const [tribunalForm, setTribunalForm] = useState<TribunalFormState>({
     nombre_tribunal: "",
-    caso: "",
     descripcion_tribunal: "",
     presidente: "",
     integrante1: "",
@@ -108,7 +105,6 @@ export default function TribunalesPage() {
   const [showAsignModal, setShowAsignModal] = useState(false);
   const [activeTribunalForAsign, setActiveTribunalForAsign] = useState<Tribunal | null>(null);
   const [asignaciones, setAsignaciones] = useState<TribunalEstudiante[]>([]);
-  const [estudiantesAll, setEstudiantesAll] = useState<Estudiante[]>([]);
   const [eligibleEstudiantes, setEligibleEstudiantes] = useState<Estudiante[]>([]);
   const [loadingEligible, setLoadingEligible] = useState(false);
 
@@ -158,7 +154,7 @@ export default function TribunalesPage() {
   useEffect(() => {
     if (selectedCP) {
       loadAll();
-      loadDocentesByCP(); // ✅ asegura carrera_docente para selects
+      loadDocentesByCP();
       loadPlanAndCalificadores();
     } else {
       setTribunales([]);
@@ -209,11 +205,6 @@ export default function TribunalesPage() {
     }
   }
 
-  /**
-   * ✅ Calificadores/Tribunales requieren carrera_docente.
-   * Si no existe, intenta autogenerar desde:
-   * carrera.id_departamento -> docentes por departamento -> POST /carreras-docentes
-   */
   async function loadDocentesByCP() {
     if (!selectedCP) return;
 
@@ -234,14 +225,12 @@ export default function TribunalesPage() {
         return;
       }
 
-      // 1) intentar carrera_docente ya existente
       let cds = await carreraDocenteService.list({ includeInactive: false, carreraId });
       if ((cds ?? []).length > 0) {
         setDocentes(cds ?? []);
         return;
       }
 
-      // 2) obtener dept desde carrera
       const carreras = await carrerasService.list(false);
       const carrera = (carreras ?? []).find((c: any) => Number(c.id_carrera) === Number(carreraId)) ?? null;
 
@@ -271,7 +260,6 @@ export default function TribunalesPage() {
         return;
       }
 
-      // 👇 REQUIERE que exista carreraDocenteService.create en tu service TS
       for (const d of activos) {
         try {
           await carreraDocenteService.create({
@@ -280,7 +268,7 @@ export default function TribunalesPage() {
             tipo_admin: "DOCENTE",
           });
         } catch {
-          // ignorar ya existe
+          // ignore
         }
       }
 
@@ -351,10 +339,7 @@ export default function TribunalesPage() {
       .filter((t: any) => (mostrarInactivos ? true : isActivo(t.estado)))
       .filter((t: any) => {
         if (!q) return true;
-        return (
-          String(t.nombre_tribunal || "").toLowerCase().includes(q) ||
-          String(t.caso ?? "").toLowerCase().includes(q)
-        );
+        return String(t.nombre_tribunal || "").toLowerCase().includes(q);
       });
   }, [tribunales, search, mostrarInactivos]);
 
@@ -370,7 +355,6 @@ export default function TribunalesPage() {
   function resetTribunalForm() {
     setTribunalForm({
       nombre_tribunal: "",
-      caso: "",
       descripcion_tribunal: "",
       presidente: "",
       integrante1: "",
@@ -391,9 +375,8 @@ export default function TribunalesPage() {
     setFormErrors({});
     setTribunalForm({
       nombre_tribunal: String((t as any).nombre_tribunal || ""),
-      caso: (t as any).caso == null ? "" : String((t as any).caso),
       descripcion_tribunal: String((t as any).descripcion_tribunal || ""),
-      // ⚠️ si tu backend NO devuelve ids docentes del tribunal, se quedan vacíos
+      // si backend no devuelve docentes del tribunal, quedan vacíos
       presidente: "",
       integrante1: "",
       integrante2: "",
@@ -413,10 +396,6 @@ export default function TribunalesPage() {
     const uniq = new Set(ids as any[]);
     if (ids.length && uniq.size !== ids.length) e.docentes = "No repitas el mismo docente en el tribunal.";
 
-    if (tribunalForm.caso.trim()) {
-      const n = Number(tribunalForm.caso);
-      if (!Number.isFinite(n) || n <= 0) e.caso = "Caso inválido (debe ser número positivo).";
-    }
     return e;
   }
 
@@ -431,14 +410,10 @@ export default function TribunalesPage() {
     try {
       setSavingTribunal(true);
 
-      const casoNum =
-        tribunalForm.caso.trim() && Number.isFinite(Number(tribunalForm.caso)) ? Number(tribunalForm.caso) : undefined;
-
       if (!editing) {
         const payload: TribunalCreateDTO = {
           id_carrera_periodo: Number(selectedCP),
           nombre_tribunal: tribunalForm.nombre_tribunal.trim(),
-          caso: casoNum,
           descripcion_tribunal: tribunalForm.descripcion_tribunal.trim() || undefined,
           docentes: {
             presidente: Number(tribunalForm.presidente),
@@ -453,7 +428,6 @@ export default function TribunalesPage() {
         const payload: TribunalUpdateDTO = {
           id_carrera_periodo: Number(selectedCP),
           nombre_tribunal: tribunalForm.nombre_tribunal.trim(),
-          caso: casoNum,
           descripcion_tribunal: tribunalForm.descripcion_tribunal.trim() || undefined,
           docentes: {
             presidente: Number(tribunalForm.presidente),
@@ -487,7 +461,6 @@ export default function TribunalesPage() {
     setAsignForm({ id_estudiante: "", id_franja_horario: "" });
     setErrors({});
     setEligibleEstudiantes([]);
-    setEstudiantesAll([]);
 
     try {
       setLoading(true);
@@ -496,6 +469,8 @@ export default function TribunalesPage() {
         tribunalEstudiantesService.list({
           tribunalId: Number((t as any).id_tribunal),
           includeInactive: true,
+          page: 1,
+          limit: 200,
         }),
         estudiantesService.list({
           carreraPeriodoId: Number((t as any).id_carrera_periodo),
@@ -512,11 +487,11 @@ export default function TribunalesPage() {
       ]);
 
       setAsignaciones(a ?? []);
-      setEstudiantesAll(est ?? []);
       setFranjas(fr ?? []);
       setShowAsignModal(true);
 
-      // ✅ FILTRO: solo estudiantes con caso asignado (para evitar 422 del backend)
+      // ⚠️ tu filtro actual hace N requests (1 por estudiante).
+      // Lo dejamos funcional por ahora, pero ya sabes que es pesado.
       setLoadingEligible(true);
       try {
         const results = await Promise.all(
@@ -532,7 +507,6 @@ export default function TribunalesPage() {
         const elig = results.filter(Boolean) as Estudiante[];
         setEligibleEstudiantes(elig);
 
-        // si el seleccionado no es elegible, reset
         setAsignForm((p) => ({
           ...p,
           id_estudiante: elig.some((x) => Number(x.id_estudiante) === Number(p.id_estudiante)) ? p.id_estudiante : "",
@@ -593,6 +567,8 @@ export default function TribunalesPage() {
       const a = await tribunalEstudiantesService.list({
         tribunalId: Number((activeTribunalForAsign as any).id_tribunal),
         includeInactive: true,
+        page: 1,
+        limit: 200,
       });
       setAsignaciones(a ?? []);
       setAsignForm({ id_estudiante: "", id_franja_horario: "" });
@@ -617,6 +593,8 @@ export default function TribunalesPage() {
         const a = await tribunalEstudiantesService.list({
           tribunalId: Number((activeTribunalForAsign as any).id_tribunal),
           includeInactive: true,
+          page: 1,
+          limit: 200,
         });
         setAsignaciones(a ?? []);
       }
@@ -686,8 +664,7 @@ export default function TribunalesPage() {
       showToast("Calificadores generales guardados.", "success");
       await loadPlanAndCalificadores();
     } catch (err: any) {
-      const msg =
-        err?.response?.data?.message || err?.userMessage || "No se pudo guardar calificadores generales.";
+      const msg = err?.response?.data?.message || err?.userMessage || "No se pudo guardar calificadores generales.";
       showToast(String(msg), "error");
     } finally {
       setSavingCG(false);
@@ -756,7 +733,7 @@ export default function TribunalesPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && loadAll()}
-              placeholder="Buscar por nombre o caso..."
+              placeholder="Buscar por nombre..."
             />
           </div>
 
@@ -897,7 +874,6 @@ export default function TribunalesPage() {
             <thead>
               <tr>
                 <th>Tribunal</th>
-                <th>Caso</th>
                 <th>Estado</th>
                 <th style={{ width: 220 }}>Acciones</th>
               </tr>
@@ -905,7 +881,7 @@ export default function TribunalesPage() {
             <tbody>
               {paginated.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="emptyCell">
+                  <td colSpan={3} className="emptyCell">
                     <div className="empty">No hay tribunales para mostrar.</div>
                   </td>
                 </tr>
@@ -916,11 +892,14 @@ export default function TribunalesPage() {
                     <tr key={t.id_tribunal}>
                       <td>
                         <div className="tdTitle">{t.nombre_tribunal}</div>
-                        <div className="tdSub">{t.nombre_carrera ? `${t.nombre_carrera} — ${t.codigo_periodo ?? ""}` : "—"}</div>
+                        <div className="tdSub">
+                          {t.nombre_carrera ? `${t.nombre_carrera} — ${t.codigo_periodo ?? ""}` : "—"}
+                        </div>
                       </td>
-                      <td>{t.caso == null ? <span className="muted">—</span> : t.caso}</td>
                       <td>
-                        <span className={`badge ${activo ? "badgeActive" : "badgeInactive"}`}>{activo ? "Activo" : "Inactivo"}</span>
+                        <span className={`badge ${activo ? "badgeActive" : "badgeInactive"}`}>
+                          {activo ? "Activo" : "Inactivo"}
+                        </span>
                       </td>
                       <td className="tdActions">
                         <div className="actions">
@@ -988,17 +967,6 @@ export default function TribunalesPage() {
                     placeholder="Ej: Tribunal 1"
                   />
                   {formErrors.nombre_tribunal ? <p className="error">{formErrors.nombre_tribunal}</p> : null}
-                </div>
-
-                <div className="field">
-                  <label className="fieldLabel">Caso (opcional)</label>
-                  <input
-                    className="input"
-                    value={tribunalForm.caso}
-                    onChange={(e) => setTribunalForm((p) => ({ ...p, caso: e.target.value }))}
-                    placeholder="Ej: 1"
-                  />
-                  {formErrors.caso ? <p className="error">{formErrors.caso}</p> : null}
                 </div>
 
                 <div className="field full">
@@ -1103,12 +1071,10 @@ export default function TribunalesPage() {
         activeTribunalForAsign={activeTribunalForAsign}
         asignForm={asignForm}
         setAsignForm={setAsignForm}
-        // ✅ PASAMOS SOLO ELEGIBLES (con caso asignado)
         estudiantes={eligibleEstudiantes}
         franjas={franjas}
         asignaciones={asignaciones}
         errors={errors}
-        // loading incluye también verificación
         loading={loading || loadingEligible}
         onCreateAsignacion={onCreateAsignacion}
         onToggleAsignEstado={onToggleAsignEstado}

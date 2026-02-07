@@ -71,9 +71,48 @@ async function setEstado(id_estudiante, id_caso_estudio, estado) {
   return getEntrega(id_estudiante, id_caso_estudio, { includeInactive: true });
 }
 
+/**
+ * ✅ Permiso DOCENTE: puede ver/descargar si:
+ * - el docente pertenece a un tribunal (tribunal_docente activo)
+ * - y ese tribunal tiene asignado al estudiante (tribunal_estudiante activo)
+ * - y el estudiante/caso coinciden con la entrega solicitada
+ */
+async function docentePuedeVerEntrega({ id_docente, id_estudiante, id_caso_estudio }) {
+  const [rows] = await pool.query(
+    `
+    SELECT 1
+    FROM tribunal_docente td
+    JOIN carrera_docente cd ON cd.id_carrera_docente = td.id_carrera_docente
+    JOIN tribunal_estudiante te ON te.id_tribunal = td.id_tribunal
+
+    -- entrega del estudiante (para asegurar que existe esa combinación)
+    JOIN estudiante_caso_entrega ece
+      ON ece.id_estudiante = te.id_estudiante
+     AND ece.id_caso_estudio = ?
+     AND ece.estado = 1
+
+    -- ✅ opcional fuerte: el caso solicitado debe ser el caso asignado al estudiante
+    LEFT JOIN estudiante_caso_asignacion eca
+      ON eca.id_estudiante = te.id_estudiante AND eca.estado = 1
+
+    WHERE cd.id_docente = ?
+      AND cd.estado = 1
+      AND td.estado = 1
+      AND te.estado = 1
+      AND te.id_estudiante = ?
+      AND (eca.id_caso_estudio IS NULL OR eca.id_caso_estudio = ?)  -- 👈 si quieres obligar, quita el "IS NULL OR"
+    LIMIT 1
+    `,
+    [Number(id_caso_estudio), Number(id_docente), Number(id_estudiante), Number(id_caso_estudio)]
+  );
+
+  return !!rows.length;
+}
+
 module.exports = {
   getEntrega,
   upsertEntrega,
   validateEntregaScope,
   setEstado,
+  docentePuedeVerEntrega,
 };
