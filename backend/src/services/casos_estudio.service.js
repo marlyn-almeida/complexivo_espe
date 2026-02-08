@@ -36,6 +36,27 @@ async function update(reqCtxCp, id_caso_estudio, patch) {
 }
 
 /**
+ * ✅ NUEVO: eliminar REAL
+ * - valida que el caso exista
+ * - valida que pertenezca al CP del ctx
+ * - elimina el registro
+ * - retorna el registro anterior para que el controller borre el PDF
+ */
+async function remove(reqCtxCp, id_caso_estudio) {
+  const existing = await repo.getById(id_caso_estudio);
+
+  if (!existing) throw err("Caso de estudio no encontrado", 404);
+
+  if (Number(existing.id_carrera_periodo) !== Number(reqCtxCp)) {
+    throw err("Caso fuera de tu carrera–período", 403);
+  }
+
+  await repo.remove(id_caso_estudio);
+
+  return existing;
+}
+
+/**
  * ✅ Para download:
  * - ADMIN: puede descargar si el caso pertenece al CP del ctx
  * - DOCENTE: por defecto permitimos si está en el mismo CP
@@ -50,8 +71,6 @@ async function getByIdForDownload(reqCtxCp, id_caso_estudio, user) {
   }
 
   // ✅ EXTRA SEGURIDAD (OPCIONAL RECOMENDADA)
-  // Si quieres que un DOCENTE solo descargue casos donde efectivamente
-  // tiene algún estudiante asignado con ese caso (en sus tribunales):
   if (isDocente(user)) {
     const ok = await repo.docentePuedeVerCaso({
       id_docente: Number(user.id),
@@ -64,4 +83,4 @@ async function getByIdForDownload(reqCtxCp, id_caso_estudio, user) {
   return caso;
 }
 
-module.exports = { list, create, update, getByIdForDownload };
+module.exports = { list, create, update, remove, getByIdForDownload };

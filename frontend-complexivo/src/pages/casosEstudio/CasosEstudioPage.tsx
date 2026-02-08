@@ -11,24 +11,12 @@ import { casosEstudioService } from "../../services/casosEstudio.service";
 import CasoEstudioFormModal from "./CasoEstudioFormModal";
 import CasoEstudioViewModal from "./CasoEstudioViewModal";
 
-import {
-  Plus,
-  Eye,
-  Search,
-  Filter,
-  X,
-  FileText,
-  BadgeCheck,
-  Download,
-  Pencil,
-  Trash2,
-  ToggleLeft,
-} from "lucide-react";
+import { Plus, Eye, Search, Filter, X, FileText, BadgeCheck, Download, Pencil, Trash2, ToggleLeft } from "lucide-react";
 
 import escudoESPE from "../../assets/escudo.png";
 import "./CasosEstudioPage.css";
 
-// ✅ CLAVE: guardar CP activo para que axiosClient mande header x-carrera-periodo-id
+// ✅ CLAVE: guardar CP activo para que axiosClient mande headers
 import { setActiveCarreraPeriodoId } from "../../api/axiosClient";
 
 const PAGE_SIZE = 10;
@@ -61,6 +49,7 @@ export default function CasosEstudioPage() {
   const [casos, setCasos] = useState<CasoEstudio[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // ✅ opcional: ver inactivos (para “eliminados”)
   const [mostrarInactivos, setMostrarInactivos] = useState(false);
 
   // ===========================
@@ -88,26 +77,19 @@ export default function CasosEstudioPage() {
     window.setTimeout(() => setToast(null), 3200);
   }
 
-  // ✅ si el backend devuelve error pero axios estaba en blob, lo parseamos
-  async function extractBackendError(err: any): Promise<string> {
-    const data = err?.response?.data;
+  function extractBackendError(err: any): string {
+    const msg = err?.response?.data?.message;
+    const list = err?.response?.data?.errors;
 
-    // JSON normal
-    if (data && typeof data === "object" && typeof data.message === "string") return data.message;
-
-    // Blob JSON (cuando responseType="blob" y el backend respondió JSON)
-    if (data instanceof Blob) {
-      try {
-        const text = await data.text();
-        const parsed = JSON.parse(text);
-        if (parsed?.message) return String(parsed.message);
-      } catch {
-        // ignore
-      }
+    if (Array.isArray(list) && list.length) {
+      const first = list[0];
+      if (first?.msg) return String(first.msg);
+      if (first?.message) return String(first.message);
     }
-
-    const msg = err?.message;
     if (typeof msg === "string" && msg.trim()) return msg;
+
+    // ✅ si axiosClient ya te manda userMessage:
+    if (typeof err?.userMessage === "string" && err.userMessage.trim()) return err.userMessage;
 
     return "Ocurrió un error";
   }
@@ -147,6 +129,7 @@ export default function CasosEstudioPage() {
       const cps = await carreraPeriodoService.list(false);
       setCarreraPeriodos(cps ?? []);
 
+      // ✅ 1) si hay CP guardado y existe/está activo, usarlo
       const saved = readSavedCP();
       const savedOk =
         !!saved &&
@@ -160,6 +143,7 @@ export default function CasosEstudioPage() {
         return;
       }
 
+      // ✅ 2) fallback: primer CP activo
       const first = (cps ?? []).find((x: any) => Boolean((x as any).estado)) ?? (cps ?? [])[0];
 
       if (first) {
@@ -185,11 +169,58 @@ export default function CasosEstudioPage() {
 
     try {
       setLoading(true);
-      const data = await casosEstudioService.list({ includeInactive: mostrarInactivos });
+
+      const data = await casosEstudioService.list({
+        includeInactive: mostrarInactivos,
+      });
+
       setCasos(data ?? []);
     } catch (err: any) {
-      showToast(await extractBackendError(err), "error");
+      showToast(extractBackendError(err), "error");
       setCasos([]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // ===========================
+  // PDF OPEN / DOWNLOAD
+  // ===========================
+  async function openPdf(item: CasoEstudio) {
+    try {
+      setLoading(true);
+
+      const res = await casosEstudioService.download(Number(item.id_caso_estudio));
+      const blob = new Blob([res.data], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+
+      window.open(url, "_blank", "noopener,noreferrer");
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (err: any) {
+      showToast(extractBackendError(err), "error");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function downloadPdf(item: CasoEstudio) {
+    try {
+      setLoading(true);
+
+      const res = await casosEstudioService.download(Number(item.id_caso_estudio));
+      const blob = new Blob([res.data], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = item.archivo_nombre || `caso_${item.numero_caso}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (err: any) {
+      showToast(extractBackendError(err), "error");
     } finally {
       setLoading(false);
     }
@@ -234,67 +265,6 @@ export default function CasosEstudioPage() {
   }
 
   // ===========================
-  // ✅ PDF AUTH (usa tu endpoint /download)
-  // ===========================
-  function getFilenameFromHeaders(headers: any, fallback: string) {
-    const cd = headers?.["content-disposition"];
-    if (!cd) return fallback;
-
-    const match = /filename\*=UTF-8''([^;]+)|filename="?([^"]+)"?/i.exec(cd);
-    const raw = (match?.[1] || match?.[2] || "").trim();
-    if (!raw) return fallback;
-
-    try {
-      return decodeURIComponent(raw);
-    } catch {
-      return raw;
-    }
-  }
-
-  async function openPdf(item: CasoEstudio) {
-    try {
-      setLoading(true);
-
-      const res = await casosEstudioService.download(Number(item.id_caso_estudio));
-      const blob = new Blob([res.data], { type: "application/pdf" });
-      const url = URL.createObjectURL(blob);
-
-      window.open(url, "_blank", "noopener,noreferrer");
-      setTimeout(() => URL.revokeObjectURL(url), 60_000);
-    } catch (err: any) {
-      showToast(await extractBackendError(err), "error");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function downloadPdf(item: CasoEstudio) {
-    try {
-      setLoading(true);
-
-      const res = await casosEstudioService.download(Number(item.id_caso_estudio));
-      const fallback = item.archivo_nombre || `caso_${item.numero_caso}.pdf`;
-      const filename = getFilenameFromHeaders(res.headers, fallback);
-
-      const blob = new Blob([res.data], { type: "application/pdf" });
-      const url = URL.createObjectURL(blob);
-
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-
-      setTimeout(() => URL.revokeObjectURL(url), 10_000);
-    } catch (err: any) {
-      showToast(await extractBackendError(err), "error");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  // ===========================
   // “ELIMINAR” (DESACTIVAR) / ACTIVAR
   // ===========================
   async function onToggleEstado(item: CasoEstudio) {
@@ -306,7 +276,7 @@ export default function CasosEstudioPage() {
       showToast(current === 1 ? "Caso desactivado." : "Caso activado.", "success");
       await loadAll();
     } catch (err: any) {
-      showToast(await extractBackendError(err), "error");
+      showToast(extractBackendError(err), "error");
     } finally {
       setLoading(false);
     }
@@ -490,7 +460,7 @@ export default function CasosEstudioPage() {
                     </span>
                   </th>
 
-                  <th className="thActions thCenter" style={{ width: 340 }}>
+                  <th className="thActions thCenter" style={{ width: 260 }}>
                     <span className="thFlex">
                       <FileText size={16} /> Acciones
                     </span>
@@ -538,15 +508,23 @@ export default function CasosEstudioPage() {
                               <span className="tooltip">Ver</span>
                             </button>
 
-                            <button className="iconBtn iconBtn_primary" title="Ver PDF" onClick={() => openPdf(x)}>
+                            {/* ✅ VER PDF (inline) */}
+                            <button
+                              className="iconBtn iconBtn_primary"
+                              title="Ver PDF"
+                              onClick={() => openPdf(x)}
+                              disabled={loading}
+                            >
                               <Eye className="iconAction" />
                               <span className="tooltip">Ver PDF</span>
                             </button>
 
+                            {/* ✅ DESCARGAR PDF */}
                             <button
                               className="iconBtn iconBtn_primary"
                               title="Descargar PDF"
                               onClick={() => downloadPdf(x)}
+                              disabled={loading}
                             >
                               <Download className="iconAction" />
                               <span className="tooltip">Descargar</span>

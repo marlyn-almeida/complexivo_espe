@@ -91,9 +91,11 @@ async function update(req, res, next) {
     const id_caso_estudio = Number(req.params.id_caso_estudio);
 
     const patch = {
-      numero_caso: req.body.numero_caso !== undefined ? Number(req.body.numero_caso) : undefined,
+      numero_caso:
+        req.body.numero_caso !== undefined ? Number(req.body.numero_caso) : undefined,
       titulo: req.body.titulo !== undefined ? String(req.body.titulo) : undefined,
-      descripcion: req.body.descripcion !== undefined ? String(req.body.descripcion) : undefined,
+      descripcion:
+        req.body.descripcion !== undefined ? String(req.body.descripcion) : undefined,
     };
 
     if (req.file) {
@@ -160,7 +162,6 @@ async function download(req, res, next) {
 
     const filename = safeName(caso.archivo_nombre || `caso_${caso.numero_caso}.pdf`);
 
-    // ✅ Inline para vista en el navegador
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `inline; filename="${filename}"`);
 
@@ -170,4 +171,30 @@ async function download(req, res, next) {
   }
 }
 
-module.exports = { list, create, update, toggleEstado, download };
+// ✅ NUEVO: ELIMINAR REAL (borra BD + PDF)
+async function remove(req, res, next) {
+  try {
+    const cp = Number(req.ctx.id_carrera_periodo);
+    const id_caso_estudio = Number(req.params.id_caso_estudio);
+
+    // svc.remove debe retornar el registro anterior (para ubicar archivo_path)
+    const existing = await svc.remove(cp, id_caso_estudio);
+
+    if (existing?.archivo_path) {
+      const fullPath = resolveUploadsPath(existing.archivo_path);
+      if (fullPath && fs.existsSync(fullPath)) {
+        try {
+          fs.unlinkSync(fullPath);
+        } catch (e) {
+          console.warn("No se pudo borrar archivo:", e?.message);
+        }
+      }
+    }
+
+    res.json({ ok: true, message: "Caso eliminado permanentemente." });
+  } catch (e) {
+    next(e);
+  }
+}
+
+module.exports = { list, create, update, toggleEstado, download, remove };

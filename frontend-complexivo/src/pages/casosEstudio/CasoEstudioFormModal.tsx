@@ -111,7 +111,7 @@ export default function CasoEstudioFormModal({
 
   return createPortal(
     <div className="dmOverlay" role="dialog" aria-modal="true">
-      {/* ✅ click fuera para cerrar (si NO quieres, borra este div) */}
+      {/* ✅ click fuera para cerrar */}
       <div
         onClick={() => {
           if (!saving) onClose();
@@ -119,7 +119,8 @@ export default function CasoEstudioFormModal({
         style={{ position: "fixed", inset: 0 }}
       />
 
-      <div className="dmCard" style={{ position: "relative" }}>
+      {/* ✅ card (stopPropagation para NO cerrar al tocar dentro) */}
+      <div className="dmCard" style={{ position: "relative" }} onClick={(e) => e.stopPropagation()}>
         <div className="dmHeader">
           <div className="dmHeaderLeft">
             <div className="dmHeaderIcon">
@@ -145,7 +146,6 @@ export default function CasoEstudioFormModal({
               <div className="dmInputBox">
                 <Hash />
                 <input
-                  className="dmNoSpin"
                   type="number"
                   inputMode="numeric"
                   min={1}

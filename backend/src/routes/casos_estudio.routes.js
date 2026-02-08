@@ -1,4 +1,4 @@
-// src/routes/casos_estudio.routes.js
+// ✅ src/routes/casos_estudio.routes.js
 const router = require("express").Router();
 const { body, param, query } = require("express-validator");
 const validate = require("../middlewares/validate.middleware");
@@ -65,7 +65,7 @@ router.put(
   ctrl.update
 );
 
-// ✅ PATCH estado
+// ✅ PATCH estado (mantienes tu papelera si quieres)
 router.patch(
   "/:id_caso_estudio/estado",
   auth,
@@ -75,6 +75,17 @@ router.patch(
   body("estado").isBoolean().toBoolean(),
   validate,
   ctrl.toggleEstado
+);
+
+// ✅ ✅ NUEVO: DELETE REAL (borra BD + PDF) SOLO ADMIN
+router.delete(
+  "/:id_caso_estudio",
+  auth,
+  authorize(["ADMIN"]),
+  attachCarreraPeriodoCtx,
+  param("id_caso_estudio").isInt({ min: 1 }).toInt(),
+  validate,
+  ctrl.remove
 );
 
 module.exports = router;

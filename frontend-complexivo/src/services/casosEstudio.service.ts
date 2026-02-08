@@ -68,4 +68,12 @@ export const casosEstudioService = {
     });
     return unwrapObject(res);
   },
+
+  // ✅ ✅ ✅ (NO BORRA NADA) — agrega download para ver/descargar PDF por endpoint protegido
+  async download(id_caso_estudio: number) {
+    return axiosClient.get(`/casos-estudio/${id_caso_estudio}/download`, {
+      responseType: "blob",
+      transformResponse: (r) => r,
+    });
+  },
 };
