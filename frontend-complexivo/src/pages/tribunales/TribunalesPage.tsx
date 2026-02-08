@@ -16,6 +16,8 @@ import {
 import { useNavigate } from "react-router-dom";
 import "./TribunalesPage.css";
 
+import escudoESPE from "../../assets/escudo.png";
+
 import type { Tribunal } from "../../types/tribunal";
 import type { TribunalEstudiante } from "../../types/tribunalEstudiante";
 import type { CarreraPeriodo } from "../../types/carreraPeriodo";
@@ -133,6 +135,17 @@ export default function TribunalesPage() {
     window.setTimeout(() => setToast(null), 3200);
   }
 
+  function extractBackendError(err: any): string {
+    const msg = err?.response?.data?.message ?? err?.data?.message ?? err?.userMessage;
+    const list = err?.response?.data?.errors;
+    if (Array.isArray(list) && list.length) {
+      const first = list[0];
+      if (first?.msg) return String(first.msg);
+    }
+    if (typeof msg === "string" && msg.trim()) return msg;
+    return "Ocurrió un error";
+  }
+
   function estado01(v: any): 0 | 1 {
     return Number(v) === 1 ? 1 : 0;
   }
@@ -205,8 +218,7 @@ export default function TribunalesPage() {
       }
 
       const first =
-        (cps ?? []).find((x: any) => Number((x as any).estado_cp ?? (x as any).estado ?? 1) === 1) ??
-        (cps ?? [])[0];
+        (cps ?? []).find((x: any) => Number((x as any).estado_cp ?? (x as any).estado ?? 1) === 1) ?? (cps ?? [])[0];
 
       if (first) {
         const id = Number((first as any).id_carrera_periodo);
@@ -415,8 +427,8 @@ export default function TribunalesPage() {
       });
 
       setShowFormModal(true);
-    } catch {
-      showToast("No se pudo cargar el tribunal para editar.", "error");
+    } catch (err: any) {
+      showToast(extractBackendError(err), "error");
     } finally {
       setLoading(false);
     }
@@ -481,12 +493,7 @@ export default function TribunalesPage() {
       resetTribunalForm();
       await loadAll();
     } catch (err: any) {
-      const msg =
-        err?.data?.message ||
-        err?.response?.data?.message ||
-        err?.userMessage ||
-        "No se pudo guardar el tribunal.";
-      showToast(String(msg), "error");
+      showToast(extractBackendError(err), "error");
     } finally {
       setSavingTribunal(false);
     }
@@ -533,8 +540,8 @@ export default function TribunalesPage() {
       setCasos(cs ?? []);
 
       setShowAsignModal(true);
-    } catch {
-      showToast("No se pudo cargar datos para asignación.", "error");
+    } catch (err: any) {
+      showToast(extractBackendError(err), "error");
       setShowAsignModal(false);
     } finally {
       setLoading(false);
@@ -581,8 +588,7 @@ export default function TribunalesPage() {
       setAsignaciones(a ?? []);
       setAsignForm({ id_estudiante: "", id_franja_horario: "", id_caso_estudio: "" });
     } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.userMessage || "No se pudo crear la asignación.";
-      showToast(String(msg), "error");
+      showToast(extractBackendError(err), "error");
     } finally {
       setLoading(false);
     }
@@ -609,8 +615,8 @@ export default function TribunalesPage() {
         });
         setAsignaciones(a ?? []);
       }
-    } catch {
-      showToast("No se pudo cambiar el estado de la asignación.", "error");
+    } catch (err: any) {
+      showToast(extractBackendError(err), "error");
     } finally {
       setLoading(false);
     }
@@ -637,8 +643,7 @@ export default function TribunalesPage() {
         setAsignaciones(a ?? []);
       }
     } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.userMessage || "No se pudo actualizar el cierre.";
-      showToast(String(msg), "error");
+      showToast(extractBackendError(err), "error");
     } finally {
       setLoading(false);
     }
@@ -653,8 +658,8 @@ export default function TribunalesPage() {
 
       showToast(current === 1 ? "Tribunal desactivado." : "Tribunal activado.", "success");
       await loadAll();
-    } catch {
-      showToast("No se pudo cambiar el estado.", "error");
+    } catch (err: any) {
+      showToast(extractBackendError(err), "error");
     } finally {
       setLoading(false);
     }
@@ -704,8 +709,7 @@ export default function TribunalesPage() {
       showToast("Calificadores generales guardados.", "success");
       await loadPlanAndCalificadores();
     } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.userMessage || "No se pudo guardar calificadores generales.";
-      showToast(String(msg), "error");
+      showToast(extractBackendError(err), "error");
     } finally {
       setSavingCG(false);
     }
@@ -713,300 +717,304 @@ export default function TribunalesPage() {
 
   return (
     <div className="tribunalesPage">
-      {toast ? <div className={`toast toast-${toast.type}`}>{toast.msg}</div> : null}
-
-      {/* HERO */}
-      <div className="hero">
-        <div className="heroLeft">
-          <div className="heroText">
-            <h2 className="heroTitle">GESTIÓN DE TRIBUNALES</h2>
-            <p className="heroSubtitle">{selectedCPLabel || "Seleccione Carrera–Período"}</p>
-          </div>
-        </div>
-
-        <div className="heroActions">
-          <button className="heroBtn primary" onClick={openCreateModal} disabled={!selectedCP}>
-            <Plus className="heroBtnIcon" /> Añadir Tribunal
-          </button>
-        </div>
-      </div>
-
-      {/* BOX PRINCIPAL */}
-      <div className="box">
-        <div className="boxHead">
-          <div className="sectionTitle">
-            <span className="sectionTitleIcon">
-              <Users size={18} />
-            </span>
-            Listado de tribunales
-          </div>
-
-          <div className="boxRight">
-            <button className="btnGhost" onClick={loadAll} disabled={loading || !selectedCP} title="Actualizar">
-              ⟳ Actualizar
-            </button>
-
-            <label className="toggle">
-              <input
-                type="checkbox"
-                checked={mostrarInactivos}
-                onChange={(e) => setMostrarInactivos(e.target.checked)}
-                disabled={!selectedCP}
-              />
-              <span className="slider" />
-              <span className="toggleText">Mostrar inactivos</span>
-            </label>
-          </div>
-        </div>
-
-        {/* SUMMARY */}
-        <div className="summaryRow">
-          <div className="summaryBoxes">
-            <div className="summaryBox">
-              <span className="summaryLabel">Total</span>
-              <span className="summaryValue">{total}</span>
-            </div>
-
-            <div className="summaryBox active">
-              <span className="summaryLabel">Activos</span>
-              <span className="summaryValue">{activos}</span>
-            </div>
-
-            <div className="summaryBox inactive">
-              <span className="summaryLabel">Inactivos</span>
-              <span className="summaryValue">{inactivos}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* FILTERS */}
-        <div className="filtersRow">
-          <div className="searchWrap">
-            <Search className="searchIcon" />
-            <input
-              className="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar por nombre de tribunal..."
-              disabled={!selectedCP}
-            />
-          </div>
-
-          <div className="filterWrap">
-            <Filter className="filterIcon" />
-            <select
-              className="select"
-              value={selectedCP}
-              onChange={(e) => {
-                const next = e.target.value ? Number(e.target.value) : "";
-                setSelectedCP(next);
-                setActiveCarreraPeriodoId(typeof next === "number" ? next : null);
-              }}
-              disabled={loading}
-              title="Seleccione Carrera–Período"
-            >
-              <option value="">Seleccione Carrera–Período</option>
-              {carreraPeriodos.map((cp: any) => (
-                <option key={cp.id_carrera_periodo} value={cp.id_carrera_periodo}>
-                  {(cp.nombre_carrera ?? "Carrera") + " — " + (cp.codigo_periodo ?? cp.descripcion_periodo ?? "Período")}
-                </option>
-              ))}
-            </select>
-
-            {selectedCP && (
-              <button className="chipClear" onClick={() => setSelectedCP("")} title="Quitar filtro">
-                <X size={14} /> Quitar
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* TABLE */}
-        <div className="tableWrap">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Tribunal</th>
-                <th>Estado</th>
-                <th style={{ width: 220 }}>Acciones</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {!selectedCP ? (
-                <tr>
-                  <td colSpan={3} className="emptyCell">
-                    <div className="empty">Seleccione una Carrera–Período para ver tribunales.</div>
-                  </td>
-                </tr>
-              ) : loading ? (
-                <tr>
-                  <td colSpan={3} className="emptyCell">
-                    <div className="empty">Cargando...</div>
-                  </td>
-                </tr>
-              ) : paginated.length === 0 ? (
-                <tr>
-                  <td colSpan={3} className="emptyCell">
-                    <div className="empty">No hay tribunales para mostrar.</div>
-                  </td>
-                </tr>
-              ) : (
-                paginated.map((t: any) => {
-                  const activo = isActivo(t.estado);
-                  return (
-                    <tr key={t.id_tribunal}>
-                      <td>
-                        <div className="tdTitle">{t.nombre_tribunal}</div>
-                        <div className="tdSub">
-                          {t.nombre_carrera ? `${t.nombre_carrera} — ${t.codigo_periodo ?? ""}` : selectedCPLabel || "—"}
-                        </div>
-                      </td>
-
-                      <td>
-                        {activo ? <span className="badgeActive">Activo</span> : <span className="badgeInactive">Inactivo</span>}
-                      </td>
-
-                      <td className="tdActions">
-                        <div className="actions">
-                          <button className="iconBtn iconBtn_neutral" onClick={() => openView(t)} type="button">
-                            <Eye className="iconAction" />
-                            <span className="tooltip">Ver</span>
-                          </button>
-
-                          <button className="iconBtn iconBtn_purple" onClick={() => openEditModal(t)} type="button">
-                            <Pencil className="iconAction" />
-                            <span className="tooltip">Editar</span>
-                          </button>
-
-                          <button className="iconBtn iconBtn_primary" onClick={() => onToggleEstado(t)} type="button">
-                            {activo ? <ToggleRight className="iconAction" /> : <ToggleLeft className="iconAction" />}
-                            <span className="tooltip">{activo ? "Desactivar" : "Activar"}</span>
-                          </button>
-
-                          <button className="iconBtn iconBtn_neutral" onClick={() => openAsignaciones(t)} type="button">
-                            <CalendarPlus className="iconAction" />
-                            <span className="tooltip">Asignar</span>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* PAGINATION */}
-        <div className="paginationRow">
-          <button className="btnGhost" disabled={currentPage <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
-            ← Anterior
-          </button>
-
-          <span className="paginationText">
-            Página {currentPage} de {totalPages}
-          </span>
-
-          <button
-            className="btnGhost"
-            disabled={currentPage >= totalPages}
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-          >
-            Siguiente →
-          </button>
-        </div>
-      </div>
-
-      {/* TOP GRID (Plan + Calificadores) */}
-      <div className="topGrid">
-        {/* PLAN */}
-        <div className="box">
-          <div className="boxHead">
-            <div className="sectionTitle">
-              <span className="sectionTitleIcon">
-                <AlertTriangle size={18} />
-              </span>
-              Plan de Evaluación
-            </div>
-          </div>
-
-          {loadingPlan ? (
-            <p className="muted">Cargando plan...</p>
-          ) : !plan ? (
-            <div className="planEmpty">
-              <div className="planEmptyIcon">
-                <AlertTriangle size={20} />
-              </div>
-              <div>No se ha configurado un Plan de Evaluación para esta carrera y período.</div>
-              <button className="btnWarn" onClick={() => navigate(`/plan-evaluacion?cp=${selectedCP}`)} disabled={!selectedCP}>
-                Configurar Plan Ahora
-              </button>
-            </div>
-          ) : (
-            <div className="planInfo">
-              <p className="muted">
-                Plan activo: <b>{plan.nombre_plan ?? "Plan de evaluación"}</b>
+      <div className="wrap">
+        {/* ✅ HERO alineado estilo ESPE */}
+        <div className="hero">
+          <div className="heroLeft">
+            <img className="heroLogo" src={escudoESPE} alt="ESPE" />
+            <div className="heroText">
+              <h1 className="heroTitle">Tribunales</h1>
+              <p className="heroSubtitle">
+                Gestión de tribunales y asignación de estudiantes por franja horaria.{" "}
+                <b>{selectedCPLabel || "Seleccione Carrera–Período"}</b>
               </p>
-              {plan.descripcion_plan ? <p className="muted">{plan.descripcion_plan}</p> : null}
-              <button className="btnGhost" onClick={() => navigate(`/plan-evaluacion?cp=${selectedCP}`)} disabled={!selectedCP}>
-                Ver / Editar Plan
-              </button>
             </div>
-          )}
+          </div>
+
+          <div className="heroActions">
+            <button className="heroBtn primary" onClick={openCreateModal} disabled={!selectedCP || loading}>
+              <Plus className="heroBtnIcon" /> Añadir tribunal
+            </button>
+          </div>
         </div>
 
-        {/* CALIFICADORES */}
+        {/* BOX PRINCIPAL */}
         <div className="box">
           <div className="boxHead">
             <div className="sectionTitle">
               <span className="sectionTitleIcon">
                 <Users size={18} />
               </span>
-              Asignar Calificadores Generales
+              Listado de tribunales
+            </div>
+
+            <div className="boxRight">
+              <button className="btnGhost" onClick={loadAll} disabled={loading || !selectedCP} title="Actualizar">
+                ⟳ Actualizar
+              </button>
+
+              <label className="toggle">
+                <input
+                  type="checkbox"
+                  checked={mostrarInactivos}
+                  onChange={(e) => setMostrarInactivos(e.target.checked)}
+                  disabled={!selectedCP}
+                />
+                <span className="slider" />
+                <span className="toggleText">Mostrar inactivos</span>
+              </label>
             </div>
           </div>
 
-          <div className="cgGrid">
-            <div className="cgRow">
-              <div className="cgLabel">Calificador General 1</div>
-              <select className="select" value={cg1} onChange={(e) => setCg1(e.target.value ? Number(e.target.value) : "")}>
-                <option value="">-- Sin asignar --</option>
-                {docentes.map((cd: any) => (
-                  <option key={cd.id_carrera_docente} value={cd.id_carrera_docente}>
-                    {(cd.apellidos_docente ?? "") + " " + (cd.nombres_docente ?? "")}
+          {/* SUMMARY */}
+          <div className="summaryRow">
+            <div className="summaryBoxes">
+              <div className="summaryBox">
+                <span className="summaryLabel">Total</span>
+                <span className="summaryValue">{total}</span>
+              </div>
+
+              <div className="summaryBox active">
+                <span className="summaryLabel">Activos</span>
+                <span className="summaryValue">{activos}</span>
+              </div>
+
+              <div className="summaryBox inactive">
+                <span className="summaryLabel">Inactivos</span>
+                <span className="summaryValue">{inactivos}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* FILTERS */}
+          <div className="filtersRow">
+            <div className="searchWrap">
+              <Search className="searchIcon" />
+              <input
+                className="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar por nombre de tribunal..."
+                disabled={!selectedCP}
+              />
+            </div>
+
+            <div className="filterWrap">
+              <Filter className="filterIcon" />
+              <select
+                className="select"
+                value={selectedCP}
+                onChange={(e) => {
+                  const next = e.target.value ? Number(e.target.value) : "";
+                  setSelectedCP(next);
+                  setActiveCarreraPeriodoId(typeof next === "number" ? next : null);
+                }}
+                disabled={loading}
+                title="Seleccione Carrera–Período"
+              >
+                <option value="">Seleccione Carrera–Período</option>
+                {carreraPeriodos.map((cp: any) => (
+                  <option key={cp.id_carrera_periodo} value={cp.id_carrera_periodo}>
+                    {(cp.nombre_carrera ?? "Carrera") + " — " + (cp.codigo_periodo ?? cp.descripcion_periodo ?? "Período")}
                   </option>
                 ))}
               </select>
-            </div>
 
-            <div className="cgRow">
-              <div className="cgLabel">Calificador General 2</div>
-              <select className="select" value={cg2} onChange={(e) => setCg2(e.target.value ? Number(e.target.value) : "")}>
-                <option value="">-- Sin asignar --</option>
-                {docentes.map((cd: any) => (
-                  <option key={cd.id_carrera_docente} value={cd.id_carrera_docente}>
-                    {(cd.apellidos_docente ?? "") + " " + (cd.nombres_docente ?? "")}
-                  </option>
-                ))}
-              </select>
+              {selectedCP && (
+                <button className="chipClear" onClick={() => setSelectedCP("")} title="Quitar filtro">
+                  <X size={14} /> Quitar
+                </button>
+              )}
             </div>
+          </div>
 
-            <div className="cgRow">
-              <div className="cgLabel">Calificador General 3</div>
-              <select className="select" value={cg3} onChange={(e) => setCg3(e.target.value ? Number(e.target.value) : "")}>
-                <option value="">-- Sin asignar --</option>
-                {docentes.map((cd: any) => (
-                  <option key={cd.id_carrera_docente} value={cd.id_carrera_docente}>
-                    {(cd.apellidos_docente ?? "") + " " + (cd.nombres_docente ?? "")}
-                  </option>
-                ))}
-              </select>
-            </div>
+          {/* TABLE */}
+          <div className="tableWrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Tribunal</th>
+                  <th>Estado</th>
+                  <th style={{ width: 220 }}>Acciones</th>
+                </tr>
+              </thead>
 
-            <button className="btnPrimary btnBlock" onClick={onSaveCalificadoresGenerales} disabled={!selectedCP || savingCG}>
-              {savingCG ? "Guardando..." : "Guardar Calificadores Generales"}
+              <tbody>
+                {!selectedCP ? (
+                  <tr>
+                    <td colSpan={3} className="emptyCell">
+                      <div className="empty">Seleccione una Carrera–Período para ver tribunales.</div>
+                    </td>
+                  </tr>
+                ) : loading ? (
+                  <tr>
+                    <td colSpan={3} className="emptyCell">
+                      <div className="empty">Cargando...</div>
+                    </td>
+                  </tr>
+                ) : paginated.length === 0 ? (
+                  <tr>
+                    <td colSpan={3} className="emptyCell">
+                      <div className="empty">No hay tribunales para mostrar.</div>
+                    </td>
+                  </tr>
+                ) : (
+                  paginated.map((t: any) => {
+                    const activo = isActivo(t.estado);
+                    return (
+                      <tr key={t.id_tribunal}>
+                        <td>
+                          <div className="tdTitle">{t.nombre_tribunal}</div>
+                          <div className="tdSub">
+                            {t.nombre_carrera ? `${t.nombre_carrera} — ${t.codigo_periodo ?? ""}` : selectedCPLabel || "—"}
+                          </div>
+                        </td>
+
+                        <td>
+                          {activo ? <span className="badgeActive">Activo</span> : <span className="badgeInactive">Inactivo</span>}
+                        </td>
+
+                        <td className="tdActions">
+                          <div className="actions">
+                            <button className="iconBtn iconBtn_neutral" onClick={() => openView(t)} type="button">
+                              <Eye className="iconAction" />
+                              <span className="tooltip">Ver</span>
+                            </button>
+
+                            <button className="iconBtn iconBtn_purple" onClick={() => openEditModal(t)} type="button">
+                              <Pencil className="iconAction" />
+                              <span className="tooltip">Editar</span>
+                            </button>
+
+                            <button className="iconBtn iconBtn_primary" onClick={() => onToggleEstado(t)} type="button">
+                              {activo ? <ToggleRight className="iconAction" /> : <ToggleLeft className="iconAction" />}
+                              <span className="tooltip">{activo ? "Desactivar" : "Activar"}</span>
+                            </button>
+
+                            <button className="iconBtn iconBtn_neutral" onClick={() => openAsignaciones(t)} type="button">
+                              <CalendarPlus className="iconAction" />
+                              <span className="tooltip">Asignar</span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* PAGINATION */}
+          <div className="paginationRow">
+            <button className="btnGhost" disabled={currentPage <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+              ← Anterior
             </button>
+
+            <span className="paginationText">
+              Página {currentPage} de {totalPages}
+            </span>
+
+            <button
+              className="btnGhost"
+              disabled={currentPage >= totalPages}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            >
+              Siguiente →
+            </button>
+          </div>
+        </div>
+
+        {/* TOP GRID (Plan + Calificadores) */}
+        <div className="topGrid">
+          {/* PLAN */}
+          <div className="box">
+            <div className="boxHead">
+              <div className="sectionTitle">
+                <span className="sectionTitleIcon">
+                  <AlertTriangle size={18} />
+                </span>
+                Plan de Evaluación
+              </div>
+            </div>
+
+            {loadingPlan ? (
+              <p className="muted">Cargando plan...</p>
+            ) : !plan ? (
+              <div className="planEmpty">
+                <div className="planEmptyIcon">
+                  <AlertTriangle size={20} />
+                </div>
+                <div>No se ha configurado un Plan de Evaluación para esta carrera y período.</div>
+                <button className="btnWarn" onClick={() => navigate(`/plan-evaluacion?cp=${selectedCP}`)} disabled={!selectedCP}>
+                  Configurar Plan Ahora
+                </button>
+              </div>
+            ) : (
+              <div className="planInfo">
+                <p className="muted">
+                  Plan activo: <b>{plan.nombre_plan ?? "Plan de evaluación"}</b>
+                </p>
+                {plan.descripcion_plan ? <p className="muted">{plan.descripcion_plan}</p> : null}
+                <button className="btnGhost" onClick={() => navigate(`/plan-evaluacion?cp=${selectedCP}`)} disabled={!selectedCP}>
+                  Ver / Editar Plan
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* CALIFICADORES */}
+          <div className="box">
+            <div className="boxHead">
+              <div className="sectionTitle">
+                <span className="sectionTitleIcon">
+                  <Users size={18} />
+                </span>
+                Asignar Calificadores Generales
+              </div>
+            </div>
+
+            <div className="cgGrid">
+              <div className="cgRow">
+                <div className="cgLabel">Calificador General 1</div>
+                <select className="select" value={cg1} onChange={(e) => setCg1(e.target.value ? Number(e.target.value) : "")}>
+                  <option value="">-- Sin asignar --</option>
+                  {docentes.map((cd: any) => (
+                    <option key={cd.id_carrera_docente} value={cd.id_carrera_docente}>
+                      {(cd.apellidos_docente ?? "") + " " + (cd.nombres_docente ?? "")}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="cgRow">
+                <div className="cgLabel">Calificador General 2</div>
+                <select className="select" value={cg2} onChange={(e) => setCg2(e.target.value ? Number(e.target.value) : "")}>
+                  <option value="">-- Sin asignar --</option>
+                  {docentes.map((cd: any) => (
+                    <option key={cd.id_carrera_docente} value={cd.id_carrera_docente}>
+                      {(cd.apellidos_docente ?? "") + " " + (cd.nombres_docente ?? "")}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="cgRow">
+                <div className="cgLabel">Calificador General 3</div>
+                <select className="select" value={cg3} onChange={(e) => setCg3(e.target.value ? Number(e.target.value) : "")}>
+                  <option value="">-- Sin asignar --</option>
+                  {docentes.map((cd: any) => (
+                    <option key={cd.id_carrera_docente} value={cd.id_carrera_docente}>
+                      {(cd.apellidos_docente ?? "") + " " + (cd.nombres_docente ?? "")}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <button className="btnPrimary btnBlock" onClick={onSaveCalificadoresGenerales} disabled={!selectedCP || savingCG}>
+                {savingCG ? "Guardando..." : "Guardar Calificadores Generales"}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -1039,7 +1047,7 @@ export default function TribunalesPage() {
         }}
       />
 
-      {/* ✅ MODAL ASIGNACIONES (ya conectado completo) */}
+      {/* MODAL ASIGNACIONES */}
       <TribunalAsignacionesModal
         showAsignModal={showAsignModal}
         setShowAsignModal={setShowAsignModal}
@@ -1048,15 +1056,18 @@ export default function TribunalesPage() {
         setAsignForm={setAsignForm}
         estudiantes={estudiantes}
         franjas={franjas}
-        casos={casos}              // ✅ AQUÍ
+        casos={casos}
         asignaciones={asignaciones}
         errors={errors}
         loading={loading}
         onCreateAsignacion={onCreateAsignacion}
         onToggleAsignEstado={onToggleAsignEstado}
+        // ✅ si tu modal ya tiene botones de cierre, pásale esto:
+        // onToggleCierre={onToggleCierre}
         isActivo={isActivo}
       />
 
+      {toast && <div className={`toast toast-${toast.type}`}>{toast.msg}</div>}
     </div>
   );
 }
