@@ -55,7 +55,7 @@ type ToastType = "success" | "error" | "info";
 type AsignacionFormState = {
   id_estudiante: number | "";
   id_franja_horario: number | "";
-  id_caso_estudio: number | ""; // ✅ NUEVO: caso pertenece a tribunal_estudiante
+  id_caso_estudio: number | ""; // ✅ caso en tribunal_estudiante
 };
 
 type TribunalFormState = {
@@ -230,7 +230,8 @@ export default function TribunalesPage() {
     if (!selectedCP) return;
 
     try {
-      const cp: any = carreraPeriodos.find((x: any) => Number(x.id_carrera_periodo) === Number(selectedCP)) ?? null;
+      const cp: any =
+        carreraPeriodos.find((x: any) => Number(x.id_carrera_periodo) === Number(selectedCP)) ?? null;
 
       const carreraId =
         Number(cp?.id_carrera) ||
@@ -504,7 +505,6 @@ export default function TribunalesPage() {
     try {
       setLoading(true);
 
-      // ✅ Todos vienen de módulos por Carrera-Periodo
       const [a, est, fr, cs] = await Promise.all([
         tribunalEstudiantesService.list({
           tribunalId: Number((t as any).id_tribunal),
@@ -566,7 +566,7 @@ export default function TribunalesPage() {
         id_tribunal: Number((activeTribunalForAsign as any).id_tribunal),
         id_estudiante: Number(asignForm.id_estudiante),
         id_franja_horario: Number(asignForm.id_franja_horario),
-        id_caso_estudio: Number(asignForm.id_caso_estudio), // ✅ CLAVE
+        id_caso_estudio: Number(asignForm.id_caso_estudio),
       });
 
       showToast("Asignación creada.", "success");
@@ -593,7 +593,10 @@ export default function TribunalesPage() {
       setLoading(true);
       const current = estado01((row as any).estado);
 
-      await tribunalEstudiantesService.toggleEstado(Number((row as any).id_tribunal_estudiante), current as 0 | 1);
+      await tribunalEstudiantesService.toggleEstado(
+        Number((row as any).id_tribunal_estudiante),
+        current as 0 | 1
+      );
 
       showToast(current === 1 ? "Asignación desactivada." : "Asignación activada.", "success");
 
@@ -608,6 +611,34 @@ export default function TribunalesPage() {
       }
     } catch {
       showToast("No se pudo cambiar el estado de la asignación.", "error");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // ✅ NUEVO: cierre / reapertura (defensa)
+  async function onToggleCierre(row: TribunalEstudiante) {
+    try {
+      setLoading(true);
+      const cerradoActual = estado01((row as any).cerrado);
+      const next = cerradoActual === 1 ? false : true;
+
+      await tribunalEstudiantesService.setCierre(Number(row.id_tribunal_estudiante), next);
+
+      showToast(next ? "Defensa cerrada." : "Defensa reabierta.", "success");
+
+      if (activeTribunalForAsign) {
+        const a = await tribunalEstudiantesService.list({
+          tribunalId: Number((activeTribunalForAsign as any).id_tribunal),
+          includeInactive: true,
+          page: 1,
+          limit: 200,
+        });
+        setAsignaciones(a ?? []);
+      }
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.userMessage || "No se pudo actualizar el cierre.";
+      showToast(String(msg), "error");
     } finally {
       setLoading(false);
     }
@@ -1008,24 +1039,24 @@ export default function TribunalesPage() {
         }}
       />
 
-      {/* MODAL ASIGNACIONES */}
+      {/* ✅ MODAL ASIGNACIONES (ya conectado completo) */}
       <TribunalAsignacionesModal
         showAsignModal={showAsignModal}
         setShowAsignModal={setShowAsignModal}
         activeTribunalForAsign={activeTribunalForAsign}
-        asignForm={asignForm as any} // 👈 modal actual no tiene id_caso_estudio tipado aún
-        setAsignForm={setAsignForm as any}
+        asignForm={asignForm}
+        setAsignForm={setAsignForm}
         estudiantes={estudiantes}
         franjas={franjas}
+        casos={casos}              // ✅ AQUÍ
         asignaciones={asignaciones}
         errors={errors}
         loading={loading}
         onCreateAsignacion={onCreateAsignacion}
         onToggleAsignEstado={onToggleAsignEstado}
         isActivo={isActivo}
-        // 👇 si tu modal ya acepta casos, pásalo (cuando lo ajustes)
-        // casos={casos}
       />
+
     </div>
   );
 }

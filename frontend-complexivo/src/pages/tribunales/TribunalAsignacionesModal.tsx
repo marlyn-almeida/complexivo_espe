@@ -6,15 +6,15 @@ import type { Tribunal } from "../../types/tribunal";
 import type { TribunalEstudiante } from "../../types/tribunalEstudiante";
 import type { Estudiante } from "../../types/estudiante";
 import type { FranjaHorario } from "../../types/franjaHoraria";
+import type { CasoEstudio } from "../../types/casoEstudio";
 
 import "./TribunalAsignacionesModal.css";
+
 import { casosEstudioService } from "../../services/casosEstudio.service";
 import { entregasCasoService } from "../../services/entregasCaso.service";
 
-type AsignacionFormState = {
-  id_estudiante: number | "";
-  id_franja_horario: number | "";
-};
+// ✅ IMPORTA EL MISMO TIPO QUE USA TribunalesPage.tsx
+import type { AsignacionFormState } from "./tribunales.types";
 
 type Props = {
   showAsignModal: boolean;
@@ -27,6 +27,8 @@ type Props = {
 
   estudiantes: Estudiante[];
   franjas: FranjaHorario[];
+  casos: CasoEstudio[]; // ✅ NUEVO
+
   asignaciones: TribunalEstudiante[];
 
   errors: Record<string, string>;
@@ -64,6 +66,7 @@ export default function TribunalAsignacionesModal({
   setAsignForm,
   estudiantes,
   franjas,
+  casos,
   asignaciones,
   errors,
   loading,
@@ -90,6 +93,12 @@ export default function TribunalAsignacionesModal({
     return { id_caso_estudio, numero_caso, titulo_caso };
   }, [selectedEst]);
 
+  // ✅ caso seleccionado desde el select del modal
+  const selectedCaso = useMemo(() => {
+    if (!asignForm.id_caso_estudio) return null;
+    return (casos ?? []).find((c: any) => Number(c.id_caso_estudio) === Number(asignForm.id_caso_estudio)) ?? null;
+  }, [asignForm.id_caso_estudio, casos]);
+
   if (!showAsignModal || !activeTribunalForAsign) return null;
 
   async function onDownloadCasoBase(row: TribunalEstudiante) {
@@ -99,23 +108,24 @@ export default function TribunalAsignacionesModal({
     const key = `caso_${(row as any).id_tribunal_estudiante}`;
     try {
       setDownloadingKey(key);
-      const res = await casosEstudioService.download(idCaso);
+
+      // ⚠️ Aquí asumo que existe casosEstudioService.download(id)
+      // Si no existe, dime tu función real y lo ajusto.
+      const res = await (casosEstudioService as any).download(idCaso);
       const blob = res?.data as Blob;
 
       const n = (row as any).numero_caso ? `Caso_${(row as any).numero_caso}` : `Caso_${idCaso}`;
       downloadBlob(blob, `${n}.pdf`);
     } catch {
-      // si quieres toast, pásalo por props (por ahora silencioso)
+      // silencioso por ahora
     } finally {
       setDownloadingKey(null);
     }
   }
 
   /**
-   * ✅ ENTREGA: por tu regla real, es 1 vigente por estudiante.
-   * Entonces descargamos por estudiante.
-   * Si la fila viene con id_entrega (id_estudiante_caso_entrega / id_entrega),
-   * la usamos para descargar por ID (compatibilidad).
+   * ✅ ENTREGA: 1 vigente por estudiante.
+   * Descargamos por estudiante o por id_entrega si viene.
    */
   async function onDownloadEntrega(row: TribunalEstudiante) {
     const idEst = Number((row as any).id_estudiante) || 0;
@@ -130,7 +140,7 @@ export default function TribunalAsignacionesModal({
     try {
       setDownloadingKey(key);
 
-      const res = await entregasCasoService.downloadPreferente({
+      const res = await (entregasCasoService as any).downloadPreferente({
         id_entrega: idEntrega > 0 ? idEntrega : undefined,
         id_estudiante: idEst,
       });
@@ -144,7 +154,7 @@ export default function TribunalAsignacionesModal({
 
       downloadBlob(blob, `Entrega_${safeFileName(estName)}.pdf`);
     } catch {
-      // si quieres toast, pásalo por props (por ahora silencioso)
+      // silencioso por ahora
     } finally {
       setDownloadingKey(null);
     }
@@ -158,7 +168,7 @@ export default function TribunalAsignacionesModal({
           <div className="asignTitleRow">
             <h3 className="asignTitle">Asignaciones — {activeTribunalForAsign.nombre_tribunal}</h3>
             <p className="asignSubtitle">
-              Asignas estudiante + franja. El caso base y la entrega se descargan desde la asignación.
+              Asignas estudiante + franja + caso. Luego puedes descargar caso base y entrega.
             </p>
           </div>
 
@@ -192,20 +202,6 @@ export default function TribunalAsignacionesModal({
               </select>
               {errors.id_estudiante ? <p className="error">{errors.id_estudiante}</p> : null}
 
-              {/* panel caso seleccionado */}
-              <div className="asignMiniCard">
-                <div className="asignMiniTitle">Caso del estudiante (referencia)</div>
-                {!asignForm.id_estudiante ? (
-                  <div className="asignMiniMuted">Seleccione un estudiante para ver referencia.</div>
-                ) : selectedCaseInfo && (selectedCaseInfo.numero_caso || selectedCaseInfo.titulo_caso) ? (
-                  <div className="asignMiniText">
-                    Caso <b>{selectedCaseInfo.numero_caso ?? "—"}</b>
-                    {selectedCaseInfo.titulo_caso ? ` — ${selectedCaseInfo.titulo_caso}` : ""}
-                  </div>
-                ) : (
-                  <div className="asignMiniMuted">No disponible aquí (se verá en la tabla al crear asignación).</div>
-                )}
-              </div>
             </div>
 
             <div className="field">
@@ -228,6 +224,44 @@ export default function TribunalAsignacionesModal({
                 ))}
               </select>
               {errors.id_franja_horario ? <p className="error">{errors.id_franja_horario}</p> : null}
+            </div>
+
+            {/* ✅ NUEVO: Caso a asignar */}
+            <div className="field">
+              <label className="fieldLabel">Caso de estudio</label>
+              <select
+                className="select"
+                value={asignForm.id_caso_estudio}
+                onChange={(e) =>
+                  setAsignForm((p) => ({
+                    ...p,
+                    id_caso_estudio: e.target.value ? Number(e.target.value) : "",
+                  }))
+                }
+              >
+                <option value="">Seleccione...</option>
+                {casos.map((c: any) => (
+                  <option key={c.id_caso_estudio} value={c.id_caso_estudio}>
+                    {`Caso ${c.numero_caso} — ${c.titulo ?? "Sin título"}`}
+                  </option>
+                ))}
+              </select>
+              {errors.id_caso_estudio ? <p className="error">{errors.id_caso_estudio}</p> : null}
+
+              {/* mini preview */}
+              <div className="asignMiniCard">
+                <div className="asignMiniTitle">Caso seleccionado</div>
+                {!asignForm.id_caso_estudio ? (
+                  <div className="asignMiniMuted">Seleccione un caso.</div>
+                ) : selectedCaso ? (
+                  <div className="asignMiniText">
+                    Caso <b>{selectedCaso.numero_caso}</b>
+                    {selectedCaso.titulo ? ` — ${selectedCaso.titulo}` : ""}
+                  </div>
+                ) : (
+                  <div className="asignMiniMuted">No encontrado.</div>
+                )}
+              </div>
             </div>
 
             <div className="field">
@@ -321,7 +355,7 @@ export default function TribunalAsignacionesModal({
                               <FileText size={18} />
                             </button>
 
-                            {/* PDF Entrega (por estudiante) */}
+                            {/* PDF Entrega */}
                             <button
                               className="asignBtnIcon"
                               onClick={() => onDownloadEntrega(row)}
