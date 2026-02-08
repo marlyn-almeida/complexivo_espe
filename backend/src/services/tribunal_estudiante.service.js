@@ -30,6 +30,7 @@ async function create(d, scope = null) {
   const t = await repo.getTribunal(d.id_tribunal);
   if (!t) throw err("Tribunal no existe", 422);
 
+  // scope (ROL2) - restringir por carrera
   if (scope?.id_carrera) {
     const carreraIdTribunal = await repo.getTribunalCarreraId(d.id_tribunal);
     if (!carreraIdTribunal) throw err("No se pudo obtener la carrera del tribunal", 422);
@@ -58,6 +59,7 @@ async function create(d, scope = null) {
   const dupFranja = await repo.existsFranjaEnTribunal(d.id_tribunal, d.id_franja_horario);
   if (dupFranja) throw err("Esa franja ya está ocupada en este tribunal", 409);
 
+  // ✅ validar conflicto horario de docentes
   const docentes = await repo.getDocentesByTribunal(d.id_tribunal);
   for (const doc of docentes) {
     const conflicto = await repo.existsConflictoHorarioDocente({
@@ -74,10 +76,23 @@ async function create(d, scope = null) {
     }
   }
 
+  // ✅ OBLIGATORIO: el estudiante debe tener caso asignado
+  const caso = await repo.getCasoAsignadoByEstudiante(d.id_estudiante);
+  if (!caso || !caso.id_caso_estudio) {
+    throw err("El estudiante no tiene un caso de estudio asignado (estudiante_caso_asignacion).", 422);
+  }
+
+  // ✅ el caso debe pertenecer a la misma carrera_periodo del tribunal
+  if (+caso.id_carrera_periodo !== +t.id_carrera_periodo) {
+    throw err("El caso asignado del estudiante no pertenece a la misma carrera_periodo del tribunal.", 422);
+  }
+
+  // ✅ crear ya guardando id_caso_estudio
   return repo.create({
     id_tribunal: d.id_tribunal,
     id_estudiante: d.id_estudiante,
     id_franja_horario: d.id_franja_horario,
+    id_caso_estudio: caso.id_caso_estudio,
   });
 }
 
@@ -87,7 +102,7 @@ async function changeEstado(id, estado, scope = null) {
   return r;
 }
 
-// ✅ NUEVO: cerrar/abrir asignación (bloquea calificación)
+// ✅ cerrar/abrir asignación (bloquea calificación)
 async function changeCierre(id, cerrado, scope = null) {
   const te = await repo.getTribunalEstudiante(id);
   if (!te) throw err("Asignación tribunal_estudiante no encontrada", 404);

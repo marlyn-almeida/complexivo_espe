@@ -11,7 +11,7 @@ async function getTribunal(id_tribunal) {
 
 async function getTribunalEstudiante(id_tribunal_estudiante) {
   const [r] = await pool.query(
-    `SELECT id_tribunal_estudiante, id_tribunal, id_estudiante, id_franja_horario, estado, cerrado
+    `SELECT id_tribunal_estudiante, id_tribunal, id_estudiante, id_franja_horario, id_caso_estudio, estado, cerrado
      FROM tribunal_estudiante
      WHERE id_tribunal_estudiante=? LIMIT 1`,
     [id_tribunal_estudiante]
@@ -75,6 +75,7 @@ async function getCasoAsignadoByEstudiante(id_estudiante) {
     FROM estudiante_caso_asignacion eca
     JOIN caso_estudio ce ON ce.id_caso_estudio = eca.id_caso_estudio
     WHERE eca.id_estudiante=?
+      AND eca.estado=1
     LIMIT 1
     `,
     [id_estudiante]
@@ -150,6 +151,10 @@ async function existsConflictoHorarioDocente({ id_docente, fecha, hora_inicio, h
   return r[0] || null;
 }
 
+/**
+ * ✅ LISTADO (Admin/SuperAdmin)
+ * Ahora toma el caso desde tribunal_estudiante.id_caso_estudio
+ */
 async function findAll({ tribunalId = null, includeInactive = false, scopeCarreraId = null } = {}) {
   const where = [];
   const params = [];
@@ -159,7 +164,6 @@ async function findAll({ tribunalId = null, includeInactive = false, scopeCarrer
     where.push("te.id_tribunal=?");
     params.push(+tribunalId);
   }
-
   if (scopeCarreraId) {
     where.push("c.id_carrera=?");
     params.push(+scopeCarreraId);
@@ -174,6 +178,7 @@ async function findAll({ tribunalId = null, includeInactive = false, scopeCarrer
       te.id_tribunal,
       te.id_estudiante,
       te.id_franja_horario,
+      te.id_caso_estudio,
       te.estado,
       te.cerrado,
       te.fecha_cierre,
@@ -192,7 +197,6 @@ async function findAll({ tribunalId = null, includeInactive = false, scopeCarrer
 
       t.nombre_tribunal,
 
-      eca.id_caso_estudio,
       ce.numero_caso,
       ce.titulo AS titulo_caso,
 
@@ -208,10 +212,8 @@ async function findAll({ tribunalId = null, includeInactive = false, scopeCarrer
     JOIN estudiante e ON e.id_estudiante = te.id_estudiante
     JOIN franja_horario f ON f.id_franja_horario = te.id_franja_horario
 
-    LEFT JOIN estudiante_caso_asignacion eca
-      ON eca.id_estudiante = te.id_estudiante AND eca.estado=1
     LEFT JOIN caso_estudio ce
-      ON ce.id_caso_estudio = eca.id_caso_estudio AND ce.estado=1
+      ON ce.id_caso_estudio = te.id_caso_estudio
 
     ${ws}
     ORDER BY f.fecha DESC, f.hora_inicio DESC
@@ -222,11 +224,15 @@ async function findAll({ tribunalId = null, includeInactive = false, scopeCarrer
   return rows;
 }
 
+/**
+ * ✅ CREAR asignación
+ * Ahora inserta id_caso_estudio
+ */
 async function create(d) {
   const [res] = await pool.query(
-    `INSERT INTO tribunal_estudiante (id_tribunal, id_estudiante, id_franja_horario, estado, cerrado)
-     VALUES (?,?,?,1,0)`,
-    [d.id_tribunal, d.id_estudiante, d.id_franja_horario]
+    `INSERT INTO tribunal_estudiante (id_tribunal, id_estudiante, id_franja_horario, id_caso_estudio, estado, cerrado)
+     VALUES (?,?,?,?,1,0)`,
+    [d.id_tribunal, d.id_estudiante, d.id_franja_horario, d.id_caso_estudio]
   );
 
   const [r] = await pool.query(
@@ -248,7 +254,7 @@ async function setEstado(id, estado) {
   return r[0] || null;
 }
 
-// ✅ NUEVO: cerrar/abrir
+// ✅ cerrar/abrir
 async function setCerrado(id, cerrado, id_docente_cierra = null) {
   await pool.query(
     `
@@ -270,6 +276,10 @@ async function setCerrado(id, cerrado, id_docente_cierra = null) {
   return r[0] || null;
 }
 
+/**
+ * ✅ MIS ASIGNACIONES (ROL 3)
+ * También usa te.id_caso_estudio
+ */
 async function findMisAsignaciones({ id_docente, includeInactive = false } = {}) {
   const [rows] = await pool.query(
     `
@@ -278,6 +288,7 @@ async function findMisAsignaciones({ id_docente, includeInactive = false } = {})
       te.id_tribunal,
       te.id_estudiante,
       te.id_franja_horario,
+      te.id_caso_estudio,
       te.estado,
       te.cerrado,
       te.fecha_cierre,
@@ -296,7 +307,6 @@ async function findMisAsignaciones({ id_docente, includeInactive = false } = {})
 
       t.nombre_tribunal,
 
-      eca.id_caso_estudio,
       ce.numero_caso,
       ce.titulo AS titulo_caso,
 
@@ -317,10 +327,8 @@ async function findMisAsignaciones({ id_docente, includeInactive = false } = {})
     JOIN estudiante e ON e.id_estudiante = te.id_estudiante
     JOIN franja_horario f ON f.id_franja_horario = te.id_franja_horario
 
-    LEFT JOIN estudiante_caso_asignacion eca
-      ON eca.id_estudiante = te.id_estudiante AND eca.estado=1
     LEFT JOIN caso_estudio ce
-      ON ce.id_caso_estudio = eca.id_caso_estudio AND ce.estado=1
+      ON ce.id_caso_estudio = te.id_caso_estudio
 
     WHERE cd.id_docente = ?
       AND cd.estado = 1
