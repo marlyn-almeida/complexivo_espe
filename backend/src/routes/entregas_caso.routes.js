@@ -1,4 +1,4 @@
-// src/routes/entregas_caso.routes.js
+// ✅ src/routes/entregas_caso.routes.js
 const router = require("express").Router();
 const { body, param } = require("express-validator");
 const validate = require("../middlewares/validate.middleware");
@@ -8,7 +8,6 @@ const ctrl = require("../controllers/entregas_caso.controller");
 
 const multer = require("multer");
 
-// ✅ Para recibir req.file.buffer
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 15 * 1024 * 1024 }, // 15MB
@@ -26,7 +25,7 @@ router.get(
   ctrl.get
 );
 
-// ✅ Descargar PDF de la entrega del estudiante
+// ✅ ✅ ✅ Ver PDF inline (por estudiante + caso)
 router.get(
   "/:id_estudiante/:id_caso_estudio/download",
   auth,

@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { estudiantesService } from "../../services/estudiantes.service";
 import { notaTeoricoService } from "../../services/notaTeorico.service";
 import { entregasCasoService } from "../../services/entregasCaso.service";
+import { casosEstudioService } from "../../services/casosEstudio.service"; // ✅ NUEVO: para descargar el PDF base del caso
 
 import {
   ArrowLeft,
@@ -77,10 +78,15 @@ export default function EstudianteAsignacionesPage() {
   }
 
   function extractBackendMsg(err: any) {
+    // ✅ si viene desde axiosClient (tu interceptor)
+    if (typeof err?.userMessage === "string" && err.userMessage.trim()) return err.userMessage;
+
+    // normal
     const msg = err?.response?.data?.message;
     const list = err?.response?.data?.errors;
     if (Array.isArray(list) && list.length && list[0]?.msg) return String(list[0].msg);
     if (typeof msg === "string" && msg.trim()) return msg;
+
     return err?.message || "Ocurrió un error.";
   }
 
@@ -184,7 +190,6 @@ export default function EstudianteAsignacionesPage() {
     try {
       setLoading(true);
 
-      // ✅ AQUÍ VA EL CAMBIO REAL (sin inventar campos)
       await entregasCasoService.subir({
         id_estudiante: id,
         id_caso_estudio: idCasoEstudio,
@@ -202,14 +207,104 @@ export default function EstudianteAsignacionesPage() {
     }
   }
 
-  // ✅ Descargas simples (si archivo_path ya es URL pública o ruta servida por tu backend)
-  function openPath(path?: string | null) {
-    const p = String(path || "").trim();
-    if (!p) {
-      showToast("No hay archivo disponible para descargar.", "info");
+  // =========================================================
+  // ✅ PDF HELPERS (blob -> abrir / descargar)
+  // =========================================================
+  function openBlobInNewTab(blob: Blob) {
+    const url = URL.createObjectURL(blob);
+    window.open(url, "_blank", "noopener,noreferrer");
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  }
+
+  function downloadBlob(blob: Blob, filename: string) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename || "archivo.pdf";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  }
+
+  // ✅ Caso base (usa endpoint protegido /api/casos-estudio/:id/download)
+  async function openCasoPdfInline() {
+    if (!idCasoEstudio) {
+      showToast("Aún no hay un caso asignado para este estudiante.", "info");
       return;
     }
-    window.open(p, "_blank", "noopener,noreferrer");
+    try {
+      setLoading(true);
+      const res = await casosEstudioService.download(idCasoEstudio);
+      const blob = new Blob([res.data], { type: "application/pdf" });
+      openBlobInNewTab(blob);
+    } catch (err: any) {
+      showToast(extractBackendMsg(err), "error");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function downloadCasoPdf() {
+    if (!idCasoEstudio) {
+      showToast("Aún no hay un caso asignado para este estudiante.", "info");
+      return;
+    }
+    try {
+      setLoading(true);
+      const res = await casosEstudioService.download(idCasoEstudio);
+      const blob = new Blob([res.data], { type: "application/pdf" });
+
+      const name =
+        (caso?.archivo_nombre as string) ||
+        (caso?.numero_caso ? `caso_${caso.numero_caso}.pdf` : `caso_${idCasoEstudio}.pdf`);
+
+      downloadBlob(blob, name);
+    } catch (err: any) {
+      showToast(extractBackendMsg(err), "error");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // ✅ Entrega (usa endpoint real: /api/entregas-caso/:id_estudiante/:id_caso_estudio/download)
+  async function openEntregaPdfInline() {
+    if (!idCasoEstudio) {
+      showToast("Aún no hay un caso asignado para este estudiante.", "info");
+      return;
+    }
+    try {
+      setLoading(true);
+      const res = await entregasCasoService.downloadByEstudianteCaso(id, idCasoEstudio);
+      const blob = new Blob([res.data], { type: "application/pdf" });
+      openBlobInNewTab(blob);
+    } catch (err: any) {
+      showToast(extractBackendMsg(err), "error");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function downloadEntregaPdf() {
+    if (!idCasoEstudio) {
+      showToast("Aún no hay un caso asignado para este estudiante.", "info");
+      return;
+    }
+    try {
+      setLoading(true);
+      const res = await entregasCasoService.downloadByEstudianteCaso(id, idCasoEstudio);
+      const blob = new Blob([res.data], { type: "application/pdf" });
+
+      const name =
+        (entrega?.archivo_nombre as string) ||
+        `entrega_${id}_${idCasoEstudio}.pdf`;
+
+      downloadBlob(blob, name);
+    } catch (err: any) {
+      showToast(extractBackendMsg(err), "error");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -313,20 +408,20 @@ export default function EstudianteAsignacionesPage() {
                         {caso.titulo || `Caso ID ${caso.id_caso_estudio}`}
                       </div>
                       <div className="fileMeta">{caso.descripcion ? caso.descripcion : "Caso disponible."}</div>
-                      <div className="fileMeta">
-                        {caso.archivo_nombre ? `Archivo: ${caso.archivo_nombre}` : ""}
-                      </div>
+                      <div className="fileMeta">{caso.archivo_nombre ? `Archivo: ${caso.archivo_nombre}` : ""}</div>
                     </div>
 
-                    <button
-                      className="btnGhost"
-                      onClick={() => openPath(caso.archivo_path)}
-                      disabled={loading || !caso?.archivo_path}
-                      title={!caso?.archivo_path ? "No hay archivo_path disponible" : ""}
-                    >
-                      <Download size={16} />
-                      Caso PDF
-                    </button>
+                    {/* ✅ Antes abrías archivo_path directo. Ahora usamos endpoint protegido + blob */}
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                      <button className="btnGhost" onClick={openCasoPdfInline} disabled={loading}>
+                        <Download size={16} />
+                        Ver PDF
+                      </button>
+                      <button className="btnGhost" onClick={downloadCasoPdf} disabled={loading}>
+                        <FileDown size={16} />
+                        Descargar
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <div className="muted">Aún no hay caso asignado para este estudiante.</div>
@@ -337,12 +432,10 @@ export default function EstudianteAsignacionesPage() {
               <div className="subBlock" style={{ marginTop: 12 }}>
                 <div className="subTitle">Entrega registrada</div>
 
-                {entrega?.id_estudiante_caso_entrega ? (
+                {entrega?.archivo_nombre || entrega?.archivo_path ? (
                   <div className="fileRow">
                     <div className="fileInfo">
-                      <div className="fileName">
-                        {entrega.archivo_nombre || "Entrega PDF registrada"}
-                      </div>
+                      <div className="fileName">{entrega.archivo_nombre || "Entrega PDF registrada"}</div>
                       <div className="fileMeta">
                         {entrega.fecha_entrega
                           ? `Entregada: ${safeDateLabel(entrega.fecha_entrega)}`
@@ -352,15 +445,17 @@ export default function EstudianteAsignacionesPage() {
                       </div>
                     </div>
 
-                    <button
-                      className="btnGhost"
-                      onClick={() => openPath(entrega.archivo_path)}
-                      disabled={loading || !entrega?.archivo_path}
-                      title={!entrega?.archivo_path ? "No hay archivo_path disponible" : ""}
-                    >
-                      <FileDown size={16} />
-                      Ver/Descargar
-                    </button>
+                    {/* ✅ Antes abrías archivo_path directo. Ahora usamos endpoint protegido + blob */}
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                      <button className="btnGhost" onClick={openEntregaPdfInline} disabled={loading || !idCasoEstudio}>
+                        <FileDown size={16} />
+                        Ver PDF
+                      </button>
+                      <button className="btnGhost" onClick={downloadEntregaPdf} disabled={loading || !idCasoEstudio}>
+                        <Download size={16} />
+                        Descargar
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <div className="muted">Sin entrega registrada.</div>

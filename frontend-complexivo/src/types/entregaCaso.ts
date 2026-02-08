@@ -2,9 +2,7 @@
 export type Estado01 = 0 | 1;
 
 export type EntregaCaso = {
-  // ✅ OJO: tu backend puede tener uno de estos nombres
-  // dejamos ambos opcionales para que no reviente si cambia el nombre exacto
-  id_entrega_caso?: number;
+  // (si tu DB devuelve id interno)
   id_estudiante_caso_entrega?: number;
 
   id_estudiante: number;
@@ -21,7 +19,7 @@ export type EntregaCaso = {
   created_at?: string;
   updated_at?: string | null;
 
-  // joins opcionales (si backend devuelve)
+  // joins opcionales
   numero_caso?: number | string | null;
   titulo_caso?: string | null;
 

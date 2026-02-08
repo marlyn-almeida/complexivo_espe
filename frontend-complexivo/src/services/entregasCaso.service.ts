@@ -1,4 +1,4 @@
-// src/services/entregasCaso.service.ts
+// ✅ src/services/entregasCaso.service.ts
 import axiosClient from "../api/axiosClient";
 import type { EntregaCaso, EntregaCasoCreateDTO, Estado01 } from "../types/entregaCaso";
 
@@ -28,14 +28,13 @@ function unwrapObject(res: any): any {
 
 export type EntregaCasoListParams = {
   id_estudiante?: number;
-  id_caso_estudio?: number; // (si tu backend lo soporta; si no, no afecta)
+  id_caso_estudio?: number;
   includeInactive?: boolean;
   page?: number;
   limit?: number;
 };
 
 export const entregasCasoService = {
-  // ✅ Listado (si lo usas en otra pantalla)
   list: async (params?: EntregaCasoListParams): Promise<EntregaCaso[]> => {
     const res = await axiosClient.get(BASE, {
       params: {
@@ -49,18 +48,17 @@ export const entregasCasoService = {
     return unwrapArray(res);
   },
 
-  // ✅ Obtener 1 entrega por ID (si existe endpoint)
+  // ⚠️ tu backend NO tiene GET /entregas-caso/:id (por ahora)
+  // si NO lo usas, déjalo, pero si te da 404, elimínalo o crea endpoint
   get: async (id: number): Promise<EntregaCaso> => {
     const res = await axiosClient.get(`${BASE}/${id}`);
     return unwrapObject(res) as EntregaCaso;
   },
 
-  // ✅ Subir/Reemplazar entrega (multipart/form-data)
-  // Tu regla: una entrega vigente por estudiante → el backend debe sobrescribir/actualizar.
   subir: async (payload: EntregaCasoCreateDTO): Promise<EntregaCaso> => {
     const formData = new FormData();
     formData.append("id_estudiante", String(payload.id_estudiante));
-    formData.append("id_caso_estudio", String(payload.id_caso_estudio)); // si tu backend lo usa para validar relación, ok
+    formData.append("id_caso_estudio", String(payload.id_caso_estudio));
     formData.append("archivo", payload.archivo);
     if (payload.observacion) formData.append("observacion", payload.observacion);
 
@@ -77,35 +75,11 @@ export const entregasCasoService = {
     return unwrapObject(res);
   },
 
-  // =========================================================
-  // ✅ DESCARGAS
-  // =========================================================
-
-  /**
-   * ✅ Descarga por ID de entrega
-   * Endpoint esperado: GET /entregas-caso/:id/download
-   */
-  downloadById: async (id_entrega: number) => {
-    return axiosClient.get(`${BASE}/${id_entrega}/download`, { responseType: "blob" });
-  },
-
-  /**
-   * ✅ Descarga por estudiante (TU REGLA REAL)
-   * Endpoint recomendado: GET /entregas-caso/estudiante/:id/download
-   * Si tu backend todavía no lo tiene, lo implementas y listo.
-   */
-  downloadByEstudiante: async (id_estudiante: number) => {
-    return axiosClient.get(`${BASE}/estudiante/${id_estudiante}/download`, { responseType: "blob" });
-  },
-
-  /**
-   * ✅ Helper opcional:
-   * intenta descargar por ID si lo tienes; si no, por estudiante.
-   */
-  downloadPreferente: async (args: { id_entrega?: number; id_estudiante: number }) => {
-    if (args.id_entrega && args.id_entrega > 0) {
-      return entregasCasoService.downloadById(args.id_entrega);
-    }
-    return entregasCasoService.downloadByEstudiante(args.id_estudiante);
+  // ✅ ✅ ✅ DESCARGA REAL (coincide con tu backend)
+  download: async (id_estudiante: number, id_caso_estudio: number) => {
+    return axiosClient.get(`${BASE}/${id_estudiante}/${id_caso_estudio}/download`, {
+      responseType: "blob",
+      transformResponse: (r) => r,
+    });
   },
 };

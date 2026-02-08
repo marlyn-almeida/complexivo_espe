@@ -1,4 +1,4 @@
-// src/controllers/entregas_caso.controller.js
+// ✅ src/controllers/entregas_caso.controller.js
 const path = require("path");
 const fs = require("fs");
 const svc = require("../services/entregas_caso.service");
@@ -12,6 +12,20 @@ function safeName(name = "") {
     .replace(/[^\w.\-]+/g, "_")
     .replace(/_+/g, "_")
     .slice(0, 180);
+}
+
+/**
+ * ✅ Igual que casos-estudio: evita path traversal y resuelve a /uploads real
+ * publicPath esperado: "/uploads/entregas-caso/xxx.pdf"
+ */
+function resolveUploadsPath(publicPath) {
+  const uploadsRoot = path.join(process.cwd(), "uploads");
+  const rel = String(publicPath || "").replace(/^\/+/, ""); // "uploads/..."
+  const full = path.resolve(process.cwd(), rel);
+  const root = path.resolve(uploadsRoot);
+
+  if (!full.startsWith(root)) return null; // ✅ evita escapar de /uploads
+  return full;
 }
 
 async function get(req, res, next) {
@@ -31,14 +45,12 @@ async function upsert(req, res, next) {
   try {
     const cp = Number(req.ctx.id_carrera_periodo);
 
-    // ✅ aquí sí viene el PDF
     if (!req.file) {
       const err = new Error("Archivo PDF requerido (campo: archivo)");
       err.status = 422;
       throw err;
     }
 
-    // Validación básica
     const original = req.file.originalname || "entrega.pdf";
     const isPdf =
       req.file.mimetype === "application/pdf" ||
@@ -54,7 +66,6 @@ async function upsert(req, res, next) {
     const id_caso_estudio = Number(req.body.id_caso_estudio);
     const observacion = req.body.observacion;
 
-    // ✅ nombre + path
     const uploadsRoot = path.join(process.cwd(), "uploads", "entregas-caso");
     ensureDir(uploadsRoot);
 
@@ -79,7 +90,7 @@ async function upsert(req, res, next) {
   }
 }
 
-// ✅ NUEVO: download del PDF de la entrega del estudiante
+// ✅ ✅ ✅ CORREGIDO: ver PDF inline (NO fuerza descarga)
 async function download(req, res, next) {
   try {
     const cp = Number(req.ctx.id_carrera_periodo);
@@ -94,22 +105,21 @@ async function download(req, res, next) {
       throw err;
     }
 
-    // archivo_path guardado como "/uploads/entregas-caso/xxxx.pdf"
-    const rel = String(entrega.archivo_path).replace(/^\/+/, "");
-    const abs = path.join(process.cwd(), rel);
-
-    if (!fs.existsSync(abs)) {
+    const fullPath = resolveUploadsPath(entrega.archivo_path);
+    if (!fullPath || !fs.existsSync(fullPath)) {
       const err = new Error("Archivo no encontrado en el servidor.");
       err.status = 404;
       throw err;
     }
 
-    // nombre sugerido
-    const suggested =
-      entrega.archivo_nombre ||
-      `entrega_${id_estudiante}_${id_caso_estudio}.pdf`;
+    const filename = safeName(
+      entrega.archivo_nombre || `entrega_${id_estudiante}_${id_caso_estudio}.pdf`
+    );
 
-    res.download(abs, suggested);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename="${filename}"`);
+
+    return res.sendFile(fullPath);
   } catch (e) {
     next(e);
   }
