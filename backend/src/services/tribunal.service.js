@@ -1,12 +1,26 @@
 // src/services/tribunal.service.js
 const repo = require("../repositories/tribunal.repo");
 
-function isRol2(user) {
-  return Number(user?.rol) === 2;
+function roleName(user) {
+  // soporta "ADMIN" / "DOCENTE" / "SUPER_ADMIN" y también números 1/2/3 si algún día llegan
+  const r = user?.activeRole ?? user?.rol ?? null;
+  if (!r) return null;
+  if (typeof r === "string") return r;
+  const n = Number(r);
+  if (n === 1) return "SUPER_ADMIN";
+  if (n === 2) return "ADMIN";
+  if (n === 3) return "DOCENTE";
+  return null;
 }
 
-function isRol3(user) {
-  return Number(user?.rol) === 3;
+function isAdmin(user) {
+  return roleName(user) === "ADMIN";
+}
+function isDocente(user) {
+  return roleName(user) === "DOCENTE";
+}
+function isSuperAdmin(user) {
+  return roleName(user) === "SUPER_ADMIN";
 }
 
 function validarDocentes(docentes) {
@@ -32,15 +46,23 @@ function validarDocentes(docentes) {
   }
 }
 
-async function list(query = {}, user) {
+async function list(query = {}, user, ctx = null) {
+  // ✅ ADMIN: carrera_periodo viene del ctx (header x-carrera-periodo-id)
+  const cpCtx = Number(ctx?.id_carrera_periodo) || null;
+
+  // SUPER_ADMIN puede usar query.carreraPeriodoId si quiere
+  const cpQuery = query.carreraPeriodoId ? Number(query.carreraPeriodoId) : null;
+
+  const carreraPeriodoId =
+    isAdmin(user) ? cpCtx : (cpQuery || cpCtx); // SUPER_ADMIN: permite filtro por query o header
+
   return repo.findAll({
     includeInactive: Boolean(query.includeInactive),
-    carreraPeriodoId: query.carreraPeriodoId || null,
-    scopeCarreraId: isRol2(user) ? user?.scope?.id_carrera : null,
+    carreraPeriodoId,
   });
 }
 
-async function get(id, user) {
+async function get(id, user, ctx = null) {
   const t = await repo.findById(id);
   if (!t) {
     const e = new Error("Tribunal no encontrado");
@@ -48,10 +70,11 @@ async function get(id, user) {
     throw e;
   }
 
-  if (isRol2(user)) {
-    const carreraId = await repo.getCarreraIdByCarreraPeriodo(t.id_carrera_periodo);
-    if (Number(carreraId) !== Number(user?.scope?.id_carrera)) {
-      const e = new Error("Acceso denegado: tribunal fuera de tu carrera");
+  // ✅ ADMIN: no puede leer tribunales fuera del CP activo
+  if (isAdmin(user)) {
+    const cpCtx = Number(ctx?.id_carrera_periodo) || 0;
+    if (cpCtx > 0 && Number(t.id_carrera_periodo) !== cpCtx) {
+      const e = new Error("Acceso denegado: tribunal fuera de tu Carrera–Período activo");
       e.status = 403;
       throw e;
     }
@@ -61,7 +84,7 @@ async function get(id, user) {
   return t;
 }
 
-async function create(d, user) {
+async function create(d, user, ctx = null) {
   const okCP = await repo.carreraPeriodoExists(d.id_carrera_periodo);
   if (!okCP) {
     const e = new Error("La relación carrera_periodo no existe");
@@ -69,22 +92,20 @@ async function create(d, user) {
     throw e;
   }
 
-  validarDocentes(d.docentes);
-
-  const carreraId = await repo.getCarreraIdByCarreraPeriodo(d.id_carrera_periodo);
-
-  if (isRol2(user) && Number(carreraId) !== Number(user?.scope?.id_carrera)) {
-    const e = new Error("Acceso denegado: solo puedes crear tribunales para tu carrera");
-    e.status = 403;
-    throw e;
+  // ✅ ADMIN: solo puede crear para el CP activo
+  if (isAdmin(user)) {
+    const cpCtx = Number(ctx?.id_carrera_periodo) || 0;
+    if (cpCtx > 0 && Number(d.id_carrera_periodo) !== cpCtx) {
+      const e = new Error("Acceso denegado: solo puedes crear tribunales para tu Carrera–Período activo");
+      e.status = 403;
+      throw e;
+    }
   }
 
-  // validar que carrera_docente existan y estén activos
-  const ids = [
-    +d.docentes.presidente,
-    +d.docentes.integrante1,
-    +d.docentes.integrante2,
-  ];
+  validarDocentes(d.docentes);
+
+  // validar carrera_docente existan y estén activos
+  const ids = [+d.docentes.presidente, +d.docentes.integrante1, +d.docentes.integrante2];
 
   for (const idCd of ids) {
     const cd = await repo.getCarreraIdByCarreraDocente(idCd);
@@ -107,8 +128,8 @@ async function create(d, user) {
   return created;
 }
 
-async function update(id, d, user) {
-  await get(id, user);
+async function update(id, d, user, ctx = null) {
+  await get(id, user, ctx);
 
   const okCP = await repo.carreraPeriodoExists(d.id_carrera_periodo);
   if (!okCP) {
@@ -117,14 +138,20 @@ async function update(id, d, user) {
     throw e;
   }
 
+  // ✅ ADMIN: solo puede mover/editar dentro del CP activo
+  if (isAdmin(user)) {
+    const cpCtx = Number(ctx?.id_carrera_periodo) || 0;
+    if (cpCtx > 0 && Number(d.id_carrera_periodo) !== cpCtx) {
+      const e = new Error("Acceso denegado: solo puedes editar tribunales del CP activo");
+      e.status = 403;
+      throw e;
+    }
+  }
+
   if (d.docentes) {
     validarDocentes(d.docentes);
 
-    const ids = [
-      +d.docentes.presidente,
-      +d.docentes.integrante1,
-      +d.docentes.integrante2,
-    ];
+    const ids = [+d.docentes.presidente, +d.docentes.integrante1, +d.docentes.integrante2];
 
     for (const idCd of ids) {
       const cd = await repo.getCarreraIdByCarreraDocente(idCd);
@@ -140,7 +167,7 @@ async function update(id, d, user) {
     id_carrera_periodo: d.id_carrera_periodo,
     nombre_tribunal: d.nombre_tribunal,
     descripcion_tribunal: d.descripcion_tribunal ?? null,
-    docentes: d.docentes, // si no viene, NO toca tribunal_docente
+    docentes: d.docentes,
   });
 
   const updated = await repo.findById(id);
@@ -148,13 +175,13 @@ async function update(id, d, user) {
   return updated;
 }
 
-async function changeEstado(id, estado, user) {
-  await get(id, user);
+async function changeEstado(id, estado, user, ctx = null) {
+  await get(id, user, ctx);
   return repo.setEstado(id, estado);
 }
 
 async function misTribunales(query = {}, user) {
-  if (!isRol3(user)) {
+  if (!isDocente(user)) {
     const e = new Error("Acceso denegado");
     e.status = 403;
     throw e;

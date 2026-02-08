@@ -9,6 +9,16 @@ async function getTribunal(id_tribunal) {
   return r[0] || null;
 }
 
+async function getTribunalEstudiante(id_tribunal_estudiante) {
+  const [r] = await pool.query(
+    `SELECT id_tribunal_estudiante, id_tribunal, id_estudiante, id_franja_horario, estado, cerrado
+     FROM tribunal_estudiante
+     WHERE id_tribunal_estudiante=? LIMIT 1`,
+    [id_tribunal_estudiante]
+  );
+  return r[0] || null;
+}
+
 async function getTribunalCarreraId(id_tribunal) {
   const [r] = await pool.query(
     `
@@ -52,7 +62,6 @@ async function getFranjaFull(id_franja_horario) {
   return r[0] || null;
 }
 
-// ✅ NUEVO: caso asignado al estudiante (1 estudiante -> 1 caso)
 async function getCasoAsignadoByEstudiante(id_estudiante) {
   const [r] = await pool.query(
     `
@@ -82,7 +91,6 @@ async function existsAsignacion(id_tribunal, id_estudiante) {
   return r[0] || null;
 }
 
-// ✅ evita que el mismo tribunal use la misma franja 2 veces (activo)
 async function existsFranjaEnTribunal(id_tribunal, id_franja_horario) {
   const [r] = await pool.query(
     `SELECT id_tribunal_estudiante FROM tribunal_estudiante
@@ -92,7 +100,6 @@ async function existsFranjaEnTribunal(id_tribunal, id_franja_horario) {
   return r[0] || null;
 }
 
-// ✅ franja ocupada globalmente (1 franja = 1 reserva activa)
 async function existsFranjaOcupadaGlobal(id_franja_horario) {
   const [r] = await pool.query(
     `SELECT id_tribunal_estudiante
@@ -104,7 +111,6 @@ async function existsFranjaOcupadaGlobal(id_franja_horario) {
   return r[0] || null;
 }
 
-// ✅ docentes del tribunal (agenda)
 async function getDocentesByTribunal(id_tribunal) {
   const [rows] = await pool.query(
     `
@@ -123,7 +129,6 @@ async function getDocentesByTribunal(id_tribunal) {
   return rows;
 }
 
-// ✅ conflicto por cruce de horas
 async function existsConflictoHorarioDocente({ id_docente, fecha, hora_inicio, hora_fin }) {
   const [r] = await pool.query(
     `
@@ -170,6 +175,9 @@ async function findAll({ tribunalId = null, includeInactive = false, scopeCarrer
       te.id_estudiante,
       te.id_franja_horario,
       te.estado,
+      te.cerrado,
+      te.fecha_cierre,
+      te.id_docente_cierra,
       te.created_at,
       te.updated_at,
 
@@ -184,7 +192,6 @@ async function findAll({ tribunalId = null, includeInactive = false, scopeCarrer
 
       t.nombre_tribunal,
 
-      -- ✅ caso asignado al estudiante (si existe)
       eca.id_caso_estudio,
       ce.numero_caso,
       ce.titulo AS titulo_caso,
@@ -217,8 +224,8 @@ async function findAll({ tribunalId = null, includeInactive = false, scopeCarrer
 
 async function create(d) {
   const [res] = await pool.query(
-    `INSERT INTO tribunal_estudiante (id_tribunal, id_estudiante, id_franja_horario, estado)
-     VALUES (?,?,?,1)`,
+    `INSERT INTO tribunal_estudiante (id_tribunal, id_estudiante, id_franja_horario, estado, cerrado)
+     VALUES (?,?,?,1,0)`,
     [d.id_tribunal, d.id_estudiante, d.id_franja_horario]
   );
 
@@ -241,7 +248,28 @@ async function setEstado(id, estado) {
   return r[0] || null;
 }
 
-// ✅ Mis asignaciones (ROL 3) + caso del estudiante
+// ✅ NUEVO: cerrar/abrir
+async function setCerrado(id, cerrado, id_docente_cierra = null) {
+  await pool.query(
+    `
+    UPDATE tribunal_estudiante
+    SET
+      cerrado=?,
+      fecha_cierre=IF(?, NOW(), NULL),
+      id_docente_cierra=IF(?, ?, NULL),
+      updated_at=CURRENT_TIMESTAMP
+    WHERE id_tribunal_estudiante=?
+    `,
+    [cerrado ? 1 : 0, cerrado ? 1 : 0, cerrado ? 1 : 0, id_docente_cierra, id]
+  );
+
+  const [r] = await pool.query(
+    `SELECT * FROM tribunal_estudiante WHERE id_tribunal_estudiante=?`,
+    [id]
+  );
+  return r[0] || null;
+}
+
 async function findMisAsignaciones({ id_docente, includeInactive = false } = {}) {
   const [rows] = await pool.query(
     `
@@ -251,6 +279,9 @@ async function findMisAsignaciones({ id_docente, includeInactive = false } = {})
       te.id_estudiante,
       te.id_franja_horario,
       te.estado,
+      te.cerrado,
+      te.fecha_cierre,
+      te.id_docente_cierra,
       te.created_at,
       te.updated_at,
 
@@ -265,7 +296,6 @@ async function findMisAsignaciones({ id_docente, includeInactive = false } = {})
 
       t.nombre_tribunal,
 
-      -- ✅ caso asignado al estudiante
       eca.id_caso_estudio,
       ce.numero_caso,
       ce.titulo AS titulo_caso,
@@ -306,6 +336,7 @@ async function findMisAsignaciones({ id_docente, includeInactive = false } = {})
 
 module.exports = {
   getTribunal,
+  getTribunalEstudiante,
   getTribunalCarreraId,
   getEstudiante,
   getFranja,
@@ -323,5 +354,6 @@ module.exports = {
   findAll,
   create,
   setEstado,
+  setCerrado,
   findMisAsignaciones,
 };

@@ -26,6 +26,15 @@ module.exports = {
     }
   },
 
+  // ✅ NUEVO: cerrar/abrir asignación
+  changeCierre: async (req, res, next) => {
+    try {
+      res.json(await s.changeCierre(req.params.id, req.body.cerrado, req.user || null));
+    } catch (e) {
+      next(e);
+    }
+  },
+
   misAsignaciones: async (req, res, next) => {
     try {
       res.json(await s.misAsignaciones(req.query, req.user));

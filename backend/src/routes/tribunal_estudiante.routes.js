@@ -2,7 +2,7 @@
 const router = require("express").Router();
 const { body, param, query } = require("express-validator");
 const validate = require("../middlewares/validate.middleware");
-const ctrl = require("../controllers/tribunal_estudiante.controller"); // ✅ ESTE
+const ctrl = require("../controllers/tribunal_estudiante.controller");
 const { auth, authorize } = require("../middlewares/auth.middleware");
 
 // ✅ ROL 3: Mis asignaciones (agenda)
@@ -47,6 +47,17 @@ router.patch(
   body("estado").isBoolean().toBoolean(),
   validate,
   ctrl.changeEstado
+);
+
+// ✅ Cerrar / Abrir (bloquea calificaciones)
+router.patch(
+  "/:id/cierre",
+  auth,
+  authorize([1, 2]),
+  param("id").isInt({ min: 1 }).toInt(),
+  body("cerrado").isBoolean().toBoolean(),
+  validate,
+  ctrl.changeCierre
 );
 
 module.exports = router;

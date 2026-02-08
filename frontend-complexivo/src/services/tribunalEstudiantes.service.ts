@@ -29,7 +29,6 @@ function unwrapObject(res: any): any {
 export type TribunalEstudianteListParams = {
   tribunalId?: number;
   includeInactive?: boolean;
-  // ✅ opcional (tu backend puede ignorarlo; no rompe)
   page?: number;
   limit?: number;
 };
@@ -41,6 +40,9 @@ export type TribunalEstudianteCreateDTO = {
 };
 
 export const tribunalEstudiantesService = {
+  // =========================
+  // LISTAR asignaciones
+  // =========================
   list: async (params?: TribunalEstudianteListParams): Promise<TribunalEstudiante[]> => {
     const res = await axiosClient.get(BASE, {
       params: {
@@ -53,18 +55,44 @@ export const tribunalEstudiantesService = {
     return unwrapArray(res);
   },
 
+  // =========================
+  // CREAR asignación
+  // =========================
   create: async (payload: TribunalEstudianteCreateDTO) => {
     const res = await axiosClient.post(BASE, payload);
     return unwrapObject(res);
   },
 
+  // =========================
+  // ACTIVAR / DESACTIVAR registro
+  // (NO es cierre de defensa)
+  // =========================
   toggleEstado: async (id: number, currentEstado: Estado01) => {
     const nuevo: Estado01 = currentEstado === 1 ? 0 : 1;
     const res = await axiosClient.patch(`${BASE}/${id}/estado`, { estado: nuevo });
     return unwrapObject(res);
   },
 
-  // ✅ Rol 3 agenda
+  // =========================
+  // ✅ CERRAR / REABRIR DEFENSA
+  // usa el campo `cerrado` en DB
+  // 0 = abierta, 1 = cerrada
+  // =========================
+  cerrarDefensa: async (id: number) => {
+    // backend esperado: PATCH /tribunales-estudiantes/:id/cerrar
+    const res = await axiosClient.patch(`${BASE}/${id}/cerrar`, {});
+    return unwrapObject(res);
+  },
+
+  reabrirDefensa: async (id: number) => {
+    // backend esperado: PATCH /tribunales-estudiantes/:id/reabrir
+    const res = await axiosClient.patch(`${BASE}/${id}/reabrir`, {});
+    return unwrapObject(res);
+  },
+
+  // =========================
+  // Rol 3: agenda de docente
+  // =========================
   misAsignaciones: async (params?: { includeInactive?: boolean }) => {
     const res = await axiosClient.get(`${BASE}/mis-asignaciones`, {
       params: { includeInactive: params?.includeInactive ? "true" : "false" },

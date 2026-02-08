@@ -10,9 +10,8 @@ import {
   CalendarPlus,
   Users,
   AlertTriangle,
-  Save,
-  X,
   Filter,
+  X,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import "./TribunalesPage.css";
@@ -23,12 +22,19 @@ import type { CarreraPeriodo } from "../../types/carreraPeriodo";
 import type { Estudiante } from "../../types/estudiante";
 import type { FranjaHorario } from "../../types/franjaHoraria";
 import type { CarreraDocente } from "../../types/carreraDocente";
+import type { CasoEstudio } from "../../types/casoEstudio";
 
 import { carreraPeriodoService } from "../../services/carreraPeriodo.service";
 import { estudiantesService } from "../../services/estudiantes.service";
 import { franjaHorarioService } from "../../services/franjasHorarias.service";
-import { tribunalesService, type TribunalCreateDTO, type TribunalUpdateDTO } from "../../services/tribunales.service";
+import { casosEstudioService } from "../../services/casosEstudio.service";
+import {
+  tribunalesService,
+  type TribunalCreateDTO,
+  type TribunalUpdateDTO,
+} from "../../services/tribunales.service";
 import { tribunalEstudiantesService } from "../../services/tribunalEstudiantes.service";
+
 import { carreraDocenteService } from "../../services/carreraDocente.service";
 import { docentesService } from "../../services/docentes.service";
 import { carrerasService } from "../../services/carreras.service";
@@ -38,6 +44,7 @@ import { calificadoresGeneralesService } from "../../services/calificadoresGener
 
 import TribunalAsignacionesModal from "./TribunalAsignacionesModal";
 import TribunalViewModal from "./TribunalViewModal";
+import TribunalFormModal from "./TribunalFormModal";
 
 import { setActiveCarreraPeriodoId } from "../../api/axiosClient";
 
@@ -48,6 +55,7 @@ type ToastType = "success" | "error" | "info";
 type AsignacionFormState = {
   id_estudiante: number | "";
   id_franja_horario: number | "";
+  id_caso_estudio: number | ""; // ✅ NUEVO: caso pertenece a tribunal_estudiante
 };
 
 type TribunalFormState = {
@@ -67,7 +75,6 @@ export default function TribunalesPage() {
 
   const [tribunales, setTribunales] = useState<Tribunal[]>([]);
   const [docentes, setDocentes] = useState<CarreraDocente[]>([]);
-
   const [loading, setLoading] = useState(false);
 
   // ===== BLOQUES SUPERIORES =====
@@ -84,11 +91,11 @@ export default function TribunalesPage() {
   const [mostrarInactivos, setMostrarInactivos] = useState(false);
   const [page, setPage] = useState(1);
 
-  // ===== MODALES =====
+  // ===== MODAL VIEW =====
   const [showViewModal, setShowViewModal] = useState(false);
   const [viewTribunal, setViewTribunal] = useState<Tribunal | null>(null);
 
-  // ===== MODAL CREAR/EDITAR TRIBUNAL =====
+  // ===== MODAL FORM (crear/editar) =====
   const [showFormModal, setShowFormModal] = useState(false);
   const [editing, setEditing] = useState<Tribunal | null>(null);
   const [savingTribunal, setSavingTribunal] = useState(false);
@@ -102,17 +109,19 @@ export default function TribunalesPage() {
     integrante2: "",
   });
 
-  // ===== MODAL ASIGNACIÓN =====
+  // ===== MODAL ASIGNACIONES =====
   const [showAsignModal, setShowAsignModal] = useState(false);
   const [activeTribunalForAsign, setActiveTribunalForAsign] = useState<Tribunal | null>(null);
+
   const [asignaciones, setAsignaciones] = useState<TribunalEstudiante[]>([]);
-  const [eligibleEstudiantes, setEligibleEstudiantes] = useState<Estudiante[]>([]);
-  const [loadingEligible, setLoadingEligible] = useState(false);
+  const [estudiantes, setEstudiantes] = useState<Estudiante[]>([]);
   const [franjas, setFranjas] = useState<FranjaHorario[]>([]);
+  const [casos, setCasos] = useState<CasoEstudio[]>([]);
 
   const [asignForm, setAsignForm] = useState<AsignacionFormState>({
     id_estudiante: "",
     id_franja_horario: "",
+    id_caso_estudio: "",
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -152,9 +161,7 @@ export default function TribunalesPage() {
 
   useEffect(() => {
     if (selectedCP) {
-      // ✅ IMPORTANTÍSIMO: fijar CP activo antes de pegarle a endpoints que lo usan
       setActiveCarreraPeriodoId(Number(selectedCP));
-
       loadAll();
       loadDocentesByCP();
       loadPlanAndCalificadores();
@@ -170,6 +177,10 @@ export default function TribunalesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCP, mostrarInactivos]);
 
+  useEffect(() => {
+    setPage(1);
+  }, [search]);
+
   async function loadCarreraPeriodos() {
     try {
       setLoading(true);
@@ -181,7 +192,11 @@ export default function TribunalesPage() {
 
       const savedExists =
         saved > 0 &&
-        (cps ?? []).some((x: any) => Number(x.id_carrera_periodo) === saved && Boolean((x as any).estado));
+        (cps ?? []).some(
+          (x: any) =>
+            Number(x.id_carrera_periodo) === saved &&
+            Number((x as any).estado_cp ?? (x as any).estado ?? 1) === 1
+        );
 
       if (savedExists) {
         setSelectedCP(saved);
@@ -189,7 +204,10 @@ export default function TribunalesPage() {
         return;
       }
 
-      const first = (cps ?? []).find((x: any) => Boolean((x as any).estado)) ?? (cps ?? [])[0];
+      const first =
+        (cps ?? []).find((x: any) => Number((x as any).estado_cp ?? (x as any).estado ?? 1) === 1) ??
+        (cps ?? [])[0];
+
       if (first) {
         const id = Number((first as any).id_carrera_periodo);
         setSelectedCP(id);
@@ -212,8 +230,7 @@ export default function TribunalesPage() {
     if (!selectedCP) return;
 
     try {
-      const cp: any =
-        carreraPeriodos.find((x: any) => Number(x.id_carrera_periodo) === Number(selectedCP)) ?? null;
+      const cp: any = carreraPeriodos.find((x: any) => Number(x.id_carrera_periodo) === Number(selectedCP)) ?? null;
 
       const carreraId =
         Number(cp?.id_carrera) ||
@@ -228,12 +245,14 @@ export default function TribunalesPage() {
         return;
       }
 
+      // 1) intentamos carrera_docente
       let cds = await carreraDocenteService.list({ includeInactive: false, carreraId });
       if ((cds ?? []).length > 0) {
         setDocentes(cds ?? []);
         return;
       }
 
+      // 2) fallback: docentes por departamento y crear carrera_docente
       const carreras = await carrerasService.list(false);
       const carrera = (carreras ?? []).find((c: any) => Number(c.id_carrera) === Number(carreraId)) ?? null;
 
@@ -245,7 +264,7 @@ export default function TribunalesPage() {
 
       if (!deptId) {
         setDocentes([]);
-        showToast("No hay docentes en carrera_docente y no pude obtener el departamento de la carrera.", "error");
+        showToast("No hay carrera_docente y no pude obtener el departamento de la carrera.", "error");
         return;
       }
 
@@ -277,7 +296,6 @@ export default function TribunalesPage() {
 
       cds = await carreraDocenteService.list({ includeInactive: false, carreraId });
       setDocentes(cds ?? []);
-
       if ((cds ?? []).length) showToast("Docentes listos para Calificadores/Tribunales.", "success");
     } catch {
       setDocentes([]);
@@ -290,7 +308,6 @@ export default function TribunalesPage() {
 
     try {
       setLoading(true);
-
       const data = await tribunalesService.list({
         includeInactive: mostrarInactivos,
         carreraPeriodoId: Number(selectedCP),
@@ -298,7 +315,6 @@ export default function TribunalesPage() {
         page: 1,
         limit: 200,
       });
-
       setTribunales(data ?? []);
     } catch {
       showToast("Error al cargar tribunales", "error");
@@ -311,10 +327,10 @@ export default function TribunalesPage() {
   async function loadPlanAndCalificadores() {
     if (!selectedCP) return;
 
-    // ✅ Plan (con CP explícito)
+    // Plan
     try {
       setLoadingPlan(true);
-      const p = await planEvaluacionService.getByCP(Number(selectedCP));
+      const p = await planEvaluacionService.getByCP();
       setPlan(p);
     } catch {
       setPlan(null);
@@ -322,9 +338,9 @@ export default function TribunalesPage() {
       setLoadingPlan(false);
     }
 
-    // ✅ Calificadores (con CP explícito)
+    // Calificadores
     try {
-      const rows = await calificadoresGeneralesService.list(Number(selectedCP), false);
+      const rows = await calificadoresGeneralesService.list(false);
       const ids = (rows ?? [])
         .map((r: any) => Number(r.id_carrera_docente))
         .filter((n: any) => Number.isFinite(n));
@@ -349,8 +365,6 @@ export default function TribunalesPage() {
       });
   }, [tribunales, search, mostrarInactivos]);
 
-  useEffect(() => setPage(1), [search]);
-
   const total = filtered.length;
   const activos = filtered.filter((x: any) => isActivo(x.estado)).length;
   const inactivos = total - activos;
@@ -359,7 +373,7 @@ export default function TribunalesPage() {
   const currentPage = Math.min(page, totalPages);
   const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
-  // ===== MODAL CREAR/EDITAR =====
+  // ===== FORM MODAL =====
   function resetTribunalForm() {
     setTribunalForm({
       nombre_tribunal: "",
@@ -378,17 +392,33 @@ export default function TribunalesPage() {
     setShowFormModal(true);
   }
 
-  function openEditModal(t: Tribunal) {
-    setEditing(t);
-    setFormErrors({});
-    setTribunalForm({
-      nombre_tribunal: String((t as any).nombre_tribunal || ""),
-      descripcion_tribunal: String((t as any).descripcion_tribunal || ""),
-      presidente: "",
-      integrante1: "",
-      integrante2: "",
-    });
-    setShowFormModal(true);
+  async function openEditModal(t: Tribunal) {
+    try {
+      setLoading(true);
+      setEditing(t);
+      setFormErrors({});
+
+      const full = await tribunalesService.get(Number((t as any).id_tribunal));
+      const docs = (full as any)?.docentes ?? [];
+
+      const pres = docs.find((d: any) => d.designacion === "PRESIDENTE");
+      const i1 = docs.find((d: any) => d.designacion === "INTEGRANTE_1");
+      const i2 = docs.find((d: any) => d.designacion === "INTEGRANTE_2");
+
+      setTribunalForm({
+        nombre_tribunal: String((full as any).nombre_tribunal || ""),
+        descripcion_tribunal: String((full as any).descripcion_tribunal || ""),
+        presidente: pres?.id_carrera_docente ? Number(pres.id_carrera_docente) : "",
+        integrante1: i1?.id_carrera_docente ? Number(i1.id_carrera_docente) : "",
+        integrante2: i2?.id_carrera_docente ? Number(i2.id_carrera_docente) : "",
+      });
+
+      setShowFormModal(true);
+    } catch {
+      showToast("No se pudo cargar el tribunal para editar.", "error");
+    } finally {
+      setLoading(false);
+    }
   }
 
   function validateTribunalForm(): Record<string, string> {
@@ -461,17 +491,21 @@ export default function TribunalesPage() {
     }
   }
 
-  // ===== ASIGNACIÓN Tribunal–Estudiante =====
+  // ===== ASIGNACIONES =====
   async function openAsignaciones(t: Tribunal) {
     setActiveTribunalForAsign(t);
-    setAsignForm({ id_estudiante: "", id_franja_horario: "" });
+    setAsignForm({ id_estudiante: "", id_franja_horario: "", id_caso_estudio: "" });
     setErrors({});
-    setEligibleEstudiantes([]);
+    setEstudiantes([]);
+    setFranjas([]);
+    setCasos([]);
+    setAsignaciones([]);
 
     try {
       setLoading(true);
 
-      const [a, est, fr] = await Promise.all([
+      // ✅ Todos vienen de módulos por Carrera-Periodo
+      const [a, est, fr, cs] = await Promise.all([
         tribunalEstudiantesService.list({
           tribunalId: Number((t as any).id_tribunal),
           includeInactive: true,
@@ -490,40 +524,18 @@ export default function TribunalesPage() {
           page: 1,
           limit: 200,
         }),
+        casosEstudioService.list({ includeInactive: false }),
       ]);
 
       setAsignaciones(a ?? []);
+      setEstudiantes(est ?? []);
       setFranjas(fr ?? []);
+      setCasos(cs ?? []);
+
       setShowAsignModal(true);
-
-      setLoadingEligible(true);
-      try {
-        const results = await Promise.all(
-          (est ?? []).map(async (e) => {
-            try {
-              const asg = await estudiantesService.getAsignaciones(Number(e.id_estudiante));
-              return asg?.caso ? e : null;
-            } catch {
-              return null;
-            }
-          })
-        );
-        const elig = results.filter(Boolean) as Estudiante[];
-        setEligibleEstudiantes(elig);
-
-        setAsignForm((p) => ({
-          ...p,
-          id_estudiante: elig.some((x) => Number(x.id_estudiante) === Number(p.id_estudiante)) ? p.id_estudiante : "",
-        }));
-
-        if (elig.length === 0) {
-          showToast("No hay estudiantes con caso asignado. Primero asigna caso al estudiante.", "info");
-        }
-      } finally {
-        setLoadingEligible(false);
-      }
     } catch {
       showToast("No se pudo cargar datos para asignación.", "error");
+      setShowAsignModal(false);
     } finally {
       setLoading(false);
     }
@@ -532,19 +544,9 @@ export default function TribunalesPage() {
   function validateAsignForm(): Record<string, string> {
     const e: Record<string, string> = {};
     if (!activeTribunalForAsign) e.tribunal = "No hay tribunal seleccionado.";
-
-    if (loadingEligible) {
-      e.id_estudiante = "Espere: verificando casos asignados...";
-      return e;
-    }
-
-    if (!eligibleEstudiantes.length) {
-      e.id_estudiante = "No hay estudiantes elegibles (sin caso asignado).";
-      return e;
-    }
-
     if (!asignForm.id_estudiante) e.id_estudiante = "Seleccione un estudiante.";
     if (!asignForm.id_franja_horario) e.id_franja_horario = "Seleccione una franja horaria.";
+    if (!asignForm.id_caso_estudio) e.id_caso_estudio = "Seleccione un caso de estudio.";
     return e;
   }
 
@@ -564,6 +566,7 @@ export default function TribunalesPage() {
         id_tribunal: Number((activeTribunalForAsign as any).id_tribunal),
         id_estudiante: Number(asignForm.id_estudiante),
         id_franja_horario: Number(asignForm.id_franja_horario),
+        id_caso_estudio: Number(asignForm.id_caso_estudio), // ✅ CLAVE
       });
 
       showToast("Asignación creada.", "success");
@@ -574,8 +577,9 @@ export default function TribunalesPage() {
         page: 1,
         limit: 200,
       });
+
       setAsignaciones(a ?? []);
-      setAsignForm({ id_estudiante: "", id_franja_horario: "" });
+      setAsignForm({ id_estudiante: "", id_franja_horario: "", id_caso_estudio: "" });
     } catch (err: any) {
       const msg = err?.response?.data?.message || err?.userMessage || "No se pudo crear la asignación.";
       showToast(String(msg), "error");
@@ -625,7 +629,7 @@ export default function TribunalesPage() {
     }
   }
 
-  // ===== GUARDAR CALIFICADORES GENERALES =====
+  // ===== CALIFICADORES GENERALES =====
   function toNum(v: number | ""): number | null {
     return typeof v === "number" && v > 0 ? v : null;
   }
@@ -649,7 +653,7 @@ export default function TribunalesPage() {
     try {
       setSavingCG(true);
 
-      const currentRows = await calificadoresGeneralesService.list(Number(selectedCP), false);
+      const currentRows = await calificadoresGeneralesService.list(false);
       const currentActive = (currentRows ?? []).map((r: any) => ({
         id_cp_calificador_general: Number(r.id_cp_calificador_general),
         id_carrera_docente: Number(r.id_carrera_docente),
@@ -662,8 +666,9 @@ export default function TribunalesPage() {
       const toAdd = desired.filter((id) => !currentIds.has(id));
 
       for (const r of toRemove) await calificadoresGeneralesService.remove(Number(r.id_cp_calificador_general));
-      for (const id_carrera_docente of toAdd)
-        await calificadoresGeneralesService.create(Number(selectedCP), { id_carrera_docente });
+      for (const id_carrera_docente of toAdd) {
+        await calificadoresGeneralesService.create({ id_carrera_docente });
+      }
 
       showToast("Calificadores generales guardados.", "success");
       await loadPlanAndCalificadores();
@@ -695,7 +700,7 @@ export default function TribunalesPage() {
         </div>
       </div>
 
-      {/* BOX PRINCIPAL: métricas + filtros + tabla */}
+      {/* BOX PRINCIPAL */}
       <div className="box">
         <div className="boxHead">
           <div className="sectionTitle">
@@ -828,31 +833,27 @@ export default function TribunalesPage() {
                       </td>
 
                       <td>
-                        {activo ? (
-                          <span className="badgeActive">Activo</span>
-                        ) : (
-                          <span className="badgeInactive">Inactivo</span>
-                        )}
+                        {activo ? <span className="badgeActive">Activo</span> : <span className="badgeInactive">Inactivo</span>}
                       </td>
 
                       <td className="tdActions">
                         <div className="actions">
-                          <button className="iconBtn iconBtn_neutral" onClick={() => openView(t)}>
+                          <button className="iconBtn iconBtn_neutral" onClick={() => openView(t)} type="button">
                             <Eye className="iconAction" />
                             <span className="tooltip">Ver</span>
                           </button>
 
-                          <button className="iconBtn iconBtn_purple" onClick={() => openEditModal(t)}>
+                          <button className="iconBtn iconBtn_purple" onClick={() => openEditModal(t)} type="button">
                             <Pencil className="iconAction" />
                             <span className="tooltip">Editar</span>
                           </button>
 
-                          <button className="iconBtn iconBtn_primary" onClick={() => onToggleEstado(t)}>
+                          <button className="iconBtn iconBtn_primary" onClick={() => onToggleEstado(t)} type="button">
                             {activo ? <ToggleRight className="iconAction" /> : <ToggleLeft className="iconAction" />}
                             <span className="tooltip">{activo ? "Desactivar" : "Activar"}</span>
                           </button>
 
-                          <button className="iconBtn iconBtn_neutral" onClick={() => openAsignaciones(t)}>
+                          <button className="iconBtn iconBtn_neutral" onClick={() => openAsignaciones(t)} type="button">
                             <CalendarPlus className="iconAction" />
                             <span className="tooltip">Asignar</span>
                           </button>
@@ -907,11 +908,7 @@ export default function TribunalesPage() {
                 <AlertTriangle size={20} />
               </div>
               <div>No se ha configurado un Plan de Evaluación para esta carrera y período.</div>
-              <button
-                className="btnWarn"
-                onClick={() => navigate(`/plan-evaluacion?cp=${selectedCP}`)}
-                disabled={!selectedCP}
-              >
+              <button className="btnWarn" onClick={() => navigate(`/plan-evaluacion?cp=${selectedCP}`)} disabled={!selectedCP}>
                 Configurar Plan Ahora
               </button>
             </div>
@@ -983,110 +980,19 @@ export default function TribunalesPage() {
         </div>
       </div>
 
-      {/* MODAL CREAR/EDITAR */}
-      {showFormModal && (
-        <div className="modalOverlay" onMouseDown={() => setShowFormModal(false)}>
-          <div className="modalCard modalWide" onMouseDown={(e) => e.stopPropagation()}>
-            <div className="modalHeader">
-              <h3 className="modalTitle">{editing ? "Editar Tribunal" : "Crear Tribunal"}</h3>
-              <button className="btnClose" onClick={() => setShowFormModal(false)} aria-label="Cerrar" type="button">
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="modalBody">
-              <div className="grid2">
-                <div className="field full">
-                  <label className="fieldLabel">Nombre del tribunal</label>
-                  <input
-                    className="input"
-                    value={tribunalForm.nombre_tribunal}
-                    onChange={(e) => setTribunalForm((p) => ({ ...p, nombre_tribunal: e.target.value }))}
-                    placeholder="Ej: Tribunal 1"
-                  />
-                  {formErrors.nombre_tribunal ? <p className="error">{formErrors.nombre_tribunal}</p> : null}
-                </div>
-
-                <div className="field full">
-                  <label className="fieldLabel">Descripción (opcional)</label>
-                  <textarea
-                    className="textarea"
-                    rows={3}
-                    value={tribunalForm.descripcion_tribunal}
-                    onChange={(e) => setTribunalForm((p) => ({ ...p, descripcion_tribunal: e.target.value }))}
-                    placeholder="Descripción del tribunal..."
-                  />
-                </div>
-
-                <div className="field">
-                  <label className="fieldLabel">Presidente</label>
-                  <select
-                    className="select"
-                    value={tribunalForm.presidente}
-                    onChange={(e) => setTribunalForm((p) => ({ ...p, presidente: e.target.value ? Number(e.target.value) : "" }))}
-                  >
-                    <option value="">Seleccione...</option>
-                    {docentes.map((cd: any) => (
-                      <option key={cd.id_carrera_docente} value={cd.id_carrera_docente}>
-                        {(cd.apellidos_docente ?? "") + " " + (cd.nombres_docente ?? "")}
-                      </option>
-                    ))}
-                  </select>
-                  {formErrors.presidente ? <p className="error">{formErrors.presidente}</p> : null}
-                </div>
-
-                <div className="field">
-                  <label className="fieldLabel">Integrante 1</label>
-                  <select
-                    className="select"
-                    value={tribunalForm.integrante1}
-                    onChange={(e) => setTribunalForm((p) => ({ ...p, integrante1: e.target.value ? Number(e.target.value) : "" }))}
-                  >
-                    <option value="">Seleccione...</option>
-                    {docentes.map((cd: any) => (
-                      <option key={cd.id_carrera_docente} value={cd.id_carrera_docente}>
-                        {(cd.apellidos_docente ?? "") + " " + (cd.nombres_docente ?? "")}
-                      </option>
-                    ))}
-                  </select>
-                  {formErrors.integrante1 ? <p className="error">{formErrors.integrante1}</p> : null}
-                </div>
-
-                <div className="field">
-                  <label className="fieldLabel">Integrante 2</label>
-                  <select
-                    className="select"
-                    value={tribunalForm.integrante2}
-                    onChange={(e) => setTribunalForm((p) => ({ ...p, integrante2: e.target.value ? Number(e.target.value) : "" }))}
-                  >
-                    <option value="">Seleccione...</option>
-                    {docentes.map((cd: any) => (
-                      <option key={cd.id_carrera_docente} value={cd.id_carrera_docente}>
-                        {(cd.apellidos_docente ?? "") + " " + (cd.nombres_docente ?? "")}
-                      </option>
-                    ))}
-                  </select>
-                  {formErrors.integrante2 ? <p className="error">{formErrors.integrante2}</p> : null}
-                </div>
-
-                {formErrors.docentes ? <p className="error">{formErrors.docentes}</p> : null}
-
-                <div className="field full">
-                  <button className="btnPrimary" onClick={onSaveTribunal} disabled={savingTribunal} type="button">
-                    <Save size={18} /> {savingTribunal ? "Guardando..." : "Guardar Tribunal"}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div className="modalFooter">
-              <button className="btnGhost" onClick={() => setShowFormModal(false)} disabled={savingTribunal} type="button">
-                Cancelar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* MODAL FORM */}
+      <TribunalFormModal
+        open={showFormModal}
+        onClose={() => setShowFormModal(false)}
+        editing={editing}
+        docentes={docentes}
+        selectedCPLabel={selectedCPLabel || ""}
+        tribunalForm={tribunalForm}
+        setTribunalForm={setTribunalForm}
+        formErrors={formErrors}
+        saving={savingTribunal}
+        onSave={onSaveTribunal}
+      />
 
       {/* MODAL VIEW */}
       <TribunalViewModal
@@ -1107,16 +1013,18 @@ export default function TribunalesPage() {
         showAsignModal={showAsignModal}
         setShowAsignModal={setShowAsignModal}
         activeTribunalForAsign={activeTribunalForAsign}
-        asignForm={asignForm}
-        setAsignForm={setAsignForm}
-        estudiantes={eligibleEstudiantes}
+        asignForm={asignForm as any} // 👈 modal actual no tiene id_caso_estudio tipado aún
+        setAsignForm={setAsignForm as any}
+        estudiantes={estudiantes}
         franjas={franjas}
         asignaciones={asignaciones}
         errors={errors}
-        loading={loading || loadingEligible}
+        loading={loading}
         onCreateAsignacion={onCreateAsignacion}
         onToggleAsignEstado={onToggleAsignEstado}
         isActivo={isActivo}
+        // 👇 si tu modal ya acepta casos, pásalo (cuando lo ajustes)
+        // casos={casos}
       />
     </div>
   );

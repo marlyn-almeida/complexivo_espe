@@ -7,7 +7,14 @@ export interface TribunalEstudiante {
   id_estudiante: number;
   id_franja_horario: number;
 
+  // estado del registro (activo/inactivo)
   estado: Estado01;
+
+  // ✅ NUEVO: estado académico de la defensa
+  // 0 = ABIERTA, 1 = CERRADA
+  cerrado: Estado01;
+  fecha_cierre?: string | null; // DATETIME
+  id_docente_cierra?: number | null;
 
   created_at?: string;
   updated_at?: string | null;
@@ -23,7 +30,7 @@ export interface TribunalEstudiante {
   hora_fin?: string;
   laboratorio?: string;
 
-  // ✅ joins caso (si tu backend lo incluye en list/findMisAsignaciones)
+  // joins caso (si backend lo incluye)
   id_caso_estudio?: number;
   numero_caso?: number;
   titulo_caso?: string | null;

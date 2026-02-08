@@ -1,4 +1,4 @@
-// src/services/franjaHorario.service.ts
+// src/services/franjasHorarias.service.ts
 import axiosClient from "../api/axiosClient";
 import type { FranjaHorario, Estado01 } from "../types/franjaHoraria";
 

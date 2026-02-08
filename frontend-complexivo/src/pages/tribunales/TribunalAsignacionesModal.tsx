@@ -78,7 +78,7 @@ export default function TribunalAsignacionesModal({
     return (estudiantes ?? []).find((x: any) => Number(x.id_estudiante) === Number(asignForm.id_estudiante)) ?? null;
   }, [asignForm.id_estudiante, estudiantes]);
 
-  // 👇 Info “informativa” del caso del estudiante seleccionado (si tu endpoint de estudiantes lo trae)
+  // Info informativa del caso del estudiante (si el backend lo devuelve enriquecido)
   const selectedCaseInfo = useMemo(() => {
     const anyEst: any = selectedEst as any;
     if (!anyEst) return null;
@@ -101,30 +101,50 @@ export default function TribunalAsignacionesModal({
       setDownloadingKey(key);
       const res = await casosEstudioService.download(idCaso);
       const blob = res?.data as Blob;
+
       const n = (row as any).numero_caso ? `Caso_${(row as any).numero_caso}` : `Caso_${idCaso}`;
       downloadBlob(blob, `${n}.pdf`);
+    } catch {
+      // si quieres toast, pásalo por props (por ahora silencioso)
     } finally {
       setDownloadingKey(null);
     }
   }
 
+  /**
+   * ✅ ENTREGA: por tu regla real, es 1 vigente por estudiante.
+   * Entonces descargamos por estudiante.
+   * Si la fila viene con id_entrega (id_estudiante_caso_entrega / id_entrega),
+   * la usamos para descargar por ID (compatibilidad).
+   */
   async function onDownloadEntrega(row: TribunalEstudiante) {
-    const idCaso = Number((row as any).id_caso_estudio) || 0;
-    if (!idCaso) return;
+    const idEst = Number((row as any).id_estudiante) || 0;
+    if (!idEst) return;
+
+    const idEntrega =
+      Number((row as any).id_estudiante_caso_entrega) ||
+      Number((row as any).id_entrega) ||
+      0;
 
     const key = `entrega_${(row as any).id_tribunal_estudiante}`;
     try {
       setDownloadingKey(key);
-      const res = await entregasCasoService.download(Number((row as any).id_estudiante), idCaso);
+
+      const res = await entregasCasoService.downloadPreferente({
+        id_entrega: idEntrega > 0 ? idEntrega : undefined,
+        id_estudiante: idEst,
+      });
+
       const blob = res?.data as Blob;
 
-      const est =
+      const estName =
         (row as any).apellidos_estudiante && (row as any).nombres_estudiante
           ? `${(row as any).apellidos_estudiante}_${(row as any).nombres_estudiante}`
-          : `Est_${(row as any).id_estudiante}`;
+          : `Est_${idEst}`;
 
-      const n = (row as any).numero_caso ? `Caso_${(row as any).numero_caso}` : `Caso_${idCaso}`;
-      downloadBlob(blob, `Entrega_${safeFileName(est)}_${n}.pdf`);
+      downloadBlob(blob, `Entrega_${safeFileName(estName)}.pdf`);
+    } catch {
+      // si quieres toast, pásalo por props (por ahora silencioso)
     } finally {
       setDownloadingKey(null);
     }
@@ -138,7 +158,7 @@ export default function TribunalAsignacionesModal({
           <div className="asignTitleRow">
             <h3 className="asignTitle">Asignaciones — {activeTribunalForAsign.nombre_tribunal}</h3>
             <p className="asignSubtitle">
-              Aquí asignas estudiante + franja. El caso se toma del estudiante (asignación previa).
+              Asignas estudiante + franja. El caso base y la entrega se descargan desde la asignación.
             </p>
           </div>
 
@@ -174,7 +194,7 @@ export default function TribunalAsignacionesModal({
 
               {/* panel caso seleccionado */}
               <div className="asignMiniCard">
-                <div className="asignMiniTitle">Caso del estudiante</div>
+                <div className="asignMiniTitle">Caso del estudiante (referencia)</div>
                 {!asignForm.id_estudiante ? (
                   <div className="asignMiniMuted">Seleccione un estudiante para ver referencia.</div>
                 ) : selectedCaseInfo && (selectedCaseInfo.numero_caso || selectedCaseInfo.titulo_caso) ? (
@@ -183,7 +203,7 @@ export default function TribunalAsignacionesModal({
                     {selectedCaseInfo.titulo_caso ? ` — ${selectedCaseInfo.titulo_caso}` : ""}
                   </div>
                 ) : (
-                  <div className="asignMiniMuted">No disponible aquí (se mostrará al crear la asignación).</div>
+                  <div className="asignMiniMuted">No disponible aquí (se verá en la tabla al crear asignación).</div>
                 )}
               </div>
             </div>
@@ -270,15 +290,11 @@ export default function TribunalAsignacionesModal({
 
                         <td>
                           <div style={{ fontWeight: 800 }}>{casoTxt}</div>
-                          {!row.id_caso_estudio ? (
-                            <div style={{ opacity: 0.7, fontSize: 12 }}>Sin caso asignado</div>
-                          ) : null}
+                          {!row.id_caso_estudio ? <div style={{ opacity: 0.7, fontSize: 12 }}>Sin caso asignado</div> : null}
                         </td>
 
                         <td>
-                          <span className={`asignBadge ${activo ? "ok" : "off"}`}>
-                            {activo ? "Activa" : "Inactiva"}
-                          </span>
+                          <span className={`asignBadge ${activo ? "ok" : "off"}`}>{activo ? "Activa" : "Inactiva"}</span>
                         </td>
 
                         <td>
@@ -305,12 +321,12 @@ export default function TribunalAsignacionesModal({
                               <FileText size={18} />
                             </button>
 
-                            {/* PDF Entrega */}
+                            {/* PDF Entrega (por estudiante) */}
                             <button
                               className="asignBtnIcon"
                               onClick={() => onDownloadEntrega(row)}
                               title="Descargar entrega del estudiante (PDF)"
-                              disabled={loading || !row.id_caso_estudio || downloadingKey === keyEntrega}
+                              disabled={loading || downloadingKey === keyEntrega}
                               type="button"
                             >
                               <Download size={18} />
@@ -326,7 +342,7 @@ export default function TribunalAsignacionesModal({
           </div>
 
           <div className="asignFootHint">
-            Los PDFs se habilitan cuando el backend devuelve <b>id_caso_estudio</b> en la asignación.
+            Caso base: usa <b>id_caso_estudio</b>. Entrega: se descarga por <b>id_estudiante</b> (una entrega vigente).
           </div>
         </div>
 

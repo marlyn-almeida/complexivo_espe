@@ -1,7 +1,12 @@
 // src/types/entregaCaso.ts
+export type Estado01 = 0 | 1;
 
 export type EntregaCaso = {
-  id_estudiante_caso_entrega: number;
+  // ✅ OJO: tu backend puede tener uno de estos nombres
+  // dejamos ambos opcionales para que no reviente si cambia el nombre exacto
+  id_entrega_caso?: number;
+  id_estudiante_caso_entrega?: number;
+
   id_estudiante: number;
   id_caso_estudio: number;
 
@@ -11,14 +16,23 @@ export type EntregaCaso = {
   fecha_entrega?: string | null;
   observacion?: string | null;
 
-  estado: number;
-  created_at: string;
+  estado: Estado01;
+
+  created_at?: string;
+  updated_at?: string | null;
+
+  // joins opcionales (si backend devuelve)
+  numero_caso?: number | string | null;
+  titulo_caso?: string | null;
+
+  nombres_estudiante?: string;
+  apellidos_estudiante?: string;
+  id_institucional_estudiante?: string;
 };
 
-export type EntregaCasoCreate = {
-  id_estudiante: number; // ✅ NUEVO
+export type EntregaCasoCreateDTO = {
+  id_estudiante: number;
   id_caso_estudio: number;
   archivo: File;
   observacion?: string;
 };
-
