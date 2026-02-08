@@ -1,12 +1,12 @@
-// server.js (o index.js) — COMPLETO (CORREGIDO)
+// ✅ server.js — COMPLETO (CORREGIDO)
 const express = require("express");
 const cors = require("cors");
+const path = require("path");
+const fs = require("fs");
 require("dotenv").config();
 
 const { auth } = require("./middlewares/auth.middleware");
 const { attachScope } = require("./middlewares/scope.middleware");
-// ⛔ Ya NO lo ponemos global
-// const { attachCarreraPeriodoCtx } = require("./middlewares/ctx.middleware");
 
 const app = express();
 
@@ -16,8 +16,24 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ✅ Servir uploads (para links/previews de PDFs si lo necesitas)
-app.use("/uploads", express.static("uploads"));
+// =========================
+// ✅ UPLOADS STATIC (CORREGIDO)
+// =========================
+// Ruta absoluta a /uploads
+const UPLOADS_ROOT = path.join(process.cwd(), "uploads");
+const UPLOADS_CASOS = path.join(UPLOADS_ROOT, "casos-estudio");
+
+// ✅ asegurar carpetas al inicio (evita 404 por no existir carpeta)
+try {
+  if (!fs.existsSync(UPLOADS_ROOT)) fs.mkdirSync(UPLOADS_ROOT, { recursive: true });
+  if (!fs.existsSync(UPLOADS_CASOS)) fs.mkdirSync(UPLOADS_CASOS, { recursive: true });
+} catch (e) {
+  console.error("⚠️ No se pudo crear carpeta uploads:", e);
+}
+
+// ✅ Servir /uploads públicamente
+// EJ: https://tu-dominio/uploads/casos-estudio/archivo.pdf
+app.use("/uploads", express.static(UPLOADS_ROOT));
 
 // =========================
 // RUTAS PÚBLICAS
@@ -53,9 +69,6 @@ protectedApi.use("/roles", require("./routes/rol.routes"));
 protectedApi.use("/docentes", require("./routes/docente.routes"));
 
 // ✅ Asignación de Roles a Docentes (solo SUPER_ADMIN)
-// Rutas:
-//   GET  /api/docentes/:id/roles
-//   PUT  /api/docentes/:id/roles
 protectedApi.use("/", require("./routes/docenteRoles.routes"));
 
 // =========================
@@ -90,7 +103,6 @@ protectedApi.use("/plantillas-acta", require("./routes/plantillaActaWord.routes"
 
 // =========================
 // ✅ NUEVOS MÓDULOS (ROL 2)
-// (Aquí tus routes YA tienen attachCarreraPeriodoCtx adentro cuando corresponde)
 // =========================
 protectedApi.use("/casos-estudio", require("./routes/casos_estudio.routes"));
 protectedApi.use("/entregas-caso", require("./routes/entregas_caso.routes"));
@@ -103,27 +115,15 @@ protectedApi.use("/ponderaciones-examen", require("./routes/ponderacion.routes")
 // RÚBRICAS (nuevo flujo: 1 rubrica por período)
 // =========================
 protectedApi.use("/rubricas", require("./routes/rubrica.routes"));
-
-// Niveles dentro de una rúbrica (rubrica_nivel)
 protectedApi.use("/rubricas/:rubricaId/niveles", require("./routes/rubrica_nivel.routes"));
-
-// Componentes dentro de una rúbrica (rubrica_componente)
 protectedApi.use("/rubricas/:rubricaId/componentes", require("./routes/rubrica_componente.routes"));
-
-// Criterios dentro de un componente (rubrica_criterio)
 protectedApi.use("/componentes/:componenteId/criterios", require("./routes/rubrica_criterio.routes"));
-
-// Descripciones por nivel dentro de un criterio (rubrica_criterio_nivel)
 protectedApi.use("/criterios/:criterioId/niveles", require("./routes/rubrica_criterio_nivel.routes"));
 
-// =========================
-// Catálogos (si los sigues usando en otras pantallas)
-// =========================
+// Catálogos (si los sigues usando)
 protectedApi.use("/componentes", require("./routes/componente.routes"));
 protectedApi.use("/criterios", require("./routes/criterio.routes"));
 protectedApi.use("/niveles", require("./routes/nivel.routes"));
-
-// Otros catálogos agrupados
 protectedApi.use("/", require("./routes/catalogos.routes"));
 
 // (Opcional) DEBUG para confirmar scope + ctx
@@ -135,7 +135,7 @@ protectedApi.get("/debug/whoami", (req, res) => {
 app.use("/api", protectedApi);
 
 // =========================
-// 404 JSON (si no existe la ruta)
+// 404 JSON
 // =========================
 app.use((req, res) => {
   res.status(404).json({
@@ -146,7 +146,7 @@ app.use((req, res) => {
 });
 
 // =========================
-// Error handler GLOBAL (para ver el error real)
+// Error handler GLOBAL
 // =========================
 app.use((err, req, res, next) => {
   console.error("🔥 ERROR:", err);
@@ -156,6 +156,7 @@ app.use((err, req, res, next) => {
   res.status(status).json({
     ok: false,
     message: err.message || "Internal Server Error",
+    // ⚠️ si no quieres stack en prod, quítalo:
     stack: err.stack,
   });
 });
@@ -164,4 +165,5 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`Servidor activo en puerto ${PORT}`);
+  console.log("📁 Uploads root:", UPLOADS_ROOT);
 });
