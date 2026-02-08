@@ -2,7 +2,11 @@ const router = require("express").Router();
 const { body, param } = require("express-validator");
 const validate = require("../middlewares/validate.middleware");
 const { authorize } = require("../middlewares/auth.middleware");
+const { attachCarreraPeriodoCtx } = require("../middlewares/ctx.middleware");
 const ctrl = require("../controllers/plan_evaluacion.controller");
+
+// 👇 APLICA EL CTX MIDDLEWARE AQUÍ
+router.use(attachCarreraPeriodoCtx);
 
 router.get("/", authorize(["ADMIN"]), ctrl.getByCP);
 

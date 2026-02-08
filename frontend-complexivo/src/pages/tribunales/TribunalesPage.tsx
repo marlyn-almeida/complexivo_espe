@@ -1,3 +1,4 @@
+// ✅ src/pages/tribunales/TribunalesPage.tsx
 import { useEffect, useMemo, useState } from "react";
 import {
   Plus,
@@ -11,6 +12,7 @@ import {
   AlertTriangle,
   Save,
   X,
+  Filter,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import "./TribunalesPage.css";
@@ -51,7 +53,6 @@ type AsignacionFormState = {
 type TribunalFormState = {
   nombre_tribunal: string;
   descripcion_tribunal: string;
-
   presidente: number | "";
   integrante1: number | "";
   integrante2: number | "";
@@ -107,10 +108,8 @@ export default function TribunalesPage() {
   const [asignaciones, setAsignaciones] = useState<TribunalEstudiante[]>([]);
   const [eligibleEstudiantes, setEligibleEstudiantes] = useState<Estudiante[]>([]);
   const [loadingEligible, setLoadingEligible] = useState(false);
-
   const [franjas, setFranjas] = useState<FranjaHorario[]>([]);
 
-  // ===== FORM asignación =====
   const [asignForm, setAsignForm] = useState<AsignacionFormState>({
     id_estudiante: "",
     id_franja_horario: "",
@@ -132,13 +131,13 @@ export default function TribunalesPage() {
     return estado01(v) === 1;
   }
 
-  function selectedCPLabel(): string {
+  const selectedCPLabel = useMemo(() => {
     const cp = carreraPeriodos.find((x: any) => Number(x.id_carrera_periodo) === Number(selectedCP));
     if (!cp) return "";
     const carrera = (cp as any).nombre_carrera ?? "Carrera";
     const periodo = (cp as any).codigo_periodo ?? (cp as any).descripcion_periodo ?? "Período";
     return `${carrera} — ${periodo}`;
-  }
+  }, [carreraPeriodos, selectedCP]);
 
   function openView(t: Tribunal) {
     setViewTribunal(t);
@@ -153,9 +152,13 @@ export default function TribunalesPage() {
 
   useEffect(() => {
     if (selectedCP) {
+      // ✅ IMPORTANTÍSIMO: fijar CP activo antes de pegarle a endpoints que lo usan
+      setActiveCarreraPeriodoId(Number(selectedCP));
+
       loadAll();
       loadDocentesByCP();
       loadPlanAndCalificadores();
+      setPage(1);
     } else {
       setTribunales([]);
       setDocentes([]);
@@ -287,15 +290,16 @@ export default function TribunalesPage() {
 
     try {
       setLoading(true);
+
       const data = await tribunalesService.list({
         includeInactive: mostrarInactivos,
         carreraPeriodoId: Number(selectedCP),
         q: search.trim() || undefined,
         page: 1,
-        limit: 100,
+        limit: 200,
       });
+
       setTribunales(data ?? []);
-      setPage(1);
     } catch {
       showToast("Error al cargar tribunales", "error");
       setTribunales([]);
@@ -307,6 +311,7 @@ export default function TribunalesPage() {
   async function loadPlanAndCalificadores() {
     if (!selectedCP) return;
 
+    // ✅ Plan (con CP explícito)
     try {
       setLoadingPlan(true);
       const p = await planEvaluacionService.getByCP(Number(selectedCP));
@@ -317,6 +322,7 @@ export default function TribunalesPage() {
       setLoadingPlan(false);
     }
 
+    // ✅ Calificadores (con CP explícito)
     try {
       const rows = await calificadoresGeneralesService.list(Number(selectedCP), false);
       const ids = (rows ?? [])
@@ -342,6 +348,8 @@ export default function TribunalesPage() {
         return String(t.nombre_tribunal || "").toLowerCase().includes(q);
       });
   }, [tribunales, search, mostrarInactivos]);
+
+  useEffect(() => setPage(1), [search]);
 
   const total = filtered.length;
   const activos = filtered.filter((x: any) => isActivo(x.estado)).length;
@@ -376,7 +384,6 @@ export default function TribunalesPage() {
     setTribunalForm({
       nombre_tribunal: String((t as any).nombre_tribunal || ""),
       descripcion_tribunal: String((t as any).descripcion_tribunal || ""),
-      // si backend no devuelve docentes del tribunal, quedan vacíos
       presidente: "",
       integrante1: "",
       integrante2: "",
@@ -395,7 +402,6 @@ export default function TribunalesPage() {
     const ids = [tribunalForm.presidente, tribunalForm.integrante1, tribunalForm.integrante2].filter(Boolean);
     const uniq = new Set(ids as any[]);
     if (ids.length && uniq.size !== ids.length) e.docentes = "No repitas el mismo docente en el tribunal.";
-
     return e;
   }
 
@@ -490,8 +496,6 @@ export default function TribunalesPage() {
       setFranjas(fr ?? []);
       setShowAsignModal(true);
 
-      // ⚠️ tu filtro actual hace N requests (1 por estudiante).
-      // Lo dejamos funcional por ahora, pero ya sabes que es pesado.
       setLoadingEligible(true);
       try {
         const results = await Promise.all(
@@ -671,8 +675,6 @@ export default function TribunalesPage() {
     }
   }
 
-  const cpLabel = selectedCPLabel();
-
   return (
     <div className="tribunalesPage">
       {toast ? <div className={`toast toast-${toast.type}`}>{toast.msg}</div> : null}
@@ -682,32 +684,80 @@ export default function TribunalesPage() {
         <div className="heroLeft">
           <div className="heroText">
             <h2 className="heroTitle">GESTIÓN DE TRIBUNALES</h2>
-            <p className="heroSubtitle">
-              Tecnologías de la Información en línea — {cpLabel || "Seleccione Carrera–Período"}
-            </p>
+            <p className="heroSubtitle">{selectedCPLabel || "Seleccione Carrera–Período"}</p>
           </div>
         </div>
 
         <div className="heroActions">
-          <button className="heroBtn primary" onClick={openCreateModal}>
+          <button className="heroBtn primary" onClick={openCreateModal} disabled={!selectedCP}>
             <Plus className="heroBtnIcon" /> Añadir Tribunal
           </button>
         </div>
       </div>
 
-      {/* FILTROS */}
+      {/* BOX PRINCIPAL: métricas + filtros + tabla */}
       <div className="box">
         <div className="boxHead">
           <div className="sectionTitle">
             <span className="sectionTitleIcon">
-              <Search size={18} />
+              <Users size={18} />
             </span>
-            Filtros
+            Listado de tribunales
+          </div>
+
+          <div className="boxRight">
+            <button className="btnGhost" onClick={loadAll} disabled={loading || !selectedCP} title="Actualizar">
+              ⟳ Actualizar
+            </button>
+
+            <label className="toggle">
+              <input
+                type="checkbox"
+                checked={mostrarInactivos}
+                onChange={(e) => setMostrarInactivos(e.target.checked)}
+                disabled={!selectedCP}
+              />
+              <span className="slider" />
+              <span className="toggleText">Mostrar inactivos</span>
+            </label>
           </div>
         </div>
 
+        {/* SUMMARY */}
+        <div className="summaryRow">
+          <div className="summaryBoxes">
+            <div className="summaryBox">
+              <span className="summaryLabel">Total</span>
+              <span className="summaryValue">{total}</span>
+            </div>
+
+            <div className="summaryBox active">
+              <span className="summaryLabel">Activos</span>
+              <span className="summaryValue">{activos}</span>
+            </div>
+
+            <div className="summaryBox inactive">
+              <span className="summaryLabel">Inactivos</span>
+              <span className="summaryValue">{inactivos}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* FILTERS */}
         <div className="filtersRow">
+          <div className="searchWrap">
+            <Search className="searchIcon" />
+            <input
+              className="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar por nombre de tribunal..."
+              disabled={!selectedCP}
+            />
+          </div>
+
           <div className="filterWrap">
+            <Filter className="filterIcon" />
             <select
               className="select"
               value={selectedCP}
@@ -716,44 +766,123 @@ export default function TribunalesPage() {
                 setSelectedCP(next);
                 setActiveCarreraPeriodoId(typeof next === "number" ? next : null);
               }}
+              disabled={loading}
+              title="Seleccione Carrera–Período"
             >
-              <option value="">Seleccione Carrera–Período...</option>
+              <option value="">Seleccione Carrera–Período</option>
               {carreraPeriodos.map((cp: any) => (
                 <option key={cp.id_carrera_periodo} value={cp.id_carrera_periodo}>
                   {(cp.nombre_carrera ?? "Carrera") + " — " + (cp.codigo_periodo ?? cp.descripcion_periodo ?? "Período")}
                 </option>
               ))}
             </select>
+
+            {selectedCP && (
+              <button className="chipClear" onClick={() => setSelectedCP("")} title="Quitar filtro">
+                <X size={14} /> Quitar
+              </button>
+            )}
           </div>
-
-          <div className="searchWrap">
-            <Search className="searchIcon" />
-            <input
-              className="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && loadAll()}
-              placeholder="Buscar por nombre..."
-            />
-          </div>
-
-          <button className="btnGhost" onClick={loadAll} disabled={loading}>
-            Buscar
-          </button>
-
-          <label className="toggle">
-            <input
-              type="checkbox"
-              checked={mostrarInactivos}
-              onChange={(e) => setMostrarInactivos(e.target.checked)}
-            />
-            <span className="slider" />
-            <span className="toggleText">Mostrar inactivos</span>
-          </label>
         </div>
 
-        <div className="muted" style={{ marginTop: 10 }}>
-          Total: <b>{total}</b> · Activos: <b>{activos}</b> · Inactivos: <b>{inactivos}</b>
+        {/* TABLE */}
+        <div className="tableWrap">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Tribunal</th>
+                <th>Estado</th>
+                <th style={{ width: 220 }}>Acciones</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {!selectedCP ? (
+                <tr>
+                  <td colSpan={3} className="emptyCell">
+                    <div className="empty">Seleccione una Carrera–Período para ver tribunales.</div>
+                  </td>
+                </tr>
+              ) : loading ? (
+                <tr>
+                  <td colSpan={3} className="emptyCell">
+                    <div className="empty">Cargando...</div>
+                  </td>
+                </tr>
+              ) : paginated.length === 0 ? (
+                <tr>
+                  <td colSpan={3} className="emptyCell">
+                    <div className="empty">No hay tribunales para mostrar.</div>
+                  </td>
+                </tr>
+              ) : (
+                paginated.map((t: any) => {
+                  const activo = isActivo(t.estado);
+                  return (
+                    <tr key={t.id_tribunal}>
+                      <td>
+                        <div className="tdTitle">{t.nombre_tribunal}</div>
+                        <div className="tdSub">
+                          {t.nombre_carrera ? `${t.nombre_carrera} — ${t.codigo_periodo ?? ""}` : selectedCPLabel || "—"}
+                        </div>
+                      </td>
+
+                      <td>
+                        {activo ? (
+                          <span className="badgeActive">Activo</span>
+                        ) : (
+                          <span className="badgeInactive">Inactivo</span>
+                        )}
+                      </td>
+
+                      <td className="tdActions">
+                        <div className="actions">
+                          <button className="iconBtn iconBtn_neutral" onClick={() => openView(t)}>
+                            <Eye className="iconAction" />
+                            <span className="tooltip">Ver</span>
+                          </button>
+
+                          <button className="iconBtn iconBtn_purple" onClick={() => openEditModal(t)}>
+                            <Pencil className="iconAction" />
+                            <span className="tooltip">Editar</span>
+                          </button>
+
+                          <button className="iconBtn iconBtn_primary" onClick={() => onToggleEstado(t)}>
+                            {activo ? <ToggleRight className="iconAction" /> : <ToggleLeft className="iconAction" />}
+                            <span className="tooltip">{activo ? "Desactivar" : "Activar"}</span>
+                          </button>
+
+                          <button className="iconBtn iconBtn_neutral" onClick={() => openAsignaciones(t)}>
+                            <CalendarPlus className="iconAction" />
+                            <span className="tooltip">Asignar</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* PAGINATION */}
+        <div className="paginationRow">
+          <button className="btnGhost" disabled={currentPage <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+            ← Anterior
+          </button>
+
+          <span className="paginationText">
+            Página {currentPage} de {totalPages}
+          </span>
+
+          <button
+            className="btnGhost"
+            disabled={currentPage >= totalPages}
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+          >
+            Siguiente →
+          </button>
         </div>
       </div>
 
@@ -792,11 +921,7 @@ export default function TribunalesPage() {
                 Plan activo: <b>{plan.nombre_plan ?? "Plan de evaluación"}</b>
               </p>
               {plan.descripcion_plan ? <p className="muted">{plan.descripcion_plan}</p> : null}
-              <button
-                className="btnGhost"
-                onClick={() => navigate(`/plan-evaluacion?cp=${selectedCP}`)}
-                disabled={!selectedCP}
-              >
+              <button className="btnGhost" onClick={() => navigate(`/plan-evaluacion?cp=${selectedCP}`)} disabled={!selectedCP}>
                 Ver / Editar Plan
               </button>
             </div>
@@ -855,93 +980,6 @@ export default function TribunalesPage() {
               {savingCG ? "Guardando..." : "Guardar Calificadores Generales"}
             </button>
           </div>
-        </div>
-      </div>
-
-      {/* TABLA TRIBUNALES */}
-      <div className="box">
-        <div className="boxHead">
-          <div className="sectionTitle">
-            <span className="sectionTitleIcon">
-              <Users size={18} />
-            </span>
-            Listado de Tribunales
-          </div>
-        </div>
-
-        <div className="tableWrap">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Tribunal</th>
-                <th>Estado</th>
-                <th style={{ width: 220 }}>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginated.length === 0 ? (
-                <tr>
-                  <td colSpan={3} className="emptyCell">
-                    <div className="empty">No hay tribunales para mostrar.</div>
-                  </td>
-                </tr>
-              ) : (
-                paginated.map((t: any) => {
-                  const activo = isActivo(t.estado);
-                  return (
-                    <tr key={t.id_tribunal}>
-                      <td>
-                        <div className="tdTitle">{t.nombre_tribunal}</div>
-                        <div className="tdSub">
-                          {t.nombre_carrera ? `${t.nombre_carrera} — ${t.codigo_periodo ?? ""}` : "—"}
-                        </div>
-                      </td>
-                      <td>
-                        <span className={`badge ${activo ? "badgeActive" : "badgeInactive"}`}>
-                          {activo ? "Activo" : "Inactivo"}
-                        </span>
-                      </td>
-                      <td className="tdActions">
-                        <div className="actions">
-                          <button className="iconBtn iconBtn_neutral" onClick={() => openView(t)}>
-                            <Eye className="iconAction" />
-                            <span className="tooltip">Ver</span>
-                          </button>
-
-                          <button className="iconBtn iconBtn_purple" onClick={() => openEditModal(t)}>
-                            <Pencil className="iconAction" />
-                            <span className="tooltip">Editar</span>
-                          </button>
-
-                          <button className="iconBtn iconBtn_primary" onClick={() => onToggleEstado(t)}>
-                            {activo ? <ToggleRight className="iconAction" /> : <ToggleLeft className="iconAction" />}
-                            <span className="tooltip">{activo ? "Desactivar" : "Activar"}</span>
-                          </button>
-
-                          <button className="iconBtn iconBtn_neutral" onClick={() => openAsignaciones(t)}>
-                            <CalendarPlus className="iconAction" />
-                            <span className="tooltip">Asignar</span>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="paginationRow">
-          <button className="btnGhost" disabled={currentPage <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
-            Anterior
-          </button>
-          <span className="paginationText">
-            Página <b>{currentPage}</b> de <b>{totalPages}</b>
-          </span>
-          <button className="btnGhost" disabled={currentPage >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
-            Siguiente
-          </button>
         </div>
       </div>
 
@@ -1055,7 +1093,7 @@ export default function TribunalesPage() {
         open={showViewModal}
         onClose={() => setShowViewModal(false)}
         tribunal={viewTribunal}
-        cpLabel={selectedCPLabel() || ""}
+        cpLabel={selectedCPLabel || ""}
         isActivo={isActivo}
         showToast={showToast}
         onOpenAsignaciones={(t) => {

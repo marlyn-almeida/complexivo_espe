@@ -2,7 +2,11 @@ const router = require("express").Router();
 const { body, param, query } = require("express-validator");
 const validate = require("../middlewares/validate.middleware");
 const { authorize } = require("../middlewares/auth.middleware");
+const { attachCarreraPeriodoCtx } = require("../middlewares/ctx.middleware");
 const ctrl = require("../controllers/calificadores_generales.controller");
+
+// 👇 APLICA CTX AQUÍ
+router.use(attachCarreraPeriodoCtx);
 
 router.get(
   "/",

@@ -4,16 +4,13 @@ import { clearSession, getToken } from "../utils/auth";
 
 function normalizeBaseURL() {
   const raw = (import.meta.env.VITE_API_URL || "https://complexivo-espe.onrender.com/api").trim();
-
   if (raw.endsWith("/api")) return raw;
   if (raw.endsWith("/api/")) return raw.slice(0, -1);
   return raw.replace(/\/$/, "") + "/api";
 }
 
-// ✅ clave única para guardar el CP activo (carrera_periodo)
 const ACTIVE_CP_KEY = "active_carrera_periodo_id";
 
-// ✅ helper: lee CP activo desde localStorage (si existe y es número válido)
 function getActiveCarreraPeriodoId(): number | null {
   const v = localStorage.getItem(ACTIVE_CP_KEY);
   if (!v) return null;
@@ -26,7 +23,6 @@ const axiosClient = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-// ✅ REQUEST: adjunta token + (MUY IMPORTANTE) adjunta carrera_periodo activo
 axiosClient.interceptors.request.use(
   (config) => {
     const token = getToken();
@@ -35,11 +31,24 @@ axiosClient.interceptors.request.use(
       (config.headers as any).Authorization = `Bearer ${token}`;
     }
 
-    // ✅ CLAVE: enviar CP activo SIEMPRE (para Rol 2 y módulos por carrera-periodo)
     const cpId = getActiveCarreraPeriodoId();
     if (cpId) {
       config.headers = config.headers ?? {};
+
+      // ✅ HEADERS (mandamos varios por compatibilidad)
+      (config.headers as any)["x-id-carrera-periodo"] = String(cpId);
       (config.headers as any)["x-carrera-periodo-id"] = String(cpId);
+      (config.headers as any)["x-carrera-periodo"] = String(cpId);
+      (config.headers as any)["x-cp-id"] = String(cpId);
+
+      // ✅ QUERY PARAM (por si el middleware lee req.query)
+      config.params = config.params ?? {};
+      if ((config.params as any).id_carrera_periodo == null) {
+        (config.params as any).id_carrera_periodo = cpId;
+      }
+      if ((config.params as any).carreraPeriodoId == null) {
+        (config.params as any).carreraPeriodoId = cpId;
+      }
     }
 
     return config;
@@ -47,13 +56,10 @@ axiosClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Helpers para parsear errores de validación
 function getErrorsArray(data: any): any[] {
   if (!data) return [];
-  // Caso 1: errors ya es array
   if (Array.isArray(data.errors)) return data.errors;
 
-  // Caso 2: errors viene como objeto { campo: ["msg"] } o { campo: "msg" }
   if (data.errors && typeof data.errors === "object") {
     const out: any[] = [];
     for (const [k, v] of Object.entries(data.errors)) {
@@ -62,43 +68,34 @@ function getErrorsArray(data: any): any[] {
     }
     return out;
   }
-
-  // Caso 3: backend manda { error: ... } u otra forma
   return [];
 }
 
 function buildUserMessage(status?: number, data?: any, fallback?: string) {
   const base = data?.message || fallback || "Error inesperado";
 
-  // Si hay errores, agregamos el primero para que sea útil
   const errs = getErrorsArray(data);
   const first = errs?.[0];
 
   if (first) {
-    // si el backend manda { field, message }
     if (first.field && first.message) return `${base}: ${first.field} → ${first.message}`;
-    // si manda string
     if (typeof first === "string") return `${base}: ${first}`;
-    // si manda { msg } o { message }
     if ((first as any).msg) return `${base}: ${(first as any).msg}`;
     if ((first as any).message) return `${base}: ${(first as any).message}`;
   }
 
-  // Errores típicos por status
   if (status === 401) return "Sesión expirada. Vuelve a iniciar sesión.";
   if (status === 403) return "No tienes permisos para realizar esta acción.";
   if (status === 404) return "Recurso no encontrado.";
-  if (status === 422) return base; // ya es validación, pero sin detalle
+  if (status === 422) return base;
   if (status && status >= 500) return "Error del servidor. Intenta nuevamente.";
 
   return base;
 }
 
-// ✅ RESPONSE: manejo unificado + logs completos
 axiosClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Si no hay response => error de red / CORS / server caído
     if (!error?.response) {
       console.log("AXIOS NETWORK ERROR:", error?.message);
       return Promise.reject({
@@ -122,10 +119,7 @@ axiosClient.interceptors.response.use(
 
     const userMessage = buildUserMessage(status, data, error?.message);
 
-    // ✅ Si token inválido/expirado
-    if (status === 401) {
-      clearSession();
-    }
+    if (status === 401) clearSession();
 
     return Promise.reject({
       ...error,
@@ -140,7 +134,6 @@ axiosClient.interceptors.response.use(
 
 export default axiosClient;
 
-// ✅ EXPORT opcional: por si quieres setear CP desde cualquier parte del front
 export function setActiveCarreraPeriodoId(id: number | null) {
   if (!id || id <= 0) localStorage.removeItem(ACTIVE_CP_KEY);
   else localStorage.setItem(ACTIVE_CP_KEY, String(id));
