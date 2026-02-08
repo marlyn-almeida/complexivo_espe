@@ -1,4 +1,4 @@
-// src/controllers/casos_estudio.controller.js
+// ✅ src/controllers/casos_estudio.controller.js
 const svc = require("../services/casos_estudio.service");
 const path = require("path");
 const fs = require("fs");
@@ -19,10 +19,13 @@ function safeName(name = "") {
 function resolveUploadsPath(publicPath) {
   // publicPath esperado: "/uploads/casos-estudio/xxx.pdf"
   const uploadsRoot = path.join(process.cwd(), "uploads");
-  const rel = String(publicPath || "").replace(/^\/+/, "");
+  const rel = String(publicPath || "").replace(/^\/+/, ""); // "uploads/..."
   const full = path.resolve(process.cwd(), rel);
   const root = path.resolve(uploadsRoot);
+
+  // ✅ evita path traversal fuera de /uploads
   if (!full.startsWith(root)) return null;
+
   return full;
 }
 
@@ -134,7 +137,7 @@ async function toggleEstado(req, res, next) {
   }
 }
 
-// ✅ NUEVO: descargar PDF base del caso
+// ✅ CORREGIDO: ver PDF inline (NO fuerza descarga)
 async function download(req, res, next) {
   try {
     const cp = Number(req.ctx.id_carrera_periodo);
@@ -155,9 +158,13 @@ async function download(req, res, next) {
       throw err;
     }
 
-    const downloadName = safeName(caso.archivo_nombre || `caso_${caso.numero_caso}.pdf`);
+    const filename = safeName(caso.archivo_nombre || `caso_${caso.numero_caso}.pdf`);
+
+    // ✅ Inline para vista en el navegador
     res.setHeader("Content-Type", "application/pdf");
-    res.download(fullPath, downloadName);
+    res.setHeader("Content-Disposition", `inline; filename="${filename}"`);
+
+    return res.sendFile(fullPath);
   } catch (e) {
     next(e);
   }

@@ -5,7 +5,7 @@ import type { CarreraPeriodo } from "../../types/carreraPeriodo";
 import type { CasoEstudio } from "../../types/casoEstudio";
 
 import { carreraPeriodoService } from "../../services/carreraPeriodo.service";
-import { casosEstudioService, resolveFileUrl } from "../../services/casosEstudio.service";
+import { casosEstudioService } from "../../services/casosEstudio.service";
 
 // ✅ MODALES
 import CasoEstudioFormModal from "./CasoEstudioFormModal";
@@ -61,7 +61,6 @@ export default function CasosEstudioPage() {
   const [casos, setCasos] = useState<CasoEstudio[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // ✅ opcional: ver inactivos (para “eliminados”)
   const [mostrarInactivos, setMostrarInactivos] = useState(false);
 
   // ===========================
@@ -89,19 +88,27 @@ export default function CasosEstudioPage() {
     window.setTimeout(() => setToast(null), 3200);
   }
 
-  function extractBackendError(err: any): string {
-    // si backend viene como JSON
-    const msg = err?.response?.data?.message;
-    const list = err?.response?.data?.errors;
+  // ✅ si el backend devuelve error pero axios estaba en blob, lo parseamos
+  async function extractBackendError(err: any): Promise<string> {
+    const data = err?.response?.data;
 
-    if (Array.isArray(list) && list.length) {
-      const first = list[0];
-      if (first?.msg) return String(first.msg);
-      if (first?.message) return String(first.message);
+    // JSON normal
+    if (data && typeof data === "object" && typeof data.message === "string") return data.message;
+
+    // Blob JSON (cuando responseType="blob" y el backend respondió JSON)
+    if (data instanceof Blob) {
+      try {
+        const text = await data.text();
+        const parsed = JSON.parse(text);
+        if (parsed?.message) return String(parsed.message);
+      } catch {
+        // ignore
+      }
     }
+
+    const msg = err?.message;
     if (typeof msg === "string" && msg.trim()) return msg;
 
-    // si axios trae blob (por responseType blob) - aquí ya no usamos blob
     return "Ocurrió un error";
   }
 
@@ -178,14 +185,10 @@ export default function CasosEstudioPage() {
 
     try {
       setLoading(true);
-
-      const data = await casosEstudioService.list({
-        includeInactive: mostrarInactivos,
-      });
-
+      const data = await casosEstudioService.list({ includeInactive: mostrarInactivos });
       setCasos(data ?? []);
     } catch (err: any) {
-      showToast(extractBackendError(err), "error");
+      showToast(await extractBackendError(err), "error");
       setCasos([]);
     } finally {
       setLoading(false);
@@ -231,29 +234,64 @@ export default function CasosEstudioPage() {
   }
 
   // ===========================
-  // PDF (SIN /download) -> usa archivo_path
+  // ✅ PDF AUTH (usa tu endpoint /download)
   // ===========================
-  function openPdf(item: CasoEstudio) {
-    const url = resolveFileUrl(item.archivo_path);
-    if (!url) {
-      showToast("Este caso no tiene archivo asociado.", "error");
-      return;
+  function getFilenameFromHeaders(headers: any, fallback: string) {
+    const cd = headers?.["content-disposition"];
+    if (!cd) return fallback;
+
+    const match = /filename\*=UTF-8''([^;]+)|filename="?([^"]+)"?/i.exec(cd);
+    const raw = (match?.[1] || match?.[2] || "").trim();
+    if (!raw) return fallback;
+
+    try {
+      return decodeURIComponent(raw);
+    } catch {
+      return raw;
     }
-    window.open(url, "_blank", "noopener,noreferrer");
   }
 
-  function downloadPdf(item: CasoEstudio) {
-    const url = resolveFileUrl(item.archivo_path);
-    if (!url) {
-      showToast("Este caso no tiene archivo asociado.", "error");
-      return;
+  async function openPdf(item: CasoEstudio) {
+    try {
+      setLoading(true);
+
+      const res = await casosEstudioService.download(Number(item.id_caso_estudio));
+      const blob = new Blob([res.data], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+
+      window.open(url, "_blank", "noopener,noreferrer");
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (err: any) {
+      showToast(await extractBackendError(err), "error");
+    } finally {
+      setLoading(false);
     }
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = item.archivo_nombre || `caso_${item.numero_caso}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+  }
+
+  async function downloadPdf(item: CasoEstudio) {
+    try {
+      setLoading(true);
+
+      const res = await casosEstudioService.download(Number(item.id_caso_estudio));
+      const fallback = item.archivo_nombre || `caso_${item.numero_caso}.pdf`;
+      const filename = getFilenameFromHeaders(res.headers, fallback);
+
+      const blob = new Blob([res.data], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    } catch (err: any) {
+      showToast(await extractBackendError(err), "error");
+    } finally {
+      setLoading(false);
+    }
   }
 
   // ===========================
@@ -268,7 +306,7 @@ export default function CasosEstudioPage() {
       showToast(current === 1 ? "Caso desactivado." : "Caso activado.", "success");
       await loadAll();
     } catch (err: any) {
-      showToast(extractBackendError(err), "error");
+      showToast(await extractBackendError(err), "error");
     } finally {
       setLoading(false);
     }
@@ -357,7 +395,6 @@ export default function CasosEstudioPage() {
                 </div>
               </div>
 
-              {/* ✅ opcional: mostrar inactivos */}
               <label className="toggle" style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
                 <input
                   type="checkbox"
@@ -496,7 +533,7 @@ export default function CasosEstudioPage() {
 
                         <td className="tdActions tdCenter">
                           <div className="actions">
-                            <button className="iconBtn iconBtn_neutral" title="Ver detalle" onClick={() => openView(x)}>
+                            <button className="iconBtn iconBtn_neutral" title="Ver" onClick={() => openView(x)}>
                               <Eye className="iconAction" />
                               <span className="tooltip">Ver</span>
                             </button>
