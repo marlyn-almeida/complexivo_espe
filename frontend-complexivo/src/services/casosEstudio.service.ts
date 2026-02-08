@@ -24,7 +24,6 @@ function unwrapObject<T = any>(res: any): T {
   return (data?.data ?? data) as T;
 }
 
-/** ✅ normaliza archivo_path a URL absoluta si viene relativa */
 export function resolveFileUrl(path: string): string {
   if (!path) return "";
   const p = String(path).trim();
@@ -69,11 +68,16 @@ export const casosEstudioService = {
     return unwrapObject(res);
   },
 
-  // ✅ ✅ ✅ (NO BORRA NADA) — agrega download para ver/descargar PDF por endpoint protegido
   async download(id_caso_estudio: number) {
     return axiosClient.get(`/casos-estudio/${id_caso_estudio}/download`, {
       responseType: "blob",
       transformResponse: (r) => r,
     });
+  },
+
+  // ✅ ✅ ✅ DELETE real
+  async remove(id: number) {
+    const res = await axiosClient.delete(`/casos-estudio/${id}`);
+    return unwrapObject(res);
   },
 };

@@ -68,9 +68,7 @@ async function update(id_caso_estudio, data) {
   return r.affectedRows;
 }
 
-/**
- * ✅ NUEVO: eliminar REAL (borra el registro)
- */
+/** ✅ NUEVO: borrado real */
 async function remove(id_caso_estudio) {
   const [r] = await pool.query(
     `DELETE FROM caso_estudio WHERE id_caso_estudio = ?`,
@@ -80,10 +78,7 @@ async function remove(id_caso_estudio) {
 }
 
 /**
- * ✅ Permiso DOCENTE (opcional recomendado):
- * Permite descargar el caso si el docente tiene AL MENOS un estudiante asignado
- * en sus tribunales cuyo caso_asignacion activo sea ese id_caso_estudio,
- * y todo pertenece al mismo CP.
+ * ✅ Permiso DOCENTE (opcional recomendado)
  */
 async function docentePuedeVerCaso({ id_docente, id_caso_estudio, id_carrera_periodo }) {
   const [rows] = await pool.query(
@@ -115,11 +110,4 @@ async function docentePuedeVerCaso({ id_docente, id_caso_estudio, id_carrera_per
   return !!rows.length;
 }
 
-module.exports = {
-  listByCP,
-  getById,
-  create,
-  update,
-  remove, // ✅ agregado
-  docentePuedeVerCaso,
-};
+module.exports = { listByCP, getById, create, update, remove, docentePuedeVerCaso };

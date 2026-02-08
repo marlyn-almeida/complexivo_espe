@@ -11,7 +11,19 @@ import { casosEstudioService } from "../../services/casosEstudio.service";
 import CasoEstudioFormModal from "./CasoEstudioFormModal";
 import CasoEstudioViewModal from "./CasoEstudioViewModal";
 
-import { Plus, Eye, Search, Filter, X, FileText, BadgeCheck, Download, Pencil, Trash2, ToggleLeft } from "lucide-react";
+import {
+  Plus,
+  Eye,
+  Search,
+  Filter,
+  X,
+  FileText,
+  BadgeCheck,
+  Download,
+  Pencil,
+  Trash2,
+  ToggleLeft,
+} from "lucide-react";
 
 import escudoESPE from "../../assets/escudo.png";
 import "./CasosEstudioPage.css";
@@ -49,7 +61,7 @@ export default function CasosEstudioPage() {
   const [casos, setCasos] = useState<CasoEstudio[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // ✅ opcional: ver inactivos (para “eliminados”)
+  // ✅ opcional: ver inactivos (para “eliminados” lógicos)
   const [mostrarInactivos, setMostrarInactivos] = useState(false);
 
   // ===========================
@@ -72,7 +84,7 @@ export default function CasosEstudioPage() {
   // ===========================
   // HELPERS
   // ===========================
-  function showToast(msg: string, type: ToastType = "info") {
+  function showToastMsg(msg: string, type: ToastType = "info") {
     setToast({ msg, type });
     window.setTimeout(() => setToast(null), 3200);
   }
@@ -155,7 +167,7 @@ export default function CasosEstudioPage() {
         setActiveCarreraPeriodoId(null);
       }
     } catch {
-      showToast("Error al cargar Carrera–Período", "error");
+      showToastMsg("Error al cargar Carrera–Período", "error");
       setCarreraPeriodos([]);
       setSelectedCP("");
       setActiveCarreraPeriodoId(null);
@@ -176,7 +188,7 @@ export default function CasosEstudioPage() {
 
       setCasos(data ?? []);
     } catch (err: any) {
-      showToast(extractBackendError(err), "error");
+      showToastMsg(extractBackendError(err), "error");
       setCasos([]);
     } finally {
       setLoading(false);
@@ -197,7 +209,7 @@ export default function CasosEstudioPage() {
       window.open(url, "_blank", "noopener,noreferrer");
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (err: any) {
-      showToast(extractBackendError(err), "error");
+      showToastMsg(extractBackendError(err), "error");
     } finally {
       setLoading(false);
     }
@@ -220,7 +232,7 @@ export default function CasosEstudioPage() {
 
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (err: any) {
-      showToast(extractBackendError(err), "error");
+      showToastMsg(extractBackendError(err), "error");
     } finally {
       setLoading(false);
     }
@@ -241,7 +253,7 @@ export default function CasosEstudioPage() {
 
   function openCreate() {
     if (!selectedCP) {
-      showToast("Seleccione una Carrera–Período primero.", "error");
+      showToastMsg("Seleccione una Carrera–Período primero.", "error");
       return;
     }
     setFormMode("create");
@@ -265,7 +277,7 @@ export default function CasosEstudioPage() {
   }
 
   // ===========================
-  // “ELIMINAR” (DESACTIVAR) / ACTIVAR
+  // DESACTIVAR / ACTIVAR (soft delete)
   // ===========================
   async function onToggleEstado(item: CasoEstudio) {
     try {
@@ -273,19 +285,37 @@ export default function CasosEstudioPage() {
       const current = estado01((item as any).estado);
       await casosEstudioService.toggleEstado(Number(item.id_caso_estudio), current);
 
-      showToast(current === 1 ? "Caso desactivado." : "Caso activado.", "success");
+      showToastMsg(current === 1 ? "Caso desactivado." : "Caso activado.", "success");
       await loadAll();
     } catch (err: any) {
-      showToast(extractBackendError(err), "error");
+      showToastMsg(extractBackendError(err), "error");
     } finally {
       setLoading(false);
     }
   }
 
+  // ===========================
+  // ✅ ✅ ✅ ELIMINAR REAL (DELETE)
+  // ===========================
   async function onDeleteUI(item: CasoEstudio) {
-    const ok = window.confirm(`¿Seguro que deseas eliminar (desactivar) el Caso ${item.numero_caso}?`);
+    const ok = window.confirm(
+      `⚠️ Esto eliminará DEFINITIVAMENTE el Caso ${item.numero_caso}.\n¿Deseas continuar?`
+    );
     if (!ok) return;
-    await onToggleEstado(item);
+
+    try {
+      setLoading(true);
+
+      // ✅ DELETE real (requiere backend DELETE /casos-estudio/:id)
+      await casosEstudioService.remove(Number(item.id_caso_estudio));
+
+      showToastMsg("Caso eliminado definitivamente.", "success");
+      await loadAll();
+    } catch (err: any) {
+      showToastMsg(extractBackendError(err), "error");
+    } finally {
+      setLoading(false);
+    }
   }
 
   // ===========================
@@ -298,7 +328,8 @@ export default function CasosEstudioPage() {
       .filter((x: any) => (mostrarInactivos ? true : isActivo(x.estado)))
       .filter((x) => {
         if (!q) return true;
-        const t = `${x.numero_caso} ${x.titulo ?? ""} ${x.descripcion ?? ""} ${x.archivo_nombre ?? ""}`.toLowerCase();
+        const t =
+          `${x.numero_caso} ${x.titulo ?? ""} ${x.descripcion ?? ""} ${x.archivo_nombre ?? ""}`.toLowerCase();
         return t.includes(q);
       })
       .sort((a, b) => Number(a.numero_caso) - Number(b.numero_caso));
@@ -508,7 +539,6 @@ export default function CasosEstudioPage() {
                               <span className="tooltip">Ver</span>
                             </button>
 
-                            {/* ✅ VER PDF (inline) */}
                             <button
                               className="iconBtn iconBtn_primary"
                               title="Ver PDF"
@@ -519,7 +549,6 @@ export default function CasosEstudioPage() {
                               <span className="tooltip">Ver PDF</span>
                             </button>
 
-                            {/* ✅ DESCARGAR PDF */}
                             <button
                               className="iconBtn iconBtn_primary"
                               title="Descargar PDF"
@@ -535,10 +564,12 @@ export default function CasosEstudioPage() {
                               <span className="tooltip">Editar</span>
                             </button>
 
+                            {/* ✅ Si está activo => ELIMINA REAL. Si está inactivo => ACTIVA */}
                             <button
                               className={`iconBtn ${activo ? "iconBtn_danger" : "iconBtn_primary"}`}
-                              title={activo ? "Eliminar" : "Activar"}
+                              title={activo ? "Eliminar definitivo" : "Activar"}
                               onClick={() => (activo ? onDeleteUI(x) : onToggleEstado(x))}
+                              disabled={loading}
                             >
                               {activo ? <Trash2 className="iconAction" /> : <ToggleLeft className="iconAction" />}
                               <span className="tooltip">{activo ? "Eliminar" : "Activar"}</span>
@@ -584,7 +615,7 @@ export default function CasosEstudioPage() {
           selectedCarreraPeriodoId={selectedCP ? Number(selectedCP) : undefined}
           onClose={closeFormModal}
           onSaved={onSavedForm}
-          onToast={showToast}
+          onToast={showToastMsg}
         />
       )}
 

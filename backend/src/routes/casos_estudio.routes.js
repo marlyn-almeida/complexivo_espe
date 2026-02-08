@@ -1,4 +1,4 @@
-// ✅ src/routes/casos_estudio.routes.js
+// src/routes/casos_estudio.routes.js
 const router = require("express").Router();
 const { body, param, query } = require("express-validator");
 const validate = require("../middlewares/validate.middleware");
@@ -8,13 +8,12 @@ const ctrl = require("../controllers/casos_estudio.controller");
 
 const multer = require("multer");
 
-// ✅ Para poder usar req.file.buffer
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 15 * 1024 * 1024 }, // 15MB
 });
 
-// ✅ LISTAR casos
+// ✅ LISTAR
 router.get(
   "/",
   auth,
@@ -25,7 +24,7 @@ router.get(
   ctrl.list
 );
 
-// ✅ DOWNLOAD PDF del caso base
+// ✅ DOWNLOAD
 router.get(
   "/:id_caso_estudio/download",
   auth,
@@ -36,7 +35,7 @@ router.get(
   ctrl.download
 );
 
-// ✅ CREAR caso (con PDF)
+// ✅ CREAR
 router.post(
   "/",
   auth,
@@ -50,7 +49,7 @@ router.post(
   ctrl.create
 );
 
-// ✅ UPDATE caso (PDF opcional)
+// ✅ UPDATE
 router.put(
   "/:id_caso_estudio",
   auth,
@@ -65,7 +64,7 @@ router.put(
   ctrl.update
 );
 
-// ✅ PATCH estado (mantienes tu papelera si quieres)
+// ✅ PATCH estado
 router.patch(
   "/:id_caso_estudio/estado",
   auth,
@@ -77,7 +76,7 @@ router.patch(
   ctrl.toggleEstado
 );
 
-// ✅ ✅ NUEVO: DELETE REAL (borra BD + PDF) SOLO ADMIN
+// ✅ ✅ ✅ DELETE real
 router.delete(
   "/:id_caso_estudio",
   auth,

@@ -35,13 +35,7 @@ async function update(reqCtxCp, id_caso_estudio, patch) {
   return true;
 }
 
-/**
- * ✅ NUEVO: eliminar REAL
- * - valida que el caso exista
- * - valida que pertenezca al CP del ctx
- * - elimina el registro
- * - retorna el registro anterior para que el controller borre el PDF
- */
+/** ✅ NUEVO: borrado real */
 async function remove(reqCtxCp, id_caso_estudio) {
   const existing = await repo.getById(id_caso_estudio);
 
@@ -51,16 +45,14 @@ async function remove(reqCtxCp, id_caso_estudio) {
     throw err("Caso fuera de tu carrera–período", 403);
   }
 
-  await repo.remove(id_caso_estudio);
+  const affected = await repo.remove(id_caso_estudio);
+  if (!affected) throw err("No se pudo eliminar el caso.", 500);
 
-  return existing;
+  return true;
 }
 
 /**
  * ✅ Para download:
- * - ADMIN: puede descargar si el caso pertenece al CP del ctx
- * - DOCENTE: por defecto permitimos si está en el mismo CP
- *   (opcional más estricto: solo si tiene estudiantes asignados con ese caso)
  */
 async function getByIdForDownload(reqCtxCp, id_caso_estudio, user) {
   const caso = await repo.getById(id_caso_estudio);
@@ -70,7 +62,6 @@ async function getByIdForDownload(reqCtxCp, id_caso_estudio, user) {
     throw err("Caso fuera de tu carrera–período", 403);
   }
 
-  // ✅ EXTRA SEGURIDAD (OPCIONAL RECOMENDADA)
   if (isDocente(user)) {
     const ok = await repo.docentePuedeVerCaso({
       id_docente: Number(user.id),
