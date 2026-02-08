@@ -1,4 +1,4 @@
-// src/services/casosEstudio.service.ts
+// ✅ src/services/casosEstudio.service.ts
 import axiosClient from "../api/axiosClient";
 import type { CasoEstudio } from "../types/casoEstudio";
 
@@ -22,6 +22,26 @@ function unwrapArray(res: any): CasoEstudio[] {
 function unwrapObject(res: any): any {
   const data = res?.data ?? res;
   return data?.data ?? data;
+}
+
+/** ✅ normaliza archivo_path a URL absoluta si viene relativa */
+export function resolveFileUrl(path: string): string {
+  if (!path) return "";
+  const p = String(path).trim();
+  if (!p) return "";
+
+  // ya es absoluta
+  if (/^https?:\/\//i.test(p)) return p;
+
+  // si viene como "/uploads/..." u otra ruta, construimos con base API (sin /api al final)
+  const raw = (import.meta as any).env?.VITE_API_URL || "https://complexivo-espe.onrender.com/api";
+  const base = String(raw).replace(/\/$/, ""); // sin slash final
+
+  // si base termina en /api, lo quitamos para servir estáticos (normalmente)
+  const baseNoApi = base.endsWith("/api") ? base.slice(0, -4) : base;
+
+  const withSlash = p.startsWith("/") ? p : `/${p}`;
+  return `${baseNoApi}${withSlash}`;
 }
 
 export const casosEstudioService = {
@@ -51,12 +71,5 @@ export const casosEstudioService = {
       estado: estadoActual === 1 ? 0 : 1,
     });
     return unwrapObject(res);
-  },
-
-  // ✅ DESCARGA PDF del caso base
-  async download(id_caso_estudio: number) {
-    return axiosClient.get(`/casos-estudio/${id_caso_estudio}/download`, {
-      responseType: "blob",
-    });
   },
 };

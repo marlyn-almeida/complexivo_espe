@@ -5,7 +5,7 @@ import type { CarreraPeriodo } from "../../types/carreraPeriodo";
 import type { CasoEstudio } from "../../types/casoEstudio";
 
 import { carreraPeriodoService } from "../../services/carreraPeriodo.service";
-import { casosEstudioService } from "../../services/casosEstudio.service";
+import { casosEstudioService, resolveFileUrl } from "../../services/casosEstudio.service";
 
 // ✅ MODALES
 import CasoEstudioFormModal from "./CasoEstudioFormModal";
@@ -23,7 +23,6 @@ import {
   Pencil,
   Trash2,
   ToggleLeft,
-  ToggleRight,
 } from "lucide-react";
 
 import escudoESPE from "../../assets/escudo.png";
@@ -91,6 +90,7 @@ export default function CasosEstudioPage() {
   }
 
   function extractBackendError(err: any): string {
+    // si backend viene como JSON
     const msg = err?.response?.data?.message;
     const list = err?.response?.data?.errors;
 
@@ -101,6 +101,7 @@ export default function CasosEstudioPage() {
     }
     if (typeof msg === "string" && msg.trim()) return msg;
 
+    // si axios trae blob (por responseType blob) - aquí ya no usamos blob
     return "Ocurrió un error";
   }
 
@@ -122,7 +123,6 @@ export default function CasosEstudioPage() {
 
   useEffect(() => {
     if (selectedCP) {
-      // ✅ setea CP global para todo el módulo (header)
       setActiveCarreraPeriodoId(Number(selectedCP));
       loadAll();
       setPage(1);
@@ -140,7 +140,6 @@ export default function CasosEstudioPage() {
       const cps = await carreraPeriodoService.list(false);
       setCarreraPeriodos(cps ?? []);
 
-      // ✅ 1) si hay CP guardado y existe/está activo, usarlo
       const saved = readSavedCP();
       const savedOk =
         !!saved &&
@@ -154,7 +153,6 @@ export default function CasosEstudioPage() {
         return;
       }
 
-      // ✅ 2) fallback: primer CP activo
       const first = (cps ?? []).find((x: any) => Boolean((x as any).estado)) ?? (cps ?? [])[0];
 
       if (first) {
@@ -181,7 +179,6 @@ export default function CasosEstudioPage() {
     try {
       setLoading(true);
 
-      // ✅ CLAVE: NO mandar carreraPeriodoId (el backend usa header)
       const data = await casosEstudioService.list({
         includeInactive: mostrarInactivos,
       });
@@ -234,6 +231,32 @@ export default function CasosEstudioPage() {
   }
 
   // ===========================
+  // PDF (SIN /download) -> usa archivo_path
+  // ===========================
+  function openPdf(item: CasoEstudio) {
+    const url = resolveFileUrl(item.archivo_path);
+    if (!url) {
+      showToast("Este caso no tiene archivo asociado.", "error");
+      return;
+    }
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+
+  function downloadPdf(item: CasoEstudio) {
+    const url = resolveFileUrl(item.archivo_path);
+    if (!url) {
+      showToast("Este caso no tiene archivo asociado.", "error");
+      return;
+    }
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = item.archivo_nombre || `caso_${item.numero_caso}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
+  // ===========================
   // “ELIMINAR” (DESACTIVAR) / ACTIVAR
   // ===========================
   async function onToggleEstado(item: CasoEstudio) {
@@ -252,10 +275,7 @@ export default function CasosEstudioPage() {
   }
 
   async function onDeleteUI(item: CasoEstudio) {
-    // ✅ “Eliminar” = desactivar (porque no hay DELETE real)
-    const ok = window.confirm(
-      `¿Seguro que deseas eliminar (desactivar) el Caso ${item.numero_caso}?`
-    );
+    const ok = window.confirm(`¿Seguro que deseas eliminar (desactivar) el Caso ${item.numero_caso}?`);
     if (!ok) return;
     await onToggleEstado(item);
   }
@@ -296,7 +316,7 @@ export default function CasosEstudioPage() {
             <div className="heroText">
               <h1 className="heroTitle">Casos de Estudio</h1>
               <p className="heroSubtitle">
-                Crea y administra los casos (PDF oficial) por <b>Carrera–Período</b>.
+                Crea y administra los casos (PDF) por <b>Carrera–Período</b>.
               </p>
 
               {selectedCPLabel ? (
@@ -433,7 +453,7 @@ export default function CasosEstudioPage() {
                     </span>
                   </th>
 
-                  <th className="thActions thCenter" style={{ width: 260 }}>
+                  <th className="thActions thCenter" style={{ width: 340 }}>
                     <span className="thFlex">
                       <FileText size={16} /> Acciones
                     </span>
@@ -476,35 +496,30 @@ export default function CasosEstudioPage() {
 
                         <td className="tdActions tdCenter">
                           <div className="actions">
-                            <button className="iconBtn iconBtn_neutral" title="Ver" onClick={() => openView(x)}>
+                            <button className="iconBtn iconBtn_neutral" title="Ver detalle" onClick={() => openView(x)}>
                               <Eye className="iconAction" />
                               <span className="tooltip">Ver</span>
                             </button>
 
-                            {x.archivo_path ? (
-                              <a
-                                className="iconBtn iconBtn_primary"
-                                title="Descargar"
-                                href={x.archivo_path}
-                                target="_blank"
-                                rel="noreferrer"
-                              >
-                                <Download className="iconAction" />
-                                <span className="tooltip">Descargar</span>
-                              </a>
-                            ) : (
-                              <button className="iconBtn iconBtn_primary" disabled title="Sin archivo">
-                                <Download className="iconAction" />
-                                <span className="tooltip">Sin archivo</span>
-                              </button>
-                            )}
+                            <button className="iconBtn iconBtn_primary" title="Ver PDF" onClick={() => openPdf(x)}>
+                              <Eye className="iconAction" />
+                              <span className="tooltip">Ver PDF</span>
+                            </button>
+
+                            <button
+                              className="iconBtn iconBtn_primary"
+                              title="Descargar PDF"
+                              onClick={() => downloadPdf(x)}
+                            >
+                              <Download className="iconAction" />
+                              <span className="tooltip">Descargar</span>
+                            </button>
 
                             <button className="iconBtn iconBtn_purple" title="Editar" onClick={() => openEdit(x)}>
                               <Pencil className="iconAction" />
                               <span className="tooltip">Editar</span>
                             </button>
 
-                            {/* ✅ ELIMINAR (desactivar) / activar */}
                             <button
                               className={`iconBtn ${activo ? "iconBtn_danger" : "iconBtn_primary"}`}
                               title={activo ? "Eliminar" : "Activar"}

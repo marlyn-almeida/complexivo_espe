@@ -313,3 +313,12 @@
     max-width: 100%;
   }
 }
+/* ✅ Quitar spinners del number */
+.dmNoSpin::-webkit-outer-spin-button,
+.dmNoSpin::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.dmNoSpin[type="number"] {
+  -moz-appearance: textfield;
+}

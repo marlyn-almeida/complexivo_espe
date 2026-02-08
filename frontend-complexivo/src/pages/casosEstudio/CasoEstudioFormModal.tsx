@@ -1,5 +1,6 @@
-// src/pages/casosEstudio/CasoEstudioFormModal.tsx
+// ✅ src/pages/casosEstudio/CasoEstudioFormModal.tsx
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { X, FileText, Hash, AlignLeft, Upload } from "lucide-react";
 
 import type { CasoEstudio } from "../../types/casoEstudio";
@@ -12,10 +13,7 @@ type ToastType = "success" | "error" | "info";
 type Props = {
   mode: "create" | "edit";
   caso: CasoEstudio | null;
-
-  // ✅ mismo nombre que usas en Estudiantes
   selectedCarreraPeriodoId?: number;
-
   onClose: () => void;
   onSaved: () => Promise<void>;
   onToast: (msg: string, type?: ToastType) => void;
@@ -29,37 +27,50 @@ export default function CasoEstudioFormModal({
   onSaved,
   onToast,
 }: Props) {
-  // =========================
-  // STATE
-  // =========================
   const [numeroCaso, setNumeroCaso] = useState<number | "">("");
   const [titulo, setTitulo] = useState("");
   const [descripcion, setDescripcion] = useState("");
   const [archivoFile, setArchivoFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // =========================
-  // INIT (edit)
-  // =========================
   useEffect(() => {
     if (mode === "edit" && caso) {
       setNumeroCaso(caso.numero_caso);
       setTitulo(caso.titulo ?? "");
       setDescripcion(caso.descripcion ?? "");
-      setArchivoFile(null); // ✅ no forzamos archivo en edit
+      setArchivoFile(null);
+    }
+
+    if (mode === "create") {
+      setNumeroCaso("");
+      setTitulo("");
+      setDescripcion("");
+      setArchivoFile(null);
     }
   }, [mode, caso]);
 
-  // =========================
-  // SUBMIT
-  // =========================
+  // ✅ bloquear scroll + ESC
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !saving) onClose();
+    };
+    window.addEventListener("keydown", onKey);
+
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [onClose, saving]);
+
   async function onSubmit() {
     if (!selectedCarreraPeriodoId) {
       onToast("Carrera–Período no disponible.", "error");
       return;
     }
 
-    // ✅ importante: "" o 0 => inválido
     if (numeroCaso === "" || Number(numeroCaso) <= 0) {
       onToast("Ingrese el número de caso (mayor a 0).", "error");
       return;
@@ -79,10 +90,7 @@ export default function CasoEstudioFormModal({
       fd.append("titulo", titulo.trim());
       fd.append("descripcion", descripcion.trim());
 
-      if (archivoFile) {
-        // 👈 nombre debe coincidir con multer: "archivo"
-        fd.append("archivo", archivoFile);
-      }
+      if (archivoFile) fd.append("archivo", archivoFile);
 
       if (mode === "create") {
         await casosEstudioService.create(fd);
@@ -95,49 +103,49 @@ export default function CasoEstudioFormModal({
       await onSaved();
       onClose();
     } catch (err: any) {
-      onToast(err?.userMessage || "Ocurrió un error", "error");
+      onToast(err?.userMessage || err?.response?.data?.message || "Ocurrió un error", "error");
     } finally {
       setSaving(false);
     }
   }
 
-  // =========================
-  // RENDER
-  // =========================
-  return (
-    <div className="ceOverlay">
-      <div className="ceCard">
-        {/* HEADER */}
-        <div className="ceHeader">
-          <div className="ceHeaderLeft">
-            <div className="ceHeaderIcon">
+  return createPortal(
+    <div className="dmOverlay" role="dialog" aria-modal="true">
+      {/* ✅ click fuera para cerrar (si NO quieres, borra este div) */}
+      <div
+        onClick={() => {
+          if (!saving) onClose();
+        }}
+        style={{ position: "fixed", inset: 0 }}
+      />
+
+      <div className="dmCard" style={{ position: "relative" }}>
+        <div className="dmHeader">
+          <div className="dmHeaderLeft">
+            <div className="dmHeaderIcon">
               <FileText />
             </div>
             <div>
-              <div className="ceTitle">
-                {mode === "create" ? "Nuevo caso de estudio" : "Editar caso de estudio"}
-              </div>
-              <div className="ceSub">Asociado a una Carrera–Período</div>
+              <div className="dmTitle">{mode === "create" ? "Nuevo caso de estudio" : "Editar caso de estudio"}</div>
+              <div className="dmSub">Asociado a una Carrera–Período</div>
             </div>
           </div>
 
-          <button className="ceClose" onClick={onClose} disabled={saving}>
+          <button className="dmClose" onClick={onClose} disabled={saving} title="Cerrar">
             <X />
           </button>
         </div>
 
-        {/* BODY */}
-        <div className="ceBody">
-          <div className="ceFormGrid">
-            {/* NÚMERO DE CASO */}
-            <div className="ceInput">
+        <div className="dmBody">
+          <div className="dmFormGrid">
+            <div className="dmInput">
               <label>
                 Número de caso <span className="req">*</span>
               </label>
-              <div className="ceInputBox">
+              <div className="dmInputBox">
                 <Hash />
                 <input
-                  className="ceNoSpin"
+                  className="dmNoSpin"
                   type="number"
                   inputMode="numeric"
                   min={1}
@@ -145,7 +153,6 @@ export default function CasoEstudioFormModal({
                   value={numeroCaso}
                   onChange={(e) => {
                     const v = e.target.value;
-                    // ✅ permite borrar sin que se vuelva 0
                     if (v === "") return setNumeroCaso("");
                     const n = Number(v);
                     if (Number.isFinite(n)) setNumeroCaso(n);
@@ -154,32 +161,29 @@ export default function CasoEstudioFormModal({
               </div>
             </div>
 
-            {/* TÍTULO */}
-            <div className="ceInput">
+            <div className="dmInput">
               <label>Título</label>
-              <div className="ceInputBox">
+              <div className="dmInputBox">
                 <AlignLeft />
                 <input value={titulo} onChange={(e) => setTitulo(e.target.value)} />
               </div>
             </div>
 
-            {/* DESCRIPCIÓN */}
-            <div className="ceInput ceCol2">
+            <div className="dmInput dmCol2">
               <label>Descripción</label>
-              <div className="ceInputBox ceTextareaBox">
+              <div className="dmInputBox dmTextareaBox">
                 <AlignLeft />
                 <textarea value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
               </div>
             </div>
 
-            {/* ARCHIVO */}
-            <div className="ceInput ceCol2">
+            <div className="dmInput dmCol2">
               <label>
                 Archivo PDF {mode === "create" && <span className="req">*</span>}
               </label>
 
-              <div className="ceFileRow">
-                <label className="ceFileBtn">
+              <div className="dmFileRow">
+                <label className="dmFileBtn">
                   <Upload />
                   Seleccionar archivo
                   <input
@@ -190,7 +194,7 @@ export default function CasoEstudioFormModal({
                   />
                 </label>
 
-                <div className="ceFileHint">
+                <div className="dmFileHint" title={archivoFile?.name || ""}>
                   {archivoFile?.name ||
                     (mode === "edit" ? "Puede reemplazar el archivo existente" : "Ningún archivo seleccionado")}
                 </div>
@@ -199,17 +203,17 @@ export default function CasoEstudioFormModal({
           </div>
         </div>
 
-        {/* FOOTER */}
-        <div className="ceFooter">
-          <button className="ceBtnGhost" onClick={onClose} disabled={saving}>
+        <div className="dmFooter">
+          <button className="dmBtnGhost" onClick={onClose} disabled={saving}>
             Cancelar
           </button>
 
-          <button className="ceBtnPrimary" onClick={onSubmit} disabled={saving}>
+          <button className="dmBtnPrimary" onClick={onSubmit} disabled={saving}>
             {saving ? "Guardando..." : "Guardar"}
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
