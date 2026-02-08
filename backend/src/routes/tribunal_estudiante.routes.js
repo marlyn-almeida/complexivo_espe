@@ -1,4 +1,4 @@
-// src/routes/tribunal_estudiante.routes.js
+// ✅ src/routes/tribunal_estudiante.routes.js
 const router = require("express").Router();
 const { body, param, query } = require("express-validator");
 const validate = require("../middlewares/validate.middleware");
@@ -15,7 +15,7 @@ router.get(
   ctrl.misAsignaciones
 );
 
-// ✅ LISTAR
+// ✅ LISTAR (ROL 1,2)
 router.get(
   "/",
   auth,
@@ -26,7 +26,8 @@ router.get(
   ctrl.list
 );
 
-// ✅ CREAR asignación
+// ✅ CREAR asignación (ROL 1,2)
+// AHORA REQUIERE id_caso_estudio (se asigna al crear tribunal_estudiante)
 router.post(
   "/",
   auth,
@@ -34,6 +35,7 @@ router.post(
   body("id_tribunal").isInt({ min: 1 }).toInt(),
   body("id_estudiante").isInt({ min: 1 }).toInt(),
   body("id_franja_horario").isInt({ min: 1 }).toInt(),
+  body("id_caso_estudio").isInt({ min: 1 }).toInt(),
   validate,
   ctrl.create
 );

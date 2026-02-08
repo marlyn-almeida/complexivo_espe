@@ -1,4 +1,4 @@
-// src/repositories/tribunal_estudiante.repo.js
+// ✅ src/repositories/tribunal_estudiante.repo.js
 const pool = require("../config/db");
 
 async function getTribunal(id_tribunal) {
@@ -28,7 +28,7 @@ async function getTribunalCarreraId(id_tribunal) {
     JOIN carrera c ON c.id_carrera=cp.id_carrera
     WHERE t.id_tribunal=?
     LIMIT 1
-  `,
+    `,
     [id_tribunal]
   );
   return r[0]?.id_carrera ?? null;
@@ -42,43 +42,23 @@ async function getEstudiante(id_estudiante) {
   return r[0] || null;
 }
 
-async function getFranja(id_franja_horario) {
-  const [r] = await pool.query(
-    `SELECT id_franja_horario, id_carrera_periodo FROM franja_horario WHERE id_franja_horario=? LIMIT 1`,
-    [id_franja_horario]
-  );
-  return r[0] || null;
-}
-
 async function getFranjaFull(id_franja_horario) {
   const [r] = await pool.query(
     `
     SELECT id_franja_horario, id_carrera_periodo, fecha, hora_inicio, hora_fin, laboratorio
     FROM franja_horario
     WHERE id_franja_horario=? LIMIT 1
-  `,
+    `,
     [id_franja_horario]
   );
   return r[0] || null;
 }
 
-async function getCasoAsignadoByEstudiante(id_estudiante) {
+// ✅ NUEVO: caso desde caso_estudio (NO desde estudiante_caso_asignacion)
+async function getCaso(id_caso_estudio) {
   const [r] = await pool.query(
-    `
-    SELECT
-      eca.id_estudiante,
-      eca.id_caso_estudio,
-      eca.estado AS estado_asignacion,
-      ce.id_carrera_periodo,
-      ce.numero_caso,
-      ce.titulo
-    FROM estudiante_caso_asignacion eca
-    JOIN caso_estudio ce ON ce.id_caso_estudio = eca.id_caso_estudio
-    WHERE eca.id_estudiante=?
-      AND eca.estado=1
-    LIMIT 1
-    `,
-    [id_estudiante]
+    `SELECT id_caso_estudio, id_carrera_periodo FROM caso_estudio WHERE id_caso_estudio=? LIMIT 1`,
+    [id_caso_estudio]
   );
   return r[0] || null;
 }
@@ -151,10 +131,6 @@ async function existsConflictoHorarioDocente({ id_docente, fecha, hora_inicio, h
   return r[0] || null;
 }
 
-/**
- * ✅ LISTADO (Admin/SuperAdmin)
- * Ahora toma el caso desde tribunal_estudiante.id_caso_estudio
- */
 async function findAll({ tribunalId = null, includeInactive = false, scopeCarreraId = null } = {}) {
   const where = [];
   const params = [];
@@ -224,13 +200,10 @@ async function findAll({ tribunalId = null, includeInactive = false, scopeCarrer
   return rows;
 }
 
-/**
- * ✅ CREAR asignación
- * Ahora inserta id_caso_estudio
- */
 async function create(d) {
   const [res] = await pool.query(
-    `INSERT INTO tribunal_estudiante (id_tribunal, id_estudiante, id_franja_horario, id_caso_estudio, estado, cerrado)
+    `INSERT INTO tribunal_estudiante
+      (id_tribunal, id_estudiante, id_franja_horario, id_caso_estudio, estado, cerrado)
      VALUES (?,?,?,?,1,0)`,
     [d.id_tribunal, d.id_estudiante, d.id_franja_horario, d.id_caso_estudio]
   );
@@ -244,9 +217,12 @@ async function create(d) {
 
 async function setEstado(id, estado) {
   await pool.query(
-    `UPDATE tribunal_estudiante SET estado=?, updated_at=CURRENT_TIMESTAMP WHERE id_tribunal_estudiante=?`,
+    `UPDATE tribunal_estudiante
+     SET estado=?, updated_at=CURRENT_TIMESTAMP
+     WHERE id_tribunal_estudiante=?`,
     [estado ? 1 : 0, id]
   );
+
   const [r] = await pool.query(
     `SELECT * FROM tribunal_estudiante WHERE id_tribunal_estudiante=?`,
     [id]
@@ -276,10 +252,6 @@ async function setCerrado(id, cerrado, id_docente_cierra = null) {
   return r[0] || null;
 }
 
-/**
- * ✅ MIS ASIGNACIONES (ROL 3)
- * También usa te.id_caso_estudio
- */
 async function findMisAsignaciones({ id_docente, includeInactive = false } = {}) {
   const [rows] = await pool.query(
     `
@@ -346,11 +318,10 @@ module.exports = {
   getTribunal,
   getTribunalEstudiante,
   getTribunalCarreraId,
-  getEstudiante,
-  getFranja,
-  getFranjaFull,
 
-  getCasoAsignadoByEstudiante,
+  getEstudiante,
+  getFranjaFull,
+  getCaso,
 
   existsAsignacion,
   existsFranjaEnTribunal,

@@ -1,4 +1,4 @@
-// src/controllers/tribunal_estudiante.controller.js
+// ✅ src/controllers/tribunal_estudiante.controller.js
 const s = require("../services/tribunal_estudiante.service");
 
 module.exports = {
@@ -26,7 +26,7 @@ module.exports = {
     }
   },
 
-  // ✅ NUEVO: cerrar/abrir asignación
+  // ✅ cerrar/abrir asignación
   changeCierre: async (req, res, next) => {
     try {
       res.json(await s.changeCierre(req.params.id, req.body.cerrado, req.user || null));
@@ -35,6 +35,7 @@ module.exports = {
     }
   },
 
+  // ✅ ROL 3
   misAsignaciones: async (req, res, next) => {
     try {
       res.json(await s.misAsignaciones(req.query, req.user));

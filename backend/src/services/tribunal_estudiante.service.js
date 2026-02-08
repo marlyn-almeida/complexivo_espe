@@ -1,4 +1,4 @@
-// src/services/tribunal_estudiante.service.js
+// ✅ src/services/tribunal_estudiante.service.js
 const repo = require("../repositories/tribunal_estudiante.repo");
 
 function err(msg, status) {
@@ -27,39 +27,53 @@ async function list(query = {}, scope = null) {
 }
 
 async function create(d, scope = null) {
+  // 1) tribunal
   const t = await repo.getTribunal(d.id_tribunal);
   if (!t) throw err("Tribunal no existe", 422);
 
-  // scope (ROL2) - restringir por carrera
+  // scope (rol2): validar carrera
   if (scope?.id_carrera) {
     const carreraIdTribunal = await repo.getTribunalCarreraId(d.id_tribunal);
     if (!carreraIdTribunal) throw err("No se pudo obtener la carrera del tribunal", 422);
     if (+carreraIdTribunal !== +scope.id_carrera) throw err("No autorizado para operar en otra carrera", 403);
   }
 
+  // 2) estudiante
   const est = await repo.getEstudiante(d.id_estudiante);
   if (!est) throw err("Estudiante no existe", 422);
 
+  // 3) franja
   const fr = await repo.getFranjaFull(d.id_franja_horario);
   if (!fr) throw err("Franja horaria no existe", 422);
 
+  // 4) caso (✅ AHORA SE ASIGNA AQUÍ, no antes)
+  const caso = await repo.getCaso(d.id_caso_estudio);
+  if (!caso) throw err("Caso de estudio no existe", 422);
+
+  // 5) coherencia carrera_periodo
   if (+est.id_carrera_periodo !== +t.id_carrera_periodo) {
     throw err("El estudiante no pertenece a la misma carrera_periodo del tribunal", 422);
   }
   if (+fr.id_carrera_periodo !== +t.id_carrera_periodo) {
     throw err("La franja no pertenece a la misma carrera_periodo del tribunal", 422);
   }
+  if (+caso.id_carrera_periodo !== +t.id_carrera_periodo) {
+    throw err("El caso no pertenece a la misma carrera_periodo del tribunal", 422);
+  }
 
+  // 6) duplicados
   const dup = await repo.existsAsignacion(d.id_tribunal, d.id_estudiante);
   if (dup) throw err("El estudiante ya está asignado a este tribunal", 409);
 
+  // 7) franja ocupada global (no puede repetirse en otro tribunal activo)
   const franjaOcupada = await repo.existsFranjaOcupadaGlobal(d.id_franja_horario);
   if (franjaOcupada) throw err("Esa franja ya está ocupada (laboratorio/horario reservado)", 409);
 
+  // 8) franja ocupada en este tribunal (redundante pero ok)
   const dupFranja = await repo.existsFranjaEnTribunal(d.id_tribunal, d.id_franja_horario);
   if (dupFranja) throw err("Esa franja ya está ocupada en este tribunal", 409);
 
-  // ✅ validar conflicto horario de docentes
+  // 9) conflicto horario de docentes del tribunal
   const docentes = await repo.getDocentesByTribunal(d.id_tribunal);
   for (const doc of docentes) {
     const conflicto = await repo.existsConflictoHorarioDocente({
@@ -76,27 +90,17 @@ async function create(d, scope = null) {
     }
   }
 
-  // ✅ OBLIGATORIO: el estudiante debe tener caso asignado
-  const caso = await repo.getCasoAsignadoByEstudiante(d.id_estudiante);
-  if (!caso || !caso.id_caso_estudio) {
-    throw err("El estudiante no tiene un caso de estudio asignado (estudiante_caso_asignacion).", 422);
-  }
-
-  // ✅ el caso debe pertenecer a la misma carrera_periodo del tribunal
-  if (+caso.id_carrera_periodo !== +t.id_carrera_periodo) {
-    throw err("El caso asignado del estudiante no pertenece a la misma carrera_periodo del tribunal.", 422);
-  }
-
-  // ✅ crear ya guardando id_caso_estudio
+  // 10) crear (✅ guarda id_caso_estudio en tribunal_estudiante)
   return repo.create({
     id_tribunal: d.id_tribunal,
     id_estudiante: d.id_estudiante,
     id_franja_horario: d.id_franja_horario,
-    id_caso_estudio: caso.id_caso_estudio,
+    id_caso_estudio: d.id_caso_estudio,
   });
 }
 
 async function changeEstado(id, estado, scope = null) {
+  // opcional: si quieres validar scope por carrera aquí también
   const r = await repo.setEstado(id, estado);
   if (!r) throw err("Asignación tribunal_estudiante no encontrada", 404);
   return r;
