@@ -1,5 +1,4 @@
 // src/types/casoEstudio.ts
-
 export type Estado01 = 0 | 1;
 
 export type CasoEstudio = {

@@ -7,10 +7,12 @@ export interface TribunalEstudiante {
   id_estudiante: number;
   id_franja_horario: number;
 
+  // ✅ NUEVO (DB): caso asignado en el tribunal_estudiante
+  id_caso_estudio: number;
+
   // estado del registro (activo/inactivo)
   estado: Estado01;
 
-  // ✅ NUEVO: estado académico de la defensa
   // 0 = ABIERTA, 1 = CERRADA
   cerrado: Estado01;
   fecha_cierre?: string | null; // DATETIME
@@ -31,9 +33,12 @@ export interface TribunalEstudiante {
   laboratorio?: string;
 
   // joins caso (si backend lo incluye)
-  id_caso_estudio?: number;
   numero_caso?: number;
   titulo_caso?: string | null;
+
+  // joins carrera/periodo (list)
+  nombre_carrera?: string;
+  codigo_periodo?: string;
 
   // opcional (agenda rol 3)
   designacion?: string;

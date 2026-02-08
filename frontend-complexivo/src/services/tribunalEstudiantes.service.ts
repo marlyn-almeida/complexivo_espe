@@ -21,9 +21,9 @@ function unwrapArray(res: any): TribunalEstudiante[] {
   ) as TribunalEstudiante[];
 }
 
-function unwrapObject(res: any): any {
+function unwrapObject<T = any>(res: any): T {
   const data = res?.data ?? res;
-  return data?.data ?? data;
+  return (data?.data ?? data) as T;
 }
 
 export type TribunalEstudianteListParams = {
@@ -37,6 +37,7 @@ export type TribunalEstudianteCreateDTO = {
   id_tribunal: number;
   id_estudiante: number;
   id_franja_horario: number;
+  id_caso_estudio: number; // ✅ requerido ahora
 };
 
 export const tribunalEstudiantesService = {
@@ -57,43 +58,40 @@ export const tribunalEstudiantesService = {
 
   // =========================
   // CREAR asignación
+  // ✅ exige id_caso_estudio
   // =========================
-  create: async (payload: TribunalEstudianteCreateDTO) => {
+  create: async (payload: TribunalEstudianteCreateDTO): Promise<TribunalEstudiante> => {
     const res = await axiosClient.post(BASE, payload);
-    return unwrapObject(res);
+    return unwrapObject<TribunalEstudiante>(res);
   },
 
   // =========================
   // ACTIVAR / DESACTIVAR registro
   // (NO es cierre de defensa)
   // =========================
-  toggleEstado: async (id: number, currentEstado: Estado01) => {
-    const nuevo: Estado01 = currentEstado === 1 ? 0 : 1;
-    const res = await axiosClient.patch(`${BASE}/${id}/estado`, { estado: nuevo });
-    return unwrapObject(res);
+  toggleEstado: async (id: number, currentEstado: Estado01): Promise<TribunalEstudiante> => {
+    const nuevo = currentEstado === 1 ? 0 : 1;
+    const res = await axiosClient.patch(`${BASE}/${id}/estado`, { estado: !!nuevo });
+    // backend espera boolean, por eso !!nuevo
+    return unwrapObject<TribunalEstudiante>(res);
   },
 
   // =========================
   // ✅ CERRAR / REABRIR DEFENSA
-  // usa el campo `cerrado` en DB
-  // 0 = abierta, 1 = cerrada
+  // ✅ backend real: PATCH /:id/cierre  body { cerrado: boolean }
   // =========================
-  cerrarDefensa: async (id: number) => {
-    // backend esperado: PATCH /tribunales-estudiantes/:id/cerrar
-    const res = await axiosClient.patch(`${BASE}/${id}/cerrar`, {});
-    return unwrapObject(res);
+  setCierre: async (id: number, cerrado: boolean): Promise<TribunalEstudiante> => {
+    const res = await axiosClient.patch(`${BASE}/${id}/cierre`, { cerrado });
+    return unwrapObject<TribunalEstudiante>(res);
   },
 
-  reabrirDefensa: async (id: number) => {
-    // backend esperado: PATCH /tribunales-estudiantes/:id/reabrir
-    const res = await axiosClient.patch(`${BASE}/${id}/reabrir`, {});
-    return unwrapObject(res);
-  },
+  cerrarDefensa: async (id: number) => tribunalEstudiantesService.setCierre(id, true),
+  reabrirDefensa: async (id: number) => tribunalEstudiantesService.setCierre(id, false),
 
   // =========================
   // Rol 3: agenda de docente
   // =========================
-  misAsignaciones: async (params?: { includeInactive?: boolean }) => {
+  misAsignaciones: async (params?: { includeInactive?: boolean }): Promise<TribunalEstudiante[]> => {
     const res = await axiosClient.get(`${BASE}/mis-asignaciones`, {
       params: { includeInactive: params?.includeInactive ? "true" : "false" },
     });

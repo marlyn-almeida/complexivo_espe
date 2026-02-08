@@ -19,9 +19,9 @@ function unwrapArray(res: any): CasoEstudio[] {
   ) as CasoEstudio[];
 }
 
-function unwrapObject(res: any): any {
+function unwrapObject<T = any>(res: any): T {
   const data = res?.data ?? res;
-  return data?.data ?? data;
+  return (data?.data ?? data) as T;
 }
 
 /** ✅ normaliza archivo_path a URL absoluta si viene relativa */
@@ -30,14 +30,10 @@ export function resolveFileUrl(path: string): string {
   const p = String(path).trim();
   if (!p) return "";
 
-  // ya es absoluta
   if (/^https?:\/\//i.test(p)) return p;
 
-  // si viene como "/uploads/..." u otra ruta, construimos con base API (sin /api al final)
   const raw = (import.meta as any).env?.VITE_API_URL || "https://complexivo-espe.onrender.com/api";
-  const base = String(raw).replace(/\/$/, ""); // sin slash final
-
-  // si base termina en /api, lo quitamos para servir estáticos (normalmente)
+  const base = String(raw).replace(/\/$/, "");
   const baseNoApi = base.endsWith("/api") ? base.slice(0, -4) : base;
 
   const withSlash = p.startsWith("/") ? p : `/${p}`;
@@ -47,7 +43,7 @@ export function resolveFileUrl(path: string): string {
 export const casosEstudioService = {
   async list(params?: { includeInactive?: boolean }) {
     const res = await axiosClient.get("/casos-estudio", {
-      params: { includeInactive: !!params?.includeInactive },
+      params: { includeInactive: params?.includeInactive ? "true" : "false" },
     });
     return unwrapArray(res);
   },
