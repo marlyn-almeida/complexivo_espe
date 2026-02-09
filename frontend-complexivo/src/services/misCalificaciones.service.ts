@@ -19,9 +19,19 @@ function unwrapArray(res: any): MisCalificacionRow[] {
   ) as MisCalificacionRow[];
 }
 
+export type MisCalificacionesListParams = {
+  carreraPeriodoId?: number;
+  id_carrera_periodo?: number;
+};
+
 export const misCalificacionesService = {
-  async list(): Promise<MisCalificacionRow[]> {
-    const res = await axiosClient.get("/mis-calificaciones");
+  async list(params?: MisCalificacionesListParams): Promise<MisCalificacionRow[]> {
+    const res = await axiosClient.get("/mis-calificaciones", {
+      params: {
+        carreraPeriodoId: params?.carreraPeriodoId,
+        id_carrera_periodo: params?.id_carrera_periodo,
+      },
+    });
     return unwrapArray(res);
   },
 };

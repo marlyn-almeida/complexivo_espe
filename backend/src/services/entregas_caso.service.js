@@ -1,4 +1,4 @@
-// src/services/entregas_caso.service.js
+// ✅ src/services/entregas_caso.service.js
 const repo = require("../repositories/entregas_caso.repo");
 
 function err(msg, status) {
@@ -11,43 +11,57 @@ function isDocente(user) {
   return user?.rol === "DOCENTE";
 }
 
-async function get(cp, id_estudiante, id_caso_estudio, user) {
-  // ✅ seguridad base: validar que estudiante y caso pertenezcan a ese CP
-  const ok = await repo.validateEntregaScope(cp, id_estudiante, id_caso_estudio);
-  if (!ok) throw err("Entrega fuera de tu carrera-período (estudiante/caso no corresponden)", 403);
+/**
+ * ✅ GET entrega por estudiante (JSON)
+ * Regla:
+ * - El estudiante debe estar asignado a un tribunal dentro del CP
+ * - Si es DOCENTE: solo si ese docente tiene asignado al estudiante en su tribunal
+ */
+async function get(cp, id_estudiante, user) {
+  // ✅ validar que el estudiante esté asignado a tribunal dentro del CP activo
+  const ok = await repo.validateEstudianteEnTribunalCP(cp, id_estudiante);
+  if (!ok) throw err("Acceso denegado: el estudiante no está asignado a un tribunal en este Carrera–Período.", 403);
 
-  // ✅ si es DOCENTE: verificar que ese estudiante lo tenga asignado en un tribunal del docente
+  // ✅ si es DOCENTE: verificar que ese estudiante lo tenga asignado en un tribunal del docente (en ese CP)
   if (isDocente(user)) {
-    const allowed = await repo.docentePuedeVerEntrega({
+    const allowed = await repo.docentePuedeVerEntregaByEstudiante({
       id_docente: Number(user.id),
-      id_estudiante,
-      id_caso_estudio,
+      id_carrera_periodo: Number(cp),
+      id_estudiante: Number(id_estudiante),
     });
 
     if (!allowed) throw err("Acceso denegado: no tienes asignado este estudiante en tribunal.", 403);
   }
 
-  // Puede devolver null si aún no entrega
-  return repo.getEntrega(id_estudiante, id_caso_estudio, { includeInactive: false });
+  // Puede devolver null si aún no existe entrega
+  return repo.getEntregaByEstudiante(id_estudiante, { includeInactive: false });
 }
 
+/**
+ * ✅ UPSERT entrega por estudiante (ADMIN)
+ * Regla:
+ * - Solo se permite si el estudiante está en tribunal dentro del CP
+ */
 async function upsert(cp, body, user) {
-  // solo ADMIN sube (ya lo controla route), pero igual dejamos coherencia
-  const { id_estudiante, id_caso_estudio } = body;
+  const { id_estudiante } = body;
 
-  const ok = await repo.validateEntregaScope(cp, id_estudiante, id_caso_estudio);
-  if (!ok) throw err("Entrega fuera de tu carrera-período (estudiante/caso no corresponden)", 403);
+  const ok = await repo.validateEstudianteEnTribunalCP(cp, id_estudiante);
+  if (!ok) throw err("No se puede subir: el estudiante no está asignado a un tribunal en este Carrera–Período.", 403);
 
-  return repo.upsertEntrega(body);
+  return repo.upsertEntregaByEstudiante(body);
 }
 
-// ✅ download usa lo mismo que get, pero exige que exista entrega activa con archivo
-async function getForDownload(cp, id_estudiante, id_caso_estudio, user) {
-  // valida scope + permiso docente
-  await get(cp, id_estudiante, id_caso_estudio, user);
+/**
+ * ✅ Download: exige que exista entrega activa con archivo
+ * - Usa misma validación que get()
+ */
+async function getForDownload(cp, id_estudiante, user) {
+  await get(cp, id_estudiante, user);
 
-  const entrega = await repo.getEntrega(id_estudiante, id_caso_estudio, { includeInactive: false });
+  const entrega = await repo.getEntregaByEstudiante(id_estudiante, { includeInactive: false });
   if (!entrega) throw err("Entrega no encontrada.", 404);
+
+  if (!entrega.archivo_path) throw err("La entrega no tiene archivo PDF.", 404);
 
   return entrega;
 }

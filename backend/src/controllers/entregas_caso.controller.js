@@ -14,17 +14,13 @@ function safeName(name = "") {
     .slice(0, 180);
 }
 
-/**
- * ✅ Igual que casos-estudio: evita path traversal y resuelve a /uploads real
- * publicPath esperado: "/uploads/entregas-caso/xxx.pdf"
- */
 function resolveUploadsPath(publicPath) {
   const uploadsRoot = path.join(process.cwd(), "uploads");
-  const rel = String(publicPath || "").replace(/^\/+/, ""); // "uploads/..."
+  const rel = String(publicPath || "").replace(/^\/+/, "");
   const full = path.resolve(process.cwd(), rel);
   const root = path.resolve(uploadsRoot);
 
-  if (!full.startsWith(root)) return null; // ✅ evita escapar de /uploads
+  if (!full.startsWith(root)) return null;
   return full;
 }
 
@@ -32,9 +28,8 @@ async function get(req, res, next) {
   try {
     const cp = Number(req.ctx.id_carrera_periodo);
     const id_estudiante = Number(req.params.id_estudiante);
-    const id_caso_estudio = Number(req.params.id_caso_estudio);
 
-    const data = await svc.get(cp, id_estudiante, id_caso_estudio, req.user);
+    const data = await svc.get(cp, id_estudiante, req.user);
     res.json({ ok: true, data });
   } catch (e) {
     next(e);
@@ -63,23 +58,21 @@ async function upsert(req, res, next) {
     }
 
     const id_estudiante = Number(req.body.id_estudiante);
-    const id_caso_estudio = Number(req.body.id_caso_estudio);
     const observacion = req.body.observacion;
 
-    const uploadsRoot = path.join(process.cwd(), "uploads", "entregas-caso");
+    const uploadsRoot = path.join(process.cwd(), "uploads", "entregas");
     ensureDir(uploadsRoot);
 
     const ts = Date.now();
-    const filename = `${id_estudiante}_${id_caso_estudio}_${ts}_${safeName(original)}`;
+    const filename = `${id_estudiante}_${ts}_${safeName(original)}`;
     const fullPath = path.join(uploadsRoot, filename);
 
     fs.writeFileSync(fullPath, req.file.buffer);
 
     const body = {
       id_estudiante,
-      id_caso_estudio,
       archivo_nombre: original,
-      archivo_path: `/uploads/entregas-caso/${filename}`,
+      archivo_path: `/uploads/entregas/${filename}`,
       observacion,
     };
 
@@ -90,14 +83,12 @@ async function upsert(req, res, next) {
   }
 }
 
-// ✅ ✅ ✅ CORREGIDO: ver PDF inline (NO fuerza descarga)
 async function download(req, res, next) {
   try {
     const cp = Number(req.ctx.id_carrera_periodo);
     const id_estudiante = Number(req.params.id_estudiante);
-    const id_caso_estudio = Number(req.params.id_caso_estudio);
 
-    const entrega = await svc.getForDownload(cp, id_estudiante, id_caso_estudio, req.user);
+    const entrega = await svc.getForDownload(cp, id_estudiante, req.user);
 
     if (!entrega?.archivo_path) {
       const err = new Error("La entrega no tiene archivo PDF.");
@@ -112,13 +103,10 @@ async function download(req, res, next) {
       throw err;
     }
 
-    const filename = safeName(
-      entrega.archivo_nombre || `entrega_${id_estudiante}_${id_caso_estudio}.pdf`
-    );
+    const filename = safeName(entrega.archivo_nombre || `entrega_${id_estudiante}.pdf`);
 
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `inline; filename="${filename}"`);
-
     return res.sendFile(fullPath);
   } catch (e) {
     next(e);

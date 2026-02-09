@@ -1,148 +1,471 @@
 /* ✅ src/pages/misCalificaciones/MisCalificacionesPage.css */
 
-.wrap { padding: 16px 18px 28px; }
+.wrap {
+  padding: 16px 18px 28px;
+}
 
 .mcPage {
   width: 100%;
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Liberation Sans";
 }
 
-.hero{
-  display:flex; align-items:center; justify-content:space-between; gap:16px;
+/* ===============================
+   HERO
+   =============================== */
+.mcPage .hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
   background: linear-gradient(90deg, #0b6034 0%, #147a4a 100%);
-  border-radius:14px; padding:14px 16px;
-  border:1px solid rgba(255,255,255,.18);
-  color:#fff;
+  border-radius: 14px;
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.1);
 }
 
-.heroLeft{ display:flex; align-items:center; gap:12px; }
-.heroLogo{ width:44px; height:44px; object-fit:contain; background:#fff; border-radius:10px; padding:4px; }
-.heroTitle{ margin:0; font-size:20px; }
-.heroSubtitle{ margin:4px 0 0; opacity:.92; }
-
-.heroChips{ display:flex; gap:10px; margin-top:10px; flex-wrap:wrap; }
-.chip{
-  display:inline-flex; gap:8px; align-items:center;
-  padding:6px 10px; border-radius:999px;
-  background: rgba(255,255,255,.14);
-}
-.chipSoft{ background: rgba(255,255,255,.10); }
-
-.heroActions{ display:flex; gap:10px; }
-.heroBtn{
-  display:inline-flex; align-items:center; gap:8px;
-  border:none; border-radius:10px;
-  padding:10px 12px; cursor:pointer;
-}
-.heroBtn.ghost{ background: rgba(255,255,255,.16); color:#fff; }
-.heroBtnIcon{ width:18px; height:18px; }
-
-.box{
-  margin-top:14px;
-  background:#fff;
-  border:1px solid rgba(0,0,0,.08);
-  border-radius:14px;
-  box-shadow: 0 8px 18px rgba(0,0,0,.06);
-  padding:14px;
+.mcPage .heroLeft {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
 }
 
-.filtersRow{
-  display:flex; align-items:center; justify-content:space-between;
-  gap:12px; flex-wrap:wrap;
-  margin-bottom:12px;
+.mcPage .heroLogo {
+  width: 46px;
+  height: 46px;
+  object-fit: contain;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  flex: 0 0 auto;
 }
-.searchWrap{
-  display:flex; align-items:center; gap:10px;
-  border:1px solid rgba(0,0,0,.10);
-  border-radius:12px;
-  padding:10px 12px;
+
+.mcPage .heroText {
+  min-width: 0;
+}
+
+.mcPage .heroTitle {
+  margin: 0;
+  color: #fff;
+  font-weight: 900;
+  font-size: 22px;
+  line-height: 1.1;
+  letter-spacing: 0.2px;
+}
+
+.mcPage .heroSubtitle {
+  margin: 6px 0 0;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 13px;
+}
+
+.mcPage .heroHint {
+  margin-top: 8px;
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  padding: 6px 10px;
+  border-radius: 999px;
+  width: fit-content;
+}
+
+.mcPage .heroChips {
+  margin-top: 10px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.mcPage .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  font-weight: 900;
+  font-size: 12.5px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.mcPage .chipSoft {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.mcPage .heroActions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.mcPage .heroBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font-weight: 900;
+  padding: 10px 14px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.08s ease, border-color 0.15s ease;
+  white-space: nowrap;
+}
+
+.mcPage .heroBtnIcon {
+  width: 18px;
+  height: 18px;
+}
+
+.mcPage .heroBtn.ghost {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.mcPage .heroBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.6);
+  transform: translateY(-1px);
+}
+
+.mcPage .heroBtn:active {
+  transform: translateY(0);
+}
+
+.mcPage .heroBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ===============================
+   BOX
+   =============================== */
+.mcPage .box {
+  margin-top: 14px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.09);
+  border-radius: 14px;
+  padding: 16px 16px 18px;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.05);
+}
+
+/* ===============================
+   FILTERS
+   =============================== */
+.mcPage .filtersRow {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.mcPage .searchWrap {
+  position: relative;
+  width: min(520px, 100%);
+  flex: 1 1 420px;
+}
+
+.mcPage .searchIcon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.mcPage .search {
+  width: 100%;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  padding: 0 12px 0 40px;
+  outline: none;
+  font-size: 14.5px;
+}
+
+.mcPage .search:focus {
+  border-color: rgba(10, 79, 40, 0.35);
+  box-shadow: 0 0 0 4px rgba(10, 79, 40, 0.12);
+}
+
+/* ✅ selector CP */
+.mcPage .filterWrap {
   min-width: 320px;
-}
-.searchIcon{ width:18px; height:18px; opacity:.65; }
-.search{ border:none; outline:none; width:100%; }
-
-.hintInline{
-  display:flex; align-items:center; gap:8px;
-  opacity:.75;
+  flex: 1 1 320px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-.tableWrap{ width:100%; overflow:auto; border-radius:12px; border:1px solid rgba(0,0,0,.08); }
-.table{ width:100%; border-collapse:collapse; min-width:1100px; }
-thead th{
-  background:#0b6034; color:#fff;
-  padding:12px 10px; font-weight:700;
-  border-bottom:1px solid rgba(255,255,255,.15);
-}
-tbody td{
-  padding:12px 10px;
-  border-bottom:1px solid rgba(0,0,0,.06);
-}
-.thCenter, .tdCenter{ text-align:center; }
-
-.cellMain{ font-weight:700; }
-.cellSub{ font-size:12px; opacity:.70; margin-top:2px; }
-
-.chipCode{
-  display:inline-flex; align-items:center;
-  padding:6px 10px;
-  border-radius:10px;
-  border:1px solid rgba(0,0,0,.10);
-  font-weight:700;
-  background:#f6f7f8;
+.mcPage .filterIcon {
+  width: 18px;
+  height: 18px;
+  color: rgba(0, 0, 0, 0.55);
 }
 
-.badge{
-  display:inline-flex; align-items:center;
-  padding:6px 10px;
-  border-radius:999px;
-  font-weight:700;
-  font-size:12px;
-}
-.badge-ok{ background: rgba(20,122,74,.12); color:#0b6034; border:1px solid rgba(20,122,74,.25); }
-.badge-warn{ background: rgba(255,170,0,.14); color:#8a5a00; border:1px solid rgba(255,170,0,.25); }
-
-.actions{ display:flex; justify-content:center; gap:8px; flex-wrap:wrap; }
-.btnGhost{
-  display:inline-flex; align-items:center; gap:8px;
-  padding:10px 12px;
-  border-radius:10px;
-  background:#f4f6f7;
-  border:1px solid rgba(0,0,0,.10);
-  cursor:pointer;
-}
-.btnPrimary{
-  display:inline-flex; align-items:center; gap:8px;
-  padding:10px 12px;
-  border-radius:10px;
-  border:none;
-  background:#0b6034;
-  color:#fff;
-  cursor:pointer;
-}
-.btnGhost:disabled, .btnPrimary:disabled, .heroBtn:disabled{
-  opacity:.55;
-  cursor:not-allowed;
+.mcPage .select {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  outline: none;
+  background: white;
+  min-width: 180px;
+  width: 100%;
+  font-size: 14.5px;
 }
 
-.emptyCell{
-  padding:16px;
-  text-align:center;
-  opacity:.75;
+.mcPage .select:focus {
+  border-color: rgba(10, 79, 40, 0.35);
+  box-shadow: 0 0 0 4px rgba(10, 79, 40, 0.12);
 }
 
-.toast{
+.mcPage .chipClear {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: #fff;
+  font-weight: 900;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.mcPage .chipClear:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.mcPage .hintInline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  background: rgba(245, 158, 11, 0.1);
+  color: rgba(0, 0, 0, 0.75);
+  font-weight: 800;
+  font-size: 12.5px;
+  flex: 1 1 280px;
+}
+
+/* ===============================
+   TABLE
+   =============================== */
+.mcPage .tableWrap {
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  margin-top: 12px;
+  overflow: auto;
+}
+
+.mcPage .table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  min-width: 1120px;
+  table-layout: fixed;
+}
+
+.mcPage .table thead th {
+  text-align: center;
+  font-size: 13.5px;
+  font-weight: 950;
+  color: rgba(255, 255, 255, 0.96);
+  background: #0b6034;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  padding: 12px 10px;
+  white-space: nowrap;
+}
+
+.mcPage .table tbody td {
+  text-align: center;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  padding: 10px 10px;
+  vertical-align: middle;
+  font-size: 14.5px;
+  color: rgba(0, 0, 0, 0.72);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mcPage .thCenter,
+.mcPage .tdCenter {
+  text-align: center;
+}
+
+.mcPage .cellMain {
+  font-weight: 900;
+  color: rgba(0, 0, 0, 0.86);
+}
+
+.mcPage .cellSub {
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.mcPage .chipCode {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  background: rgba(59, 130, 246, 0.1);
+  color: rgba(0, 0, 0, 0.78);
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.mcPage .muted {
+  color: rgba(0, 0, 0, 0.45);
+}
+
+/* ===============================
+   BADGES
+   =============================== */
+.mcPage .badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-weight: 900;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  white-space: nowrap;
+  min-width: 120px;
+}
+
+.mcPage .badge-ok {
+  background: #dfeee7;
+  color: #0a4f28;
+  border-color: rgba(10, 79, 40, 0.18);
+}
+
+.mcPage .badge-warn {
+  background: rgba(245, 158, 11, 0.14);
+  color: rgba(0, 0, 0, 0.75);
+  border-color: rgba(245, 158, 11, 0.28);
+}
+
+/* ===============================
+   ACTIONS
+   =============================== */
+.mcPage .actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.mcPage .btnGhost,
+.mcPage .btnPrimary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  font-weight: 900;
+  cursor: pointer;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  transition: transform 0.08s ease, box-shadow 0.15s ease, background 0.15s ease;
+  white-space: nowrap;
+}
+
+.mcPage .btnGhost {
+  background: #fff;
+  color: rgba(0, 0, 0, 0.78);
+}
+
+.mcPage .btnGhost:hover {
+  background: rgba(0, 0, 0, 0.03);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 14px rgba(0, 0, 0, 0.06);
+}
+
+.mcPage .btnPrimary {
+  background: rgba(10, 79, 40, 0.1);
+  color: #0a4f28;
+  border-color: rgba(10, 79, 40, 0.22);
+}
+
+.mcPage .btnPrimary:hover {
+  background: rgba(10, 79, 40, 0.16);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 14px rgba(0, 0, 0, 0.06);
+}
+
+.mcPage .btnGhost:disabled,
+.mcPage .btnPrimary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* empty */
+.mcPage .emptyCell {
+  padding: 34px 16px !important;
+  color: rgba(0, 0, 0, 0.6);
+  font-weight: 800;
+}
+
+/* toast */
+.mcPage .toast {
   position: fixed;
-  right: 18px;
-  bottom: 18px;
+  right: 16px;
+  bottom: 16px;
+  z-index: 99999;
   padding: 12px 14px;
   border-radius: 12px;
-  color: #fff;
-  font-weight: 700;
-  box-shadow: 0 10px 24px rgba(0,0,0,.18);
-  z-index: 9999;
+  font-weight: 900;
+  max-width: 420px;
+  color: #111;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
 }
-.toast-info{ background: #2b6cb0; }
-.toast-success{ background: #147a4a; }
-.toast-error{ background: #b02b2b; }
 
-.muted{ opacity:.6; }
+.mcPage .toast-success {
+  background: #eaf7ee;
+  border-color: rgba(6, 118, 71, 0.35);
+}
+
+.mcPage .toast-error {
+  background: #fdecec;
+  border-color: rgba(180, 35, 24, 0.35);
+}
+
+.mcPage .toast-info {
+  background: #eef5ff;
+  border-color: rgba(2, 132, 199, 0.35);
+}
+
+@media (max-width: 820px) {
+  .mcPage .hero {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .mcPage .heroTitle {
+    font-size: 19px;
+  }
+  .mcPage .table {
+    table-layout: auto;
+  }
+}

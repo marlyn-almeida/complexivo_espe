@@ -13,39 +13,36 @@ const upload = multer({
   limits: { fileSize: 15 * 1024 * 1024 }, // 15MB
 });
 
-// ✅ JSON de la entrega (puede ser null)
+// ✅ JSON de la entrega por estudiante
 router.get(
-  "/:id_estudiante/:id_caso_estudio",
+  "/:id_estudiante",
   auth,
   authorize(["ADMIN", "DOCENTE"]),
   attachCarreraPeriodoCtx,
   param("id_estudiante").isInt({ min: 1 }).toInt(),
-  param("id_caso_estudio").isInt({ min: 1 }).toInt(),
   validate,
   ctrl.get
 );
 
-// ✅ ✅ ✅ Ver PDF inline (por estudiante + caso)
+// ✅ PDF inline por estudiante
 router.get(
-  "/:id_estudiante/:id_caso_estudio/download",
+  "/:id_estudiante/download",
   auth,
   authorize(["ADMIN", "DOCENTE"]),
   attachCarreraPeriodoCtx,
   param("id_estudiante").isInt({ min: 1 }).toInt(),
-  param("id_caso_estudio").isInt({ min: 1 }).toInt(),
   validate,
   ctrl.download
 );
 
-// ✅ SUBIR/ACTUALIZAR PDF desde el front
+// ✅ Subir / reemplazar por estudiante
 router.post(
-  "/",
+  "/by-estudiante",
   auth,
   authorize(["ADMIN"]),
   attachCarreraPeriodoCtx,
   upload.single("archivo"),
   body("id_estudiante").isInt({ min: 1 }).toInt(),
-  body("id_caso_estudio").isInt({ min: 1 }).toInt(),
   body("observacion").optional().isString().isLength({ max: 400 }),
   validate,
   ctrl.upsert

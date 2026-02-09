@@ -3,8 +3,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { misCalificacionesService } from "../../services/misCalificaciones.service";
 import { entregasCasoService } from "../../services/entregasCaso.service";
+import { carreraPeriodoService } from "../../services/carreraPeriodo.service";
 
 import type { MisCalificacionRow } from "../../types/misCalificacion";
+import type { CarreraPeriodo } from "../../types/carreraPeriodo";
 
 import {
   RefreshCw,
@@ -14,6 +16,8 @@ import {
   Users,
   ClipboardList,
   AlertTriangle,
+  Filter,
+  X,
 } from "lucide-react";
 
 import escudoESPE from "../../assets/escudo.png";
@@ -29,16 +33,25 @@ function safeDateLabel(v?: string | null) {
 }
 
 function hasEntrega(r: MisCalificacionRow) {
-  return !!(
-    r.entrega_archivo_path ||
-    r.entrega_archivo_nombre ||
-    r.id_estudiante_caso_entrega
-  );
+  return !!(r.entrega_archivo_path || r.entrega_archivo_nombre || r.id_entrega);
+}
+
+function isAsignadoTribunal(r: MisCalificacionRow) {
+  return !!r.id_tribunal_estudiante;
 }
 
 export default function MisCalificacionesPage() {
   const fileRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
+  // =========================
+  // CP SELECT
+  // =========================
+  const [carreraPeriodos, setCarreraPeriodos] = useState<CarreraPeriodo[]>([]);
+  const [selectedCP, setSelectedCP] = useState<number | "">("");
+
+  // =========================
+  // DATA + UI
+  // =========================
   const [loading, setLoading] = useState(false);
   const [rows, setRows] = useState<MisCalificacionRow[]>([]);
   const [search, setSearch] = useState("");
@@ -59,10 +72,60 @@ export default function MisCalificacionesPage() {
     return err?.message || "Ocurrió un error.";
   }
 
-  async function loadAll() {
+  const selectedCPLabel = useMemo(() => {
+    const cp = (carreraPeriodos ?? []).find((x: any) => x.id_carrera_periodo === selectedCP);
+    if (!cp) return "";
+    const carrera = (cp as any).nombre_carrera ?? "Carrera";
+    const periodo = (cp as any).codigo_periodo ?? (cp as any).descripcion_periodo ?? "Período";
+    return `${carrera} — ${periodo}`;
+  }, [carreraPeriodos, selectedCP]);
+
+  // =========================
+  // LOAD CP + LOAD DATA
+  // =========================
+  useEffect(() => {
+    loadCarreraPeriodos();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (selectedCP) {
+      loadAll();
+    } else {
+      setRows([]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCP]);
+
+  async function loadCarreraPeriodos() {
     try {
       setLoading(true);
-      const data = await misCalificacionesService.list();
+      const cps = await carreraPeriodoService.list(false);
+      setCarreraPeriodos(cps ?? []);
+
+      const first = (cps ?? []).find((x: any) => Boolean((x as any).estado)) ?? (cps ?? [])[0];
+      if (first) setSelectedCP((first as any).id_carrera_periodo);
+      else setSelectedCP("");
+    } catch (err: any) {
+      showToast("Error al cargar Carrera–Período", "error");
+      setCarreraPeriodos([]);
+      setSelectedCP("");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function loadAll() {
+    if (!selectedCP) return;
+
+    try {
+      setLoading(true);
+
+      const data = await misCalificacionesService.list({
+        carreraPeriodoId: Number(selectedCP),
+        id_carrera_periodo: Number(selectedCP),
+      });
+
       setRows(data ?? []);
     } catch (err: any) {
       showToast(extractBackendMsg(err), "error");
@@ -72,11 +135,6 @@ export default function MisCalificacionesPage() {
     }
   }
 
-  useEffect(() => {
-    loadAll();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return (rows ?? []).filter((r) => {
@@ -85,13 +143,15 @@ export default function MisCalificacionesPage() {
       const estudiante = `${r.apellidos_estudiante ?? ""} ${r.nombres_estudiante ?? ""}`.toLowerCase();
       const inst = String(r.id_institucional_estudiante ?? "").toLowerCase();
       const trib = String(r.nombre_tribunal ?? `Tribunal ${r.id_tribunal}`).toLowerCase();
-      const caso = String(r.id_caso_estudio ?? "").toLowerCase();
+      const carrera = String(r.nombre_carrera ?? "").toLowerCase();
+      const periodo = String(r.codigo_periodo ?? r.descripcion_periodo ?? "").toLowerCase();
 
       return (
         estudiante.includes(q) ||
         inst.includes(q) ||
         trib.includes(q) ||
-        caso.includes(q) ||
+        carrera.includes(q) ||
+        periodo.includes(q) ||
         String(r.id_estudiante).includes(q)
       );
     });
@@ -99,10 +159,12 @@ export default function MisCalificacionesPage() {
 
   const total = filtered.length;
 
-  // ✅ abrir PDF inline desde endpoint /entregas-caso/:id_estudiante/:id_caso_estudio/download
+  // =========================
+  // PDF ACTIONS
+  // =========================
   async function openEntregaPdf(row: MisCalificacionRow) {
-    if (!row?.id_estudiante || !row?.id_caso_estudio) {
-      showToast("Este estudiante aún no tiene caso asignado.", "info");
+    if (!row?.id_estudiante || !isAsignadoTribunal(row)) {
+      showToast("Este estudiante no está asignado a un tribunal.", "info");
       return;
     }
     if (!hasEntrega(row)) {
@@ -112,10 +174,7 @@ export default function MisCalificacionesPage() {
 
     try {
       setLoading(true);
-
-      // ✅ OJO: esto asume que tu service tiene una función download(id_estudiante, id_caso_estudio)
-      const res = await entregasCasoService.download(Number(row.id_estudiante), Number(row.id_caso_estudio));
-
+      const res = await entregasCasoService.downloadByEstudiante(Number(row.id_estudiante));
       const blob = new Blob([res.data], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
 
@@ -128,10 +187,9 @@ export default function MisCalificacionesPage() {
     }
   }
 
-  // ✅ descargar PDF (force)
   async function downloadEntregaPdf(row: MisCalificacionRow) {
-    if (!row?.id_estudiante || !row?.id_caso_estudio) {
-      showToast("Este estudiante aún no tiene caso asignado.", "info");
+    if (!row?.id_estudiante || !isAsignadoTribunal(row)) {
+      showToast("Este estudiante no está asignado a un tribunal.", "info");
       return;
     }
     if (!hasEntrega(row)) {
@@ -141,14 +199,13 @@ export default function MisCalificacionesPage() {
 
     try {
       setLoading(true);
-
-      const res = await entregasCasoService.download(Number(row.id_estudiante), Number(row.id_caso_estudio));
+      const res = await entregasCasoService.downloadByEstudiante(Number(row.id_estudiante));
       const blob = new Blob([res.data], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
 
       const a = document.createElement("a");
       a.href = url;
-      a.download = row.entrega_archivo_nombre || `entrega_${row.id_estudiante}_${row.id_caso_estudio}.pdf`;
+      a.download = row.entrega_archivo_nombre || `entrega_${row.id_estudiante}.pdf`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -173,17 +230,16 @@ export default function MisCalificacionesPage() {
       return;
     }
 
-    if (!row?.id_estudiante || !row?.id_caso_estudio) {
-      showToast("No se puede subir: este estudiante aún no tiene caso asignado.", "info");
+    if (!row?.id_estudiante || !isAsignadoTribunal(row)) {
+      showToast("No se puede subir: el estudiante no está asignado a un tribunal.", "info");
       return;
     }
 
     try {
       setLoading(true);
 
-      await entregasCasoService.subir({
+      await entregasCasoService.subirByEstudiante({
         id_estudiante: Number(row.id_estudiante),
-        id_caso_estudio: Number(row.id_caso_estudio),
         archivo: file,
         observacion: "Entrega subida desde Mis Calificaciones",
       });
@@ -198,12 +254,17 @@ export default function MisCalificacionesPage() {
   }
 
   function entregaEstadoLabel(r: MisCalificacionRow) {
-    const hasCaso = !!r.id_caso_estudio;
-    const entregaOk = hasEntrega(r);
-
-    if (!hasCaso) return { text: "Sin caso asignado", cls: "badge badge-warn" };
-    if (!entregaOk) return { text: "Pendiente", cls: "badge badge-warn" };
+    if (!isAsignadoTribunal(r)) return { text: "No asignado", cls: "badge badge-warn" };
+    if (!hasEntrega(r)) return { text: "Pendiente", cls: "badge badge-warn" };
     return { text: "Entregado", cls: "badge badge-ok" };
+  }
+
+  function horarioLabel(r: MisCalificacionRow) {
+    const hi = (r.hora_inicio ?? "").trim();
+    const hf = (r.hora_fin ?? "").trim();
+    if (!hi && !hf) return "—";
+    if (hi && hf) return `${hi} - ${hf}`;
+    return hi || hf;
   }
 
   return (
@@ -214,10 +275,16 @@ export default function MisCalificacionesPage() {
           <div className="heroLeft">
             <img className="heroLogo" src={escudoESPE} alt="ESPE" />
             <div className="heroText">
-              <h1 className="heroTitle">Mis Calificaciones</h1>
+              <h1 className="heroTitle">Mis Evaluaciones de Tribunales</h1>
               <p className="heroSubtitle">
-                Aquí aparecen automáticamente los estudiantes que ya están asignados a un <b>Tribunal</b>.
+                Gestión por <b>Carrera–Período</b>. Aquí aparecen estudiantes asignados a un <b>Tribunal</b>.
               </p>
+
+              {selectedCPLabel ? (
+                <div className="heroHint">
+                  Trabajando en: <b>{selectedCPLabel}</b>
+                </div>
+              ) : null}
 
               <div className="heroChips">
                 <span className="chip">
@@ -231,7 +298,7 @@ export default function MisCalificacionesPage() {
           </div>
 
           <div className="heroActions">
-            <button className="heroBtn ghost" onClick={loadAll} disabled={loading}>
+            <button className="heroBtn ghost" onClick={loadAll} disabled={loading || !selectedCP}>
               <RefreshCw className="heroBtnIcon" />
               Actualizar
             </button>
@@ -245,16 +312,45 @@ export default function MisCalificacionesPage() {
               <Search className="searchIcon" />
               <input
                 className="search"
-                placeholder="Buscar por tribunal, estudiante, ID institucional..."
+                placeholder="Buscar por estudiante, carrera, período, tribunal..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                disabled={loading}
+                disabled={!selectedCP || loading}
               />
+            </div>
+
+            {/* Selector CP */}
+            <div className="filterWrap">
+              <Filter className="filterIcon" />
+              <select
+                className="select"
+                value={selectedCP}
+                onChange={(e) => setSelectedCP(e.target.value ? Number(e.target.value) : "")}
+                disabled={loading}
+                title="Seleccione Carrera–Período"
+              >
+                <option value="">Seleccione Carrera–Período</option>
+                {carreraPeriodos.map((cp: any) => {
+                  const carrera = cp.nombre_carrera ?? `Carrera ${cp.id_carrera}`;
+                  const periodo = cp.codigo_periodo ?? cp.descripcion_periodo ?? `Período ${cp.id_periodo}`;
+                  return (
+                    <option key={cp.id_carrera_periodo} value={cp.id_carrera_periodo}>
+                      {carrera} — {periodo}
+                    </option>
+                  );
+                })}
+              </select>
+
+              {selectedCP && (
+                <button className="chipClear" onClick={() => setSelectedCP("")} title="Quitar filtro">
+                  <X size={14} /> Quitar
+                </button>
+              )}
             </div>
 
             <div className="hintInline">
               <AlertTriangle size={16} />
-              <span>Si el estudiante no tiene caso asignado, no se puede subir entrega.</span>
+              <span>Solo puedes subir/ver/descargar si el estudiante está asignado a un tribunal.</span>
             </div>
           </div>
 
@@ -263,108 +359,100 @@ export default function MisCalificacionesPage() {
             <table className="table">
               <thead>
                 <tr>
-                  <th className="thCenter" style={{ width: 240 }}>Tribunal</th>
-                  <th className="thCenter" style={{ width: 340 }}>Estudiante</th>
-                  <th className="thCenter" style={{ width: 180 }}>Caso</th>
-                  <th className="thCenter" style={{ width: 220 }}>Estado</th>
+                  <th className="thCenter" style={{ width: 280 }}>Estudiante</th>
+                  <th className="thCenter" style={{ width: 280 }}>Carrera</th>
+                  <th className="thCenter" style={{ width: 200 }}>Período</th>
+                  <th className="thCenter" style={{ width: 170 }}>Fecha</th>
+                  <th className="thCenter" style={{ width: 160 }}>Horario</th>
+                  <th className="thCenter" style={{ width: 150 }}>Estado</th>
+                  <th className="thCenter" style={{ width: 180 }}>Mi Rol</th>
                   <th className="thCenter">Entrega</th>
-                  <th className="thCenter" style={{ width: 320 }}>Acciones</th>
+                  <th className="thCenter" style={{ width: 330 }}>Acciones</th>
                 </tr>
               </thead>
 
               <tbody>
-                {loading ? (
+                {!selectedCP ? (
                   <tr>
-                    <td className="emptyCell" colSpan={6}>Cargando...</td>
+                    <td className="emptyCell" colSpan={9}>
+                      Seleccione una Carrera–Período para ver registros.
+                    </td>
+                  </tr>
+                ) : loading ? (
+                  <tr>
+                    <td className="emptyCell" colSpan={9}>Cargando...</td>
                   </tr>
                 ) : filtered.length ? (
                   filtered.map((r) => {
-                    // ✅ key estable
                     const key = `${r.id_tribunal}_${r.id_estudiante}`;
-
                     const badge = entregaEstadoLabel(r);
 
-                    const tribunalLabel = r.nombre_tribunal || `Tribunal ${r.id_tribunal}`;
                     const estudianteLabel =
                       `${r.apellidos_estudiante ?? ""} ${r.nombres_estudiante ?? ""}`.trim() ||
                       `Estudiante ${r.id_estudiante}`;
 
                     const inst = (r.id_institucional_estudiante ?? "").trim();
+                    const carrera = r.nombre_carrera ?? "—";
+                    const periodo = r.codigo_periodo ?? r.descripcion_periodo ?? "—";
+                    const fecha = r.fecha_tribunal ? safeDateLabel(r.fecha_tribunal) : "—";
+                    const horario = horarioLabel(r);
+                    const estadoTrib = r.estado_tribunal ?? "—";
+                    const miRol = r.mi_rol ?? "—";
 
-                    const entregaName = r.entrega_archivo_nombre || "-";
+                    const entregaName = r.entrega_archivo_nombre || "—";
                     const entregaFecha = r.entrega_fecha_entrega ? safeDateLabel(r.entrega_fecha_entrega) : "";
 
-                    const canUpload = !!r.id_caso_estudio;
-                    const canOpen = !!r.id_caso_estudio && hasEntrega(r);
+                    const canUpload = isAsignadoTribunal(r);
+                    const canOpen = isAsignadoTribunal(r) && hasEntrega(r);
 
                     return (
-                      <tr key={`${r.id_tribunal}_${r.id_estudiante}`}>
-                        <td className="tdCenter">
-                          <div className="cellMain">{tribunalLabel}</div>
-                          <div className="cellSub">ID: {r.id_tribunal}</div>
-                        </td>
-
+                      <tr key={key}>
                         <td className="tdCenter">
                           <div className="cellMain">{estudianteLabel}</div>
                           <div className="cellSub">{inst ? `Inst: ${inst}` : `ID: ${r.id_estudiante}`}</div>
                         </td>
 
                         <td className="tdCenter">
-                          {r.id_caso_estudio ? (
-                            <span className="chipCode">CASO {r.id_caso_estudio}</span>
-                          ) : (
-                            <span className="muted">—</span>
-                          )}
+                          <div className="cellMain">{carrera}</div>
+                          <div className="cellSub">{r.nombre_tribunal ?? `Tribunal ${r.id_tribunal}`}</div>
                         </td>
 
-                        <td className="tdCenter">
-                          <span className={badge.cls}>{badge.text}</span>
-                        </td>
+                        <td className="tdCenter">{periodo}</td>
+                        <td className="tdCenter">{fecha}</td>
+                        <td className="tdCenter">{horario}</td>
+                        <td className="tdCenter">{estadoTrib}</td>
+                        <td className="tdCenter">{miRol}</td>
 
                         <td className="tdCenter">
                           <div className="cellMain">{entregaName}</div>
                           <div className="cellSub">{entregaFecha || "—"}</div>
+                          <div className="cellSub">
+                            <span className={badge.cls}>{badge.text}</span>
+                          </div>
                         </td>
 
                         <td className="tdCenter">
                           <div className="actions">
-                            {/* VER INLINE */}
                             <button
                               className="btnGhost"
                               onClick={() => openEntregaPdf(r)}
                               disabled={loading || !canOpen}
-                              title={
-                                !r.id_caso_estudio
-                                  ? "Sin caso asignado"
-                                  : !hasEntrega(r)
-                                  ? "Sin entrega registrada"
-                                  : "Ver PDF"
-                              }
+                              title={!isAsignadoTribunal(r) ? "No asignado a tribunal" : !hasEntrega(r) ? "Sin entrega" : "Ver PDF"}
                             >
                               <FileDown size={16} /> Ver
                             </button>
 
-                            {/* DESCARGAR */}
                             <button
                               className="btnGhost"
                               onClick={() => downloadEntregaPdf(r)}
                               disabled={loading || !canOpen}
-                              title={
-                                !r.id_caso_estudio
-                                  ? "Sin caso asignado"
-                                  : !hasEntrega(r)
-                                  ? "Sin entrega registrada"
-                                  : "Descargar PDF"
-                              }
+                              title={!isAsignadoTribunal(r) ? "No asignado a tribunal" : !hasEntrega(r) ? "Sin entrega" : "Descargar PDF"}
                             >
                               <FileDown size={16} /> Descargar
                             </button>
 
-                            {/* SUBIR/REEMPLAZAR */}
                             <input
                               ref={(el) => {
-                                // ✅ FIX: callback ref debe retornar void
-                                // ✅ Limpieza cuando el input se desmonta
                                 if (el) fileRefs.current[key] = el;
                                 else delete fileRefs.current[key];
                               }}
@@ -382,7 +470,7 @@ export default function MisCalificacionesPage() {
                               className="btnPrimary"
                               onClick={() => pickFile(key)}
                               disabled={loading || !canUpload}
-                              title={!r.id_caso_estudio ? "Sin caso asignado" : "Subir/Reemplazar PDF"}
+                              title={!isAsignadoTribunal(r) ? "No asignado a tribunal" : "Subir/Reemplazar PDF"}
                             >
                               <FileUp size={16} /> Subir
                             </button>
@@ -393,7 +481,7 @@ export default function MisCalificacionesPage() {
                   })
                 ) : (
                   <tr>
-                    <td className="emptyCell" colSpan={6}>
+                    <td className="emptyCell" colSpan={9}>
                       No hay estudiantes asignados a tribunales en este Carrera–Período.
                     </td>
                   </tr>

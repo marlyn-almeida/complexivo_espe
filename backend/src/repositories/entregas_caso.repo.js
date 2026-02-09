@@ -1,33 +1,32 @@
-// src/repositories/entregas_caso.repo.js
+// ✅ src/repositories/entregas_caso.repo.js
 const pool = require("../config/db");
 
-async function getEntrega(id_estudiante, id_caso_estudio, { includeInactive = false } = {}) {
+/**
+ * ✅ Obtener entrega por estudiante
+ */
+async function getEntregaByEstudiante(id_estudiante, { includeInactive = false } = {}) {
   const [rows] = await pool.query(
     `
     SELECT *
-    FROM estudiante_caso_entrega
+    FROM estudiante_entrega
     WHERE id_estudiante = ?
-      AND id_caso_estudio = ?
       AND (? = 1 OR estado = 1)
     LIMIT 1
     `,
-    [id_estudiante, id_caso_estudio, includeInactive ? 1 : 0]
+    [Number(id_estudiante), includeInactive ? 1 : 0]
   );
   return rows[0] || null;
 }
 
-async function upsertEntrega({
-  id_estudiante,
-  id_caso_estudio,
-  archivo_nombre,
-  archivo_path,
-  observacion,
-}) {
+/**
+ * ✅ Insert/Update por estudiante (UNIQUE(id_estudiante))
+ */
+async function upsertEntregaByEstudiante({ id_estudiante, archivo_nombre, archivo_path, observacion }) {
   await pool.query(
     `
-    INSERT INTO estudiante_caso_entrega
-      (id_estudiante, id_caso_estudio, archivo_nombre, archivo_path, fecha_entrega, observacion, estado)
-    VALUES (?,?,?,?, NOW(), ?, 1)
+    INSERT INTO estudiante_entrega
+      (id_estudiante, archivo_nombre, archivo_path, fecha_entrega, observacion, estado)
+    VALUES (?,?,?,?,?,1)
     ON DUPLICATE KEY UPDATE
       archivo_nombre = VALUES(archivo_nombre),
       archivo_path   = VALUES(archivo_path),
@@ -36,83 +35,67 @@ async function upsertEntrega({
       updated_at     = CURRENT_TIMESTAMP,
       estado         = 1
     `,
-    [id_estudiante, id_caso_estudio, archivo_nombre, archivo_path, observacion || null]
+    [Number(id_estudiante), archivo_nombre, archivo_path, new Date(), observacion || null]
   );
 
-  return getEntrega(id_estudiante, id_caso_estudio, { includeInactive: true });
-}
-
-async function validateEntregaScope(id_carrera_periodo, id_estudiante, id_caso_estudio) {
-  const [rows] = await pool.query(
-    `
-    SELECT
-      (SELECT e.id_carrera_periodo FROM estudiante e WHERE e.id_estudiante = ? LIMIT 1) AS cp_est,
-      (SELECT c.id_carrera_periodo FROM caso_estudio c WHERE c.id_caso_estudio = ? LIMIT 1) AS cp_caso
-    `,
-    [id_estudiante, id_caso_estudio]
-  );
-
-  const row = rows[0] || {};
-  return (
-    Number(row.cp_est) === Number(id_carrera_periodo) &&
-    Number(row.cp_caso) === Number(id_carrera_periodo)
-  );
-}
-
-async function setEstado(id_estudiante, id_caso_estudio, estado) {
-  await pool.query(
-    `
-    UPDATE estudiante_caso_entrega
-    SET estado = ?, updated_at = CURRENT_TIMESTAMP
-    WHERE id_estudiante = ? AND id_caso_estudio = ?
-    `,
-    [estado ? 1 : 0, id_estudiante, id_caso_estudio]
-  );
-  return getEntrega(id_estudiante, id_caso_estudio, { includeInactive: true });
+  return getEntregaByEstudiante(id_estudiante, { includeInactive: true });
 }
 
 /**
- * ✅ Permiso DOCENTE: puede ver/descargar si:
+ * ✅ Validación central del nuevo modelo:
+ * El estudiante debe estar asignado en tribunal_estudiante (activo)
+ * y ese tribunal debe pertenecer al CP activo
+ */
+async function validateEstudianteEnTribunalCP(id_carrera_periodo, id_estudiante) {
+  const [rows] = await pool.query(
+    `
+    SELECT 1
+    FROM tribunal_estudiante te
+    JOIN tribunal t ON t.id_tribunal = te.id_tribunal
+    WHERE te.id_estudiante = ?
+      AND te.estado = 1
+      AND t.id_carrera_periodo = ?
+    LIMIT 1
+    `,
+    [Number(id_estudiante), Number(id_carrera_periodo)]
+  );
+  return !!rows.length;
+}
+
+/**
+ * ✅ Permiso DOCENTE:
+ * puede ver/descargar si:
  * - el docente pertenece a un tribunal (tribunal_docente activo)
  * - y ese tribunal tiene asignado al estudiante (tribunal_estudiante activo)
- * - y el estudiante/caso coinciden con la entrega solicitada
+ * - y todo corresponde al CP
+ *
+ * Nota: aquí NO se toca caso, NO se toca estudiante_caso_asignacion, nada.
  */
-async function docentePuedeVerEntrega({ id_docente, id_estudiante, id_caso_estudio }) {
+async function docentePuedeVerEntregaByEstudiante({ id_docente, id_carrera_periodo, id_estudiante }) {
   const [rows] = await pool.query(
     `
     SELECT 1
     FROM tribunal_docente td
     JOIN carrera_docente cd ON cd.id_carrera_docente = td.id_carrera_docente
+    JOIN tribunal t ON t.id_tribunal = td.id_tribunal
     JOIN tribunal_estudiante te ON te.id_tribunal = td.id_tribunal
-
-    -- entrega del estudiante (para asegurar que existe esa combinación)
-    JOIN estudiante_caso_entrega ece
-      ON ece.id_estudiante = te.id_estudiante
-     AND ece.id_caso_estudio = ?
-     AND ece.estado = 1
-
-    -- ✅ opcional fuerte: el caso solicitado debe ser el caso asignado al estudiante
-    LEFT JOIN estudiante_caso_asignacion eca
-      ON eca.id_estudiante = te.id_estudiante AND eca.estado = 1
-
     WHERE cd.id_docente = ?
       AND cd.estado = 1
       AND td.estado = 1
       AND te.estado = 1
       AND te.id_estudiante = ?
-      AND (eca.id_caso_estudio IS NULL OR eca.id_caso_estudio = ?)  -- 👈 si quieres obligar, quita el "IS NULL OR"
+      AND t.id_carrera_periodo = ?
     LIMIT 1
     `,
-    [Number(id_caso_estudio), Number(id_docente), Number(id_estudiante), Number(id_caso_estudio)]
+    [Number(id_docente), Number(id_estudiante), Number(id_carrera_periodo)]
   );
 
   return !!rows.length;
 }
 
 module.exports = {
-  getEntrega,
-  upsertEntrega,
-  validateEntregaScope,
-  setEstado,
-  docentePuedeVerEntrega,
+  getEntregaByEstudiante,
+  upsertEntregaByEstudiante,
+  validateEstudianteEnTribunalCP,
+  docentePuedeVerEntregaByEstudiante,
 };
