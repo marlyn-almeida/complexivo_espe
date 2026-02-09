@@ -9,8 +9,12 @@ const { attachCarreraPeriodoCtx } = require("../middlewares/ctx.middleware");
 const ctrl = require("../controllers/mis_calificaciones.controller");
 
 /**
+<<<<<<< Updated upstream
  * ✅ ADMIN (ROL 2) - listado por CP (tu listByCP)
  * GET /mis-calificaciones
+=======
+ * ✅ ADMIN (ROL 2) - lista general (si la necesitas)
+>>>>>>> Stashed changes
  */
 router.get(
   "/",
@@ -22,7 +26,11 @@ router.get(
 );
 
 /**
+<<<<<<< Updated upstream
  * ✅ DOCENTE (ROL 3) - cargar estructura para calificar 1 tribunal_estudiante
+=======
+ * ✅ DOCENTE (ROL 3) - cargar estructura filtrada por plan + rol
+>>>>>>> Stashed changes
  * GET /mis-calificaciones/:idTribunalEstudiante
  */
 router.get(
@@ -36,7 +44,11 @@ router.get(
 );
 
 /**
+<<<<<<< Updated upstream
  * ✅ DOCENTE (ROL 3) - guardar calificación (criterios permitidos)
+=======
+ * ✅ DOCENTE (ROL 3) - guardar calificación por criterio (seguro)
+>>>>>>> Stashed changes
  * POST /mis-calificaciones/:idTribunalEstudiante
  */
 router.post(

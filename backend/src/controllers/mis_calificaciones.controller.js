@@ -1,6 +1,7 @@
 // src/controllers/mis_calificaciones.controller.js
 const service = require("../services/mis_calificaciones.service");
 
+<<<<<<< Updated upstream
 /** helper: sacar CP sin depender de un nombre exacto */
 function getCP(req) {
   // según cómo lo tengas en ctx.middleware:
@@ -84,4 +85,38 @@ exports.saveForDocente = async (req, res) => {
   } catch (err) {
     return sendErr(res, err);
   }
+=======
+exports.list = async (req, res) => {
+  // si ya lo tienes, déjalo como está
+  const cp = req.carreraPeriodo; // lo que tu ctx middleware ponga
+  const data = await service.list(cp, req.user);
+  return res.json({ ok: true, data });
+};
+
+/**
+ * ✅ DOCENTE: trae estructura filtrada según plan + rol del docente en ese tribunal_estudiante
+ */
+exports.getForDocente = async (req, res) => {
+  const cp = req.carreraPeriodo;
+  const idTribunalEstudiante = req.params.idTribunalEstudiante;
+  const user = req.user;
+
+  const data = await service.getForDocente(cp, idTribunalEstudiante, user);
+  return res.json({ ok: true, data });
+};
+
+/**
+ * ✅ DOCENTE: guarda calificaciones con seguridad (allowedMap)
+ */
+exports.saveForDocente = async (req, res) => {
+  const cp = req.carreraPeriodo;
+  const idTribunalEstudiante = req.params.idTribunalEstudiante;
+  const user = req.user;
+
+  const payload = req.body;
+
+  await service.saveForDocente(cp, idTribunalEstudiante, user, payload);
+
+  return res.json({ ok: true, message: "Guardado" });
+>>>>>>> Stashed changes
 };
