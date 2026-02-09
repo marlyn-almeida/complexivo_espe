@@ -1,61 +1,303 @@
+// src/services/acta.service.js
+const path = require("path");
+const fs = require("fs");
+
+const pool = require("../config/db");
 const actaRepo = require("../repositories/acta.repo");
 const calRepo = require("../repositories/calificacion.repo");
 const calService = require("./calificacion.service");
 
-function letras(n){
-  // simple, luego lo mejoramos
-  return `Nota final: ${Number(n).toFixed(2)}/20`;
+const { docxToPdf } = require("../utils/docxToPdf");
+
+function err(msg, status) {
+  const e = new Error(msg);
+  e.status = status;
+  return e;
 }
 
-async function generarDesdeTribunalEstudiante({ id_tribunal_estudiante, id_rubrica, fecha_acta=null, umbral_aprobacion=14 }) {
-  // coherencia rubrica vs te
+function round2(n) {
+  const num = Number(n);
+  if (!Number.isFinite(num)) return null;
+  return Number(num.toFixed(2));
+}
+
+function formatFechaBarra(dateISO) {
+  const d = dateISO instanceof Date ? dateISO : new Date(dateISO);
+  if (Number.isNaN(d.getTime())) return "";
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = String(d.getFullYear());
+  return `${dd}/${mm}/${yyyy}`;
+}
+
+function letrasSimple(n) {
+  return `${Number(n).toFixed(2)} / 20`;
+}
+
+function ensureDir(dir) {
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+}
+
+function resolveUploadsPath(publicPath) {
+  // publicPath: "/uploads/plantillas/xxx.docx" o "uploads/..."
+  const uploadsRoot = path.join(process.cwd(), "uploads");
+  const rel = String(publicPath || "").replace(/^\/+/, ""); // "uploads/..."
+  const full = path.resolve(process.cwd(), rel);
+  const root = path.resolve(uploadsRoot);
+  if (!full.startsWith(root)) return null;
+  return full;
+}
+
+/**
+ * ✅ Lee plantilla_acta_word activa y genera DOCX + (opcional) PDF
+ * Plantilla con delimitadores ${variable}
+ */
+async function generarWordDesdePlantilla({ actaVars, outputBaseName }) {
+  const plantilla = await actaRepo.getPlantillaActiva();
+  if (!plantilla?.archivo_path) return { docx: null, pdf: null, plantilla: null };
+
+  const fullPlantilla = resolveUploadsPath(plantilla.archivo_path);
+  if (!fullPlantilla || !fs.existsSync(fullPlantilla)) {
+    throw err("Plantilla activa no encontrada en el servidor.", 404);
+  }
+
+  let PizZip, Docxtemplater;
+  try {
+    PizZip = require("pizzip");
+    Docxtemplater = require("docxtemplater");
+  } catch {
+    throw err("Faltan dependencias: instala docxtemplater y pizzip.", 500);
+  }
+
+  const content = fs.readFileSync(fullPlantilla, "binary");
+  const zip = new PizZip(content);
+
+  const doc = new Docxtemplater(zip, {
+    paragraphLoop: true,
+    linebreaks: true,
+    delimiters: { start: "${", end: "}" },
+  });
+
+  doc.setData(actaVars);
+
+  try {
+    doc.render();
+  } catch (e) {
+    const msg = e?.message || "Error renderizando plantilla";
+    throw err(`Error al renderizar plantilla: ${msg}`, 500);
+  }
+
+  const buf = doc.getZip().generate({ type: "nodebuffer" });
+
+  const outDir = path.join(process.cwd(), "uploads", "actas");
+  ensureDir(outDir);
+
+  const outDocx = path.join(outDir, `${outputBaseName}.docx`);
+  fs.writeFileSync(outDocx, buf);
+
+  // PDF opcional (sin libreoffice)
+  const outPdf = path.join(outDir, `${outputBaseName}.pdf`);
+  const cssPath = path.join(process.cwd(), "src", "templates", "acta-pdf.css");
+
+  let pdfPublic = null;
+  try {
+    await docxToPdf({ docxPath: outDocx, pdfPath: outPdf, cssPath });
+    pdfPublic = `/uploads/actas/${outputBaseName}.pdf`;
+  } catch {
+    pdfPublic = null;
+  }
+
+  return {
+    plantilla: { id_plantilla: plantilla.id_plantilla, nombre: plantilla.nombre },
+    docx: `/uploads/actas/${outputBaseName}.docx`,
+    pdf: pdfPublic,
+  };
+}
+
+/**
+ * ✅ Genera Acta desde tribunal_estudiante:
+ * - Nota teórica: nota_teorico_estudiante
+ * - Prácticas: calificacion (PRACTICO_ESCRITA / PRACTICO_ORAL)
+ * - Ponderaciones: config_ponderacion_examen
+ * - Guarda acta amarrada a calificación FINAL
+ * - Genera Word usando plantilla_acta_word (y PDF opcional)
+ */
+async function generarDesdeTribunalEstudiante(
+  { id_tribunal_estudiante, id_rubrica, fecha_acta = null, umbral_aprobacion = 14 },
+  user
+) {
+  // ✅ coherencia: ahora debe validar por PERIODO (id_periodo), no por carrera_periodo
   await calService.validarCoherencia(id_tribunal_estudiante, id_rubrica);
 
-  const teorico = await calRepo.findOneByKey(id_tribunal_estudiante, id_rubrica, "TEORICO");
+  // contexto base del tribunal_estudiante (incluye CP y fecha)
+  const ctx = await actaRepo.getContextTribunal(id_tribunal_estudiante);
+  if (!ctx) throw err("tribunal_estudiante no encontrado", 404);
+
+  const cp = Number(ctx.id_carrera_periodo);
+  const id_estudiante = Number(ctx.id_estudiante);
+
+  // nota teórica (por estudiante + CP)
+  const notaTeo = await actaRepo.getNotaTeorico(cp, id_estudiante);
+  if (!notaTeo) throw err("No existe nota teórica registrada para este estudiante en este carrera-período.", 422);
+
+  const nota_teorico_20 = round2(notaTeo.nota_teorico_20);
+
+  // calificaciones prácticas
   const escrita = await calRepo.findOneByKey(id_tribunal_estudiante, id_rubrica, "PRACTICO_ESCRITA");
   const oral = await calRepo.findOneByKey(id_tribunal_estudiante, id_rubrica, "PRACTICO_ORAL");
 
-  if (!teorico && !escrita && !oral) {
-    const e = new Error("No existen calificaciones TEORICO/PRACTICO_ESCRITA/PRACTICO_ORAL para generar el acta");
-    e.status = 422; throw e;
+  const nota_practico_escrita_20 = escrita ? round2(escrita.nota_base20) : null;
+  const nota_practico_oral_20 = oral ? round2(oral.nota_base20) : null;
+
+  if (nota_practico_escrita_20 === null && nota_practico_oral_20 === null) {
+    throw err("No existen calificaciones prácticas (ESCRITA/ORAL) para generar el acta.", 422);
   }
 
-  // regla simple: promedio de las existentes (puedes cambiar a ponderaciones luego)
-  const notas = [teorico, escrita, oral].filter(Boolean).map(x => Number(x.nota_base20));
-  const final = Number((notas.reduce((a,b)=>a+b,0) / notas.length).toFixed(2));
+  // config ponderación examen (por CP)
+  const cfg = await actaRepo.getConfigPonderacion(cp);
 
-  // creamos/actualizamos la calificación FINAL (para que acta apunte a una sola calificación)
+  const peso_teorico_final_pct = round2(cfg.peso_teorico_final_pct);
+  const peso_practico_final_pct = round2(cfg.peso_practico_final_pct);
+  const peso_practico_escrito_pct = round2(cfg.peso_practico_escrito_pct);
+  const peso_practico_oral_pct = round2(cfg.peso_practico_oral_pct);
+
+  // nota práctica ponderada
+  let practico_20 = null;
+  if (nota_practico_escrita_20 !== null && nota_practico_oral_20 !== null) {
+    practico_20 = round2(
+      nota_practico_escrita_20 * (peso_practico_escrito_pct / 100) +
+        nota_practico_oral_20 * (peso_practico_oral_pct / 100)
+    );
+  } else if (nota_practico_escrita_20 !== null) {
+    practico_20 = round2(nota_practico_escrita_20);
+  } else {
+    practico_20 = round2(nota_practico_oral_20);
+  }
+
+  // final
+  const calificacion_teorico_ponderada = round2(nota_teorico_20 * (peso_teorico_final_pct / 100));
+  const calificacion_practico_ponderada = round2(practico_20 * (peso_practico_final_pct / 100));
+  const final_20 = round2((calificacion_teorico_ponderada ?? 0) + (calificacion_practico_ponderada ?? 0));
+
+  const aprobacion = final_20 >= Number(umbral_aprobacion) ? 1 : 0;
+
+  // upsert calificación FINAL (en tu repo ya existe)
   const calFinal = await calRepo.upsertByKey({
     id_tribunal_estudiante,
     id_rubrica,
     tipo_rubrica: "FINAL",
-    nota_base20: final,
-    observacion: "Generada automáticamente para acta"
+    nota_base20: final_20,
+    observacion: "Generada automáticamente para acta",
   });
 
+  // guardar acta
   const payloadActa = {
     id_calificacion: calFinal.id_calificacion,
-    nota_teorico_20: teorico?.nota_base20 ?? null,
-    nota_practico_escrita_20: escrita?.nota_base20 ?? null,
-    nota_practico_oral_20: oral?.nota_base20 ?? null,
-    calificacion_final: final,
-    calificacion_final_letras: letras(final),
-    aprobacion: final >= umbral_aprobacion ? 1 : 0,
-    fecha_acta: fecha_acta,
-    estado_acta: "BORRADOR"
+    nota_teorico_20,
+    nota_practico_escrita_20,
+    nota_practico_oral_20,
+    calificacion_final: final_20,
+    calificacion_final_letras: letrasSimple(final_20),
+    aprobacion,
+    fecha_acta: fecha_acta ? String(fecha_acta).slice(0, 10) : null,
+    estado_acta: "BORRADOR",
   };
 
   const existente = await actaRepo.findByCalificacion(calFinal.id_calificacion);
-  if (existente) return actaRepo.updateById(existente.id_acta, payloadActa);
-  return actaRepo.create(payloadActa);
+  const acta = existente
+    ? await actaRepo.updateById(existente.id_acta, payloadActa)
+    : await actaRepo.create(payloadActa);
+
+  // variables para la plantilla (deben existir en tu ACTA.docx)
+  const tribunalDocentes = await actaRepo.getDocentesTribunal(Number(ctx.id_tribunal));
+  const director = await actaRepo.getDirectorCP(cp);
+
+  const actaVars = {
+    // checks
+    aprobado_si: aprobacion ? "X" : "",
+    aprobado_no: aprobacion ? "" : "X",
+
+    // notas
+    nota_teorico_sobre_20: nota_teorico_20 ?? "",
+    ponderacion_teorico: peso_teorico_final_pct ?? "",
+    ponderacion_practico: peso_practico_final_pct ?? "",
+
+    componente1_nota: nota_practico_escrita_20 ?? "",
+    componente1_ponderacion: peso_practico_escrito_pct ?? "",
+    componente1_calificacion_ponderada:
+      nota_practico_escrita_20 !== null ? round2(nota_practico_escrita_20 * (peso_practico_escrito_pct / 100)) : "",
+
+    componente2_nota: nota_practico_oral_20 ?? "",
+    componente2_ponderacion: peso_practico_oral_pct ?? "",
+    componente2_calificacion_ponderada:
+      nota_practico_oral_20 !== null ? round2(nota_practico_oral_20 * (peso_practico_oral_pct / 100)) : "",
+
+    calificacion_teorico_ponderada: calificacion_teorico_ponderada ?? "",
+    calificacion_practico_ponderada: calificacion_practico_ponderada ?? "",
+
+    nota_final: final_20 ?? "",
+    nota_final_letras: letrasSimple(final_20),
+
+    // estudiante
+    estudiante_id: ctx.id_institucional_estudiante ?? "",
+    estudiante_nombre_completo: `${ctx.nombres_estudiante} ${ctx.apellidos_estudiante}`.trim(),
+
+    // carrera
+    carrera_nombre_procesado: ctx.carrera_nombre ?? "",
+    carrera_modalidad: ctx.carrera_modalidad ?? "",
+
+    // fecha
+    fecha_formato_barra: formatFechaBarra(payloadActa.fecha_acta || ctx.fecha_examen),
+
+    // tribunal
+    presidente_nombre: tribunalDocentes.PRESIDENTE?.nombre ?? "",
+    presidente_cedula: tribunalDocentes.PRESIDENTE?.cedula ?? "",
+    integrante1_nombre: tribunalDocentes.INTEGRANTE_1?.nombre ?? "",
+    integrante1_cedula: tribunalDocentes.INTEGRANTE_1?.cedula ?? "",
+    integrante2_nombre: tribunalDocentes.INTEGRANTE_2?.nombre ?? "",
+    integrante2_cedula: tribunalDocentes.INTEGRANTE_2?.cedula ?? "",
+
+    // director
+    director_nombre: director?.nombre ?? "",
+    director_cedula: director?.cedula ?? "",
+  };
+
+  // generar archivos
+  const files = await generarWordDesdePlantilla({
+    actaVars,
+    outputBaseName: `acta_${acta.id_acta}_${ctx.id_institucional_estudiante}`,
+  });
+
+  return {
+    acta,
+    calculos: {
+      nota_teorico_20,
+      nota_practico_escrita_20,
+      nota_practico_oral_20,
+      practico_20,
+      peso_teorico_final_pct,
+      peso_practico_final_pct,
+      peso_practico_escrito_pct,
+      peso_practico_oral_pct,
+      calificacion_teorico_ponderada,
+      calificacion_practico_ponderada,
+      final_20,
+      umbral_aprobacion,
+      aprobacion,
+    },
+    archivos: files,
+  };
 }
 
-async function get(id){
+async function get(id) {
   const a = await actaRepo.findById(id);
-  if(!a){ const e=new Error("Acta no encontrada"); e.status=404; throw e; }
+  if (!a) throw err("Acta no encontrada", 404);
   return a;
 }
 
-async function changeEstado(id, estado){ await get(id); return actaRepo.setEstado(id, estado); }
+async function changeEstado(id, estado) {
+  await get(id);
+  return actaRepo.setEstado(id, estado);
+}
 
 module.exports = { generarDesdeTribunalEstudiante, get, changeEstado };

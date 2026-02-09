@@ -4,6 +4,7 @@ const { body, param, query } = require("express-validator");
 const validate = require("../middlewares/validate.middleware");
 const ctrl = require("../controllers/tribunal_estudiante.controller");
 const { auth, authorize } = require("../middlewares/auth.middleware");
+const { attachCarreraPeriodoCtx } = require("../middlewares/ctx.middleware");
 
 // ✅ ROL 3: Mis asignaciones (agenda)
 router.get(
@@ -13,6 +14,17 @@ router.get(
   query("includeInactive").optional().isBoolean().toBoolean(),
   validate,
   ctrl.misAsignaciones
+);
+
+// ✅ ROL 3: Contexto para calificar (CASO + ENTREGA + MI DESIGNACION)
+router.get(
+  "/:id/contexto-calificar",
+  auth,
+  authorize([3]),
+  attachCarreraPeriodoCtx,
+  param("id").isInt({ min: 1 }).toInt(),
+  validate,
+  ctrl.contextoCalificar
 );
 
 // ✅ LISTAR (ROL 1,2)

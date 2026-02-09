@@ -1,3 +1,4 @@
+// plan_evaluacion.routes.js
 const router = require("express").Router();
 const { body, param } = require("express-validator");
 const validate = require("../middlewares/validate.middleware");
@@ -5,9 +6,12 @@ const { authorize } = require("../middlewares/auth.middleware");
 const { attachCarreraPeriodoCtx } = require("../middlewares/ctx.middleware");
 const ctrl = require("../controllers/plan_evaluacion.controller");
 
-// 👇 APLICA EL CTX MIDDLEWARE AQUÍ
+// 👇 APLICA EL CTX MIDDLEWARE AQUÍ (usa x-carrera-periodo-id)
 router.use(attachCarreraPeriodoCtx);
 
+// =====================
+// ADMIN
+// =====================
 router.get("/", authorize(["ADMIN"]), ctrl.getByCP);
 
 router.post(
@@ -70,6 +74,10 @@ router.post(
   body("id_plan_item").isInt({ min: 1 }).toInt(),
   body("id_rubrica_componente").isInt({ min: 1 }).toInt(),
   body("calificado_por").isIn(["ROL2", "TRIBUNAL", "CALIFICADORES_GENERALES"]),
+  // 👇 si tú ya agregaste la columna designacion_tribunal (enum), debes validarla aquí:
+  body("designacion_tribunal")
+    .optional()
+    .isIn(["PRESIDENTE", "INTEGRANTE_1", "INTEGRANTE_2", "TODOS"]),
   validate,
   ctrl.setComponentCalificador
 );
@@ -80,6 +88,18 @@ router.get(
   param("id_plan_item").isInt({ min: 1 }).toInt(),
   validate,
   ctrl.listComponentCalificadores
+);
+
+// =====================
+// DOCENTE (ROL 3)
+// =====================
+// ✅ Mis componentes a calificar según plan y mi designación
+router.get(
+  "/mis-items/:id_tribunal_estudiante",
+  authorize(["DOCENTE"]),
+  param("id_tribunal_estudiante").isInt({ min: 1 }).toInt(),
+  validate,
+  ctrl.misItemsTribunal
 );
 
 module.exports = router;

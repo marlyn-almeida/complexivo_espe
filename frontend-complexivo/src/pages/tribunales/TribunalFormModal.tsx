@@ -1,6 +1,6 @@
 // ✅ src/pages/tribunales/TribunalFormModal.tsx
-import { useEffect, useMemo, useState } from "react";
-import { X, Plus, Trash2, Save, FileText } from "lucide-react";
+import { useEffect, useMemo } from "react";
+import { X, Users, ToggleLeft, ToggleRight, Info, Save } from "lucide-react";
 
 import type { Tribunal } from "../../types/tribunal";
 import type { Estudiante } from "../../types/estudiante";
@@ -8,12 +8,11 @@ import type { FranjaHorario } from "../../types/franjaHoraria";
 import type { CasoEstudio } from "../../types/casoEstudio";
 import type { CarreraDocente } from "../../types/carreraDocente";
 
-import type { TribunalCreateDTO, TribunalUpdateDTO } from "../../services/tribunales.service";
-
 import "./TribunalFormModal.css";
 
 type ToastType = "success" | "error" | "info";
 
+/** ✅ Docentes del tribunal */
 export type TribunalFormState = {
   nombre_tribunal: string;
   descripcion_tribunal: string;
@@ -22,26 +21,18 @@ export type TribunalFormState = {
   integrante2: number | "";
 };
 
-export type AsigRow = {
-  key: string;
+/** ✅ Modo Individual: asignación obligatoria (estudiante + franja + caso) */
+export type TribunalIndividualState = {
   id_estudiante: number | "";
   id_franja_horario: number | "";
-  /**
-   * ✅ IMPORTANTE:
-   * El caso NO es del estudiante; es de tribunal_estudiante.
-   * Esto es SOLO "plantilla opcional" (si tu backend lo soporta).
-   */
-  id_caso_estudio?: number | "";
+  id_caso_estudio: number | "";
 };
 
-// ==============================
-// ✅ 1) Props "compat" (TU PAGE)
-// ==============================
 type CompatProps = {
   open: boolean;
   onClose: () => void;
 
-  // lo que tu TribunalesPage envía
+  // desde TribunalesPage
   editing: Tribunal | null;
   docentes: CarreraDocente[];
   selectedCPLabel: string;
@@ -49,130 +40,67 @@ type CompatProps = {
   tribunalForm: TribunalFormState;
   setTribunalForm: React.Dispatch<React.SetStateAction<TribunalFormState>>;
 
+  // ✅ modo + form individual desde el Page
+  modoIndividual: boolean;
+  setModoIndividual: React.Dispatch<React.SetStateAction<boolean>>;
+
+  individualForm: TribunalIndividualState;
+  setIndividualForm: React.Dispatch<React.SetStateAction<TribunalIndividualState>>;
+
+  // ✅ listas obligatorias
+  estudiantes: Estudiante[];
+  franjas: FranjaHorario[];
+  casos: CasoEstudio[];
+
+  // errores desde el Page
   formErrors: Record<string, string>;
   saving: boolean;
 
   onSave: () => Promise<void>;
 
-  // opcional por si luego quieres la plantilla desde aquí
-  estudiantes?: Estudiante[];
-  franjas?: FranjaHorario[];
-  casos?: CasoEstudio[];
+  // (opcional) toast lo maneja page
+  showToast?: (msg: string, type?: ToastType) => void;
 };
 
-// =====================================
-// ✅ 2) Props "nuevo" (modo alternativo)
-// =====================================
-type NewProps = {
-  open: boolean;
-  onClose: () => void;
-
-  mode: "create" | "edit";
-  editingTribunal?: Tribunal | null;
-
-  selectedCP: number;
-
-  docentes: CarreraDocente[];
-  estudiantes: Estudiante[];
-  franjas: FranjaHorario[];
-  casos: CasoEstudio[];
-
-  saving: boolean;
-
-  onSubmit: (payload: TribunalCreateDTO | TribunalUpdateDTO, plantilla: AsigRow[]) => Promise<void>;
-  showToast: (msg: string, type?: ToastType) => void;
-};
-
-// ✅ union (acepta ambos)
-type Props = CompatProps | NewProps;
-
-function uid() {
-  return Math.random().toString(16).slice(2) + Date.now().toString(16);
-}
-
-// helpers para detectar qué props llegaron
-function isCompat(p: Props): p is CompatProps {
-  return (p as any).onSave !== undefined;
-}
+type Props = CompatProps;
 
 export default function TribunalFormModal(props: Props) {
-  const open = props.open;
-  const onClose = props.onClose;
-  const saving = props.saving;
+  const {
+    open,
+    onClose,
+    saving,
 
-  // ✅ si vienes desde TU page:
-  const compat = isCompat(props);
+    editing,
+    docentes,
+    selectedCPLabel,
 
-  // ===== fuente de datos (docentes/estudiantes/franjas/casos) =====
-  const docentes = compat ? props.docentes : props.docentes;
+    tribunalForm,
+    setTribunalForm,
 
-  const estudiantes = compat ? props.estudiantes ?? [] : props.estudiantes;
-  const franjas = compat ? props.franjas ?? [] : props.franjas;
-  const casos = compat ? props.casos ?? [] : props.casos;
+    modoIndividual,
+    setModoIndividual,
 
-  // ===== modo/tribunal edit =====
-  const isEdit = compat ? !!props.editing : props.mode === "edit";
-  const editingTribunal: Tribunal | null = compat ? props.editing : props.editingTribunal ?? null;
+    individualForm,
+    setIndividualForm,
 
-  // ===== Toast =====
-  const showToast = compat ? (() => {}) : props.showToast;
+    estudiantes,
+    franjas,
+    casos,
 
-  // ============================================================
-  // ✅ FORM CONTROLADO (si viene desde TU Page) o interno (nuevo)
-  // ============================================================
-  const [internalForm, setInternalForm] = useState<TribunalFormState>({
-    nombre_tribunal: "",
-    descripcion_tribunal: "",
-    presidente: "",
-    integrante1: "",
-    integrante2: "",
-  });
+    formErrors,
+    onSave,
+  } = props;
 
-  const form = compat ? props.tribunalForm : internalForm;
-  const setForm = compat ? props.setTribunalForm : setInternalForm;
-
-  // errors: si vienes del page, usas formErrors del page
-  const [internalErrors, setInternalErrors] = useState<Record<string, string>>({});
-  const errors = compat ? props.formErrors : internalErrors;
-  const setErrors = compat ? (() => {}) : setInternalErrors;
-
-  // plantilla (opcional)
-  const [rows, setRows] = useState<AsigRow[]>([]);
+  const isEdit = !!editing;
 
   useEffect(() => {
     if (!open) return;
 
-    // ✅ cuando abres modal, precarga (si edit) o limpia (si create)
-    if (isEdit && editingTribunal) {
-      // si vienes del page, tu Page YA SETEA tribunalForm al abrir editar
-      // aquí solo limpiamos plantilla + errores internos
-      if (!compat) {
-        setForm({
-          nombre_tribunal: String((editingTribunal as any).nombre_tribunal || ""),
-          descripcion_tribunal: String((editingTribunal as any).descripcion_tribunal || ""),
-          presidente: "",
-          integrante1: "",
-          integrante2: "",
-        });
-      }
-      setRows([]);
-      if (!compat) setInternalErrors({});
-      return;
+    // cuando abres en CREATE, limpia individuales (pero deja el modo como esté)
+    if (!isEdit) {
+      setIndividualForm({ id_estudiante: "", id_franja_horario: "", id_caso_estudio: "" });
     }
-
-    // create
-    if (!compat) {
-      setForm({
-        nombre_tribunal: "",
-        descripcion_tribunal: "",
-        presidente: "",
-        integrante1: "",
-        integrante2: "",
-      });
-    }
-    setRows([]);
-    if (!compat) setInternalErrors({});
-  }, [open, isEdit, editingTribunal, compat, setForm]);
+  }, [open, isEdit, setIndividualForm]);
 
   const docentesOptions = useMemo(() => {
     return (docentes ?? []).map((d: any) => ({
@@ -198,105 +126,52 @@ export default function TribunalFormModal(props: Props) {
   const casosOptions = useMemo(() => {
     return (casos ?? []).map((c: any) => ({
       id: Number(c.id_caso_estudio),
-      label: `Caso ${c.numero_caso}${c.titulo ? ` — ${c.titulo}` : ""}`,
+      numero: c.numero_caso ?? c.caso_numero ?? "",
+      titulo: c.titulo ?? c.titulo_caso ?? "",
+      label: `Caso ${c.numero_caso ?? c.caso_numero ?? "?"}${(c.titulo ?? c.titulo_caso) ? ` — ${c.titulo ?? c.titulo_caso}` : ""}`,
     }));
   }, [casos]);
-
-  function validateNewPropsOnly(): Record<string, string> {
-    // ✅ SOLO se usa si estás en modo "nuevo" (onSubmit)
-    const e: Record<string, string> = {};
-    if (!compat) {
-      if (!props.selectedCP) e.id_carrera_periodo = "Seleccione Carrera–Período.";
-      if (!form.nombre_tribunal.trim()) e.nombre_tribunal = "Ingrese el nombre del tribunal.";
-      if (!form.presidente) e.presidente = "Seleccione Presidente.";
-      if (!form.integrante1) e.integrante1 = "Seleccione Integrante 1.";
-      if (!form.integrante2) e.integrante2 = "Seleccione Integrante 2.";
-
-      const ids = [form.presidente, form.integrante1, form.integrante2].filter(Boolean) as number[];
-      const uniq = new Set(ids);
-      if (ids.length && uniq.size !== ids.length) e.docentes = "No repitas el mismo docente en el tribunal.";
-
-      rows.forEach((r, idx) => {
-        if (!r.id_estudiante) e[`row_${idx}_id_estudiante`] = "Seleccione estudiante.";
-        if (!r.id_franja_horario) e[`row_${idx}_id_franja_horario`] = "Seleccione franja.";
-      });
-    }
-    return e;
-  }
-
-  function addRow() {
-    setRows((prev) => [...prev, { key: uid(), id_estudiante: "", id_franja_horario: "", id_caso_estudio: "" }]);
-  }
-
-  function removeRow(key: string) {
-    setRows((prev) => prev.filter((x) => x.key !== key));
-  }
-
-  function updateRow(key: string, patch: Partial<AsigRow>) {
-    setRows((prev) => prev.map((x) => (x.key === key ? { ...x, ...patch } : x)));
-  }
 
   const selectedDocenteLabels = useMemo(() => {
     const map = new Map<number, string>();
     for (const d of docentesOptions) map.set(d.id, d.label);
 
     return {
-      p: form.presidente ? map.get(Number(form.presidente)) ?? "—" : "—",
-      i1: form.integrante1 ? map.get(Number(form.integrante1)) ?? "—" : "—",
-      i2: form.integrante2 ? map.get(Number(form.integrante2)) ?? "—" : "—",
+      p: tribunalForm.presidente ? map.get(Number(tribunalForm.presidente)) ?? "—" : "—",
+      i1: tribunalForm.integrante1 ? map.get(Number(tribunalForm.integrante1)) ?? "—" : "—",
+      i2: tribunalForm.integrante2 ? map.get(Number(tribunalForm.integrante2)) ?? "—" : "—",
     };
-  }, [docentesOptions, form.presidente, form.integrante1, form.integrante2]);
-
-  async function handleSubmit() {
-    // ✅ SI VIENES DE TU PAGE: NO REVALIDAMOS AQUÍ, tu Page ya valida y guarda con onSaveTribunal()
-    if (compat) {
-      await props.onSave();
-      return;
-    }
-
-    // ✅ MODO NUEVO
-    const e = validateNewPropsOnly();
-    setErrors(e);
-    if (Object.keys(e).length) {
-      showToast("Revisa el formulario.", "error");
-      return;
-    }
-
-    const base = {
-      id_carrera_periodo: Number(props.selectedCP),
-      nombre_tribunal: form.nombre_tribunal.trim(),
-      descripcion_tribunal: form.descripcion_tribunal.trim() || undefined,
-      docentes: {
-        presidente: Number(form.presidente),
-        integrante1: Number(form.integrante1),
-        integrante2: Number(form.integrante2),
-      },
-    };
-
-    const payload = (isEdit ? (base as TribunalUpdateDTO) : (base as TribunalCreateDTO)) as
-      | TribunalCreateDTO
-      | TribunalUpdateDTO;
-
-    await props.onSubmit(payload, rows);
-  }
+  }, [docentesOptions, tribunalForm.presidente, tribunalForm.integrante1, tribunalForm.integrante2]);
 
   if (!open) return null;
 
-  const cpLabel = compat ? props.selectedCPLabel : "";
+  const toggleMode = () => {
+    setModoIndividual((v) => {
+      const next = !v;
+
+      // ✅ si cambias a plantilla, limpiamos el form individual para que no quede “guardado”
+      if (!next) {
+        setIndividualForm({ id_estudiante: "", id_franja_horario: "", id_caso_estudio: "" });
+      }
+
+      return next;
+    });
+  };
 
   return (
     <div className="modalOverlay" onMouseDown={onClose}>
       <div className="modalCard tribunalFormCard" onMouseDown={(e) => e.stopPropagation()}>
+        {/* HEADER */}
         <div className="modalHeader">
           <div>
             <h3 className="modalTitle">{isEdit ? "Editar Tribunal" : "Crear Tribunal"}</h3>
             <p className="tfSub">
-              {cpLabel ? (
+              {selectedCPLabel ? (
                 <>
-                  <b>{cpLabel}</b> — Docentes del tribunal + plantilla opcional (estudiante/franja).
+                  <b>{selectedCPLabel}</b> — Define docentes y (opcionalmente) crea en modo individual.
                 </>
               ) : (
-                <>Docentes del tribunal + plantilla opcional de asignaciones (estudiante/franja).</>
+                <>Define docentes y (opcionalmente) crea en modo individual.</>
               )}
             </p>
           </div>
@@ -306,244 +181,270 @@ export default function TribunalFormModal(props: Props) {
           </button>
         </div>
 
+        {/* BODY */}
         <div className="modalBody">
+          {/* ✅ MODO */}
+          {!isEdit ? (
+            <div className="tfModeCard">
+              <button
+                type="button"
+                className="tfModeSwitch"
+                onClick={toggleMode}
+                disabled={saving}
+                aria-label="Cambiar modo"
+                title="Cambiar modo"
+              >
+                {modoIndividual ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
+              </button>
+
+              <div className="tfModeText">
+                <div className="tfModeTitle">
+                  <Users size={16} />
+                  {modoIndividual
+                    ? "Modo Individual: Crear tribunal para un estudiante específico"
+                    : "Modo Plantilla: Crear tribunal base para asignar múltiples estudiantes"}
+                </div>
+
+                <div className="tfModeSub">
+                  {modoIndividual
+                    ? "Selecciona estudiante, franja y caso (obligatorio)."
+                    : "Crea el tribunal con docentes. Luego asigna estudiantes en el módulo de Asignaciones."}
+                </div>
+
+                {!modoIndividual ? (
+                  <div className="tfModeHint">
+                    <Info size={16} />
+                    En modo plantilla, podrás asignar múltiples estudiantes desde “Asignaciones”.
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
+
           <div className="tfGrid">
+            {/* Nombre */}
             <div className="field tfFull">
               <label className="fieldLabel">Nombre del tribunal</label>
               <input
                 className="input"
-                value={form.nombre_tribunal}
-                onChange={(e) => setForm((p) => ({ ...p, nombre_tribunal: e.target.value }))}
+                value={tribunalForm.nombre_tribunal}
+                onChange={(e) => setTribunalForm((p) => ({ ...p, nombre_tribunal: e.target.value }))}
                 placeholder="Ej: Tribunal 1"
                 disabled={saving}
               />
-              {errors.nombre_tribunal ? <p className="error">{errors.nombre_tribunal}</p> : null}
+              {formErrors.nombre_tribunal ? <p className="error">{formErrors.nombre_tribunal}</p> : null}
             </div>
 
+            {/* Descripción */}
             <div className="field tfFull">
               <label className="fieldLabel">Descripción (opcional)</label>
               <textarea
                 className="textarea"
                 rows={3}
-                value={form.descripcion_tribunal}
-                onChange={(e) => setForm((p) => ({ ...p, descripcion_tribunal: e.target.value }))}
+                value={tribunalForm.descripcion_tribunal}
+                onChange={(e) => setTribunalForm((p) => ({ ...p, descripcion_tribunal: e.target.value }))}
                 placeholder="Descripción del tribunal..."
                 disabled={saving}
               />
             </div>
 
-            <div className="field">
-              <label className="fieldLabel">Presidente</label>
-              <select
-                className="select"
-                value={form.presidente}
-                onChange={(e) => setForm((p) => ({ ...p, presidente: e.target.value ? Number(e.target.value) : "" }))}
-                disabled={saving}
-              >
-                <option value="">Seleccione...</option>
-                {docentesOptions.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.label}
-                  </option>
-                ))}
-              </select>
-              {errors.presidente ? <p className="error">{errors.presidente}</p> : null}
-            </div>
-
-            <div className="field">
-              <label className="fieldLabel">Integrante 1</label>
-              <select
-                className="select"
-                value={form.integrante1}
-                onChange={(e) => setForm((p) => ({ ...p, integrante1: e.target.value ? Number(e.target.value) : "" }))}
-                disabled={saving}
-              >
-                <option value="">Seleccione...</option>
-                {docentesOptions.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.label}
-                  </option>
-                ))}
-              </select>
-              {errors.integrante1 ? <p className="error">{errors.integrante1}</p> : null}
-            </div>
-
-            <div className="field">
-              <label className="fieldLabel">Integrante 2</label>
-              <select
-                className="select"
-                value={form.integrante2}
-                onChange={(e) => setForm((p) => ({ ...p, integrante2: e.target.value ? Number(e.target.value) : "" }))}
-                disabled={saving}
-              >
-                <option value="">Seleccione...</option>
-                {docentesOptions.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.label}
-                  </option>
-                ))}
-              </select>
-              {errors.integrante2 ? <p className="error">{errors.integrante2}</p> : null}
-            </div>
-
-            {errors.docentes ? <p className="error tfFull">{errors.docentes}</p> : null}
-
-            <div className="tfResume tfFull">
-              <div className="tfResumeTitle">Resumen de docentes</div>
-              <div className="tfResumeRow">
-                <span>Presidente:</span> <b>{selectedDocenteLabels.p}</b>
-              </div>
-              <div className="tfResumeRow">
-                <span>Integrante 1:</span> <b>{selectedDocenteLabels.i1}</b>
-              </div>
-              <div className="tfResumeRow">
-                <span>Integrante 2:</span> <b>{selectedDocenteLabels.i2}</b>
-              </div>
-            </div>
-
-            {/* PLANTILLA */}
+            {/* Docentes */}
             <div className="tfSection tfFull">
               <div className="tfSectionHead">
-                <div>
-                  <div className="tfSectionTitle">Plantilla (opcional)</div>
-                  <div className="tfSectionSub">
-                    Listas vienen de módulos por Carrera–Período. Aquí solo pre-armas filas.
+                <div className="tfSectionTitleRow">
+                  <Users size={18} />
+                  <div>
+                    <div className="tfSectionTitle">Miembros del Tribunal</div>
+                    <div className="tfSectionSub">Seleccione Presidente e Integrantes (sin repetir).</div>
                   </div>
                 </div>
-
-                <button className="tfBtnAdd" type="button" onClick={addRow} disabled={saving}>
-                  <Plus size={18} /> Añadir fila
-                </button>
               </div>
 
-              {rows.length === 0 ? (
-                <div className="tfEmpty">No has agregado filas. Puedes guardar el tribunal solo con docentes.</div>
-              ) : (
-                <div className="tfTableWrap">
-                  <table className="tfTable">
-                    <thead>
-                      <tr>
-                        <th>Estudiante</th>
-                        <th>Franja</th>
-                        <th>Caso (opcional)</th>
-                        <th style={{ width: 70 }}></th>
-                      </tr>
-                    </thead>
-
-                    <tbody>
-                      {rows.map((r, idx) => (
-                        <tr key={r.key}>
-                          <td>
-                            <select
-                              className="select"
-                              value={r.id_estudiante}
-                              onChange={(e) =>
-                                updateRow(r.key, { id_estudiante: e.target.value ? Number(e.target.value) : "" })
-                              }
-                              disabled={saving}
-                            >
-                              <option value="">Seleccione...</option>
-                              {estudiantesOptions.map((o) => (
-                                <option key={o.id} value={o.id}>
-                                  {o.label}
-                                </option>
-                              ))}
-                            </select>
-                            {errors[`row_${idx}_id_estudiante`] ? (
-                              <p className="error">{errors[`row_${idx}_id_estudiante`]}</p>
-                            ) : null}
-                          </td>
-
-                          <td>
-                            <select
-                              className="select"
-                              value={r.id_franja_horario}
-                              onChange={(e) =>
-                                updateRow(r.key, {
-                                  id_franja_horario: e.target.value ? Number(e.target.value) : "",
-                                })
-                              }
-                              disabled={saving}
-                            >
-                              <option value="">Seleccione...</option>
-                              {franjasOptions.map((o) => (
-                                <option key={o.id} value={o.id}>
-                                  {o.label}
-                                </option>
-                              ))}
-                            </select>
-                            {errors[`row_${idx}_id_franja_horario`] ? (
-                              <p className="error">{errors[`row_${idx}_id_franja_horario`]}</p>
-                            ) : null}
-                          </td>
-
-                          <td>
-                            <select
-                              className="select"
-                              value={r.id_caso_estudio ?? ""}
-                              onChange={(e) =>
-                                updateRow(r.key, { id_caso_estudio: e.target.value ? Number(e.target.value) : "" })
-                              }
-                              disabled={saving}
-                            >
-                              <option value="">(Opcional) Seleccione caso...</option>
-                              {casosOptions.map((o) => (
-                                <option key={o.id} value={o.id}>
-                                  {o.label}
-                                </option>
-                              ))}
-                            </select>
-
-                            {r.id_caso_estudio ? (
-                              <div className="tfHint">
-                                <FileText size={14} /> Se verá/descargará en “Ver Tribunal” si el backend lo guarda en la
-                                asignación.
-                              </div>
-                            ) : (
-                              <div className="tfHint">
-                                Caso no es del estudiante. Si tu backend lo asigna después, se mostrará igual en “Ver”.
-                              </div>
-                            )}
-                          </td>
-
-                          <td style={{ textAlign: "center" }}>
-                            <button
-                              className="tfBtnTrash"
-                              type="button"
-                              onClick={() => removeRow(r.key)}
-                              disabled={saving}
-                              title="Quitar fila"
-                            >
-                              <Trash2 size={18} />
-                            </button>
-                          </td>
-                        </tr>
+              <div style={{ padding: 12 }}>
+                <div className="tfGrid3">
+                  <div className="field">
+                    <label className="fieldLabel">Presidente</label>
+                    <select
+                      className="select"
+                      value={tribunalForm.presidente}
+                      onChange={(e) =>
+                        setTribunalForm((p) => ({ ...p, presidente: e.target.value ? Number(e.target.value) : "" }))
+                      }
+                      disabled={saving}
+                    >
+                      <option value="">Seleccione...</option>
+                      {docentesOptions.map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.label}
+                        </option>
                       ))}
-                    </tbody>
-                  </table>
+                    </select>
+                    {formErrors.presidente ? <p className="error">{formErrors.presidente}</p> : null}
+                  </div>
 
-                  <div className="tfFoot">
-                    * El caso aquí es solo plantilla. Lo real debe quedar en <b>tribunal_estudiante</b>.
+                  <div className="field">
+                    <label className="fieldLabel">Integrante 1</label>
+                    <select
+                      className="select"
+                      value={tribunalForm.integrante1}
+                      onChange={(e) =>
+                        setTribunalForm((p) => ({ ...p, integrante1: e.target.value ? Number(e.target.value) : "" }))
+                      }
+                      disabled={saving}
+                    >
+                      <option value="">Seleccione...</option>
+                      {docentesOptions.map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.label}
+                        </option>
+                      ))}
+                    </select>
+                    {formErrors.integrante1 ? <p className="error">{formErrors.integrante1}</p> : null}
+                  </div>
+
+                  <div className="field">
+                    <label className="fieldLabel">Integrante 2</label>
+                    <select
+                      className="select"
+                      value={tribunalForm.integrante2}
+                      onChange={(e) =>
+                        setTribunalForm((p) => ({ ...p, integrante2: e.target.value ? Number(e.target.value) : "" }))
+                      }
+                      disabled={saving}
+                    >
+                      <option value="">Seleccione...</option>
+                      {docentesOptions.map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.label}
+                        </option>
+                      ))}
+                    </select>
+                    {formErrors.integrante2 ? <p className="error">{formErrors.integrante2}</p> : null}
                   </div>
                 </div>
-              )}
 
-              {/* hint si no pasaste listas (tu page todavía no las pasa) */}
-              {rows.length > 0 && (estudiantes.length === 0 || franjas.length === 0) ? (
-                <div className="tfFoot" style={{ marginTop: 8, opacity: 0.8 }}>
-                  Nota: aún no estás pasando <b>estudiantes/franjas/casos</b> al modal desde el Page; por eso los selects pueden salir vacíos.
+                {formErrors.docentes ? <p className="error" style={{ marginTop: 8 }}>{formErrors.docentes}</p> : null}
+
+                {/* Resumen */}
+                <div className="tfResume" style={{ marginTop: 12 }}>
+                  <div className="tfResumeTitle">Resumen de docentes</div>
+                  <div className="tfResumeRow">
+                    <span>Presidente:</span> <b>{selectedDocenteLabels.p}</b>
+                  </div>
+                  <div className="tfResumeRow">
+                    <span>Integrante 1:</span> <b>{selectedDocenteLabels.i1}</b>
+                  </div>
+                  <div className="tfResumeRow">
+                    <span>Integrante 2:</span> <b>{selectedDocenteLabels.i2}</b>
+                  </div>
                 </div>
-              ) : null}
+              </div>
             </div>
 
+            {/* ✅ MODO INDIVIDUAL */}
+            {!isEdit && modoIndividual ? (
+              <div className="tfSection tfFull">
+                <div className="tfSectionHead">
+                  <div className="tfSectionTitleRow">
+                    <Info size={18} />
+                    <div>
+                      <div className="tfSectionTitle">Datos del Tribunal (Modo Individual)</div>
+                      <div className="tfSectionSub">Aquí el caso es obligatorio.</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ padding: 12 }}>
+                  <div className="tfGrid2">
+                    <div className="field">
+                      <label className="fieldLabel">Estudiante</label>
+                      <select
+                        className="select"
+                        value={individualForm.id_estudiante}
+                        onChange={(e) =>
+                          setIndividualForm((p) => ({
+                            ...p,
+                            id_estudiante: e.target.value ? Number(e.target.value) : "",
+                          }))
+                        }
+                        disabled={saving}
+                      >
+                        <option value="">Seleccione...</option>
+                        {estudiantesOptions.map((o) => (
+                          <option key={o.id} value={o.id}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </select>
+                      {formErrors.id_estudiante ? <p className="error">{formErrors.id_estudiante}</p> : null}
+                    </div>
+
+                    <div className="field">
+                      <label className="fieldLabel">Caso de estudio</label>
+                      <select
+                        className="select"
+                        value={individualForm.id_caso_estudio}
+                        onChange={(e) =>
+                          setIndividualForm((p) => ({
+                            ...p,
+                            id_caso_estudio: e.target.value ? Number(e.target.value) : "",
+                          }))
+                        }
+                        disabled={saving}
+                      >
+                        <option value="">Seleccione...</option>
+                        {casosOptions.map((o) => (
+                          <option key={o.id} value={o.id}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </select>
+                      {formErrors.id_caso_estudio ? <p className="error">{formErrors.id_caso_estudio}</p> : null}
+                    </div>
+
+                    <div className="field tfFull">
+                      <label className="fieldLabel">Franja horaria</label>
+                      <select
+                        className="select"
+                        value={individualForm.id_franja_horario}
+                        onChange={(e) =>
+                          setIndividualForm((p) => ({
+                            ...p,
+                            id_franja_horario: e.target.value ? Number(e.target.value) : "",
+                          }))
+                        }
+                        disabled={saving}
+                      >
+                        <option value="">Seleccione...</option>
+                        {franjasOptions.map((o) => (
+                          <option key={o.id} value={o.id}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </select>
+                      {formErrors.id_franja_horario ? <p className="error">{formErrors.id_franja_horario}</p> : null}
+                    </div>
+                  </div>
+
+                  <div className="tfInfoBox" style={{ marginTop: 12 }}>
+                    <Info size={18} />
+                    Importante: Los horarios no pueden solaparse en el mismo laboratorio y fecha. Puede haber múltiples
+                    tribunales a la misma hora si son laboratorios diferentes.
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {/* GUARDAR */}
             <div className="tfFull">
-              <button className="tfBtnSave" type="button" onClick={handleSubmit} disabled={saving}>
-                <Save size={18} /> {saving ? "Guardando..." : isEdit ? "Guardar cambios" : "Crear tribunal"}
+              <button className="tfBtnSave" type="button" onClick={onSave} disabled={saving}>
+                <Save size={18} /> {saving ? "Guardando..." : isEdit ? "Guardar cambios" : "Guardar Tribunal"}
               </button>
             </div>
           </div>
         </div>
 
+        {/* FOOTER */}
         <div className="modalFooter">
           <button className="btnGhost" onClick={onClose} disabled={saving} type="button">
             Cancelar

@@ -100,7 +100,6 @@ async function create(d, scope = null) {
 }
 
 async function changeEstado(id, estado, scope = null) {
-  // opcional: si quieres validar scope por carrera aquí también
   const r = await repo.setEstado(id, estado);
   if (!r) throw err("Asignación tribunal_estudiante no encontrada", 404);
   return r;
@@ -139,4 +138,25 @@ async function misAsignaciones(query = {}, user) {
   });
 }
 
-module.exports = { list, create, changeEstado, changeCierre, misAsignaciones };
+/**
+ * ✅ NUEVO: contexto para panel de calificación
+ * Devuelve:
+ * - mi_designacion (PRESIDENTE / INTEGRANTE_1 / INTEGRANTE_2)
+ * - caso (pdf path)
+ * - entrega (pdf path)
+ */
+async function contextoCalificar(id_tribunal_estudiante, cpCtx, user) {
+  if (!isRol3(user)) throw err("Acceso denegado", 403);
+
+  const data = await repo.getContextoCalificar({
+    id_tribunal_estudiante: Number(id_tribunal_estudiante),
+    id_docente: Number(user.id),
+    cpCtx: Number(cpCtx || 0),
+  });
+
+  if (!data) throw err("Asignación no encontrada o no pertenece a tu agenda.", 404);
+
+  return { ok: true, data };
+}
+
+module.exports = { list, create, changeEstado, changeCierre, misAsignaciones, contextoCalificar };

@@ -78,7 +78,12 @@ async function remove(id_caso_estudio) {
 }
 
 /**
- * ✅ Permiso DOCENTE (opcional recomendado)
+ * ✅ PERMISO DOCENTE (CORREGIDO)
+ * DOCENTE puede ver/descargar el CASO si:
+ * - pertenece a un tribunal activo
+ * - y ese tribunal tiene asignaciones activas (tribunal_estudiante)
+ * - y la asignación tiene ese mismo id_caso_estudio
+ * - y todo está dentro del carrera_periodo (cp) activo
  */
 async function docentePuedeVerCaso({ id_docente, id_caso_estudio, id_carrera_periodo }) {
   const [rows] = await pool.query(
@@ -88,23 +93,16 @@ async function docentePuedeVerCaso({ id_docente, id_caso_estudio, id_carrera_per
     JOIN carrera_docente cd ON cd.id_carrera_docente = td.id_carrera_docente
     JOIN tribunal t ON t.id_tribunal = td.id_tribunal
     JOIN tribunal_estudiante te ON te.id_tribunal = t.id_tribunal
-
-    JOIN estudiante e ON e.id_estudiante = te.id_estudiante
-
-    JOIN estudiante_caso_asignacion eca
-      ON eca.id_estudiante = e.id_estudiante
-     AND eca.estado = 1
-
     WHERE cd.id_docente = ?
       AND cd.estado = 1
       AND td.estado = 1
+      AND t.estado = 1
       AND te.estado = 1
       AND t.id_carrera_periodo = ?
-      AND e.id_carrera_periodo = ?
-      AND eca.id_caso_estudio = ?
+      AND te.id_caso_estudio = ?
     LIMIT 1
     `,
-    [Number(id_docente), Number(id_carrera_periodo), Number(id_carrera_periodo), Number(id_caso_estudio)]
+    [Number(id_docente), Number(id_carrera_periodo), Number(id_caso_estudio)]
   );
 
   return !!rows.length;

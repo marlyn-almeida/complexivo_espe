@@ -1,6 +1,17 @@
-// src/pages/tribunales/TribunalViewModal.tsx
+// ✅ src/pages/tribunales/TribunalViewModal.tsx
 import { useEffect, useMemo, useState } from "react";
-import { X, Users, CalendarPlus, FileText, Download } from "lucide-react";
+import {
+  X,
+  Users,
+  CalendarDays,
+  Clock,
+  Lock,
+  Unlock,
+  Pencil,
+  FileText,
+  Download,
+  Eye,
+} from "lucide-react";
 
 import type { Tribunal } from "../../types/tribunal";
 import type { TribunalEstudiante } from "../../types/tribunalEstudiante";
@@ -9,6 +20,9 @@ import { tribunalesService } from "../../services/tribunales.service";
 import { tribunalEstudiantesService } from "../../services/tribunalEstudiantes.service";
 import { casosEstudioService } from "../../services/casosEstudio.service";
 import { entregasCasoService } from "../../services/entregasCaso.service";
+
+// ⚠️ Si tú ya tienes un servicio real de calificaciones/resumen, cámbialo aquí
+// import { calificacionesService } from "../../services/calificaciones.service";
 
 import "./TribunalViewModal.css";
 
@@ -24,7 +38,14 @@ type Props = {
   isActivo: (v: any) => boolean;
   showToast: (msg: string, type?: ToastType) => void;
 
+  // abre el modal de asignaciones (si quieres)
   onOpenAsignaciones: (t: Tribunal) => void;
+
+  // ✅ NUEVO: para editar desde el view (si quieres conectarlo)
+  onEdit?: (t: Tribunal) => void;
+
+  // ✅ opcional: si tu cierre/apertura NO es por asignación sino por tribunal
+  // si lo tienes, lo conectamos luego
 };
 
 function safeFileName(name: string) {
@@ -45,10 +66,119 @@ function downloadBlob(blob: Blob, filename: string) {
   window.URL.revokeObjectURL(url);
 }
 
-function fmtDateTime(dt?: string | null) {
-  if (!dt) return "—";
-  // backend puede mandar "YYYY-MM-DD HH:mm:ss" o ISO. Mostramos “bonito” sin romper.
-  return String(dt).replace("T", " ").slice(0, 19);
+function fmtDate(d?: string | null) {
+  if (!d) return "—";
+  // si viene YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}/.test(d)) return d.slice(0, 10);
+  return String(d).slice(0, 10);
+}
+function fmtTime(t?: string | null) {
+  if (!t) return "—";
+  return String(t).slice(0, 5);
+}
+
+type ResumenItem = {
+  id_item?: number;
+  nombre_item: string;
+  porcentaje_global: number; // 0-100
+  nota_item_20: number; // 0-20
+  puntaje_ponderado: number; // ej 8.50
+  tiene_detalle?: boolean;
+};
+
+type RubricaDetalleRow = {
+  componente: string;
+  evaluador: string;
+  rol: string;
+  criterio: string;
+  calificacion: string;
+  observaciones?: string | null;
+};
+
+function getFirstActiveAsign(asigs: TribunalEstudiante[]) {
+  const rows = asigs ?? [];
+  const active = rows.find((r: any) => Number(r?.estado ?? 1) === 1);
+  return (active ?? rows[0] ?? null) as any;
+}
+
+/** ✅ Modal interno para el “Ver Detalle” (tu captura azul) */
+function RubricaDetalleModal({
+  open,
+  onClose,
+  title,
+  subtitle,
+  rows,
+}: {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  subtitle?: string;
+  rows: RubricaDetalleRow[];
+}) {
+  if (!open) return null;
+
+  return (
+    <div className="modalOverlay" onMouseDown={onClose}>
+      <div className="modalCard rubricaDetailCard" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="rubricaDetailHeader">
+          <div className="rdhLeft">
+            <div className="rdhTitle">{title}</div>
+            {subtitle ? <div className="rdhSub">{subtitle}</div> : null}
+          </div>
+          <button className="btnClose" onClick={onClose} type="button" aria-label="Cerrar">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="rdhBody">
+          <div className="rdTableWrap">
+            <table className="rdTable">
+              <thead>
+                <tr>
+                  <th>Componente</th>
+                  <th>Evaluador</th>
+                  <th>Rol</th>
+                  <th>Criterio</th>
+                  <th>Calificación</th>
+                  <th>Observaciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.length ? (
+                  rows.map((r, idx) => (
+                    <tr key={idx}>
+                      <td className="rdStrong">{r.componente}</td>
+                      <td>{r.evaluador}</td>
+                      <td>
+                        <span className={`rdRole ${r.rol}`}>
+                          {r.rol}
+                        </span>
+                      </td>
+                      <td>{r.criterio}</td>
+                      <td className="rdBlue">{r.calificacion}</td>
+                      <td>{r.observaciones?.trim() ? r.observaciones : "-"}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={6} className="rdEmpty">
+                      No hay detalle para mostrar.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="rdFooter">
+            <button className="rdBtn" onClick={onClose} type="button">
+              Cerrar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function TribunalViewModal({
@@ -59,10 +189,22 @@ export default function TribunalViewModal({
   isActivo,
   showToast,
   onOpenAsignaciones,
+  onEdit,
 }: Props) {
   const [loading, setLoading] = useState(false);
+
   const [detail, setDetail] = useState<Tribunal | null>(null);
   const [asignaciones, setAsignaciones] = useState<TribunalEstudiante[]>([]);
+
+  // ✅ Resumen + detalle (si tienes servicios reales, los conectamos)
+  const [resumen, setResumen] = useState<ResumenItem[]>([]);
+  const [notaFinal, setNotaFinal] = useState<number | null>(null);
+
+  const [openDetalle, setOpenDetalle] = useState(false);
+  const [detalleTitle, setDetalleTitle] = useState("");
+  const [detalleSub, setDetalleSub] = useState("");
+  const [detalleRows, setDetalleRows] = useState<RubricaDetalleRow[]>([]);
+
   const [downloadingKey, setDownloadingKey] = useState<string | null>(null);
 
   const activeId = useMemo(() => Number((tribunal as any)?.id_tribunal) || 0, [tribunal]);
@@ -77,11 +219,19 @@ export default function TribunalViewModal({
       integrante1: byRole.get("INTEGRANTE_1") ?? null,
       integrante2: byRole.get("INTEGRANTE_2") ?? null,
       extra: rows.filter(
-        (x: any) =>
-          !["PRESIDENTE", "INTEGRANTE_1", "INTEGRANTE_2"].includes(String(x.designacion || ""))
+        (x: any) => !["PRESIDENTE", "INTEGRANTE_1", "INTEGRANTE_2"].includes(String(x.designacion || ""))
       ),
     };
   }, [detail]);
+
+  const asignBase = useMemo(() => getFirstActiveAsign(asignaciones), [asignaciones]);
+
+  const estadoDefensa = useMemo(() => {
+    // ✅ ABIERTO/CERRADO: si hay asignación tomamos su cerrado
+    if (!asignBase) return { label: "SIN ASIGNACIÓN", closed: null as boolean | null };
+    const closed = Number((asignBase as any).cerrado ?? 0) === 1;
+    return { label: closed ? "CERRADO" : "ABIERTO", closed };
+  }, [asignBase]);
 
   useEffect(() => {
     if (!open || !activeId) return;
@@ -90,28 +240,44 @@ export default function TribunalViewModal({
       try {
         setLoading(true);
 
-        // 1) detalle tribunal (para docentes)
+        // 1) detalle tribunal (docentes)
         let t: Tribunal | null = null;
         try {
           t = await tribunalesService.get(activeId);
         } catch {
-          // si el endpoint /tribunales/:id no existe o falla, usamos el objeto base
           t = tribunal ?? null;
         }
         setDetail(t);
 
-        // 2) asignaciones tribunal_estudiante (incluye caso, franja, cerrado… si backend lo manda)
+        // 2) asignaciones
         const a = await tribunalEstudiantesService.list({
           tribunalId: activeId,
           includeInactive: true,
           page: 1,
-          limit: 300,
+          limit: 400,
         });
         setAsignaciones(a ?? []);
+
+        // 3) resumen calificaciones (si no hay servicio, queda vacío)
+        //    ⚠️ Conecta tu endpoint real aquí
+        try {
+          // EJEMPLO (ajústalo a tu backend):
+          // const r = await calificacionesService.resumenTribunal(activeId);
+          // setResumen(r.items ?? []);
+          // setNotaFinal(typeof r.nota_final === "number" ? r.nota_final : null);
+
+          setResumen([]); // placeholder
+          setNotaFinal(null);
+        } catch {
+          setResumen([]);
+          setNotaFinal(null);
+        }
       } catch {
         showToast("No se pudo cargar el detalle del tribunal.", "error");
         setDetail(tribunal ?? null);
         setAsignaciones([]);
+        setResumen([]);
+        setNotaFinal(null);
       } finally {
         setLoading(false);
       }
@@ -122,6 +288,18 @@ export default function TribunalViewModal({
   if (!open || !tribunal) return null;
 
   const activo = isActivo((tribunal as any).estado);
+
+  const estudianteTxt =
+    asignBase?.apellidos_estudiante && asignBase?.nombres_estudiante
+      ? `${(asignBase as any).apellidos_estudiante} ${(asignBase as any).nombres_estudiante}`
+      : asignBase?.id_estudiante
+        ? `ID estudiante: ${(asignBase as any).id_estudiante}`
+        : "—";
+
+  const institTxt = (asignBase as any)?.id_institucional_estudiante ?? "—";
+  const fecha = fmtDate((asignBase as any)?.fecha);
+  const horaIni = fmtTime((asignBase as any)?.hora_inicio);
+  const horaFin = fmtTime((asignBase as any)?.hora_fin);
 
   async function onDownloadCasoBase(row: TribunalEstudiante) {
     const idCaso = Number((row as any).id_caso_estudio) || 0;
@@ -150,29 +328,15 @@ export default function TribunalViewModal({
     try {
       setDownloadingKey(key);
 
-      /**
-       * ✅ IMPORTANTE (tu aclaración):
-       * La entrega ES del estudiante y NO depende del caso.
-       * Entonces intentamos descargar por estudiante.
-       *
-       * Si tu service aún no tiene downloadByEstudiante, abajo hay fallback.
-       */
       const anySvc: any = entregasCasoService as any;
-
       let res: any = null;
 
       if (typeof anySvc.downloadByEstudiante === "function") {
-        // recomendado: GET /entregas-caso/estudiante/:id/download (por ejemplo)
         res = await anySvc.downloadByEstudiante(idEst);
       } else if (typeof anySvc.download === "function") {
-        // fallback: si tu service actual requiere 1 parámetro (id_entrega) o (id_estudiante, id_caso)
-        // 1) si el backend te devuelve id_entrega en el row, lo usamos
         const idEntrega = Number((row as any).id_entrega || (row as any).id_estudiante_caso_entrega) || 0;
-
-        if (idEntrega) {
-          res = await anySvc.download(idEntrega);
-        } else {
-          // 2) último fallback: si tu endpoint de download usa (id_estudiante, id_caso_estudio)
+        if (idEntrega) res = await anySvc.download(idEntrega);
+        else {
           const idCaso = Number((row as any).id_caso_estudio) || 0;
           if (idCaso) res = await anySvc.download(idEst, idCaso);
           else throw new Error("No hay datos para descargar entrega");
@@ -194,17 +358,28 @@ export default function TribunalViewModal({
     }
   }
 
+  function openDetalleRubrica(item: ResumenItem) {
+    // ⚠️ Aquí normalmente pedirías el detalle real al backend.
+    // Como aún no pegaste tu service de detalle, lo abrimos con dummy y luego lo conectamos.
+    setDetalleTitle(item.nombre_item);
+    setDetalleSub("Plantilla de Rúbrica: Rúbrica General de Examen Complexivo");
+    setDetalleRows([]);
+    setOpenDetalle(true);
+  }
+
+  const actaDisponible = Boolean((detail as any)?.acta_url || (detail as any)?.acta_pdf_url || (detail as any)?.id_acta);
+
   return (
     <div className="modalOverlay" onMouseDown={onClose}>
-      <div className="modalCard tribunalViewCard" onMouseDown={(e) => e.stopPropagation()}>
-        {/* HEADER */}
-        <div className="modalHeader tribunalViewHeader">
-          <div className="tvTitleWrap">
-            <h3 className="tvTitle">Ver Tribunal</h3>
-            <p className="tvSubtitle">
-              {tribunal.nombre_tribunal} <span className="tvDot">•</span>{" "}
-              {cpLabel || tribunal.nombre_carrera || "—"}
-            </p>
+      <div className="modalCard tribunalProfileCard" onMouseDown={(e) => e.stopPropagation()}>
+        {/* HEADER tipo captura */}
+        <div className="tpHeader">
+          <div className="tpHeaderLeft">
+            <div className="tpTitle">PERFIL DEL TRIBUNAL</div>
+            <div className="tpSub">
+              {estudianteTxt} {institTxt !== "—" ? `(${institTxt})` : ""} <span className="tpDot">•</span>{" "}
+              {cpLabel || (tribunal as any).nombre_carrera || "—"}
+            </div>
           </div>
 
           <button className="btnClose" onClick={onClose} type="button" aria-label="Cerrar">
@@ -213,214 +388,238 @@ export default function TribunalViewModal({
         </div>
 
         {/* BODY */}
-        <div className="tvBody">
-          {/* TOP INFO */}
-          <div className="tvTopGrid">
-            <div className="tvCard">
-              <div className="tvCardTitle">Información</div>
-
-              <div className="tvInfoRow">
-                <span className="tvLabel">Estado:</span>
-                <span className={`tvBadge ${activo ? "ok" : "off"}`}>
-                  {activo ? "ACTIVO" : "INACTIVO"}
-                </span>
-              </div>
-
-              <div className="tvInfoRow">
-                <span className="tvLabel">Descripción:</span>
-                <span className="tvValue">
-                  {(tribunal as any).descripcion_tribunal?.trim() ? (tribunal as any).descripcion_tribunal : "—"}
-                </span>
-              </div>
-
-              <div className="tvInfoRow">
-                <span className="tvLabel">ID:</span>
-                <span className="tvValue">#{tribunal.id_tribunal}</span>
-              </div>
-
-              <div className="tvActionsTop">
-                <button
-                  className="tvBtnPrimary"
-                  onClick={() => onOpenAsignaciones(tribunal)}
-                  type="button"
-                >
-                  <CalendarPlus size={18} /> Asignaciones
-                </button>
-              </div>
+        <div className="tpBody">
+          {/* Barra “Datos del Tribunal” + Estado + Acciones (como tu foto) */}
+          <div className="tpSectionHead">
+            <div className="tpSectionTitle">
+              <span className="tpInfoDot">i</span> Datos del Tribunal
+              <span
+                className={`tpEstadoBadge ${
+                  estadoDefensa.closed === null ? "neutral" : estadoDefensa.closed ? "closed" : "open"
+                }`}
+              >
+                {estadoDefensa.label}
+              </span>
             </div>
 
-            <div className="tvCard">
-              <div className="tvCardTitle">
-                <span className="tvCardIcon">
-                  <Users size={18} />
-                </span>
-                Docentes
-              </div>
+            <div className="tpHeadActions">
+              {/* abrir/cerrar tribunal: por ahora es visual (conecta endpoint luego) */}
+              <button
+                className="tpBtn tpBtnGhost"
+                type="button"
+                onClick={() => showToast("Aquí conectamos Abrir/Cerrar Tribunal (endpoint).", "info")}
+                disabled={!asignBase}
+                title={!asignBase ? "Solo disponible cuando ya existe asignación" : undefined}
+              >
+                {estadoDefensa.closed ? <Unlock size={16} /> : <Lock size={16} />}{" "}
+                {estadoDefensa.closed ? "Abrir Tribunal" : "Cerrar Tribunal"}
+              </button>
 
-              <div className="tvDocGrid">
-                <div className="tvDocRow">
-                  <span className="tvDocRole">Presidente</span>
-                  <span className="tvDocName">
-                    {docentesOrdenados.presidente
-                      ? `${docentesOrdenados.presidente.apellidos_docente ?? ""} ${docentesOrdenados.presidente.nombres_docente ?? ""}`.trim()
-                      : "—"}
-                  </span>
-                </div>
-
-                <div className="tvDocRow">
-                  <span className="tvDocRole">Integrante 1</span>
-                  <span className="tvDocName">
-                    {docentesOrdenados.integrante1
-                      ? `${docentesOrdenados.integrante1.apellidos_docente ?? ""} ${docentesOrdenados.integrante1.nombres_docente ?? ""}`.trim()
-                      : "—"}
-                  </span>
-                </div>
-
-                <div className="tvDocRow">
-                  <span className="tvDocRole">Integrante 2</span>
-                  <span className="tvDocName">
-                    {docentesOrdenados.integrante2
-                      ? `${docentesOrdenados.integrante2.apellidos_docente ?? ""} ${docentesOrdenados.integrante2.nombres_docente ?? ""}`.trim()
-                      : "—"}
-                  </span>
-                </div>
-              </div>
-
-              {(docentesOrdenados.extra?.length ?? 0) > 0 ? (
-                <div className="tvHint">
-                  * Hay docentes adicionales devueltos por el backend (no estándar).
-                </div>
-              ) : null}
+              <button
+                className="tpBtn tpBtnPrimary"
+                type="button"
+                onClick={() => (onEdit ? onEdit(tribunal) : showToast("Conecta onEdit desde el Page.", "info"))}
+              >
+                <Pencil size={16} /> Editar Datos
+              </button>
             </div>
           </div>
 
-          {/* ASIGNACIONES TABLE */}
-          <div className="tvCard tvCardTable">
-            <div className="tvCardTitle">Estudiantes asignados</div>
+          {/* Cards top: Estudiante / Fecha / Hora inicio / Hora fin */}
+          <div className="tpCardsGrid">
+            <div className="tpCard">
+              <div className="tpCardLabel">
+                <Users size={16} /> Estudiante
+              </div>
+              <div className="tpCardValue">{estudianteTxt}</div>
+              <div className="tpCardSub">{institTxt}</div>
+            </div>
+
+            <div className="tpCard">
+              <div className="tpCardLabel">
+                <CalendarDays size={16} /> Fecha
+              </div>
+              <div className="tpCardValue">{fecha}</div>
+            </div>
+
+            <div className="tpCard">
+              <div className="tpCardLabel">
+                <Clock size={16} /> Hora Inicio
+              </div>
+              <div className="tpCardValue">{horaIni}</div>
+            </div>
+
+            <div className="tpCard">
+              <div className="tpCardLabel">
+                <Clock size={16} /> Hora Fin
+              </div>
+              <div className="tpCardValue">{horaFin}</div>
+            </div>
+          </div>
+
+          {/* Miembros */}
+          <div className="tpBlock">
+            <div className="tpBlockTitle">
+              <Users size={18} /> Miembros del Tribunal:
+            </div>
+
+            <div className="tpMiembros">
+              <div className="tpMiembroRow">
+                <span className="tpRoleBadge pres">Presidente</span>
+                <span className="tpMiembroName">
+                  {docentesOrdenados.presidente
+                    ? `${docentesOrdenados.presidente.apellidos_docente ?? ""} ${docentesOrdenados.presidente.nombres_docente ?? ""}`.trim()
+                    : "—"}
+                </span>
+              </div>
+
+              <div className="tpMiembroRow">
+                <span className="tpRoleBadge int1">Integrante1</span>
+                <span className="tpMiembroName">
+                  {docentesOrdenados.integrante1
+                    ? `${docentesOrdenados.integrante1.apellidos_docente ?? ""} ${docentesOrdenados.integrante1.nombres_docente ?? ""}`.trim()
+                    : "—"}
+                </span>
+              </div>
+
+              <div className="tpMiembroRow">
+                <span className="tpRoleBadge int2">Integrante2</span>
+                <span className="tpMiembroName">
+                  {docentesOrdenados.integrante2
+                    ? `${docentesOrdenados.integrante2.apellidos_docente ?? ""} ${docentesOrdenados.integrante2.nombres_docente ?? ""}`.trim()
+                    : "—"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Resumen calificaciones + Nota final */}
+          <div className="tpBlock">
+            <div className="tpBlockTitle">Resumen de Calificaciones y Nota del Tribunal</div>
 
             {loading ? (
-              <div className="tvEmpty">Cargando...</div>
-            ) : asignaciones.length === 0 ? (
-              <div className="tvEmpty">No hay asignaciones aún.</div>
+              <div className="tpEmpty">Cargando...</div>
+            ) : resumen.length === 0 ? (
+              <div className="tpEmpty">Sin calificaciones registradas.</div>
             ) : (
-              <div className="tvTableWrap">
-                <table className="tvTable">
+              <div className="tpTableWrap">
+                <table className="tpTable">
                   <thead>
                     <tr>
-                      <th>Estudiante</th>
-                      <th>Franja</th>
-                      <th>Caso</th>
-                      <th>Estado</th>
-                      <th style={{ width: 190 }}>PDF</th>
+                      <th>Ítem de Evaluación</th>
+                      <th>% Ponderación Global</th>
+                      <th>Nota Ítem (sobre 20)</th>
+                      <th>Puntaje Ponderado</th>
+                      <th style={{ width: 150 }}>Detalles</th>
                     </tr>
                   </thead>
-
                   <tbody>
-                    {asignaciones.map((row: any) => {
-                      const idRow = Number(row.id_tribunal_estudiante);
-                      const keyCaso = `caso_${idRow}`;
-                      const keyEntrega = `entrega_${idRow}`;
-
-                      const estTxt =
-                        row.apellidos_estudiante && row.nombres_estudiante
-                          ? `${row.apellidos_estudiante} ${row.nombres_estudiante}`
-                          : `ID estudiante: ${row.id_estudiante}`;
-
-                      const frTxt =
-                        row.fecha && row.hora_inicio && row.hora_fin
-                          ? `${row.fecha} ${row.hora_inicio}–${row.hora_fin} • ${row.laboratorio ?? ""}`
-                          : `ID franja: ${row.id_franja_horario}`;
-
-                      const casoTxt = row.id_caso_estudio
-                        ? `Caso ${row.numero_caso ?? row.id_caso_estudio}${row.titulo_caso ? ` — ${row.titulo_caso}` : ""}`
-                        : "—";
-
-                      // ✅ ABIERTO/CERRADO (nuevo)
-                      const cerrado = Number(row.cerrado) === 1;
-                      const badgeTxt = cerrado ? "CERRADO" : "ABIERTO";
-
-                      return (
-                        <tr key={idRow}>
-                          <td>
-                            <div className="tvStrong">{estTxt}</div>
-                            <div className="tvSmall">{row.id_institucional_estudiante ?? "—"}</div>
-                          </td>
-
-                          <td>{frTxt}</td>
-
-                          <td>
-                            <div className="tvStrong">{casoTxt}</div>
-                            {!row.id_caso_estudio ? (
-                              <div className="tvSmall">Sin caso asociado</div>
-                            ) : null}
-                          </td>
-
-                          <td>
-                            <span className={`tvBadge ${cerrado ? "off" : "ok"}`}>{badgeTxt}</span>
-                            <div className="tvSmall">
-                              {cerrado ? (
-                                <>
-                                  {row.fecha_cierre ? `Cierre: ${fmtDateTime(row.fecha_cierre)}` : "Cierre: —"}
-                                  {row.apellidos_docente_cierra || row.nombres_docente_cierra ? (
-                                    <>
-                                      <br />
-                                      Por: {(row.apellidos_docente_cierra ?? "") + " " + (row.nombres_docente_cierra ?? "")}
-                                    </>
-                                  ) : null}
-                                </>
-                              ) : (
-                                "Pendiente de cierre"
-                              )}
-                            </div>
-                          </td>
-
-                          <td>
-                            <div className="tvPdfBtns">
-                              <button
-                                className="tvIconBtn"
-                                title="Descargar Caso base (PDF)"
-                                onClick={() => onDownloadCasoBase(row)}
-                                disabled={!row.id_caso_estudio || downloadingKey === keyCaso}
-                                type="button"
-                              >
-                                <FileText size={18} />
-                              </button>
-
-                              <button
-                                className="tvIconBtn"
-                                title="Descargar Entrega del estudiante (PDF)"
-                                onClick={() => onDownloadEntrega(row)}
-                                disabled={downloadingKey === keyEntrega}
-                                type="button"
-                              >
-                                <Download size={18} />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
+                    {resumen.map((it, idx) => (
+                      <tr key={idx}>
+                        <td className="tpStrong">{it.nombre_item}</td>
+                        <td>{it.porcentaje_global.toFixed(2)}%</td>
+                        <td className="tpBlue">{it.nota_item_20.toFixed(2)}</td>
+                        <td className="tpGreen">{it.puntaje_ponderado.toFixed(2)}</td>
+                        <td>
+                          <button
+                            className="tpBtnSmall"
+                            type="button"
+                            onClick={() => openDetalleRubrica(it)}
+                            disabled={!it.tiene_detalle}
+                            title={!it.tiene_detalle ? "No hay detalle disponible" : undefined}
+                          >
+                            <Eye size={16} /> Ver Detalle
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
 
-                <div className="tvFootHint">
-                  Los PDF del caso requieren <b>id_caso_estudio</b> en la asignación. El PDF de entrega se descarga por estudiante.
+                <div className="tpNotaFinal">
+                  🏆 <span>NOTA FINAL DEL TRIBUNAL (sobre 20):</span>{" "}
+                  <b>{typeof notaFinal === "number" ? notaFinal.toFixed(2) : "—"}</b>
                 </div>
               </div>
             )}
           </div>
-        </div>
 
-        {/* FOOTER */}
-        <div className="modalFooter">
-          <button className="tvBtnGhost" onClick={onClose} type="button">
-            Cerrar
-          </button>
-          <button className="tvBtnPrimary" onClick={() => onOpenAsignaciones(tribunal)} type="button">
-            <CalendarPlus size={18} /> Ir a Asignaciones
-          </button>
+          {/* Historial (placeholder) */}
+          <div className="tpBlock">
+            <div className="tpBlockTitle">Historial de Cambios</div>
+            <div className="tpEmpty">
+              (Aquí conectamos tu historial real. Si ya tienes endpoint/tabla, lo integramos.)
+            </div>
+          </div>
+
+          {/* Acta */}
+          <div className="tpBlock">
+            <div className="tpBlockTitle">Acta del Tribunal</div>
+
+            {!actaDisponible ? (
+              <div className="tpActaEmpty">
+                <div className="tpActaTitle">Acta no disponible</div>
+                <div className="tpActaMsg">
+                  El acta oficial del tribunal estará disponible para exportación una vez que el tribunal sea cerrado oficialmente.
+                </div>
+                <div className="tpActaState">
+                  Estado actual: <b>{estadoDefensa.closed === true ? "CERRADO" : "ABIERTO"}</b>
+                </div>
+              </div>
+            ) : (
+              <button
+                className="tpBtn tpBtnPrimary"
+                type="button"
+                onClick={() => showToast("Conecta descarga del acta (endpoint/url).", "info")}
+              >
+                <FileText size={16} /> Exportar Acta (PDF)
+              </button>
+            )}
+          </div>
+
+          {/* Bloque pequeño: PDF caso/entrega (si quieres mantenerlo) */}
+          <div className="tpBlock">
+            <div className="tpBlockTitle">Documentos</div>
+
+            {!asignBase ? (
+              <div className="tpEmpty">No hay asignación para descargar documentos.</div>
+            ) : (
+              <div className="tpDocBtns">
+                <button
+                  className="tpBtn tpBtnGhost"
+                  type="button"
+                  onClick={() => onDownloadCasoBase(asignBase)}
+                  disabled={!Number((asignBase as any).id_caso_estudio) || downloadingKey === `caso_${(asignBase as any).id_tribunal_estudiante}`}
+                >
+                  <FileText size={16} /> Caso Base
+                </button>
+
+                <button
+                  className="tpBtn tpBtnGhost"
+                  type="button"
+                  onClick={() => onDownloadEntrega(asignBase)}
+                  disabled={downloadingKey === `entrega_${(asignBase as any).id_tribunal_estudiante}`}
+                >
+                  <Download size={16} /> Entrega Estudiante
+                </button>
+
+                <button className="tpBtn tpBtnGhost" type="button" onClick={() => onOpenAsignaciones(tribunal)}>
+                  <CalendarDays size={16} /> Ver/Editar Asignación
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* Modal detalle (captura azul) */}
+      <RubricaDetalleModal
+        open={openDetalle}
+        onClose={() => setOpenDetalle(false)}
+        title={detalleTitle || "Detalle"}
+        subtitle={detalleSub}
+        rows={detalleRows}
+      />
     </div>
   );
 }

@@ -314,6 +314,70 @@ async function findMisAsignaciones({ id_docente, includeInactive = false } = {})
   return rows;
 }
 
+// ✅ NUEVO: trae CASO + ENTREGA + mi_designacion para panel de notas
+async function getContextoCalificar({ id_tribunal_estudiante, id_docente, cpCtx }) {
+  const [rows] = await pool.query(
+    `
+    SELECT
+      te.id_tribunal_estudiante,
+      te.id_tribunal,
+      te.id_estudiante,
+      te.id_franja_horario,
+      te.id_caso_estudio,
+      te.estado,
+      te.cerrado,
+
+      t.id_carrera_periodo,
+      t.nombre_tribunal,
+
+      e.nombres_estudiante,
+      e.apellidos_estudiante,
+      e.id_institucional_estudiante,
+
+      f.fecha,
+      f.hora_inicio,
+      f.hora_fin,
+      f.laboratorio,
+
+      td.designacion AS mi_designacion,
+
+      ce.numero_caso,
+      ce.titulo AS titulo_caso,
+      ce.archivo_nombre AS caso_archivo_nombre,
+      ce.archivo_path   AS caso_archivo_path,
+
+      ece.archivo_nombre AS entrega_archivo_nombre,
+      ece.archivo_path   AS entrega_archivo_path,
+      ece.fecha_entrega,
+      ece.observacion
+
+    FROM tribunal_estudiante te
+    JOIN tribunal t ON t.id_tribunal = te.id_tribunal
+    JOIN estudiante e ON e.id_estudiante = te.id_estudiante
+    JOIN franja_horario f ON f.id_franja_horario = te.id_franja_horario
+
+    JOIN tribunal_docente td ON td.id_tribunal = te.id_tribunal AND td.estado = 1
+    JOIN carrera_docente cd ON cd.id_carrera_docente = td.id_carrera_docente AND cd.estado = 1
+
+    LEFT JOIN caso_estudio ce ON ce.id_caso_estudio = te.id_caso_estudio
+
+    LEFT JOIN estudiante_caso_entrega ece
+      ON ece.id_estudiante = te.id_estudiante
+     AND ece.id_caso_estudio = te.id_caso_estudio
+     AND ece.estado = 1
+
+    WHERE te.id_tribunal_estudiante = ?
+      AND cd.id_docente = ?
+      AND te.estado = 1
+      AND ( ? = 0 OR t.id_carrera_periodo = ? )
+    LIMIT 1
+    `,
+    [Number(id_tribunal_estudiante), Number(id_docente), Number(cpCtx || 0), Number(cpCtx || 0)]
+  );
+
+  return rows[0] || null;
+}
+
 module.exports = {
   getTribunal,
   getTribunalEstudiante,
@@ -335,4 +399,8 @@ module.exports = {
   setEstado,
   setCerrado,
   findMisAsignaciones,
+
+  // ✅ NUEVO
+  getContextoCalificar,
 };
+

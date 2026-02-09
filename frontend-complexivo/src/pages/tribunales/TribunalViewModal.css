@@ -1,109 +1,324 @@
-/* src/pages/tribunales/TribunalViewModal.css */
+/* ✅ src/pages/tribunales/TribunalViewModal.css */
 
-.tribunalViewCard{
-  padding: 14px;
-}
-
-.tvHeaderLeft{
+/* Base modal */
+.modalOverlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.35);
   display:flex;
-  flex-direction:column;
-  gap: 2px;
+  align-items:center;
+  justify-content:center;
+  padding: 18px;
+  z-index: 60;
+}
+.modalCard{
+  width: min(1100px, 100%);
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 18px 60px rgba(0,0,0,.25);
+  overflow: hidden;
+}
+.btnClose{
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.35);
+  background: rgba(255,255,255,.12);
+  color: #fff;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
 }
 
-.tvSubtitle{
-  margin: 4px 0 0;
-  color: var(--text-muted);
+/* ===== PERFIL ===== */
+.tribunalProfileCard{ border-radius: 14px; }
+.tpHeader{
+  background: linear-gradient(90deg, #0b6034 0%, #147a4a 100%);
+  padding: 14px 16px;
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap: 12px;
+  color:#fff;
+}
+.tpTitle{
+  font-weight: 1000;
+  font-size: 1.15rem;
+  letter-spacing: .4px;
+}
+.tpSub{
+  margin-top: 4px;
+  opacity: .95;
   font-weight: 800;
-  font-size: 0.85rem;
+  font-size: .9rem;
 }
+.tpDot{ margin: 0 6px; opacity: .9; }
+.tpBody{
+  padding: 14px 16px 18px;
+  background: #f6f8fb;
+}
+.tpSectionHead{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.tpSectionTitle{
+  font-weight: 1000;
+  display:flex;
+  align-items:center;
+  gap: 10px;
+}
+.tpInfoDot{
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(20,122,74,.15);
+  color: #147a4a;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight: 1000;
+  font-size: .85rem;
+}
+.tpEstadoBadge{
+  margin-left: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-weight: 1000;
+  font-size: .78rem;
+  border: 1px solid rgba(0,0,0,.08);
+  background: #fff;
+}
+.tpEstadoBadge.open{ color:#0b6034; }
+.tpEstadoBadge.closed{ color:#b42318; }
+.tpEstadoBadge.neutral{ color:#6b7280; }
 
-.tvHeaderRight{
+.tpHeadActions{
   display:flex;
   align-items:center;
   gap: 10px;
   flex-wrap: wrap;
 }
-
-.tvBody{
-  margin-top: 10px;
+.tpBtn{
+  border-radius: 10px;
+  padding: 8px 12px;
+  border: 1px solid rgba(0,0,0,.1);
+  background:#fff;
+  cursor:pointer;
+  font-weight: 900;
+  display:inline-flex;
+  align-items:center;
+  gap: 8px;
+}
+.tpBtnPrimary{
+  background: #147a4a;
+  color:#fff;
+  border-color: #147a4a;
+}
+.tpBtnGhost{
+  background: #fff;
+  color:#111827;
 }
 
-.tvGrid{
+.tpCardsGrid{
   display:grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
+  margin-bottom: 12px;
 }
-
-.tvItem{
-  border: 1px solid var(--border-soft);
-  border-radius: 14px;
-  padding: 12px;
-  background: white;
+.tpCard{
+  background:#eef7f1;
+  border: 1px solid rgba(20,122,74,.18);
+  border-left: 4px solid #147a4a;
+  border-radius: 12px;
+  padding: 10px 12px;
 }
-
-.tvItemFull{
-  grid-column: 1 / -1;
-}
-
-.tvKey{
-  font-size: 0.78rem;
-  font-weight: 900;
-  color: var(--text-muted);
-}
-
-.tvVal{
-  margin-top: 6px;
-  font-weight: 900;
-  color: var(--text-main);
-  word-break: break-word;
-}
-
-.tvAsignHeader{
+.tpCardLabel{
   display:flex;
-  align-items:flex-end;
-  justify-content:space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-bottom: 10px;
+  align-items:center;
+  gap: 8px;
+  font-weight: 1000;
+  font-size: .82rem;
+  opacity: .9;
 }
-
-.tvSectionTitle{
-  margin: 0;
-  font-weight: 900;
-  font-size: 1rem;
+.tpCardValue{
+  margin-top: 6px;
+  font-weight: 1000;
+  color:#0b6034;
 }
-
-.tvSectionSub{
-  margin: 4px 0 0;
-  color: var(--text-muted);
+.tpCardSub{
+  margin-top: 2px;
+  font-size: .82rem;
   font-weight: 800;
-  font-size: 0.85rem;
+  color:#6b7280;
 }
 
-.tvToggle{
-  transform: translateY(2px);
-}
-
-.tvTableWrap{
-  border: 1px solid var(--border-soft);
-  border-radius: 14px;
-  overflow: hidden;
-}
-
-.tvTable thead th{
-  background: var(--bg-soft);
-}
-
-.tvHint{
+.tpBlock{
+  background:#fff;
+  border: 1px solid rgba(0,0,0,.08);
+  border-radius: 12px;
+  padding: 12px;
   margin-top: 12px;
 }
-
-@media (max-width: 720px){
-  .tvGrid{ grid-template-columns: 1fr; }
-}
-/* botones PDF dentro de la tabla */
-.tvPdfBtns{
-  display: inline-flex;
+.tpBlockTitle{
+  font-weight: 1000;
+  margin-bottom: 10px;
+  color:#0b6034;
+  display:flex;
+  align-items:center;
   gap: 8px;
-  align-items: center;
+}
+.tpEmpty{
+  color:#6b7280;
+  font-weight: 800;
+  padding: 8px 4px;
+}
+.tpMiembros{
+  border: 1px solid rgba(0,0,0,.08);
+  border-radius: 12px;
+  padding: 10px;
+}
+.tpMiembroRow{
+  display:flex;
+  align-items:center;
+  gap: 12px;
+  padding: 6px 0;
+}
+.tpRoleBadge{
+  border-radius: 8px;
+  padding: 6px 10px;
+  color:#fff;
+  font-weight: 1000;
+  font-size: .78rem;
+}
+.tpRoleBadge.pres{ background:#147a4a; }
+.tpRoleBadge.int1{ background:#0b6034; }
+.tpRoleBadge.int2{ background:#0b6034; opacity:.9; }
+.tpMiembroName{ font-weight: 900; color:#111827; }
+
+.tpTableWrap{
+  border: 1px solid rgba(0,0,0,.08);
+  border-radius: 12px;
+  overflow:hidden;
+}
+.tpTable{
+  width:100%;
+  border-collapse: collapse;
+}
+.tpTable thead th{
+  text-align:left;
+  padding: 10px 12px;
+  background:#f3f4f6;
+  font-weight: 1000;
+}
+.tpTable tbody td{
+  padding: 10px 12px;
+  border-top: 1px solid rgba(0,0,0,.06);
+}
+.tpStrong{ font-weight: 1000; }
+.tpBlue{ color:#2563eb; font-weight: 1000; }
+.tpGreen{ color:#0b6034; font-weight: 1000; }
+.tpBtnSmall{
+  border-radius: 10px;
+  padding: 7px 10px;
+  border: 1px solid rgba(0,0,0,.1);
+  background:#147a4a;
+  color:#fff;
+  cursor:pointer;
+  font-weight: 900;
+  display:inline-flex;
+  align-items:center;
+  gap: 8px;
+}
+.tpBtnSmall:disabled{
+  opacity:.5;
+  cursor:not-allowed;
+}
+.tpNotaFinal{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap: 10px;
+  padding: 12px 10px;
+  border-top: 2px solid rgba(20,122,74,.25);
+  font-weight: 1000;
+  color:#0b6034;
+}
+.tpActaEmpty{
+  border: 1px dashed rgba(0,0,0,.2);
+  border-radius: 12px;
+  padding: 12px;
+  background:#fafafa;
+}
+.tpActaTitle{ font-weight: 1000; margin-bottom: 6px; }
+.tpActaMsg{ color:#6b7280; font-weight: 800; }
+.tpActaState{ margin-top: 8px; font-weight: 900; }
+
+.tpDocBtns{
+  display:flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* ===== Modal azul detalle rúbrica ===== */
+.rubricaDetailCard{ width: min(1200px, 100%); }
+.rubricaDetailHeader{
+  background: #2b6cb0;
+  color:#fff;
+  padding: 12px 14px;
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap: 10px;
+}
+.rdhTitle{ font-weight: 1000; }
+.rdhSub{ opacity:.9; font-weight: 800; font-size:.85rem; margin-top: 3px; }
+.rdhBody{ padding: 12px; background:#f6f8fb; }
+.rdTableWrap{
+  border: 1px solid rgba(0,0,0,.08);
+  border-radius: 12px;
+  overflow: hidden;
+  background:#fff;
+}
+.rdTable{
+  width:100%;
+  border-collapse: collapse;
+}
+.rdTable thead th{
+  background:#147a4a;
+  color:#fff;
+  padding: 10px 12px;
+  text-align:left;
+  font-weight: 1000;
+}
+.rdTable tbody td{
+  padding: 10px 12px;
+  border-top: 1px solid rgba(0,0,0,.06);
+}
+.rdStrong{ font-weight: 1000; }
+.rdBlue{ color:#2563eb; font-weight: 1000; }
+.rdEmpty{ padding: 14px; color:#6b7280; font-weight: 800; }
+.rdFooter{
+  margin-top: 12px;
+  display:flex;
+  justify-content:flex-end;
+}
+.rdBtn{
+  border-radius: 10px;
+  padding: 8px 12px;
+  border: 1px solid rgba(0,0,0,.1);
+  background:#6b7280;
+  color:#fff;
+  font-weight: 1000;
+  cursor:pointer;
+}
+
+@media (max-width: 920px){
+  .tpCardsGrid{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px){
+  .tpCardsGrid{ grid-template-columns: 1fr; }
 }

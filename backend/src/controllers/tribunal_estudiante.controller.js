@@ -43,4 +43,14 @@ module.exports = {
       next(e);
     }
   },
+
+  // ✅ ROL 3: contexto para panel de notas
+  contextoCalificar: async (req, res, next) => {
+    try {
+      const cp = Number(req.ctx?.id_carrera_periodo || 0);
+      res.json(await s.contextoCalificar(Number(req.params.id), cp, req.user));
+    } catch (e) {
+      next(e);
+    }
+  },
 };
