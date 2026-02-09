@@ -115,6 +115,9 @@ protectedApi.use("/calificadores-generales", require("./routes/calificadores_gen
 protectedApi.use("/nota-teorico", require("./routes/nota_teorico.routes"));
 protectedApi.use("/ponderaciones-examen", require("./routes/ponderacion.routes"));
 
+// ✅ ✅ ✅ MIS CALIFICACIONES (ROL 2)
+protectedApi.use("/mis-calificaciones", require("./routes/mis_calificaciones.routes"));
+
 // =========================
 // RÚBRICAS (1 rubrica por período)
 // =========================
