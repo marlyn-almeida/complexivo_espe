@@ -2,11 +2,11 @@
 const pool = require("../config/db");
 
 /**
- * ✅ ADMIN: tu función (MISMA IDEA)
- * Solo agregamos campos que el FRONT necesita:
- * - te.id_tribunal_estudiante  (para habilitar SUBIR)
- * - franja_horaria (fecha/hora) para que no salga "—"
- * - estado/cerrado (opcional)
+ * ✅ ADMIN: lista por Carrera-Periodo (CP)
+ * Campos para el front:
+ * - te.id_tribunal_estudiante (habilita subir)
+ * - fh.fecha/hora_inicio/hora_fin
+ * - nombre_carrera / codigo_periodo (para filtros/tabla si los usas)
  */
 async function listByCP(id_carrera_periodo) {
   const [rows] = await pool.query(
@@ -16,17 +16,20 @@ async function listByCP(id_carrera_periodo) {
       t.nombre_tribunal,
       t.estado AS estado_tribunal,
 
-      te.id_tribunal_estudiante,       -- ✅ CLAVE
+      te.id_tribunal_estudiante,        -- ✅ CLAVE
       te.id_estudiante,
       COALESCE(te.cerrado, 0) AS cerrado,
 
-      fh.fecha AS fecha_tribunal,      -- ✅ para tu tabla (si existe franja)
+      fh.fecha AS fecha_tribunal,       -- ✅ (TU TABLA: franja_horario)
       fh.hora_inicio,
       fh.hora_fin,
 
       e.nombres_estudiante,
       e.apellidos_estudiante,
       e.id_institucional_estudiante,
+
+      c.nombre_carrera,
+      pa.codigo_periodo,
 
       eca.id_caso_estudio,
 
@@ -42,14 +45,25 @@ async function listByCP(id_carrera_periodo) {
       ON te.id_tribunal = t.id_tribunal
      AND te.estado = 1
 
-    LEFT JOIN franja_horaria fh
-      ON fh.id_franja_horaria = te.id_franja_horaria
+    -- ✅ FIX: tu BD es franja_horario y PK id_franja_horario
+    LEFT JOIN franja_horario fh
+      ON fh.id_franja_horario = te.id_franja_horario
      AND fh.estado = 1
 
     JOIN estudiante e
       ON e.id_estudiante = te.id_estudiante
      AND e.id_carrera_periodo = ?
      AND e.estado = 1
+
+    -- ✅ Para traer carrera/periodo (TU MODELO: todo cuelga de carrera_periodo)
+    JOIN carrera_periodo cp
+      ON cp.id_carrera_periodo = t.id_carrera_periodo
+
+    JOIN carrera c
+      ON c.id_carrera = cp.id_carrera
+
+    JOIN periodo_academico pa
+      ON pa.id_periodo = cp.id_periodo
 
     LEFT JOIN estudiante_caso_asignacion eca
       ON eca.id_estudiante = e.id_estudiante
@@ -76,9 +90,14 @@ async function listByCP(id_carrera_periodo) {
 
 /**
  * ✅ DOCENTE: valida que el docente pertenece al tribunal del tribunal_estudiante
- * Devuelve cabecera básica (estudiante/carrera/mi_rol/cerrado)
+ * OJO: aquí usamos tu BD real:
+ * - tribunal -> id_carrera_periodo
+ * - tribunal_docente -> designacion
+ * - docente NO tiene id_usuario, así que validamos por id_docente (viene del token)
+ *
+ * IMPORTANTE: idUsuario aquí debe ser id_docente (del JWT).
  */
-async function getDocenteMembership(cp, idTribunalEstudiante, idUsuario) {
+async function getDocenteMembership(cp, idTribunalEstudiante, idDocente) {
   const [rows] = await pool.query(
     `
     SELECT
@@ -91,7 +110,7 @@ async function getDocenteMembership(cp, idTribunalEstudiante, idUsuario) {
 
       c.nombre_carrera AS carrera,
 
-      td.rol_docente AS mi_rol
+      td.designacion AS mi_rol
     FROM tribunal_estudiante te
     JOIN tribunal t
       ON t.id_tribunal = te.id_tribunal
@@ -102,22 +121,27 @@ async function getDocenteMembership(cp, idTribunalEstudiante, idUsuario) {
       ON e.id_estudiante = te.id_estudiante
      AND e.estado = 1
 
-    LEFT JOIN carrera c
-      ON c.id_carrera = t.id_carrera
+    JOIN carrera_periodo cp2
+      ON cp2.id_carrera_periodo = t.id_carrera_periodo
+
+    JOIN carrera c
+      ON c.id_carrera = cp2.id_carrera
 
     JOIN tribunal_docente td
       ON td.id_tribunal = t.id_tribunal
      AND td.estado = 1
 
-    JOIN docente d
-      ON d.id_docente = td.id_docente
-     AND d.id_usuario = ?
+    -- ✅ Como td.id_docente puede ser NULL, validamos por carrera_docente
+    JOIN carrera_docente cd
+      ON cd.id_carrera_docente = td.id_carrera_docente
+     AND cd.id_docente = ?
+     AND cd.estado = 1
 
     WHERE te.id_tribunal_estudiante = ?
       AND te.estado = 1
     LIMIT 1
     `,
-    [cp, idUsuario, idTribunalEstudiante]
+    [cp, idDocente, idTribunalEstudiante]
   );
 
   return rows[0] || null;
@@ -127,8 +151,8 @@ async function getDocenteMembership(cp, idTribunalEstudiante, idUsuario) {
  * ✅ DOCENTE: GET /mis-calificaciones/:idTribunalEstudiante
  * (stub por ahora)
  */
-async function getForDocente(cp, idTribunalEstudiante, idUsuario) {
-  const head = await getDocenteMembership(cp, idTribunalEstudiante, idUsuario);
+async function getForDocente(cp, idTribunalEstudiante, idDocente) {
+  const head = await getDocenteMembership(cp, idTribunalEstudiante, idDocente);
   if (!head) {
     const err = new Error("Acceso denegado");
     err.status = 403;
@@ -156,8 +180,8 @@ async function getForDocente(cp, idTribunalEstudiante, idUsuario) {
  * ✅ DOCENTE: POST /mis-calificaciones/:idTribunalEstudiante
  * (stub por ahora)
  */
-async function saveForDocente(cp, idTribunalEstudiante, idUsuario, payload) {
-  const head = await getDocenteMembership(cp, idTribunalEstudiante, idUsuario);
+async function saveForDocente(cp, idTribunalEstudiante, idDocente, payload) {
+  const head = await getDocenteMembership(cp, idTribunalEstudiante, idDocente);
   if (!head) {
     const err = new Error("Acceso denegado");
     err.status = 403;
