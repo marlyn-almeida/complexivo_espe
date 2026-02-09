@@ -1,0 +1,155 @@
+.calificarTribunalPage {
+  padding: 16px;
+}
+
+.calificarHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.calificarHeader .left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.calificarHeader .logo {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+}
+
+.calificarHeader h1 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.calificarHeader p {
+  margin: 2px 0 0;
+  color: #4b5563;
+  font-size: 13px;
+}
+
+.calificarHeader .right {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 18px rgba(0,0,0,.06);
+  overflow: hidden;
+}
+
+.itemBlock {
+  padding: 14px;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.itemTitle h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.itemTitle p {
+  margin: 4px 0 0;
+  color: #6b7280;
+  font-size: 12.5px;
+}
+
+.compBlock {
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid #eef2f7;
+  border-radius: 10px;
+  background: #fafafa;
+}
+
+.compHeader {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+
+.muted {
+  color: #6b7280;
+  font-size: 12.5px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.table th,
+.table td {
+  border-bottom: 1px solid #eef2f7;
+  padding: 10px;
+  vertical-align: top;
+}
+
+.table th {
+  background: #0f5132;
+  color: #fff;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.table select,
+.table input {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 8px 10px;
+  outline: none;
+}
+
+.btn {
+  border: none;
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btnPrimary {
+  background: #0f5132;
+  color: #fff;
+}
+
+.btnGhost {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.toast {
+  margin: 10px 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.toast.success { background: #dcfce7; }
+.toast.error { background: #fee2e2; }
+.toast.info { background: #e0f2fe; }
+
+.toastClose {
+  border: none;
+  background: transparent;
+  font-size: 18px;
+  cursor: pointer;
+}

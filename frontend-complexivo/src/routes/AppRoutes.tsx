@@ -35,8 +35,11 @@ import { dashboardByRole, getActiveRole, getToken } from "../utils/auth";
 // ROL 2
 import CasosEstudioPage from "../pages/casosEstudio/CasosEstudioPage";
 
-// ✅ TU PAGE NUEVA (aunque el menú diga “Calificaciones”)
+// ✅ ADMIN (2) — si lo estabas usando como “vista admin” lo mantengo
 import MisCalificacionesPage from "../pages/misCalificaciones/MisCalificacionesPage";
+
+// ✅ DOCENTE (3): pantalla real para calificar 1 tribunal_estudiante
+import CalificarTribunalPage from "../pages/misCalificaciones/CalificarTribunalPage";
 
 function HomeRedirect() {
   const token = getToken();
@@ -190,7 +193,6 @@ export default function AppRoutes() {
               </ProtectedRoute>
             }
           />
-
           <Route
             path="/casos-estudio"
             element={
@@ -199,7 +201,6 @@ export default function AppRoutes() {
               </ProtectedRoute>
             }
           />
-
           <Route
             path="/franjas"
             element={
@@ -208,7 +209,6 @@ export default function AppRoutes() {
               </ProtectedRoute>
             }
           />
-
           <Route
             path="/tribunales"
             element={
@@ -218,7 +218,7 @@ export default function AppRoutes() {
             }
           />
 
-          {/* ✅ CALIFICACIONES (ROL 2) */}
+          {/* ✅ CALIFICACIONES ADMIN (2) (si lo estabas usando) */}
           <Route
             path="/calificaciones"
             element={
@@ -228,7 +228,28 @@ export default function AppRoutes() {
             }
           />
 
-          {/* DOCENTE (3) */}
+          {/* ✅ DOCENTE (3) — LISTADO (AGENDA) */}
+          {/* ESTA es la ruta que debe usar tu menú “Calificación” */}
+          <Route
+            path="/docente/calificaciones"
+            element={
+              <ProtectedRoute allowRoles={[3]}>
+                <MisTribunalesPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* ✅ DOCENTE (3) — CALIFICAR 1 TRIBUNAL_ESTUDIANTE */}
+          <Route
+            path="/docente/calificaciones/:idTribunalEstudiante"
+            element={
+              <ProtectedRoute allowRoles={[3]}>
+                <CalificarTribunalPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* ✅ COMPATIBILIDAD: si tu menú aún apunta aquí */}
           <Route
             path="/mis-tribunales"
             element={
@@ -237,11 +258,22 @@ export default function AppRoutes() {
               </ProtectedRoute>
             }
           />
+
+          {/* ACTAS */}
+          <Route
+            path="/admin/actas"
+            element={
+              <ProtectedRoute allowRoles={[2]}>
+                <Placeholder title="Actas (ADMIN) — pendiente de pantalla" />
+              </ProtectedRoute>
+            }
+          />
+
           <Route
             path="/actas"
             element={
               <ProtectedRoute allowRoles={[3]}>
-                <Placeholder title="Actas (pendiente)" />
+                <Placeholder title="Actas (DOCENTE) — pendiente" />
               </ProtectedRoute>
             }
           />
