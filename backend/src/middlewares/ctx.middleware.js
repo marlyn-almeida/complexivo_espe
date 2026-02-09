@@ -1,6 +1,15 @@
 // src/middlewares/ctx.middleware.js
 const pool = require("../config/db");
 
+/** ✅ convertir id_usuario (JWT) -> id_docente */
+async function getDocenteIdByUserId(id_usuario) {
+  const [rows] = await pool.query(
+    `SELECT id_docente FROM docente WHERE id_usuario = ? LIMIT 1`,
+    [id_usuario]
+  );
+  return rows[0]?.id_docente ?? null;
+}
+
 async function getMisCarreraPeriodosPorDocente(id_docente) {
   const [rows] = await pool.query(
     `SELECT cp.id_carrera_periodo, cp.id_carrera, cp.id_periodo, cp.estado,
@@ -67,7 +76,15 @@ async function attachCarreraPeriodoCtx(req, res, next) {
       return next();
     }
 
-    const id_docente = Number(req.user.id);
+    // ✅ req.user.id es id_usuario (del JWT). Convertimos a id_docente real.
+    const id_usuario = Number(req.user?.id || 0);
+    const id_docente = await getDocenteIdByUserId(id_usuario);
+
+    if (!id_docente) {
+      return res.status(403).json({
+        message: "Docente no encontrado para el usuario autenticado",
+      });
+    }
 
     // ✅ 1) PRIORIDAD: header CP (lo manda tu axiosClient si existe en localStorage)
     const headerCp = req.headers["x-carrera-periodo-id"];
@@ -76,7 +93,9 @@ async function attachCarreraPeriodoCtx(req, res, next) {
     if (requestedCpId && Number.isFinite(requestedCpId) && requestedCpId > 0) {
       const ok = await validateCpForRol2ByCpId(id_docente, requestedCpId);
       if (!ok) {
-        return res.status(403).json({ message: "Carrera-Período no autorizado para tu perfil" });
+        return res
+          .status(403)
+          .json({ message: "Carrera-Período no autorizado para tu perfil" });
       }
       req.ctx = { id_carrera_periodo: requestedCpId };
       return next();
@@ -85,7 +104,9 @@ async function attachCarreraPeriodoCtx(req, res, next) {
     // ✅ 2) Fallback: usar scope si existe (por si no envían header)
     const scope = req.user?.scope;
     if (!scope?.id_carrera_periodo) {
-      return res.status(403).json({ message: "Scope de carrera-período no disponible" });
+      return res
+        .status(403)
+        .json({ message: "Scope de carrera-período no disponible" });
     }
 
     req.ctx = { id_carrera_periodo: Number(scope.id_carrera_periodo) };
@@ -99,4 +120,6 @@ module.exports = {
   attachCarreraPeriodoCtx,
   getMisCarreraPeriodosPorDocente,
   validateCpForRol2,
+  validateCpForRol2ByCpId, // opcional, por si lo quieres usar fuera
+  getDocenteIdByUserId,    // opcional, útil para depurar
 };
