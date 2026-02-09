@@ -7,7 +7,7 @@ async function getDocenteIdByUserId(id_usuario) {
     `SELECT id_docente FROM docente WHERE id_usuario = ? LIMIT 1`,
     [id_usuario]
   );
-  return rows[0]?.id_docente ?? null;
+  return rows[0]?.id_docente ? Number(rows[0].id_docente) : null;
 }
 
 async function getMisCarreraPeriodosPorDocente(id_docente) {
@@ -61,27 +61,17 @@ async function validateCpForRol2(id_docente, id_carrera, id_carrera_periodo) {
   return ok.length > 0;
 }
 
-/** ✅ NUEVO: resolver id_docente usando id_usuario del token */
-async function getDocenteIdByUsuarioId(id_usuario) {
-  const [rows] = await pool.query(
-    `SELECT id_docente
-     FROM docente
-     WHERE id_usuario = ?
-     LIMIT 1`,
-    [id_usuario]
-  );
-  return rows[0]?.id_docente ? Number(rows[0].id_docente) : null;
-}
-
 /** ✅ helper: toma CP de header/query/scope */
 function pickRequestedCp(req) {
   // 1) header (tu axiosClient)
   const h1 = Number(req.headers["x-carrera-periodo-id"] || 0);
   if (h1 > 0) return h1;
 
-  // (compat)
   const h2 = Number(req.headers["x-carrera-periodo"] || 0);
   if (h2 > 0) return h2;
+
+  const h3 = Number(req.headers["x-id-carrera-periodo"] || 0);
+  if (h3 > 0) return h3;
 
   // 2) query (tu MisCalificacionesPage manda esto)
   const q1 = Number(req.query?.carreraPeriodoId || 0);
@@ -106,13 +96,13 @@ async function attachCarreraPeriodoCtx(req, res, next) {
   try {
     const role = req.user?.activeRole ?? req.user?.rol ?? null;
 
-    // ✅ Solo ADMIN necesita ctx para estos módulos
+    // ✅ Solo ADMIN necesita ctx
     if (role !== "ADMIN") {
       req.ctx = { id_carrera_periodo: null };
       return next();
     }
 
-    // ✅ req.user.id es id_usuario (del JWT). Convertimos a id_docente real.
+    // ✅ req.user.id es id_usuario (JWT) -> id_docente
     const id_usuario = Number(req.user?.id || 0);
     const id_docente = await getDocenteIdByUserId(id_usuario);
 
@@ -122,38 +112,25 @@ async function attachCarreraPeriodoCtx(req, res, next) {
       });
     }
 
-    // ✅ 1) PRIORIDAD: header CP (lo manda tu axiosClient si existe en localStorage)
-    const headerCp = req.headers["x-carrera-periodo-id"];
-    const requestedCpId = headerCp ? Number(headerCp) : null;
-
-    if (requestedCpId && Number.isFinite(requestedCpId) && requestedCpId > 0) {
-      const ok = await validateCpForRol2ByCpId(id_docente, requestedCpId);
-      if (!ok) {
-        return res
-          .status(403)
-          .json({ message: "Carrera-Período no autorizado para tu perfil" });
-      }
-      req.ctx = { id_carrera_periodo: requestedCpId };
-      return next();
+    // ✅ Tomar CP desde header/query/scope
+    const requestedCpId = pickRequestedCp(req);
+    if (!requestedCpId) {
+      return res.status(400).json({ message: "id_carrera_periodo requerido" });
     }
 
-    // ✅ 2) Fallback: usar scope si existe (por si no envían header)
-    const scope = req.user?.scope;
-    if (!scope?.id_carrera_periodo) {
-      return res
-        .status(403)
-        .json({ message: "Scope de carrera-período no disponible" });
-    }
-
-    // ✅ Validar que ese CP realmente te pertenece como DIRECTOR/APOYO
+    // ✅ Validar CP para Director/Apoyo
     const ok = await validateCpForRol2ByCpId(id_docente, requestedCpId);
     if (!ok) {
-      return res.status(403).json({ message: "Carrera-Período no autorizado para tu perfil" });
+      return res.status(403).json({
+        message: "Carrera-Período no autorizado para tu perfil",
+      });
     }
 
+    // ✅ Set ctx
     req.ctx = { id_carrera_periodo: requestedCpId };
     req.carreraPeriodo = requestedCpId;   // compat
     req.carreraPeriodoId = requestedCpId; // compat
+
     return next();
   } catch (e) {
     next(e);
@@ -164,6 +141,7 @@ module.exports = {
   attachCarreraPeriodoCtx,
   getMisCarreraPeriodosPorDocente,
   validateCpForRol2,
-  validateCpForRol2ByCpId, // opcional, por si lo quieres usar fuera
-  getDocenteIdByUserId,    // opcional, útil para depurar
+  validateCpForRol2ByCpId,
+  getDocenteIdByUserId,
+  pickRequestedCp,
 };
