@@ -1,15 +1,6 @@
 // ✅ src/middlewares/ctx.middleware.js
 const pool = require("../config/db");
 
-/** ✅ convertir id_usuario (JWT) -> id_docente */
-async function getDocenteIdByUserId(id_usuario) {
-  const [rows] = await pool.query(
-    `SELECT id_docente FROM docente WHERE id_usuario = ? LIMIT 1`,
-    [id_usuario]
-  );
-  return rows[0]?.id_docente ? Number(rows[0].id_docente) : null;
-}
-
 async function getMisCarreraPeriodosPorDocente(id_docente) {
   const [rows] = await pool.query(
     `SELECT cp.id_carrera_periodo, cp.id_carrera, cp.id_periodo, cp.estado,
@@ -28,7 +19,7 @@ async function getMisCarreraPeriodosPorDocente(id_docente) {
   return rows;
 }
 
-// ✅ VALIDACIÓN por CP directamente (SIN depender de scope.id_carrera)
+// ✅ VALIDACIÓN por CP directamente
 async function validateCpForRol2ByCpId(id_docente, id_carrera_periodo) {
   const [ok] = await pool.query(
     `SELECT 1
@@ -44,7 +35,7 @@ async function validateCpForRol2ByCpId(id_docente, id_carrera_periodo) {
   return ok.length > 0;
 }
 
-// (Mantengo esta por si aún la usas en otros lados)
+// (Mantengo esta por compat si la usas en otros lados)
 async function validateCpForRol2(id_docente, id_carrera, id_carrera_periodo) {
   const [ok] = await pool.query(
     `SELECT 1
@@ -63,7 +54,7 @@ async function validateCpForRol2(id_docente, id_carrera, id_carrera_periodo) {
 
 /** ✅ helper: toma CP de header/query/scope */
 function pickRequestedCp(req) {
-  // 1) header (tu axiosClient)
+  // 1) headers (axiosClient)
   const h1 = Number(req.headers["x-carrera-periodo-id"] || 0);
   if (h1 > 0) return h1;
 
@@ -73,14 +64,17 @@ function pickRequestedCp(req) {
   const h3 = Number(req.headers["x-id-carrera-periodo"] || 0);
   if (h3 > 0) return h3;
 
-  // 2) query (tu MisCalificacionesPage manda esto)
+  const h4 = Number(req.headers["x-cp-id"] || 0);
+  if (h4 > 0) return h4;
+
+  // 2) query params (por si llega por URL)
   const q1 = Number(req.query?.carreraPeriodoId || 0);
   if (q1 > 0) return q1;
 
   const q2 = Number(req.query?.id_carrera_periodo || 0);
   if (q2 > 0) return q2;
 
-  // 3) scope (fallback)
+  // 3) scope fallback (si tu auth lo pone)
   const s = Number(req.user?.scope?.id_carrera_periodo || 0);
   if (s > 0) return s;
 
@@ -90,7 +84,7 @@ function pickRequestedCp(req) {
 /**
  * ctx:
  * - Rol 2 (ADMIN): requiere CP válido y autorizado
- * - Rol 1/3: no forzamos ctx aquí (queda null)
+ * - Rol 1/3: no forzamos ctx aquí
  */
 async function attachCarreraPeriodoCtx(req, res, next) {
   try {
@@ -102,35 +96,25 @@ async function attachCarreraPeriodoCtx(req, res, next) {
       return next();
     }
 
-    // ✅ req.user.id es id_usuario (JWT) -> id_docente
-    const id_usuario = Number(req.user?.id || 0);
-    const id_docente = await getDocenteIdByUserId(id_usuario);
-
+    // ✅ En tu BD, el login es docente, por tanto el JWT debe traer id_docente
+    const id_docente = Number(req.user?.id || 0);
     if (!id_docente) {
-      return res.status(403).json({
-        message: "Docente no encontrado para el usuario autenticado",
-      });
+      return res.status(401).json({ ok: false, message: "Token inválido (sin id_docente)" });
     }
 
-    // ✅ Tomar CP desde header/query/scope
     const requestedCpId = pickRequestedCp(req);
     if (!requestedCpId) {
-      return res.status(400).json({ message: "id_carrera_periodo requerido" });
+      return res.status(400).json({ ok: false, message: "id_carrera_periodo requerido" });
     }
 
-    // ✅ Validar CP para Director/Apoyo
     const ok = await validateCpForRol2ByCpId(id_docente, requestedCpId);
     if (!ok) {
-      return res.status(403).json({
-        message: "Carrera-Período no autorizado para tu perfil",
-      });
+      return res.status(403).json({ ok: false, message: "Carrera-Período no autorizado para tu perfil" });
     }
 
-    // ✅ Set ctx
     req.ctx = { id_carrera_periodo: requestedCpId };
     req.carreraPeriodo = requestedCpId;   // compat
     req.carreraPeriodoId = requestedCpId; // compat
-
     return next();
   } catch (e) {
     next(e);
@@ -142,6 +126,5 @@ module.exports = {
   getMisCarreraPeriodosPorDocente,
   validateCpForRol2,
   validateCpForRol2ByCpId,
-  getDocenteIdByUserId,
   pickRequestedCp,
 };
