@@ -11,7 +11,7 @@ export type IconName =
   | "acta"
   | "tribunales"
   | "estudiantes"
-  // ✅ (siguen existiendo por si luego los reactivas)
+  // (siguen existiendo por si luego los reactivas)
   | "casosEstudio"
   | "entregasCaso"
   | "planEvaluacion"
@@ -75,25 +75,15 @@ export const MENU_SECTIONS: MenuSection[] = [
       { label: "Docentes", to: "/docentes", roles: [2], icon: "docentes" },
       { label: "Estudiantes", to: "/estudiantes", roles: [2], icon: "estudiantes" },
 
-      // ✅ Tribunales (rol 2)
       { label: "Tribunales", to: "/tribunales", roles: [2], icon: "tribunales" },
 
-      // ✅ Casos (se queda)
       { label: "Casos de estudio", to: "/casos-estudio", roles: [2], icon: "casosEstudio" },
 
-      // (si esta page existe)
+      // ✅ tu nueva pantalla vive aquí, pero la ruta se llama /calificaciones
       { label: "Calificaciones", to: "/calificaciones", roles: [2], icon: "rubricas" },
 
-      // (si esta page existe)
+      // (si algún día existe)
       { label: "Actas firmadas", to: "/actas-firmadas", roles: [2], icon: "acta" },
-
-      // ❌ QUITADO del sidebar:
-      // { label: "Período (lectura)", to: "/periodo", roles: [2], icon: "periodos" },
-      // { label: "Entregas de caso", to: "/entregas-caso", roles: [2], icon: "entregasCaso" },
-      // { label: "Plan de evaluación", to: "/plan-evaluacion", roles: [2], icon: "planEvaluacion" },
-      // { label: "Calificadores generales", to: "/calificadores-generales", roles: [2], icon: "calificadores" },
-      // { label: "Nota teórico", to: "/nota-teorico", roles: [2], icon: "notaTeorico" },
-      // { label: "Ponderaciones examen", to: "/ponderaciones-examen", roles: [2], icon: "ponderaciones" },
     ],
   },
 

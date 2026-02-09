@@ -1,4 +1,4 @@
-// ✅ src/routes/AppRoutes.tsx
+// src/routes/AppRoutes.tsx
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import Layout from "../components/layout/Layout";
@@ -32,16 +32,12 @@ import PlantillasActaWordPage from "../pages/plantillasActa/PlantillasActaWordPa
 import ProtectedRoute from "../components/auth/ProtectedRoute";
 import { dashboardByRole, getActiveRole, getToken } from "../utils/auth";
 
-// ✅ NUEVAS PÁGINAS (ROL 2)
-// Si aún no existen, crea archivos simples o usa Placeholder abajo.
+// ROL 2
 import CasosEstudioPage from "../pages/casosEstudio/CasosEstudioPage";
-import EntregasCasoPage from "../pages/entregasCaso/EntregasCasoPage";
-import PlanEvaluacionPage from "../pages/planEvaluacion/PlanEvaluacionPage";
-import CalificadoresGeneralesPage from "../pages/calificadoresGenerales/CalificadoresGeneralesPage";
-import NotaTeoricoPage from "../pages/notaTeorico/NotaTeoricoPage";
-import PonderacionesExamenPage from "../pages/ponderacionesExamen/PonderacionesExamenPage";
 
-// Redirige desde "/" al dashboard del rol activo
+// ✅ TU PAGE NUEVA (aunque el menú diga “Calificaciones”)
+import MisCalificacionesPage from "../pages/misCalificaciones/MisCalificacionesPage";
+
 function HomeRedirect() {
   const token = getToken();
   const role = getActiveRole();
@@ -57,20 +53,15 @@ export default function AppRoutes() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* =========================
-            PÚBLICO
-           ========================= */}
+        {/* PÚBLICO */}
         <Route path="/login" element={<Login />} />
         <Route path="/change-password" element={<ChangePasswordPage />} />
 
-        {/* =========================
-            PRIVADO (Layout)
-           ========================= */}
+        {/* PRIVADO (Layout) */}
         <Route element={<Layout />}>
-          {/* Home: decide dashboard según rol */}
           <Route path="/" element={<HomeRedirect />} />
 
-          {/* Dashboards por rol */}
+          {/* Dashboards */}
           <Route
             path="/superadmin/dashboard"
             element={
@@ -96,7 +87,7 @@ export default function AppRoutes() {
             }
           />
 
-          {/* Perfil (todos) */}
+          {/* Perfil */}
           <Route
             path="/perfil"
             element={
@@ -106,9 +97,7 @@ export default function AppRoutes() {
             }
           />
 
-          {/* =========================
-              SUPER_ADMIN (1)
-             ========================= */}
+          {/* SUPER_ADMIN (1) */}
           <Route
             path="/carreras"
             element={
@@ -125,7 +114,6 @@ export default function AppRoutes() {
               </ProtectedRoute>
             }
           />
-
           <Route
             path="/periodos"
             element={
@@ -134,7 +122,6 @@ export default function AppRoutes() {
               </ProtectedRoute>
             }
           />
-
           <Route
             path="/periodos/:id/carreras"
             element={
@@ -143,7 +130,6 @@ export default function AppRoutes() {
               </ProtectedRoute>
             }
           />
-
           <Route
             path="/rubricas"
             element={
@@ -168,7 +154,6 @@ export default function AppRoutes() {
               </ProtectedRoute>
             }
           />
-
           <Route
             path="/plantillas-acta"
             element={
@@ -178,9 +163,7 @@ export default function AppRoutes() {
             }
           />
 
-          {/* =========================
-              DOCENTES (SUPER_ADMIN y ADMIN)
-             ========================= */}
+          {/* DOCENTES (1 y 2) */}
           <Route
             path="/docentes"
             element={
@@ -190,9 +173,7 @@ export default function AppRoutes() {
             }
           />
 
-          {/* =========================
-              ADMIN (2)
-             ========================= */}
+          {/* ADMIN (2) */}
           <Route
             path="/estudiantes"
             element={
@@ -201,7 +182,6 @@ export default function AppRoutes() {
               </ProtectedRoute>
             }
           />
-
           <Route
             path="/estudiantes/:idEstudiante/asignaciones"
             element={
@@ -211,7 +191,6 @@ export default function AppRoutes() {
             }
           />
 
-          {/* ✅ NUEVOS MÓDULOS DEL COMPLEXIVO (ROL 2) */}
           <Route
             path="/casos-estudio"
             element={
@@ -220,48 +199,7 @@ export default function AppRoutes() {
               </ProtectedRoute>
             }
           />
-          <Route
-            path="/entregas-caso"
-            element={
-              <ProtectedRoute allowRoles={[2]}>
-                <EntregasCasoPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/plan-evaluacion"
-            element={
-              <ProtectedRoute allowRoles={[2]}>
-                <PlanEvaluacionPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/calificadores-generales"
-            element={
-              <ProtectedRoute allowRoles={[2]}>
-                <CalificadoresGeneralesPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/nota-teorico"
-            element={
-              <ProtectedRoute allowRoles={[2]}>
-                <NotaTeoricoPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/ponderaciones-examen"
-            element={
-              <ProtectedRoute allowRoles={[2]}>
-                <PonderacionesExamenPage />
-              </ProtectedRoute>
-            }
-          />
 
-          {/* ✅ CAMBIO: FRANJAS ahora también para SUPER_ADMIN */}
           <Route
             path="/franjas"
             element={
@@ -280,9 +218,17 @@ export default function AppRoutes() {
             }
           />
 
-          {/* =========================
-              DOCENTE (3)
-             ========================= */}
+          {/* ✅ CALIFICACIONES (ROL 2) */}
+          <Route
+            path="/calificaciones"
+            element={
+              <ProtectedRoute allowRoles={[2]}>
+                <MisCalificacionesPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* DOCENTE (3) */}
           <Route
             path="/mis-tribunales"
             element={
@@ -291,7 +237,6 @@ export default function AppRoutes() {
               </ProtectedRoute>
             }
           />
-
           <Route
             path="/actas"
             element={
@@ -302,7 +247,7 @@ export default function AppRoutes() {
           />
         </Route>
 
-        {/* cualquier otra ruta */}
+        {/* cualquier otra */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
