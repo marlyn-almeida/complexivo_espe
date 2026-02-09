@@ -1,17 +1,15 @@
-// ✅ src/services/mis_calificaciones.service.js
+// src/services/mis_calificaciones.service.js
 const repo = require("../repositories/mis_calificaciones.repo");
 
-function err(msg, status) {
-  const e = new Error(msg);
-  e.status = status;
-  return e;
-}
-
-async function list(cp, user) {
-  // ✅ Solo ADMIN (Director / Apoyo)
-  if (user?.rol !== "ADMIN") throw err("No autorizado.", 403);
-
+exports.listByCP = async (cp) => {
   return repo.listByCP(cp);
-}
+};
 
-module.exports = { list };
+exports.getForDocente = async (cp, idTribunalEstudiante, user) => {
+  // ✅ valida pertenencia + devuelve estructura
+  return repo.getForDocente(cp, idTribunalEstudiante, user.id);
+};
+
+exports.saveForDocente = async (cp, idTribunalEstudiante, user, payload) => {
+  return repo.saveForDocente(cp, idTribunalEstudiante, user.id, payload);
+};
