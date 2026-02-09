@@ -1,19 +1,11 @@
-// src/controllers/mis_calificaciones.controller.js
+// ✅ src/controllers/mis_calificaciones.controller.js
 const service = require("../services/mis_calificaciones.service");
 
-<<<<<<< Updated upstream
 /** helper: sacar CP sin depender de un nombre exacto */
 function getCP(req) {
-  // según cómo lo tengas en ctx.middleware:
-  // - req.carreraPeriodo (number)
-  // - req.carreraPeriodoId
-  // - req.ctx.id_carrera_periodo
-  // - req.scope?.id_carrera_periodo
-  // etc
   return (
     Number(req?.carreraPeriodo) ||
     Number(req?.carreraPeriodoId) ||
-    Number(req?.ctx?.id_carrera_periodo) ||
     Number(req?.ctx?.id_carrera_periodo) ||
     Number(req?.user?.scope?.id_carrera_periodo) ||
     0
@@ -33,9 +25,10 @@ function sendErr(res, err) {
 }
 
 /**
- * ✅ ADMIN
+ * ✅ ADMIN (ROL 2)
+ * GET /mis-calificaciones
  */
-exports.list = async (req, res) => {
+async function list(req, res) {
   try {
     const cp = getCP(req);
     if (!cp) return res.status(400).json({ message: "id_carrera_periodo requerido" });
@@ -45,78 +38,53 @@ exports.list = async (req, res) => {
   } catch (err) {
     return sendErr(res, err);
   }
-};
+}
 
 /**
- * ✅ DOCENTE: estructura para calificar
+ * ✅ DOCENTE (ROL 3)
+ * GET /mis-calificaciones/:idTribunalEstudiante
  */
-exports.getForDocente = async (req, res) => {
+async function getForDocente(req, res) {
   try {
     const cp = getCP(req);
     if (!cp) return res.status(400).json({ message: "id_carrera_periodo requerido" });
 
-    const idTribunalEstudiante = Number(req.params.idTribunalEstudiante);
-    const user = req.user;
+    const idTribunalEstudiante = Number(req.params.idTribunalEstudiante || 0);
+    if (!idTribunalEstudiante) return res.status(400).json({ message: "idTribunalEstudiante inválido" });
 
+    const user = req.user;
     const data = await service.getForDocente(cp, idTribunalEstudiante, user);
 
     if (!data) return res.status(404).json({ message: "No encontrado" });
-
     return res.json({ ok: true, data });
   } catch (err) {
     return sendErr(res, err);
   }
-};
+}
 
 /**
- * ✅ DOCENTE: guardar calificaciones
+ * ✅ DOCENTE (ROL 3)
+ * POST /mis-calificaciones/:idTribunalEstudiante
  */
-exports.saveForDocente = async (req, res) => {
+async function saveForDocente(req, res) {
   try {
     const cp = getCP(req);
     if (!cp) return res.status(400).json({ message: "id_carrera_periodo requerido" });
 
-    const idTribunalEstudiante = Number(req.params.idTribunalEstudiante);
-    const user = req.user;
+    const idTribunalEstudiante = Number(req.params.idTribunalEstudiante || 0);
+    if (!idTribunalEstudiante) return res.status(400).json({ message: "idTribunalEstudiante inválido" });
 
+    const user = req.user;
     await service.saveForDocente(cp, idTribunalEstudiante, user, req.body);
 
     return res.json({ ok: true, message: "Guardado" });
   } catch (err) {
     return sendErr(res, err);
   }
-=======
-exports.list = async (req, res) => {
-  // si ya lo tienes, déjalo como está
-  const cp = req.carreraPeriodo; // lo que tu ctx middleware ponga
-  const data = await service.list(cp, req.user);
-  return res.json({ ok: true, data });
-};
+}
 
-/**
- * ✅ DOCENTE: trae estructura filtrada según plan + rol del docente en ese tribunal_estudiante
- */
-exports.getForDocente = async (req, res) => {
-  const cp = req.carreraPeriodo;
-  const idTribunalEstudiante = req.params.idTribunalEstudiante;
-  const user = req.user;
-
-  const data = await service.getForDocente(cp, idTribunalEstudiante, user);
-  return res.json({ ok: true, data });
-};
-
-/**
- * ✅ DOCENTE: guarda calificaciones con seguridad (allowedMap)
- */
-exports.saveForDocente = async (req, res) => {
-  const cp = req.carreraPeriodo;
-  const idTribunalEstudiante = req.params.idTribunalEstudiante;
-  const user = req.user;
-
-  const payload = req.body;
-
-  await service.saveForDocente(cp, idTribunalEstudiante, user, payload);
-
-  return res.json({ ok: true, message: "Guardado" });
->>>>>>> Stashed changes
+module.exports = {
+  list,
+  getForDocente,
+  saveForDocente,
 };

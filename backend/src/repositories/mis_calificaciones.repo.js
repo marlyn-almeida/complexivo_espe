@@ -1,8 +1,12 @@
-// src/repositories/mis_calificaciones.repo.js
+// ✅ src/repositories/mis_calificaciones.repo.js
 const pool = require("../config/db");
 
 /**
- * ✅ ADMIN: tu función (NO la cambio)
+ * ✅ ADMIN: tu función (MISMA IDEA)
+ * Solo agregamos campos que el FRONT necesita:
+ * - te.id_tribunal_estudiante  (para habilitar SUBIR)
+ * - franja_horaria (fecha/hora) para que no salga "—"
+ * - estado/cerrado (opcional)
  */
 async function listByCP(id_carrera_periodo) {
   const [rows] = await pool.query(
@@ -10,7 +14,15 @@ async function listByCP(id_carrera_periodo) {
     SELECT
       t.id_tribunal,
       t.nombre_tribunal,
+      t.estado AS estado_tribunal,
+
+      te.id_tribunal_estudiante,       -- ✅ CLAVE
       te.id_estudiante,
+      COALESCE(te.cerrado, 0) AS cerrado,
+
+      fh.fecha AS fecha_tribunal,      -- ✅ para tu tabla (si existe franja)
+      fh.hora_inicio,
+      fh.hora_fin,
 
       e.nombres_estudiante,
       e.apellidos_estudiante,
@@ -18,7 +30,7 @@ async function listByCP(id_carrera_periodo) {
 
       eca.id_caso_estudio,
 
-      ece.id_estudiante_caso_entrega,
+      ece.id_estudiante_caso_entrega AS id_entrega,
       ece.archivo_nombre AS entrega_archivo_nombre,
       ece.archivo_path  AS entrega_archivo_path,
       ece.fecha_entrega AS entrega_fecha_entrega,
@@ -29,6 +41,10 @@ async function listByCP(id_carrera_periodo) {
     JOIN tribunal_estudiante te
       ON te.id_tribunal = t.id_tribunal
      AND te.estado = 1
+
+    LEFT JOIN franja_horaria fh
+      ON fh.id_franja_horaria = te.id_franja_horaria
+     AND fh.estado = 1
 
     JOIN estudiante e
       ON e.id_estudiante = te.id_estudiante
@@ -109,12 +125,7 @@ async function getDocenteMembership(cp, idTribunalEstudiante, idUsuario) {
 
 /**
  * ✅ DOCENTE: GET /mis-calificaciones/:idTribunalEstudiante
- * Aquí debes devolver la estructura REAL ya filtrada por plan + rol.
- *
- * Por ahora:
- * - valida que el docente pertenece
- * - devuelve una respuesta que NO rompe el frontend (items vacíos)
- * Luego reemplazas items por tu query real del plan + rubrica.
+ * (stub por ahora)
  */
 async function getForDocente(cp, idTribunalEstudiante, idUsuario) {
   const head = await getDocenteMembership(cp, idTribunalEstudiante, idUsuario);
@@ -124,8 +135,6 @@ async function getForDocente(cp, idTribunalEstudiante, idUsuario) {
     throw err;
   }
 
-  // ✅ TODO: aquí tu lógica real (plan activo, items, componentes, criterios, niveles, existentes)
-  // Este “shape” es el que tu CalificarTribunalPage espera.
   return {
     tribunal_estudiante: {
       id_tribunal_estudiante: head.id_tribunal_estudiante,
@@ -145,12 +154,7 @@ async function getForDocente(cp, idTribunalEstudiante, idUsuario) {
 
 /**
  * ✅ DOCENTE: POST /mis-calificaciones/:idTribunalEstudiante
- * Por ahora:
- * - valida pertenencia
- * - valida no cerrado
- * - deja “stub”
- *
- * Luego aquí conectas tu allowedMap + upsert en rubrica_criterio_calificacion.
+ * (stub por ahora)
  */
 async function saveForDocente(cp, idTribunalEstudiante, idUsuario, payload) {
   const head = await getDocenteMembership(cp, idTribunalEstudiante, idUsuario);
@@ -165,12 +169,6 @@ async function saveForDocente(cp, idTribunalEstudiante, idUsuario, payload) {
     err.status = 409;
     throw err;
   }
-
-  // ✅ TODO: reemplazar por tu lógica real
-  // payload = { calificaciones: [{id_criterio,id_nivel,observacion}], observacion_general }
-  // - construir allowedMap según plan + mi_rol
-  // - upsert masivo en rubrica_criterio_calificacion
-  // - guardar observacion_general si aplica
 
   return true;
 }

@@ -1,20 +1,16 @@
-// src/routes/mis_calificaciones.routes.js
+// ✅ src/routes/mis_calificaciones.routes.js
 const router = require("express").Router();
 const { param, body } = require("express-validator");
 
 const validate = require("../middlewares/validate.middleware");
-const { authorize, auth } = require("../middlewares/auth.middleware");
+const { auth, authorize } = require("../middlewares/auth.middleware");
 const { attachCarreraPeriodoCtx } = require("../middlewares/ctx.middleware");
 
 const ctrl = require("../controllers/mis_calificaciones.controller");
 
 /**
-<<<<<<< Updated upstream
- * ✅ ADMIN (ROL 2) - listado por CP (tu listByCP)
+ * ✅ ADMIN (ROL 2) - listado por CP
  * GET /mis-calificaciones
-=======
- * ✅ ADMIN (ROL 2) - lista general (si la necesitas)
->>>>>>> Stashed changes
  */
 router.get(
   "/",
@@ -26,11 +22,7 @@ router.get(
 );
 
 /**
-<<<<<<< Updated upstream
- * ✅ DOCENTE (ROL 3) - cargar estructura para calificar 1 tribunal_estudiante
-=======
- * ✅ DOCENTE (ROL 3) - cargar estructura filtrada por plan + rol
->>>>>>> Stashed changes
+ * ✅ DOCENTE (ROL 3) - cargar estructura para calificar
  * GET /mis-calificaciones/:idTribunalEstudiante
  */
 router.get(
@@ -44,11 +36,7 @@ router.get(
 );
 
 /**
-<<<<<<< Updated upstream
- * ✅ DOCENTE (ROL 3) - guardar calificación (criterios permitidos)
-=======
- * ✅ DOCENTE (ROL 3) - guardar calificación por criterio (seguro)
->>>>>>> Stashed changes
+ * ✅ DOCENTE (ROL 3) - guardar calificación
  * POST /mis-calificaciones/:idTribunalEstudiante
  */
 router.post(

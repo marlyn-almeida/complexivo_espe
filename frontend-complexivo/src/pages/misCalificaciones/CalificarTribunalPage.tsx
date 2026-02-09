@@ -17,7 +17,8 @@ import {
   type ItemPlan,
   type SavePayload,
   type Nivel,
-} from "../../services/misCalificacionesDocente.service";
+} from "../../services/calificacionesDocente.service";
+
 
 type ToastType = "success" | "error" | "info";
 type SelectedMap = Record<number, { id_nivel: number; observacion?: string }>;

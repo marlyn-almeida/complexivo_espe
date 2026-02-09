@@ -1,3 +1,4 @@
+// ✅ src/services/misCalificacionesDocente.service.ts
 import axiosClient from "../api/axiosClient";
 
 /* ===== Tipos ===== */
@@ -14,7 +15,6 @@ export type Criterio = {
   descripcion_criterio?: string | null;
   niveles: Nivel[];
 
-  // opcionales (si el backend los manda)
   id_nivel_seleccionado?: number | null;
   observacion?: string | null;
 };
@@ -62,18 +62,21 @@ export type SavePayload = {
   observacion_general?: string | null;
 };
 
-/* ===== ✅ EXPORT CORRECTO ===== */
+/* ===== ✅ EXPORT NAMED (lo que tu page importa) ===== */
 export const misCalificacionesDocenteService = {
-  get: async (idTribunalEstudiante: number): Promise<MisCalificacionesResponse> => {
+  async get(idTribunalEstudiante: number): Promise<MisCalificacionesResponse> {
     const { data } = await axiosClient.get(`/mis-calificaciones/${idTribunalEstudiante}`);
     return data;
   },
 
-  save: async (
+  async save(
     idTribunalEstudiante: number,
     payload: SavePayload
-  ): Promise<{ ok: true; message?: string }> => {
+  ): Promise<{ ok: true; message?: string }> {
     const { data } = await axiosClient.post(`/mis-calificaciones/${idTribunalEstudiante}`, payload);
     return data;
   },
 };
+
+/* ===== ✅ EXPORT DEFAULT (opcional, por si alguna vez importas sin llaves) ===== */
+export default misCalificacionesDocenteService;

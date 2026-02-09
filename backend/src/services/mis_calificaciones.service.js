@@ -1,30 +1,42 @@
-// src/services/mis_calificaciones.service.js
+// ✅ src/services/mis_calificaciones.service.js
 const repo = require("../repositories/mis_calificaciones.repo");
 
-<<<<<<< Updated upstream
-exports.listByCP = async (cp) => {
+/**
+ * ✅ ADMIN
+ */
+async function listByCP(cp) {
   return repo.listByCP(cp);
-};
+}
 
-exports.getForDocente = async (cp, idTribunalEstudiante, user) => {
-  // ✅ valida pertenencia + devuelve estructura
-  return repo.getForDocente(cp, idTribunalEstudiante, user.id);
-};
+/**
+ * ✅ DOCENTE
+ * user = req.user (trae id del usuario logeado)
+ */
+async function getForDocente(cp, idTribunalEstudiante, user) {
+  const idUsuario = Number(user?.id || 0);
+  if (!idUsuario) {
+    const err = new Error("Token inválido");
+    err.status = 401;
+    throw err;
+  }
+  return repo.getForDocente(cp, idTribunalEstudiante, idUsuario);
+}
 
-exports.saveForDocente = async (cp, idTribunalEstudiante, user, payload) => {
-  return repo.saveForDocente(cp, idTribunalEstudiante, user.id, payload);
-=======
-exports.list = async (cp, user) => {
-  return repo.list(cp, user);
-};
+/**
+ * ✅ DOCENTE
+ */
+async function saveForDocente(cp, idTribunalEstudiante, user, payload) {
+  const idUsuario = Number(user?.id || 0);
+  if (!idUsuario) {
+    const err = new Error("Token inválido");
+    err.status = 401;
+    throw err;
+  }
+  return repo.saveForDocente(cp, idTribunalEstudiante, idUsuario, payload);
+}
 
-exports.getForDocente = async (cp, idTribunalEstudiante, user) => {
-  // ✅ aquí debe ir tu lógica real: validar miembro, plan activo, filtrar por rol, etc
-  return repo.getForDocente(cp, idTribunalEstudiante, user);
-};
-
-exports.saveForDocente = async (cp, idTribunalEstudiante, user, payload) => {
-  // ✅ aquí debe ir tu lógica real: validar cerrado, allowedMap, upsert masivo, etc
-  return repo.saveForDocente(cp, idTribunalEstudiante, user, payload);
->>>>>>> Stashed changes
+module.exports = {
+  listByCP,
+  getForDocente,
+  saveForDocente,
 };
