@@ -1,4 +1,4 @@
-// src/middlewares/ctx.middleware.js
+// ✅ src/middlewares/ctx.middleware.js
 const pool = require("../config/db");
 
 /** ✅ convertir id_usuario (JWT) -> id_docente */
@@ -61,9 +61,45 @@ async function validateCpForRol2(id_docente, id_carrera, id_carrera_periodo) {
   return ok.length > 0;
 }
 
+/** ✅ NUEVO: resolver id_docente usando id_usuario del token */
+async function getDocenteIdByUsuarioId(id_usuario) {
+  const [rows] = await pool.query(
+    `SELECT id_docente
+     FROM docente
+     WHERE id_usuario = ?
+     LIMIT 1`,
+    [id_usuario]
+  );
+  return rows[0]?.id_docente ? Number(rows[0].id_docente) : null;
+}
+
+/** ✅ helper: toma CP de header/query/scope */
+function pickRequestedCp(req) {
+  // 1) header (tu axiosClient)
+  const h1 = Number(req.headers["x-carrera-periodo-id"] || 0);
+  if (h1 > 0) return h1;
+
+  // (compat)
+  const h2 = Number(req.headers["x-carrera-periodo"] || 0);
+  if (h2 > 0) return h2;
+
+  // 2) query (tu MisCalificacionesPage manda esto)
+  const q1 = Number(req.query?.carreraPeriodoId || 0);
+  if (q1 > 0) return q1;
+
+  const q2 = Number(req.query?.id_carrera_periodo || 0);
+  if (q2 > 0) return q2;
+
+  // 3) scope (fallback)
+  const s = Number(req.user?.scope?.id_carrera_periodo || 0);
+  if (s > 0) return s;
+
+  return null;
+}
+
 /**
  * ctx:
- * - Rol 2 (ADMIN): requiere CP válido
+ * - Rol 2 (ADMIN): requiere CP válido y autorizado
  * - Rol 1/3: no forzamos ctx aquí (queda null)
  */
 async function attachCarreraPeriodoCtx(req, res, next) {
@@ -109,7 +145,15 @@ async function attachCarreraPeriodoCtx(req, res, next) {
         .json({ message: "Scope de carrera-período no disponible" });
     }
 
-    req.ctx = { id_carrera_periodo: Number(scope.id_carrera_periodo) };
+    // ✅ Validar que ese CP realmente te pertenece como DIRECTOR/APOYO
+    const ok = await validateCpForRol2ByCpId(id_docente, requestedCpId);
+    if (!ok) {
+      return res.status(403).json({ message: "Carrera-Período no autorizado para tu perfil" });
+    }
+
+    req.ctx = { id_carrera_periodo: requestedCpId };
+    req.carreraPeriodo = requestedCpId;   // compat
+    req.carreraPeriodoId = requestedCpId; // compat
     return next();
   } catch (e) {
     next(e);
