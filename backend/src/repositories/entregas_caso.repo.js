@@ -42,9 +42,25 @@ async function upsertEntregaByEstudiante({ id_estudiante, archivo_nombre, archiv
 }
 
 /**
- * ✅ Validación central del nuevo modelo:
- * El estudiante debe estar asignado en tribunal_estudiante (activo)
- * y ese tribunal debe pertenecer al CP activo
+ * ✅ NUEVA VALIDACIÓN (SOLO CP, SIN TRIBUNAL)
+ */
+async function validateEstudianteEnCP(id_carrera_periodo, id_estudiante) {
+  const [rows] = await pool.query(
+    `
+    SELECT 1
+    FROM estudiante e
+    WHERE e.id_estudiante = ?
+      AND e.id_carrera_periodo = ?
+      AND e.estado = 1
+    LIMIT 1
+    `,
+    [Number(id_estudiante), Number(id_carrera_periodo)]
+  );
+  return !!rows.length;
+}
+
+/**
+ * ✅ Validación por tribunal (SE MANTIENE para DOCENTE)
  */
 async function validateEstudianteEnTribunalCP(id_carrera_periodo, id_estudiante) {
   const [rows] = await pool.query(
@@ -63,13 +79,7 @@ async function validateEstudianteEnTribunalCP(id_carrera_periodo, id_estudiante)
 }
 
 /**
- * ✅ Permiso DOCENTE:
- * puede ver/descargar si:
- * - el docente pertenece a un tribunal (tribunal_docente activo)
- * - y ese tribunal tiene asignado al estudiante (tribunal_estudiante activo)
- * - y todo corresponde al CP
- *
- * Nota: aquí NO se toca caso, NO se toca estudiante_caso_asignacion, nada.
+ * ✅ Permiso DOCENTE
  */
 async function docentePuedeVerEntregaByEstudiante({ id_docente, id_carrera_periodo, id_estudiante }) {
   const [rows] = await pool.query(
@@ -96,6 +106,7 @@ async function docentePuedeVerEntregaByEstudiante({ id_docente, id_carrera_perio
 module.exports = {
   getEntregaByEstudiante,
   upsertEntregaByEstudiante,
+  validateEstudianteEnCP,
   validateEstudianteEnTribunalCP,
   docentePuedeVerEntregaByEstudiante,
 };

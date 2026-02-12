@@ -23,6 +23,7 @@ import {
   X,
   Pencil,
   Save,
+  Eye,
 } from "lucide-react";
 
 import escudoESPE from "../../assets/escudo.png";
@@ -49,20 +50,51 @@ function extractBackendMsg(err: any) {
 }
 
 /* =========================
-   ADMIN HELPERS
+   HELPERS (ADMIN)
    ========================= */
-function hasEntrega(r: MisCalificacionRow) {
-  return !!(r.entrega_archivo_path || r.entrega_archivo_nombre || (r as any).id_entrega);
+
+// ✅ Obtiene el path/nombre/fecha aunque el backend lo mande con nombres distintos
+function entregaMeta(r: any) {
+  const nombre =
+    r?.entrega_archivo_nombre ??
+    r?.archivo_nombre ??
+    r?.estudiante_entrega_archivo_nombre ??
+    r?.nombre_archivo ??
+    null;
+
+  const path =
+    r?.entrega_archivo_path ??
+    r?.archivo_path ??
+    r?.estudiante_entrega_archivo_path ??
+    r?.path_archivo ??
+    null;
+
+  const fecha =
+    r?.entrega_fecha_entrega ??
+    r?.fecha_entrega ??
+    r?.estudiante_entrega_fecha_entrega ??
+    r?.created_at ??
+    null;
+
+  const idEntrega = r?.id_entrega ?? r?.id_estudiante_entrega ?? r?.id_estudiante_caso_entrega ?? null;
+
+  return { nombre, path, fecha, idEntrega };
 }
-function isAsignadoTribunal(r: MisCalificacionRow) {
-  return !!(r as any).id_tribunal_estudiante;
+
+function hasEntrega(r: any) {
+  const m = entregaMeta(r);
+  return Boolean(m.path || m.nombre || m.idEntrega);
+}
+
+function isAsignadoTribunal(r: any) {
+  return Boolean(r?.id_tribunal_estudiante);
 }
 
 /* =========================
-   DOCENTE HELPERS
+   HELPERS (DOCENTE)
    ========================= */
 function isCerradoDocente(r: MiTribunalItem) {
-  return Number(r.cerrado ?? 0) === 1;
+  return Number((r as any).cerrado ?? 0) === 1;
 }
 
 export default function MisCalificacionesPage() {
@@ -105,18 +137,18 @@ export default function MisCalificacionesPage() {
   const [notaObs, setNotaObs] = useState<string>("");
 
   function openNotaModal(row: MisCalificacionRow) {
-    if (!row?.id_estudiante) {
+    if (!(row as any)?.id_estudiante) {
       showToast("Fila inválida: falta id_estudiante.", "info");
       return;
     }
     setNotaTarget(row);
-    setNotaValor(row.nota_teorico_20 != null ? String(row.nota_teorico_20) : "");
-    setNotaObs(row.nota_teorico_observacion ?? "");
+    setNotaValor((row as any).nota_teorico_20 != null ? String((row as any).nota_teorico_20) : "");
+    setNotaObs((row as any).nota_teorico_observacion ?? "");
     setNotaModalOpen(true);
   }
 
   async function saveNotaTeorica() {
-    if (!notaTarget?.id_estudiante) return;
+    if (!(notaTarget as any)?.id_estudiante) return;
 
     const n = Number(notaValor);
     if (Number.isNaN(n) || n < 0 || n > 20) {
@@ -128,7 +160,7 @@ export default function MisCalificacionesPage() {
       setLoading(true);
 
       await notaTeoricaService.save({
-        id_estudiante: Number(notaTarget.id_estudiante),
+        id_estudiante: Number((notaTarget as any).id_estudiante),
         nota_teorico_20: n,
         observacion: notaObs?.trim() ? notaObs.trim() : undefined,
       });
@@ -208,9 +240,10 @@ export default function MisCalificacionesPage() {
       const data = await misCalificacionesService.list({
         carreraPeriodoId: Number(selectedCP),
         id_carrera_periodo: Number(selectedCP),
-      });
+        _t: Date.now(),
+      } as any);
 
-      setRows(data ?? []);
+      setRows((data ?? []) as any);
     } catch (err: any) {
       showToast(extractBackendMsg(err), "error");
       setRows([]);
@@ -240,22 +273,20 @@ export default function MisCalificacionesPage() {
   // =========================
   const filteredAdmin = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return (rows ?? []).filter((r) => {
+    return (rows ?? []).filter((r: any) => {
       if (!q) return true;
 
-      const estudiante = `${(r as any).apellidos_estudiante ?? ""} ${(r as any).nombres_estudiante ?? ""}`.toLowerCase();
-      const inst = String((r as any).id_institucional_estudiante ?? "").toLowerCase();
-      const trib = String((r as any).nombre_tribunal ?? `Tribunal ${(r as any).id_tribunal}`).toLowerCase();
-      const carrera = String((r as any).nombre_carrera ?? "").toLowerCase();
-      const periodo = String((r as any).codigo_periodo ?? (r as any).descripcion_periodo ?? "").toLowerCase();
+      const estudiante = `${r?.apellidos_estudiante ?? ""} ${r?.nombres_estudiante ?? ""}`.toLowerCase();
+      const inst = String(r?.id_institucional_estudiante ?? "").toLowerCase();
+      const trib = String(r?.nombre_tribunal ?? `Tribunal ${r?.id_tribunal ?? ""}`).toLowerCase();
+      const carrera = String(r?.nombre_carrera ?? "").toLowerCase();
 
       return (
         estudiante.includes(q) ||
         inst.includes(q) ||
         trib.includes(q) ||
         carrera.includes(q) ||
-        periodo.includes(q) ||
-        String((r as any).id_estudiante).includes(q)
+        String(r?.id_estudiante ?? "").includes(q)
       );
     });
   }, [rows, search]);
@@ -264,17 +295,31 @@ export default function MisCalificacionesPage() {
     const q = search.trim().toLowerCase();
     return (docRows ?? []).filter((r) => {
       if (!q) return true;
-      const base = `${r.estudiante} ${r.carrera ?? ""} ${r.fecha ?? ""}`.toLowerCase();
+      const base = `${(r as any).estudiante ?? ""} ${(r as any).carrera ?? ""} ${(r as any).fecha ?? ""}`.toLowerCase();
       return base.includes(q);
     });
   }, [docRows, search]);
 
-  const total = role === 3 ? filteredDocente.length : filteredAdmin.length;
+  // =========================
+  // MÉTRICAS (HERO)
+  // =========================
+  const metrics = useMemo(() => {
+    if (role === 3) {
+      const total = filteredDocente.length;
+      const abiertos = filteredDocente.filter((x) => !isCerradoDocente(x)).length;
+      const cerrados = total - abiertos;
+      return { total, ok: abiertos, warn: cerrados, okLabel: "Abiertos", warnLabel: "Cerrados" };
+    }
+    const total = filteredAdmin.length;
+    const entregados = filteredAdmin.filter((x: any) => hasEntrega(x)).length;
+    const pendientes = total - entregados;
+    return { total, ok: entregados, warn: pendientes, okLabel: "Entregados", warnLabel: "Pendientes" };
+  }, [filteredAdmin, filteredDocente, role]);
 
   // =========================
   // ADMIN: PDF actions
   // =========================
-  async function openEntregaPdf(row: MisCalificacionRow) {
+  async function openEntregaPdf(row: any) {
     if (!row?.id_estudiante) {
       showToast("Fila inválida: falta id_estudiante.", "info");
       return;
@@ -290,7 +335,7 @@ export default function MisCalificacionesPage() {
 
     try {
       setLoading(true);
-      const res = await entregasCasoService.downloadByEstudiante(Number((row as any).id_estudiante));
+      const res = await entregasCasoService.downloadByEstudiante(Number(row.id_estudiante));
       const blob = new Blob([res.data], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
 
@@ -303,7 +348,7 @@ export default function MisCalificacionesPage() {
     }
   }
 
-  async function downloadEntregaPdf(row: MisCalificacionRow) {
+  async function downloadEntregaPdf(row: any) {
     if (!row?.id_estudiante) {
       showToast("Fila inválida: falta id_estudiante.", "info");
       return;
@@ -319,13 +364,14 @@ export default function MisCalificacionesPage() {
 
     try {
       setLoading(true);
-      const res = await entregasCasoService.downloadByEstudiante(Number((row as any).id_estudiante));
+      const res = await entregasCasoService.downloadByEstudiante(Number(row.id_estudiante));
       const blob = new Blob([res.data], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
 
+      const meta = entregaMeta(row);
       const a = document.createElement("a");
       a.href = url;
-      a.download = (row as any).entrega_archivo_nombre || `entrega_${(row as any).id_estudiante}.pdf`;
+      a.download = meta.nombre || `entrega_${row.id_estudiante}.pdf`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -342,7 +388,7 @@ export default function MisCalificacionesPage() {
     fileRefs.current[key]?.click();
   }
 
-  async function onUpload(row: MisCalificacionRow, file: File | null) {
+  async function onUpload(row: any, file: File | null) {
     if (!file) return;
 
     if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
@@ -355,7 +401,6 @@ export default function MisCalificacionesPage() {
       return;
     }
 
-    // ✅ PDF SÍ depende de tribunal/caso (según lo que decidiste dejar)
     if (!isAsignadoTribunal(row)) {
       showToast("No se puede subir: el estudiante no está asignado a un tribunal.", "info");
       return;
@@ -365,12 +410,26 @@ export default function MisCalificacionesPage() {
       setLoading(true);
 
       await entregasCasoService.subirByEstudiante({
-        id_estudiante: Number((row as any).id_estudiante),
+        id_estudiante: Number(row.id_estudiante),
         archivo: file,
         observacion: "Entrega subida/reemplazada desde Mis Evaluaciones (ADMIN)",
       });
 
       showToast("Entrega subida/reemplazada correctamente.", "success");
+
+      // ✅ optimista
+      setRows((prev: any[]) =>
+        (prev ?? []).map((x: any) => {
+          if (Number(x?.id_estudiante) !== Number(row.id_estudiante)) return x;
+          return {
+            ...x,
+            entrega_archivo_nombre: file.name,
+            entrega_archivo_path: x?.entrega_archivo_path ?? x?.archivo_path ?? "__uploaded__",
+            entrega_fecha_entrega: new Date().toISOString(),
+          };
+        })
+      );
+
       await loadAdminList();
     } catch (err: any) {
       showToast(extractBackendMsg(err), "error");
@@ -379,18 +438,10 @@ export default function MisCalificacionesPage() {
     }
   }
 
-  function entregaEstadoLabel(r: MisCalificacionRow) {
+  function entregaEstadoLabel(r: any) {
     if (!isAsignadoTribunal(r)) return { text: "No asignado", cls: "badge badge-warn" };
     if (!hasEntrega(r)) return { text: "Pendiente", cls: "badge badge-warn" };
     return { text: "Entregado", cls: "badge badge-ok" };
-  }
-
-  function horarioLabel(r: MisCalificacionRow) {
-    const hi = String((r as any).hora_inicio ?? "").trim();
-    const hf = String((r as any).hora_fin ?? "").trim();
-    if (!hi && !hf) return "—";
-    if (hi && hf) return `${hi} - ${hf}`;
-    return hi || hf;
   }
 
   // =========================
@@ -405,7 +456,7 @@ export default function MisCalificacionesPage() {
             <img className="heroLogo" src={escudoESPE} alt="ESPE" />
             <div className="heroText">
               <h1 className="heroTitle">
-                {role === 3 ? "Mis Tribunales (DOCENTE)" : "Mis Evaluaciones de Tribunales (ADMIN)"}
+                {role === 3 ? "Mis Tribunales (DOCENTE)" : "Mis Evaluaciones (ADMIN)"}
               </h1>
 
               <p className="heroSubtitle">
@@ -415,7 +466,7 @@ export default function MisCalificacionesPage() {
                   </>
                 ) : (
                   <>
-                    Gestión por <b>Carrera–Período</b>. Puedes registrar <b>nota teórica</b> y gestionar <b>PDF</b>.
+                    Gestión por <b>Carrera–Período</b>. Registra <b>nota teórica</b> y gestiona <b>PDF</b>.
                   </>
                 )}
               </p>
@@ -428,18 +479,16 @@ export default function MisCalificacionesPage() {
 
               <div className="heroChips">
                 <span className="chip">
-                  <Users size={16} /> {total} registros
+                  <Users size={16} /> {metrics.total} registros
                 </span>
 
-                {role === 2 ? (
-                  <span className="chip chipSoft">
-                    <ClipboardList size={16} /> Nota teórica + Entrega PDF
-                  </span>
-                ) : (
-                  <span className="chip chipSoft">
-                    <ClipboardList size={16} /> Calificación por criterios (según Plan)
-                  </span>
-                )}
+                <span className="chip chipSoft">
+                  <ClipboardList size={16} /> {metrics.ok} {metrics.okLabel}
+                </span>
+
+                <span className="chip chipSoft">
+                  <ClipboardList size={16} /> {metrics.warn} {metrics.warnLabel}
+                </span>
               </div>
             </div>
           </div>
@@ -463,7 +512,7 @@ export default function MisCalificacionesPage() {
               <Search className="searchIcon" />
               <input
                 className="search"
-                placeholder={role === 3 ? "Buscar por estudiante / carrera / fecha..." : "Buscar por estudiante, carrera, período, tribunal..."}
+                placeholder={role === 3 ? "Buscar por estudiante / carrera / fecha..." : "Buscar por estudiante / carrera / tribunal..."}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 disabled={loading}
@@ -506,7 +555,7 @@ export default function MisCalificacionesPage() {
               <span>
                 {role === 3
                   ? "Solo verás tus tribunales asignados. Presiona Calificar para ingresar."
-                  : "Nota teórica NO depende de tribunal. El PDF sí requiere que esté asignado a tribunal (según decisión actual)."}
+                  : "Selecciona Carrera–Período para gestionar notas y entregas."}
               </span>
             </div>
           </div>
@@ -534,7 +583,7 @@ export default function MisCalificacionesPage() {
                       <td className="emptyCell" colSpan={6}>Cargando...</td>
                     </tr>
                   ) : filteredDocente.length ? (
-                    filteredDocente.map((r) => {
+                    filteredDocente.map((r: any) => {
                       const hora = `${r.hora_inicio ?? "--:--"} - ${r.hora_fin ?? "--:--"}`;
                       const cerrado = isCerradoDocente(r);
 
@@ -577,51 +626,44 @@ export default function MisCalificacionesPage() {
             </div>
           ) : (
             /* =========================
-               TABLA ADMIN (ROL 2)
+               TABLA ADMIN (ROL 2) ✅ SIN PERÍODO/FECHA/HORARIO/ESTADO
                ========================= */
             <div className="tableWrap">
-              <table className="table">
+              <table className="table tableAdmin">
                 <thead>
                   <tr>
-                    <th className="thCenter" style={{ width: 280 }}>Estudiante</th>
-                    <th className="thCenter" style={{ width: 280 }}>Carrera</th>
-                    <th className="thCenter" style={{ width: 200 }}>Período</th>
-                    <th className="thCenter" style={{ width: 170 }}>Fecha</th>
-                    <th className="thCenter" style={{ width: 160 }}>Horario</th>
-                    <th className="thCenter" style={{ width: 150 }}>Estado</th>
-                    <th className="thCenter" style={{ width: 170 }}>Nota teórica</th>
-                    <th className="thCenter">Entrega</th>
-                    <th className="thCenter" style={{ width: 420 }}>Acciones</th>
+                    <th className="thCenter" style={{ width: 320 }}>Estudiante</th>
+                    <th className="thCenter" style={{ width: 320 }}>Carrera / Tribunal</th>
+                    <th className="thCenter" style={{ width: 220 }}>Nota teórica</th>
+                    <th className="thCenter" style={{ width: 260 }}>Entrega</th>
+                    <th className="thCenter" style={{ width: 360 }}>Acciones</th>
                   </tr>
                 </thead>
 
                 <tbody>
                   {!selectedCP ? (
                     <tr>
-                      <td className="emptyCell" colSpan={9}>Seleccione una Carrera–Período para ver registros.</td>
+                      <td className="emptyCell" colSpan={5}>Seleccione una Carrera–Período para ver registros.</td>
                     </tr>
                   ) : loading ? (
                     <tr>
-                      <td className="emptyCell" colSpan={9}>Cargando...</td>
+                      <td className="emptyCell" colSpan={5}>Cargando...</td>
                     </tr>
                   ) : filteredAdmin.length ? (
                     filteredAdmin.map((r: any) => {
-                      const key = `${r.id_tribunal}_${r.id_estudiante}`;
+                      const key = String(r.id_estudiante);
                       const badge = entregaEstadoLabel(r);
+                      const meta = entregaMeta(r);
 
                       const estudianteLabel =
-                        `${r.apellidos_estudiante ?? ""} ${r.nombres_estudiante ?? ""}`.trim() ||
-                        `Estudiante ${r.id_estudiante}`;
+                        `${r.apellidos_estudiante ?? ""} ${r.nombres_estudiante ?? ""}`.trim() || `Estudiante ${r.id_estudiante}`;
 
                       const inst = (r.id_institucional_estudiante ?? "").trim();
                       const carrera = r.nombre_carrera ?? "—";
-                      const periodo = r.codigo_periodo ?? r.descripcion_periodo ?? "—";
-                      const fecha = r.fecha_tribunal ? safeDateLabel(r.fecha_tribunal) : "—";
-                      const horario = horarioLabel(r);
-                      const estadoTrib = r.estado_tribunal ?? "—";
+                      const tribunal = r.nombre_tribunal ?? `Tribunal ${r.id_tribunal ?? "—"}`;
 
-                      const entregaName = r.entrega_archivo_nombre || "—";
-                      const entregaFecha = r.entrega_fecha_entrega ? safeDateLabel(r.entrega_fecha_entrega) : "";
+                      const entregaName = meta.nombre || "—";
+                      const entregaFecha = meta.fecha ? safeDateLabel(meta.fecha) : "";
 
                       const canUpload = isAsignadoTribunal(r);
                       const canOpen = isAsignadoTribunal(r) && hasEntrega(r);
@@ -635,22 +677,12 @@ export default function MisCalificacionesPage() {
 
                           <td className="tdCenter">
                             <div className="cellMain">{carrera}</div>
-                            <div className="cellSub">{r.nombre_tribunal ?? `Tribunal ${r.id_tribunal}`}</div>
+                            <div className="cellSub">{tribunal}</div>
                           </td>
 
-                          <td className="tdCenter">{periodo}</td>
-                          <td className="tdCenter">{fecha}</td>
-                          <td className="tdCenter">{horario}</td>
-                          <td className="tdCenter">{estadoTrib}</td>
-
-                          {/* ✅ Nota teórica NO depende de tribunal */}
                           <td className="tdCenter">
-                            <div className="cellMain">
-                              {r.nota_teorico_20 != null ? `${r.nota_teorico_20}/20` : "—"}
-                            </div>
-                            <div className="cellSub">
-                              {r.nota_teorico_observacion ? String(r.nota_teorico_observacion) : "Sin observación"}
-                            </div>
+                            <div className="cellMain">{r.nota_teorico_20 != null ? `${r.nota_teorico_20}/20` : "—"}</div>
+                            <div className="cellSub">{r.nota_teorico_observacion ? String(r.nota_teorico_observacion) : "Sin observación"}</div>
                           </td>
 
                           <td className="tdCenter">
@@ -662,10 +694,10 @@ export default function MisCalificacionesPage() {
                           </td>
 
                           <td className="tdCenter">
-                            <div className="actions">
-                              {/* ✅ Botón Nota */}
+                            {/* ✅ UNA SOLA FILA */}
+                            <div className="actionsRow">
                               <button
-                                className="btnGhost"
+                                className="btnAction btnNota"
                                 onClick={() => openNotaModal(r)}
                                 disabled={loading}
                                 title="Registrar/Editar nota teórica"
@@ -674,16 +706,16 @@ export default function MisCalificacionesPage() {
                               </button>
 
                               <button
-                                className="btnGhost"
+                                className="btnAction btnVer"
                                 onClick={() => openEntregaPdf(r)}
                                 disabled={loading || !canOpen}
                                 title={!isAsignadoTribunal(r) ? "No asignado a tribunal" : !hasEntrega(r) ? "Sin entrega" : "Ver PDF"}
                               >
-                                <FileDown size={16} /> Ver
+                                <Eye size={16} /> Ver
                               </button>
 
                               <button
-                                className="btnGhost"
+                                className="btnAction btnDesc"
                                 onClick={() => downloadEntregaPdf(r)}
                                 disabled={loading || !canOpen}
                                 title={!isAsignadoTribunal(r) ? "No asignado a tribunal" : !hasEntrega(r) ? "Sin entrega" : "Descargar PDF"}
@@ -707,7 +739,7 @@ export default function MisCalificacionesPage() {
                               />
 
                               <button
-                                className="btnPrimary"
+                                className="btnAction btnSubir"
                                 onClick={() => pickFile(key)}
                                 disabled={loading || !canUpload}
                                 title={!isAsignadoTribunal(r) ? "No asignado a tribunal" : "Subir/Reemplazar PDF"}
@@ -721,9 +753,7 @@ export default function MisCalificacionesPage() {
                     })
                   ) : (
                     <tr>
-                      <td className="emptyCell" colSpan={9}>
-                        No hay registros para este Carrera–Período.
-                      </td>
+                      <td className="emptyCell" colSpan={5}>No hay registros para este Carrera–Período.</td>
                     </tr>
                   )}
                 </tbody>

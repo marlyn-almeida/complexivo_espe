@@ -14,9 +14,7 @@ import {
 } from "../../services/misCalificacionesDocente.service";
 
 type ToastType = "success" | "error" | "info";
-
-/** ✅ allow undefined para evitar choque cuando no hay selección todavía */
-type SelectedMap = Record<number, { id_nivel?: number; observacion?: string }>;
+type SelectedMap = Record<number, { id_nivel: number; observacion?: string }>;
 
 export default function CalificarTribunalPage() {
   const nav = useNavigate();
@@ -43,15 +41,6 @@ export default function CalificarTribunalPage() {
 
   const cerrado = Number(header?.cerrado ?? 0) === 1;
 
-  function extractMsg(e: any) {
-    return (
-      e?.response?.data?.message ||
-      (Array.isArray(e?.response?.data?.errors) && e.response.data.errors[0]?.msg) ||
-      e?.message ||
-      "Ocurrió un error."
-    );
-  }
-
   async function load() {
     if (!id) {
       setToast({ type: "error", msg: "ID inválido del tribunal." });
@@ -75,7 +64,7 @@ export default function CalificarTribunalPage() {
       setItems(res.data.items || []);
       setObsGeneral(res.data.observacion_general || "");
 
-      // ✅ precargar selección por criterio si vienen guardadas
+      // ✅ precargar selecciones + observaciones por criterio si vienen
       const initial: SelectedMap = {};
       for (const item of res.data.items || []) {
         for (const comp of item.componentes || []) {
@@ -91,7 +80,10 @@ export default function CalificarTribunalPage() {
       }
       setSelected(initial);
     } catch (e: any) {
-      setToast({ type: "error", msg: extractMsg(e) || "No se pudo cargar la estructura de calificación." });
+      setToast({
+        type: "error",
+        msg: e?.response?.data?.message || "No se pudo cargar la estructura de calificación.",
+      });
     } finally {
       setLoading(false);
     }
@@ -102,7 +94,7 @@ export default function CalificarTribunalPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  // ✅ Tomamos headers de niveles desde el primer criterio disponible (misma rúbrica)
+  // ✅ headers de niveles desde el primer criterio disponible
   const nivelHeaders: Nivel[] = useMemo(() => {
     for (const item of items) {
       for (const comp of item.componentes || []) {
@@ -138,7 +130,7 @@ export default function CalificarTribunalPage() {
       .filter(([, v]) => !!v?.id_nivel)
       .map(([k, v]) => ({
         id_criterio: Number(k),
-        id_nivel: Number(v.id_nivel),
+        id_nivel: v.id_nivel,
         observacion: v.observacion?.trim() ? v.observacion.trim() : null,
       }));
 
@@ -154,7 +146,7 @@ export default function CalificarTribunalPage() {
       setToast({ type: "success", msg: "Calificaciones guardadas correctamente." });
       await load();
     } catch (e: any) {
-      setToast({ type: "error", msg: extractMsg(e) || "No se pudo guardar." });
+      setToast({ type: "error", msg: e?.response?.data?.message || "No se pudo guardar." });
     } finally {
       setSaving(false);
     }
@@ -162,7 +154,7 @@ export default function CalificarTribunalPage() {
 
   return (
     <div className="califPage wrap containerFull">
-      {/* HERO verde tipo ESPE */}
+      {/* HERO */}
       <div className="hero">
         <div className="heroLeft">
           <img className="heroLogo" src={escudoESPE} alt="ESPE" />
@@ -227,7 +219,7 @@ export default function CalificarTribunalPage() {
         </div>
       </div>
 
-      {/* Box principal */}
+      {/* Box */}
       <div className="box">
         <div className="boxHead">
           <div className="sectionTitle">
@@ -255,7 +247,7 @@ export default function CalificarTribunalPage() {
           </div>
         </div>
 
-        {/* Items/Componentes */}
+        {/* Items */}
         {loading ? (
           <div className="emptyBox">Cargando estructura...</div>
         ) : !items.length ? (
@@ -367,7 +359,7 @@ export default function CalificarTribunalPage() {
           />
         </div>
 
-        {/* Footer botones */}
+        {/* Footer */}
         <div className="footerBtns">
           <button className="btnPrimary" onClick={onSave} disabled={loading || saving || cerrado}>
             <Save size={18} />
