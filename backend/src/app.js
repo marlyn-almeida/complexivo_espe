@@ -1,4 +1,4 @@
-// ✅ server.js — COMPLETO (LIMPIO Y CONSISTENTE)
+// ✅ server.js — COMPLETO (con carpeta entregas-caso incluida)
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
@@ -21,22 +21,26 @@ app.use(express.json());
 // =========================
 const UPLOADS_ROOT = path.join(process.cwd(), "uploads");
 
-// carpetas mínimas (puedes agregar más si quieres)
+// carpetas mínimas
 const UPLOADS_CASOS = path.join(UPLOADS_ROOT, "casos-estudio");
 const UPLOADS_ACTAS = path.join(UPLOADS_ROOT, "actas");
 const UPLOADS_PLANTILLAS = path.join(UPLOADS_ROOT, "plantillas");
+// ✅ NUEVO: ENTREGAS
+const UPLOADS_ENTREGAS = path.join(UPLOADS_ROOT, "entregas-caso");
 
 try {
   if (!fs.existsSync(UPLOADS_ROOT)) fs.mkdirSync(UPLOADS_ROOT, { recursive: true });
   if (!fs.existsSync(UPLOADS_CASOS)) fs.mkdirSync(UPLOADS_CASOS, { recursive: true });
   if (!fs.existsSync(UPLOADS_ACTAS)) fs.mkdirSync(UPLOADS_ACTAS, { recursive: true });
   if (!fs.existsSync(UPLOADS_PLANTILLAS)) fs.mkdirSync(UPLOADS_PLANTILLAS, { recursive: true });
+  // ✅ NUEVO
+  if (!fs.existsSync(UPLOADS_ENTREGAS)) fs.mkdirSync(UPLOADS_ENTREGAS, { recursive: true });
 } catch (e) {
   console.error("⚠️ No se pudo crear carpeta uploads:", e);
 }
 
 // ✅ Servir /uploads públicamente
-// Ej: http://localhost:3001/uploads/actas/acta_1_12345.docx
+// Ej: http://localhost:3001/uploads/entregas-caso/xxxx.pdf
 app.use("/uploads", express.static(UPLOADS_ROOT));
 
 // =========================
@@ -92,10 +96,7 @@ protectedApi.use("/carreras-docentes", require("./routes/carrera_docente.routes"
 protectedApi.use("/tribunales", require("./routes/tribunal.routes"));
 protectedApi.use("/tribunales-estudiantes", require("./routes/tribunal_estudiante.routes"));
 
-protectedApi.use(
-  "/estudiante-caso-asignacion",
-  require("./routes/estudiante_caso_asignacion.routes")
-);
+protectedApi.use("/estudiante-caso-asignacion", require("./routes/estudiante_caso_asignacion.routes"));
 
 protectedApi.use("/calificaciones", require("./routes/calificacion.routes"));
 protectedApi.use("/actas", require("./routes/acta.routes"));
@@ -175,4 +176,5 @@ const PORT = process.env.PORT || 3001;
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`Servidor activo en puerto ${PORT}`);
   console.log("📁 Uploads root:", UPLOADS_ROOT);
+  console.log("📁 Uploads entregas:", UPLOADS_ENTREGAS);
 });
