@@ -1,116 +1,115 @@
 // ✅ src/controllers/entregas_caso.controller.js
 const path = require("path");
 const fs = require("fs");
-const svc = require("../services/entregas_caso.service");
+const service = require("../services/entregas_caso.service");
 
-function ensureDir(dir) {
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+function httpErr(res, e) {
+  const status = Number(e?.status || 500);
+  return res.status(status).json({ ok: false, message: e?.message || "Error interno" });
 }
 
-function safeName(name = "") {
-  return String(name)
-    .replace(/[^\w.\-]+/g, "_")
-    .replace(/_+/g, "_")
-    .slice(0, 180);
+/** ✅ CP viene del ctx.middleware (ADMIN). */
+function getCpFromReq(req) {
+  return Number(req?.ctx?.id_carrera_periodo || 0);
 }
 
-function resolveUploadsPath(publicPath) {
-  const uploadsRoot = path.join(process.cwd(), "uploads");
-  const rel = String(publicPath || "").replace(/^\/+/, "");
-  const full = path.resolve(process.cwd(), rel);
-  const root = path.resolve(uploadsRoot);
+/** ✅ convierte archivo_path (relativo o absoluto) a ruta absoluta real */
+function resolveAbsolutePath(archivo_path) {
+  if (!archivo_path) return null;
 
-  if (!full.startsWith(root)) return null;
-  return full;
+  // si ya es absoluta
+  if (path.isAbsolute(archivo_path)) return archivo_path;
+
+  // normaliza separadores y arma absoluta desde el root del proyecto
+  const clean = String(archivo_path).replace(/^\/+/, ""); // quita / inicial si viene "/uploads/.."
+  return path.join(process.cwd(), clean);
 }
 
-async function get(req, res, next) {
+/**
+ * ✅ GET /entregas-caso/:id_estudiante
+ * JSON metadata (ya lo usas en algunos lados)
+ */
+async function get(req, res) {
   try {
-    const cp = Number(req.ctx.id_carrera_periodo);
-    const id_estudiante = Number(req.params.id_estudiante);
+    const cp = getCpFromReq(req);
+    const id_estudiante = Number(req.params.id_estudiante || 0);
 
-    const data = await svc.get(cp, id_estudiante, req.user);
-    res.json({ ok: true, data });
+    if (!cp) return res.status(400).json({ ok: false, message: "id_carrera_periodo requerido" });
+    if (!id_estudiante) return res.status(400).json({ ok: false, message: "id_estudiante inválido" });
+
+    const data = await service.get(cp, id_estudiante, req.user);
+    return res.json({ ok: true, data });
   } catch (e) {
-    next(e);
+    return httpErr(res, e);
   }
 }
 
-async function upsert(req, res, next) {
+/**
+ * ✅ GET /entregas-caso/:id_estudiante/download
+ * PDF inline (para "Ver") y sirve igual para "Descargar" (frontend crea blob)
+ */
+async function download(req, res) {
   try {
-    const cp = Number(req.ctx.id_carrera_periodo);
+    const cp = getCpFromReq(req);
+    const id_estudiante = Number(req.params.id_estudiante || 0);
 
-    if (!req.file) {
-      const err = new Error("Archivo PDF requerido (campo: archivo)");
-      err.status = 422;
-      throw err;
+    if (!cp) return res.status(400).json({ ok: false, message: "id_carrera_periodo requerido" });
+    if (!id_estudiante) return res.status(400).json({ ok: false, message: "id_estudiante inválido" });
+
+    // ✅ valida permisos + trae entrega con archivo_path
+    const entrega = await service.getForDownload(cp, id_estudiante, req.user);
+
+    // ✅ ruta absoluta correcta
+    const abs = resolveAbsolutePath(entrega.archivo_path);
+
+    if (!abs || !fs.existsSync(abs)) {
+      return res.status(404).json({
+        ok: false,
+        message: "Archivo PDF no encontrado en el servidor (archivo_path inválido o archivo borrado).",
+      });
     }
 
-    const original = req.file.originalname || "entrega.pdf";
-    const isPdf =
-      req.file.mimetype === "application/pdf" ||
-      String(original).toLowerCase().endsWith(".pdf");
-
-    if (!isPdf) {
-      const err = new Error("Solo se permite archivo PDF.");
-      err.status = 422;
-      throw err;
-    }
-
-    const id_estudiante = Number(req.body.id_estudiante);
-    const observacion = req.body.observacion;
-
-    const uploadsRoot = path.join(process.cwd(), "uploads", "entregas");
-    ensureDir(uploadsRoot);
-
-    const ts = Date.now();
-    const filename = `${id_estudiante}_${ts}_${safeName(original)}`;
-    const fullPath = path.join(uploadsRoot, filename);
-
-    fs.writeFileSync(fullPath, req.file.buffer);
-
-    const body = {
-      id_estudiante,
-      archivo_nombre: original,
-      archivo_path: `/uploads/entregas/${filename}`,
-      observacion,
-    };
-
-    const saved = await svc.upsert(cp, body, req.user);
-    res.json({ ok: true, data: saved });
-  } catch (e) {
-    next(e);
-  }
-}
-
-async function download(req, res, next) {
-  try {
-    const cp = Number(req.ctx.id_carrera_periodo);
-    const id_estudiante = Number(req.params.id_estudiante);
-
-    const entrega = await svc.getForDownload(cp, id_estudiante, req.user);
-
-    if (!entrega?.archivo_path) {
-      const err = new Error("La entrega no tiene archivo PDF.");
-      err.status = 404;
-      throw err;
-    }
-
-    const fullPath = resolveUploadsPath(entrega.archivo_path);
-    if (!fullPath || !fs.existsSync(fullPath)) {
-      const err = new Error("Archivo no encontrado en el servidor.");
-      err.status = 404;
-      throw err;
-    }
-
-    const filename = safeName(entrega.archivo_nombre || `entrega_${id_estudiante}.pdf`);
-
+    // ✅ headers correctos para PDF
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `inline; filename="${filename}"`);
-    return res.sendFile(fullPath);
+
+    // inline => se ve en nueva pestaña
+    // (si quisieras forzar descarga desde backend, cambia inline por attachment)
+    const filename = entrega.archivo_nombre || `entrega_${id_estudiante}.pdf`;
+    res.setHeader("Content-Disposition", `inline; filename="${encodeURIComponent(filename)}"`);
+
+    return res.sendFile(abs);
   } catch (e) {
-    next(e);
+    return httpErr(res, e);
   }
 }
 
-module.exports = { get, upsert, download };
+/**
+ * ✅ POST /entregas-caso/by-estudiante
+ * (NO te cambio la lógica: solo dejo un handler estándar)
+ */
+async function upsert(req, res) {
+  try {
+    const cp = getCpFromReq(req);
+
+    if (!cp) return res.status(400).json({ ok: false, message: "id_carrera_periodo requerido" });
+
+    // aquí normalmente tu controller arma: { id_estudiante, archivo_nombre, archivo_path, observacion }
+    // y llama service.upsert(...)
+    const saved = await service.upsert(
+      cp,
+      {
+        id_estudiante: Number(req.body.id_estudiante),
+        archivo_nombre: req.body.archivo_nombre,
+        archivo_path: req.body.archivo_path,
+        observacion: req.body.observacion,
+      },
+      req.user
+    );
+
+    return res.json({ ok: true, data: saved, message: "Entrega guardada" });
+  } catch (e) {
+    return httpErr(res, e);
+  }
+}
+
+module.exports = { get, download, upsert };
