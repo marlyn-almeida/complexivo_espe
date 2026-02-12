@@ -7,8 +7,23 @@ function err(msg, status) {
   return e;
 }
 
+// ✅ FIX REAL: tu auth guarda rol como STRING ("DOCENTE"), no número (3)
 function isRol3(user) {
-  return Number(user?.rol) === 3;
+  if (!user) return false;
+
+  const role = user.rol || user.activeRole;
+
+  // si viene string
+  if (typeof role === "string") {
+    return role.toUpperCase() === "DOCENTE";
+  }
+
+  // si alguna vez viene numérico
+  if (typeof role === "number") {
+    return role === 3;
+  }
+
+  return false;
 }
 
 async function list(query = {}, scope = null) {
@@ -46,7 +61,7 @@ async function create(d, scope = null) {
   const fr = await repo.getFranjaFull(d.id_franja_horario);
   if (!fr) throw err("Franja horaria no existe", 422);
 
-  // 4) caso (✅ AHORA SE ASIGNA AQUÍ, no antes)
+  // 4) caso
   const caso = await repo.getCaso(d.id_caso_estudio);
   if (!caso) throw err("Caso de estudio no existe", 422);
 
@@ -65,15 +80,15 @@ async function create(d, scope = null) {
   const dup = await repo.existsAsignacion(d.id_tribunal, d.id_estudiante);
   if (dup) throw err("El estudiante ya está asignado a este tribunal", 409);
 
-  // 7) franja ocupada global (no puede repetirse en otro tribunal activo)
+  // 7) franja ocupada global
   const franjaOcupada = await repo.existsFranjaOcupadaGlobal(d.id_franja_horario);
   if (franjaOcupada) throw err("Esa franja ya está ocupada (laboratorio/horario reservado)", 409);
 
-  // 8) franja ocupada en este tribunal (redundante pero ok)
+  // 8) franja ocupada en este tribunal
   const dupFranja = await repo.existsFranjaEnTribunal(d.id_tribunal, d.id_franja_horario);
   if (dupFranja) throw err("Esa franja ya está ocupada en este tribunal", 409);
 
-  // 9) conflicto horario de docentes del tribunal
+  // 9) conflicto horario docentes
   const docentes = await repo.getDocentesByTribunal(d.id_tribunal);
   for (const doc of docentes) {
     const conflicto = await repo.existsConflictoHorarioDocente({
@@ -90,7 +105,7 @@ async function create(d, scope = null) {
     }
   }
 
-  // 10) crear (✅ guarda id_caso_estudio en tribunal_estudiante)
+  // 10) crear
   return repo.create({
     id_tribunal: d.id_tribunal,
     id_estudiante: d.id_estudiante,
@@ -105,7 +120,6 @@ async function changeEstado(id, estado, scope = null) {
   return r;
 }
 
-// ✅ cerrar/abrir asignación (bloquea calificación)
 async function changeCierre(id, cerrado, scope = null) {
   const te = await repo.getTribunalEstudiante(id);
   if (!te) throw err("Asignación tribunal_estudiante no encontrada", 404);
@@ -118,13 +132,14 @@ async function changeCierre(id, cerrado, scope = null) {
   }
 
   // registrar quién cierra/abre
-  const id_docente = scope?.id ? Number(scope.id) : null; // en tu auth user.id es docente
+  const id_docente = scope?.id ? Number(scope.id) : null;
   const r = await repo.setCerrado(id, !!cerrado, id_docente);
   if (!r) throw err("No se pudo actualizar cierre", 500);
   return r;
 }
 
 async function misAsignaciones(query = {}, user) {
+  // ✅ aquí estaba el 403 por isRol3 mal
   if (!isRol3(user)) throw err("Acceso denegado", 403);
 
   const includeInactive =
@@ -138,13 +153,6 @@ async function misAsignaciones(query = {}, user) {
   });
 }
 
-/**
- * ✅ NUEVO: contexto para panel de calificación
- * Devuelve:
- * - mi_designacion (PRESIDENTE / INTEGRANTE_1 / INTEGRANTE_2)
- * - caso (pdf path)
- * - entrega (pdf path)
- */
 async function contextoCalificar(id_tribunal_estudiante, cpCtx, user) {
   if (!isRol3(user)) throw err("Acceso denegado", 403);
 

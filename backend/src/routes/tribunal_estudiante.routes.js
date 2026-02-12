@@ -16,7 +16,7 @@ router.get(
   ctrl.misAsignaciones
 );
 
-// ✅ ROL 3: Contexto para calificar (CASO + ENTREGA + MI DESIGNACION)
+// ✅ ROL 3: Contexto para calificar
 router.get(
   "/:id/contexto-calificar",
   auth,
@@ -39,7 +39,6 @@ router.get(
 );
 
 // ✅ CREAR asignación (ROL 1,2)
-// AHORA REQUIERE id_caso_estudio (se asigna al crear tribunal_estudiante)
 router.post(
   "/",
   auth,
@@ -63,7 +62,7 @@ router.patch(
   ctrl.changeEstado
 );
 
-// ✅ Cerrar / Abrir (bloquea calificaciones)
+// ✅ Cerrar / Abrir
 router.patch(
   "/:id/cierre",
   auth,

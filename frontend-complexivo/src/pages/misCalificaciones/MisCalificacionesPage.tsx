@@ -52,7 +52,6 @@ function extractBackendMsg(err: any) {
    HELPERS (ADMIN)
    ========================= */
 
-// ✅ Obtiene el path/nombre/fecha aunque el backend lo mande con nombres distintos
 function entregaMeta(r: any) {
   const nombre =
     r?.entrega_archivo_nombre ??
@@ -80,13 +79,13 @@ function entregaMeta(r: any) {
   return { nombre, path, fecha, idEntrega };
 }
 
+// ✅ FIX: SOLO hay entrega “usable” si existe path (archivo real)
 function hasEntrega(r: any) {
   const m = entregaMeta(r);
-  return Boolean(m.path || m.nombre || m.idEntrega);
+  return Boolean(m.path);
 }
 
 function isAsignadoTribunal(r: any) {
-  // ✅ clave: solo si existe tribunal_estudiante en ESTE CP
   return Boolean(r?.id_tribunal_estudiante);
 }
 
@@ -112,15 +111,11 @@ export default function MisCalificacionesPage() {
 
   const fileRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
-  // =========================
   // ADMIN: CP SELECT
-  // =========================
   const [carreraPeriodos, setCarreraPeriodos] = useState<CarreraPeriodo[]>([]);
   const [selectedCP, setSelectedCP] = useState<number | "">("");
 
-  // =========================
   // DATA + UI
-  // =========================
   const [loading, setLoading] = useState(false);
 
   // ADMIN rows
@@ -137,9 +132,7 @@ export default function MisCalificacionesPage() {
     window.setTimeout(() => setToast(null), 3200);
   }
 
-  // =========================
   // ADMIN: MODAL NOTA TEÓRICA
-  // =========================
   const [notaModalOpen, setNotaModalOpen] = useState(false);
   const [notaTarget, setNotaTarget] = useState<MisCalificacionRow | null>(null);
   const [notaValor, setNotaValor] = useState<string>("");
@@ -186,9 +179,7 @@ export default function MisCalificacionesPage() {
     }
   }
 
-  // =========================
   // LABEL CP (ADMIN)
-  // =========================
   const selectedCPLabel = useMemo(() => {
     const cp = (carreraPeriodos ?? []).find((x: any) => x.id_carrera_periodo === selectedCP);
     if (!cp) return "";
@@ -197,9 +188,7 @@ export default function MisCalificacionesPage() {
     return `${carrera} — ${periodo}`;
   }, [carreraPeriodos, selectedCP]);
 
-  // =========================
-  // LOAD INIT (según rol)
-  // =========================
+  // LOAD INIT
   useEffect(() => {
     if (role === 2) {
       loadCarreraPeriodos();
@@ -212,9 +201,7 @@ export default function MisCalificacionesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // =========================
   // ADMIN: LOAD CP LIST + DATA
-  // =========================
   async function loadCarreraPeriodos() {
     try {
       setLoading(true);
@@ -233,7 +220,6 @@ export default function MisCalificacionesPage() {
     }
   }
 
-  // ✅ si no hay CP => no mostramos, y limpiamos ctx
   useEffect(() => {
     if (role !== 2) return;
 
@@ -269,9 +255,7 @@ export default function MisCalificacionesPage() {
     }
   }
 
-  // =========================
   // DOCENTE: LOAD AGENDA
-  // =========================
   async function loadDocenteAgenda() {
     try {
       setLoading(true);
@@ -285,9 +269,7 @@ export default function MisCalificacionesPage() {
     }
   }
 
-  // =========================
-  // FILTERED (según rol)
-  // =========================
+  // FILTERED
   const filteredAdmin = useMemo(() => {
     const q = search.trim().toLowerCase();
     return (rows ?? []).filter((r: any) => {
@@ -317,9 +299,7 @@ export default function MisCalificacionesPage() {
     });
   }, [docRows, search]);
 
-  // =========================
   // MÉTRICAS
-  // =========================
   const metrics = useMemo(() => {
     if (role === 3) {
       const total = filteredDocente.length;
@@ -347,28 +327,24 @@ export default function MisCalificacionesPage() {
       return;
     }
     if (!hasEntrega(row)) {
-      showToast("Aún no existe una entrega registrada para este estudiante.", "info");
+      showToast("No hay PDF guardado (archivo_path vacío).", "info");
       return;
     }
 
     try {
       setLoading(true);
 
-      const meta = entregaMeta(row);
+      const res = await entregasCasoService.downloadByEstudiante(Number(row.id_estudiante));
 
-      const res = meta.idEntrega
-        ? await entregasCasoService.downloadByEntrega(Number(meta.idEntrega))
-        : await entregasCasoService.downloadByEstudiante(Number(row.id_estudiante));
-
-      const ct = String(res.headers?.["content-type"] ?? "");
+      const ct = String((res as any).headers?.["content-type"] ?? "");
       if (!ct.includes("pdf")) {
-        const txt = await new Response(res.data).text();
+        const txt = await new Response((res as any).data).text();
         console.error("Download no-PDF:", txt);
-        showToast("El backend no devolvió un PDF (revisa endpoint/permisos).", "error");
+        showToast("El backend no devolvió un PDF (revisa archivo_path/permisos).", "error");
         return;
       }
 
-      const blob = new Blob([res.data], { type: "application/pdf" });
+      const blob = new Blob([(res as any).data], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
       window.open(url, "_blank", "noopener,noreferrer");
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
@@ -389,28 +365,25 @@ export default function MisCalificacionesPage() {
       return;
     }
     if (!hasEntrega(row)) {
-      showToast("Aún no existe una entrega registrada para este estudiante.", "info");
+      showToast("No hay PDF guardado (archivo_path vacío).", "info");
       return;
     }
 
     try {
       setLoading(true);
 
-      const meta = entregaMeta(row);
+      const res = await entregasCasoService.downloadByEstudiante(Number(row.id_estudiante));
 
-      const res = meta.idEntrega
-        ? await entregasCasoService.downloadByEntrega(Number(meta.idEntrega))
-        : await entregasCasoService.downloadByEstudiante(Number(row.id_estudiante));
-
-      const ct = String(res.headers?.["content-type"] ?? "");
+      const ct = String((res as any).headers?.["content-type"] ?? "");
       if (!ct.includes("pdf")) {
-        const txt = await new Response(res.data).text();
+        const txt = await new Response((res as any).data).text();
         console.error("Download no-PDF:", txt);
-        showToast("El backend no devolvió un PDF (revisa endpoint/permisos).", "error");
+        showToast("El backend no devolvió un PDF (revisa archivo_path/permisos).", "error");
         return;
       }
 
-      const blob = new Blob([res.data], { type: "application/pdf" });
+      const meta = entregaMeta(row);
+      const blob = new Blob([(res as any).data], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
 
       const a = document.createElement("a");
@@ -432,6 +405,7 @@ export default function MisCalificacionesPage() {
     fileRefs.current[key]?.click();
   }
 
+  // ✅ FIX: guarda archivo_path REAL que devuelve el backend
   async function onUpload(row: any, file: File | null) {
     if (!file) return;
 
@@ -453,23 +427,33 @@ export default function MisCalificacionesPage() {
     try {
       setLoading(true);
 
-      await entregasCasoService.subirByEstudiante({
+      const res = await entregasCasoService.subirByEstudiante({
         id_estudiante: Number(row.id_estudiante),
         archivo: file,
         observacion: "Entrega subida/reemplazada desde Mis Evaluaciones (ADMIN)",
       });
 
-      showToast("Entrega subida/reemplazada correctamente.", "success");
+      const saved = (res as any)?.data?.data ?? (res as any)?.data;
 
-      // ✅ optimista
+      const archivo_nombre = saved?.archivo_nombre ?? file.name;
+      const archivo_path = saved?.archivo_path ?? null;
+      const fecha_entrega = saved?.fecha_entrega ?? saved?.updated_at ?? new Date().toISOString();
+
+      if (!archivo_path) {
+        showToast("Se subió, pero el backend no devolvió archivo_path. Revisa controller/upsert.", "error");
+        return;
+      }
+
+      showToast("Entrega subida correctamente.", "success");
+
       setRows((prev: any[]) =>
         (prev ?? []).map((x: any) => {
           if (Number(x?.id_estudiante) !== Number(row.id_estudiante)) return x;
           return {
             ...x,
-            entrega_archivo_nombre: file.name,
-            entrega_archivo_path: x?.entrega_archivo_path ?? x?.archivo_path ?? "__uploaded__",
-            entrega_fecha_entrega: new Date().toISOString(),
+            entrega_archivo_nombre: archivo_nombre,
+            entrega_archivo_path: archivo_path, // ✅ REAL
+            entrega_fecha_entrega: fecha_entrega,
           };
         })
       );
@@ -634,33 +618,19 @@ export default function MisCalificacionesPage() {
               <table className="table">
                 <thead>
                   <tr>
-                    <th className="thCenter" style={{ width: 320 }}>
-                      Estudiante
-                    </th>
-                    <th className="thCenter" style={{ width: 320 }}>
-                      Carrera
-                    </th>
-                    <th className="thCenter" style={{ width: 180 }}>
-                      Fecha
-                    </th>
-                    <th className="thCenter" style={{ width: 160 }}>
-                      Horario
-                    </th>
-                    <th className="thCenter" style={{ width: 140 }}>
-                      Estado
-                    </th>
-                    <th className="thCenter" style={{ width: 220 }}>
-                      Acciones
-                    </th>
+                    <th className="thCenter" style={{ width: 320 }}>Estudiante</th>
+                    <th className="thCenter" style={{ width: 320 }}>Carrera</th>
+                    <th className="thCenter" style={{ width: 180 }}>Fecha</th>
+                    <th className="thCenter" style={{ width: 160 }}>Horario</th>
+                    <th className="thCenter" style={{ width: 140 }}>Estado</th>
+                    <th className="thCenter" style={{ width: 220 }}>Acciones</th>
                   </tr>
                 </thead>
 
                 <tbody>
                   {loading ? (
                     <tr>
-                      <td className="emptyCell" colSpan={6}>
-                        Cargando...
-                      </td>
+                      <td className="emptyCell" colSpan={6}>Cargando...</td>
                     </tr>
                   ) : filteredDocente.length ? (
                     filteredDocente.map((r: any) => {
@@ -677,7 +647,9 @@ export default function MisCalificacionesPage() {
                           <td className="tdCenter">{r.fecha ?? "—"}</td>
                           <td className="tdCenter">{hora}</td>
                           <td className="tdCenter">
-                            <span className={`badge ${cerrado ? "badge-off" : "badge-ok"}`}>{cerrado ? "CERRADO" : "ABIERTO"}</span>
+                            <span className={`badge ${cerrado ? "badge-off" : "badge-ok"}`}>
+                              {cerrado ? "CERRADO" : "ABIERTO"}
+                            </span>
                           </td>
                           <td className="tdCenter">
                             <div className="actions">
@@ -696,9 +668,7 @@ export default function MisCalificacionesPage() {
                     })
                   ) : (
                     <tr>
-                      <td className="emptyCell" colSpan={6}>
-                        No tienes tribunales asignados.
-                      </td>
+                      <td className="emptyCell" colSpan={6}>No tienes tribunales asignados.</td>
                     </tr>
                   )}
                 </tbody>
@@ -710,36 +680,22 @@ export default function MisCalificacionesPage() {
               <table className="table tableAdmin">
                 <thead>
                   <tr>
-                    <th className="thCenter" style={{ width: 320 }}>
-                      Estudiante
-                    </th>
-                    <th className="thCenter" style={{ width: 320 }}>
-                      Carrera / Tribunal
-                    </th>
-                    <th className="thCenter" style={{ width: 220 }}>
-                      Nota teórica
-                    </th>
-                    <th className="thCenter" style={{ width: 260 }}>
-                      Entrega
-                    </th>
-                    <th className="thCenter" style={{ width: 240 }}>
-                      Acciones
-                    </th>
+                    <th className="thCenter" style={{ width: 320 }}>Estudiante</th>
+                    <th className="thCenter" style={{ width: 320 }}>Carrera / Tribunal</th>
+                    <th className="thCenter" style={{ width: 220 }}>Nota teórica</th>
+                    <th className="thCenter" style={{ width: 260 }}>Entrega</th>
+                    <th className="thCenter" style={{ width: 240 }}>Acciones</th>
                   </tr>
                 </thead>
 
                 <tbody>
                   {!selectedCP ? (
                     <tr>
-                      <td className="emptyCell" colSpan={5}>
-                        Seleccione una Carrera–Período para ver registros.
-                      </td>
+                      <td className="emptyCell" colSpan={5}>Seleccione una Carrera–Período para ver registros.</td>
                     </tr>
                   ) : loading ? (
                     <tr>
-                      <td className="emptyCell" colSpan={5}>
-                        Cargando...
-                      </td>
+                      <td className="emptyCell" colSpan={5}>Cargando...</td>
                     </tr>
                   ) : filteredAdmin.length ? (
                     filteredAdmin.map((r: any) => {
@@ -788,7 +744,6 @@ export default function MisCalificacionesPage() {
 
                           <td className="tdCenter">
                             <div className="actionsRow">
-                              {/* ✅ SOLO ICONOS */}
                               <button
                                 className="btnAction btnNota"
                                 onClick={() => openNotaModal(r)}
@@ -802,7 +757,7 @@ export default function MisCalificacionesPage() {
                                 className="btnAction btnVer"
                                 onClick={() => openEntregaPdf(r)}
                                 disabled={loading || !canOpen}
-                                title={!isAsignadoTribunal(r) ? "No asignado a tribunal" : !hasEntrega(r) ? "Sin entrega" : "Ver PDF"}
+                                title={!isAsignadoTribunal(r) ? "No asignado a tribunal" : !hasEntrega(r) ? "Sin PDF (archivo_path vacío)" : "Ver PDF"}
                               >
                                 <Eye size={16} />
                               </button>
@@ -811,7 +766,7 @@ export default function MisCalificacionesPage() {
                                 className="btnAction btnDesc"
                                 onClick={() => downloadEntregaPdf(r)}
                                 disabled={loading || !canOpen}
-                                title={!isAsignadoTribunal(r) ? "No asignado a tribunal" : !hasEntrega(r) ? "Sin entrega" : "Descargar PDF"}
+                                title={!isAsignadoTribunal(r) ? "No asignado a tribunal" : !hasEntrega(r) ? "Sin PDF (archivo_path vacío)" : "Descargar PDF"}
                               >
                                 <FileDown size={16} />
                               </button>
@@ -846,9 +801,7 @@ export default function MisCalificacionesPage() {
                     })
                   ) : (
                     <tr>
-                      <td className="emptyCell" colSpan={5}>
-                        No hay registros para este Carrera–Período.
-                      </td>
+                      <td className="emptyCell" colSpan={5}>No hay registros para este Carrera–Período.</td>
                     </tr>
                   )}
                 </tbody>

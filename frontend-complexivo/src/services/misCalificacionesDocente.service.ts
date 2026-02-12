@@ -1,7 +1,9 @@
 // ✅ src/services/misCalificacionesDocente.service.ts
 import axiosClient from "../api/axiosClient";
 
-/* ===== Tipos ===== */
+// =========================
+// TYPES (los que usa tu page)
+// =========================
 export type Nivel = {
   id_nivel: number;
   nombre_nivel: string;
@@ -9,48 +11,32 @@ export type Nivel = {
   descripcion?: string | null;
 };
 
-export type Criterio = {
+export type CriterioPlan = {
   id_criterio: number;
   nombre_criterio: string;
   descripcion_criterio?: string | null;
+
   niveles: Nivel[];
 
+  // si backend devuelve ya seleccionado
   id_nivel_seleccionado?: number | null;
   observacion?: string | null;
 };
 
-export type Componente = {
+export type ComponentePlan = {
   id_componente: number;
   nombre_componente: string;
   ponderacion?: number | null;
-  criterios: Criterio[];
+  criterios: CriterioPlan[];
 };
 
 export type ItemPlan = {
   id_item_plan: number;
   nombre_item: string;
   ponderacion?: number | null;
-  rubrica_nombre?: string | null;
-  componentes: Componente[];
-};
 
-export type MisCalificacionesResponse = {
-  ok: true;
-  data: {
-    tribunal_estudiante: {
-      id_tribunal_estudiante: number;
-      estudiante: string;
-      carrera?: string | null;
-      cerrado?: 0 | 1;
-      mi_rol?: string | null;
-    };
-    plan: {
-      id_plan_evaluacion: number;
-      nombre_plan: string;
-    };
-    items: ItemPlan[];
-    observacion_general?: string | null;
-  };
+  rubrica_nombre?: string | null;
+  componentes: ComponentePlan[];
 };
 
 export type SavePayload = {
@@ -62,21 +48,60 @@ export type SavePayload = {
   observacion_general?: string | null;
 };
 
-/* ===== ✅ EXPORT NAMED (lo que tu page importa) ===== */
-export const misCalificacionesDocenteService = {
-  async get(idTribunalEstudiante: number): Promise<MisCalificacionesResponse> {
-    const { data } = await axiosClient.get(`/mis-calificaciones/${idTribunalEstudiante}`);
-    return data;
-  },
+// =========================
+// RESPONSE SHAPE (lo que tu page lee)
+// =========================
+export type MisCalificacionesDocenteResponse = {
+  ok: boolean;
+  data: {
+    tribunal_estudiante: {
+      id_tribunal_estudiante: number;
+      estudiante: string;
+      carrera?: string | null;
+      mi_rol?: string | null;
+      cerrado?: 0 | 1;
+      // opcional
+      id_estudiante?: number;
+      id_tribunal?: number;
+      fecha?: string | null;
+      hora_inicio?: string | null;
+      hora_fin?: string | null;
+    };
 
-  async save(
-    idTribunalEstudiante: number,
-    payload: SavePayload
-  ): Promise<{ ok: true; message?: string }> {
-    const { data } = await axiosClient.post(`/mis-calificaciones/${idTribunalEstudiante}`, payload);
-    return data;
-  },
+    plan?: {
+      id_plan?: number;
+      nombre_plan?: string | null;
+    } | null;
+
+    items: ItemPlan[];
+
+    observacion_general?: string | null;
+  };
 };
 
-/* ===== ✅ EXPORT DEFAULT (opcional, por si alguna vez importas sin llaves) ===== */
-export default misCalificacionesDocenteService;
+function unwrapResponse(res: any): MisCalificacionesDocenteResponse {
+  // axios => {data: ...}
+  const data = res?.data ?? res;
+
+  // si ya viene {ok,data}
+  if (data?.ok !== undefined) return data as MisCalificacionesDocenteResponse;
+
+  // si viene {data:{...}} sin ok
+  return { ok: true, data: (data?.data ?? data) as any };
+}
+
+export const misCalificacionesDocenteService = {
+  // ✅ Backend real (según tu calificacion.service.ts):
+  // GET /calificaciones/mis/:id_tribunal_estudiante
+  get: async (id_tribunal_estudiante: number): Promise<MisCalificacionesDocenteResponse> => {
+    const res = await axiosClient.get(`/calificaciones/mis/${id_tribunal_estudiante}`);
+    return unwrapResponse(res);
+  },
+
+  // ✅ Backend real:
+  // POST /calificaciones/mis/:id_tribunal_estudiante
+  save: async (id_tribunal_estudiante: number, payload: SavePayload): Promise<MisCalificacionesDocenteResponse> => {
+    const res = await axiosClient.post(`/calificaciones/mis/${id_tribunal_estudiante}`, payload);
+    return unwrapResponse(res);
+  },
+};

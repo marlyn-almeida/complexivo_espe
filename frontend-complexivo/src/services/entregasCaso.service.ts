@@ -22,16 +22,7 @@ export const entregasCasoService = {
     });
   },
 
-  // ✅ Descargar PDF por ENTREGA (cuando el listado trae id_entrega)
-  downloadByEntrega: async (id_entrega: number) => {
-    return axiosClient.get(`${BASE}/${id_entrega}/download`, {
-      responseType: "blob",
-      transformResponse: (r) => r,
-      headers: { Accept: "application/pdf" },
-    });
-  },
-
-  // ✅ Descargar PDF por ESTUDIANTE (fallback si tu backend soporta esto)
+  // ✅ Ver/Descargar PDF por ESTUDIANTE (ES TU ENDPOINT REAL)
   downloadByEstudiante: async (id_estudiante: number) => {
     return axiosClient.get(`${BASE}/${id_estudiante}/download`, {
       responseType: "blob",
@@ -43,6 +34,6 @@ export const entregasCasoService = {
   // ✅ (opcional) metadata JSON
   getByEstudiante: async (id_estudiante: number) => {
     const res = await axiosClient.get(`${BASE}/${id_estudiante}`);
-    return res?.data?.data ?? res?.data;
+    return (res as any)?.data?.data ?? (res as any)?.data;
   },
 };
