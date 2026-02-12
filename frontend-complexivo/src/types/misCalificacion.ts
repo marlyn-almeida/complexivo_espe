@@ -1,7 +1,7 @@
 // ✅ src/types/misCalificacion.ts
 
 export type MisCalificacionRow = {
-  // ✅ clave real para saber si está asignado a tribunal (OBLIGATORIO en el nuevo modelo)
+  // ✅ clave real para saber si está asignado a tribunal
   id_tribunal_estudiante?: number | null;
 
   // tribunal
@@ -14,25 +14,29 @@ export type MisCalificacionRow = {
   apellidos_estudiante?: string | null;
   id_institucional_estudiante?: string | null;
 
-  // ✅ (ya NO se usa para entregas, lo dejamos solo por compat si aún llega del backend)
+  // (compat)
   id_caso_estudio?: number | null;
 
-  // entrega (puede ser null si aún no hay)
-  id_entrega?: number | null; // ✅ NUEVO recomendado
+  // ✅ NOTA TEÓRICA (ADMIN) - independiente del tribunal
+  nota_teorico_20?: number | null;
+  nota_teorico_observacion?: string | null;
+
+  // entrega
+  id_entrega?: number | null;
   entrega_archivo_nombre?: string | null;
   entrega_archivo_path?: string | null;
   entrega_fecha_entrega?: string | null;
   entrega_observacion?: string | null;
   entrega_estado?: number | null;
 
-  // ✅ campos opcionales para que la tabla se parezca a tu screenshot
+  // meta
   nombre_carrera?: string | null;
   codigo_periodo?: string | null;
   descripcion_periodo?: string | null;
 
-  fecha_tribunal?: string | null;      // "2026-02-08"
-  hora_inicio?: string | null;         // "12:41"
-  hora_fin?: string | null;            // "23:43"
-  estado_tribunal?: string | null;     // "ABIERTO" / "CERRADO" (o lo que manejes)
-  mi_rol?: string | null;              // "Director de Carrera" / "Docente de Apoyo" / "Vocal" etc.
+  fecha_tribunal?: string | null;
+  hora_inicio?: string | null;
+  hora_fin?: string | null;
+  estado_tribunal?: string | null;
+  mi_rol?: string | null;
 };

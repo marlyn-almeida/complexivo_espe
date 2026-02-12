@@ -16,17 +16,16 @@ function sendErr(res, err) {
   const status = Number(err?.status || err?.statusCode || 500);
   const msg =
     err?.message ||
-    (status === 403
-      ? "Acceso denegado"
-      : status === 409
-      ? "Conflicto"
-      : "Error interno");
+    (status === 403 ? "Acceso denegado" : status === 409 ? "Conflicto" : "Error interno");
   return res.status(status).json({ message: msg });
 }
 
 /**
  * ✅ ADMIN (ROL 2)
  * GET /mis-calificaciones
+ *
+ * Ahora lista ESTUDIANTES del CP aunque NO tengan tribunal.
+ * Trae: nota_teorico, caso_asignado, entrega_pdf y (si existe) info de tribunal.
  */
 async function list(req, res) {
   try {
@@ -43,17 +42,20 @@ async function list(req, res) {
 /**
  * ✅ DOCENTE (ROL 3)
  * GET /mis-calificaciones/:idTribunalEstudiante
+ *
+ * IMPORTANTE:
+ * - NO exigimos CP en header, porque el DOCENTE no usa attachCarreraPeriodoCtx
+ * - La validación real se hace contra tribunal_docente/carrera_docente en repo
  */
 async function getForDocente(req, res) {
   try {
-    const cp = getCP(req);
-    if (!cp) return res.status(400).json({ message: "id_carrera_periodo requerido" });
-
     const idTribunalEstudiante = Number(req.params.idTribunalEstudiante || 0);
-    if (!idTribunalEstudiante) return res.status(400).json({ message: "idTribunalEstudiante inválido" });
+    if (!idTribunalEstudiante) {
+      return res.status(400).json({ message: "idTribunalEstudiante inválido" });
+    }
 
     const user = req.user;
-    const data = await service.getForDocente(cp, idTribunalEstudiante, user);
+    const data = await service.getForDocente(idTribunalEstudiante, user);
 
     if (!data) return res.status(404).json({ message: "No encontrado" });
     return res.json({ ok: true, data });
@@ -68,14 +70,13 @@ async function getForDocente(req, res) {
  */
 async function saveForDocente(req, res) {
   try {
-    const cp = getCP(req);
-    if (!cp) return res.status(400).json({ message: "id_carrera_periodo requerido" });
-
     const idTribunalEstudiante = Number(req.params.idTribunalEstudiante || 0);
-    if (!idTribunalEstudiante) return res.status(400).json({ message: "idTribunalEstudiante inválido" });
+    if (!idTribunalEstudiante) {
+      return res.status(400).json({ message: "idTribunalEstudiante inválido" });
+    }
 
     const user = req.user;
-    await service.saveForDocente(cp, idTribunalEstudiante, user, req.body);
+    await service.saveForDocente(idTribunalEstudiante, user, req.body);
 
     return res.json({ ok: true, message: "Guardado" });
   } catch (err) {

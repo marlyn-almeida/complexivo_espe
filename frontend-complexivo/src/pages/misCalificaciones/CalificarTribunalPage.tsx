@@ -1,13 +1,7 @@
-// src/pages/misCalificaciones/CalificarTribunalPage.tsx
+// ✅ src/pages/misCalificaciones/CalificarTribunalPage.tsx
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import {
-  ArrowLeft,
-  RefreshCcw,
-  Save,
-  ClipboardCheck,
-  BadgeCheck,
-} from "lucide-react";
+import { ArrowLeft, RefreshCcw, Save, ClipboardCheck, BadgeCheck } from "lucide-react";
 
 import escudoESPE from "../../assets/escudo.png";
 import "./CalificarTribunalPage.css";
@@ -17,11 +11,12 @@ import {
   type ItemPlan,
   type SavePayload,
   type Nivel,
-} from "../../services/calificacionesDocente.service";
-
+} from "../../services/misCalificacionesDocente.service";
 
 type ToastType = "success" | "error" | "info";
-type SelectedMap = Record<number, { id_nivel: number; observacion?: string }>;
+
+/** ✅ allow undefined para evitar choque cuando no hay selección todavía */
+type SelectedMap = Record<number, { id_nivel?: number; observacion?: string }>;
 
 export default function CalificarTribunalPage() {
   const nav = useNavigate();
@@ -31,9 +26,7 @@ export default function CalificarTribunalPage() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const [toast, setToast] = useState<{ type: ToastType; msg: string } | null>(
-    null
-  );
+  const [toast, setToast] = useState<{ type: ToastType; msg: string } | null>(null);
 
   const [header, setHeader] = useState<{
     estudiante: string;
@@ -49,6 +42,15 @@ export default function CalificarTribunalPage() {
   const [obsGeneral, setObsGeneral] = useState("");
 
   const cerrado = Number(header?.cerrado ?? 0) === 1;
+
+  function extractMsg(e: any) {
+    return (
+      e?.response?.data?.message ||
+      (Array.isArray(e?.response?.data?.errors) && e.response.data.errors[0]?.msg) ||
+      e?.message ||
+      "Ocurrió un error."
+    );
+  }
 
   async function load() {
     if (!id) {
@@ -73,7 +75,7 @@ export default function CalificarTribunalPage() {
       setItems(res.data.items || []);
       setObsGeneral(res.data.observacion_general || "");
 
-      // precargar selecciones + observaciones por criterio si vienen
+      // ✅ precargar selección por criterio si vienen guardadas
       const initial: SelectedMap = {};
       for (const item of res.data.items || []) {
         for (const comp of item.componentes || []) {
@@ -89,12 +91,7 @@ export default function CalificarTribunalPage() {
       }
       setSelected(initial);
     } catch (e: any) {
-      setToast({
-        type: "error",
-        msg:
-          e?.response?.data?.message ||
-          "No se pudo cargar la estructura de calificación.",
-      });
+      setToast({ type: "error", msg: extractMsg(e) || "No se pudo cargar la estructura de calificación." });
     } finally {
       setLoading(false);
     }
@@ -105,7 +102,7 @@ export default function CalificarTribunalPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  // Tomamos headers de niveles desde el primer criterio disponible (misma rúbrica)
+  // ✅ Tomamos headers de niveles desde el primer criterio disponible (misma rúbrica)
   const nivelHeaders: Nivel[] = useMemo(() => {
     for (const item of items) {
       for (const comp of item.componentes || []) {
@@ -133,10 +130,7 @@ export default function CalificarTribunalPage() {
 
   async function onSave() {
     if (cerrado) {
-      setToast({
-        type: "info",
-        msg: "Este tribunal está cerrado. No se pueden guardar cambios.",
-      });
+      setToast({ type: "info", msg: "Este tribunal está cerrado. No se pueden guardar cambios." });
       return;
     }
 
@@ -144,7 +138,7 @@ export default function CalificarTribunalPage() {
       .filter(([, v]) => !!v?.id_nivel)
       .map(([k, v]) => ({
         id_criterio: Number(k),
-        id_nivel: v.id_nivel,
+        id_nivel: Number(v.id_nivel),
         observacion: v.observacion?.trim() ? v.observacion.trim() : null,
       }));
 
@@ -160,10 +154,7 @@ export default function CalificarTribunalPage() {
       setToast({ type: "success", msg: "Calificaciones guardadas correctamente." });
       await load();
     } catch (e: any) {
-      setToast({
-        type: "error",
-        msg: e?.response?.data?.message || "No se pudo guardar.",
-      });
+      setToast({ type: "error", msg: extractMsg(e) || "No se pudo guardar." });
     } finally {
       setSaving(false);
     }
@@ -191,12 +182,7 @@ export default function CalificarTribunalPage() {
         </div>
 
         <div className="heroActions">
-          <button
-            className="heroBtn ghost"
-            onClick={load}
-            disabled={loading || saving}
-            title="Actualizar"
-          >
+          <button className="heroBtn ghost" onClick={load} disabled={loading || saving} title="Actualizar">
             <RefreshCcw className="heroBtnIcon" />
             Actualizar
           </button>
@@ -230,9 +216,7 @@ export default function CalificarTribunalPage() {
             Mis Evaluaciones
           </button>
           <span className="crumbSep">/</span>
-          <span className="crumbHere">
-            {header?.estudiante ? header.estudiante : "Calificar"}
-          </span>
+          <span className="crumbHere">{header?.estudiante ? header.estudiante : "Calificar"}</span>
         </div>
 
         <div className="rolePill">
@@ -254,9 +238,7 @@ export default function CalificarTribunalPage() {
           </div>
 
           <div className="boxRight">
-            <div className={`statePill ${cerrado ? "off" : "on"}`}>
-              {cerrado ? "CERRADO" : "ABIERTO"}
-            </div>
+            <div className={`statePill ${cerrado ? "off" : "on"}`}>{cerrado ? "CERRADO" : "ABIERTO"}</div>
             <div className="roleBadge">
               <span>Su Rol de Evaluación:</span>
               <b>{header?.mi_rol || "Miembro"}</b>
@@ -265,8 +247,12 @@ export default function CalificarTribunalPage() {
         </div>
 
         <div className="meta">
-          <div><b>Estudiante:</b> {header?.estudiante || "—"}</div>
-          <div><b>Plan:</b> {header?.plan_nombre || "—"}</div>
+          <div>
+            <b>Estudiante:</b> {header?.estudiante || "—"}
+          </div>
+          <div>
+            <b>Plan:</b> {header?.plan_nombre || "—"}
+          </div>
         </div>
 
         {/* Items/Componentes */}
@@ -286,9 +272,7 @@ export default function CalificarTribunalPage() {
                     <span className="chipPercent">{Number(item.ponderacion).toFixed(2)}%</span>
                   )}
                 </div>
-                <div className="rubricaCardSub">
-                  Usando plantilla: {item.rubrica_nombre || "—"}
-                </div>
+                <div className="rubricaCardSub">Usando plantilla: {item.rubrica_nombre || "—"}</div>
               </div>
 
               {item.componentes.map((comp) => (
@@ -297,9 +281,7 @@ export default function CalificarTribunalPage() {
                     <span className="compDot" />
                     <b>{comp.nombre_componente}</b>
                     {comp.ponderacion != null && (
-                      <span className="compHint">
-                        ({Number(comp.ponderacion).toFixed(2)}% de esta rúbrica)
-                      </span>
+                      <span className="compHint">({Number(comp.ponderacion).toFixed(2)}% de esta rúbrica)</span>
                     )}
                   </div>
 
@@ -326,16 +308,12 @@ export default function CalificarTribunalPage() {
                             <tr key={crit.id_criterio}>
                               <td className="tdCriterio">
                                 <div className="critMain">{crit.nombre_criterio}</div>
-                                {crit.descripcion_criterio && (
-                                  <div className="critSub">{crit.descripcion_criterio}</div>
-                                )}
+                                {crit.descripcion_criterio && <div className="critSub">{crit.descripcion_criterio}</div>}
                               </td>
 
                               {nivelHeaders.map((n) => {
                                 const checked = picked === n.id_nivel;
-                                const nivelReal = (crit.niveles || []).find(
-                                  (x) => x.id_nivel === n.id_nivel
-                                );
+                                const nivelReal = (crit.niveles || []).find((x) => x.id_nivel === n.id_nivel);
 
                                 return (
                                   <td key={n.id_nivel} className={`tdNivel ${checked ? "sel" : ""}`}>
@@ -348,9 +326,7 @@ export default function CalificarTribunalPage() {
                                         onChange={() => onPick(crit.id_criterio, n.id_nivel)}
                                       />
                                       <span className="nivelRadio" />
-                                      <span className="nivelText">
-                                        {nivelReal?.descripcion || "—"}
-                                      </span>
+                                      <span className="nivelText">{nivelReal?.descripcion || "—"}</span>
                                     </label>
                                   </td>
                                 );
@@ -379,7 +355,9 @@ export default function CalificarTribunalPage() {
 
         {/* Observación general */}
         <div className="obsGeneralWrap">
-          <div className="obsGeneralLabel">Observación General para {header?.mi_rol || "ti"} (Opcional)</div>
+          <div className="obsGeneralLabel">
+            Observación General para {header?.mi_rol || "ti"} (Opcional)
+          </div>
           <textarea
             className="obsGeneral"
             placeholder="Observación general..."
@@ -389,7 +367,7 @@ export default function CalificarTribunalPage() {
           />
         </div>
 
-        {/* Footer botones como en tu foto */}
+        {/* Footer botones */}
         <div className="footerBtns">
           <button className="btnPrimary" onClick={onSave} disabled={loading || saving || cerrado}>
             <Save size={18} />

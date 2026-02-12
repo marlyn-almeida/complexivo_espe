@@ -1,4 +1,4 @@
-// src/routes/AppRoutes.tsx
+// ✅ src/routes/AppRoutes.tsx
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import Layout from "../components/layout/Layout";
@@ -26,7 +26,6 @@ import RubricaEditorPage from "../pages/rubrica/RubricaEditorPage";
 import FranjaHorariaPage from "../pages/franja-horaria/FranjaHorariaPage";
 import TribunalesPage from "../pages/tribunales/TribunalesPage";
 
-import MisTribunalesPage from "../pages/docentes/MisTribunalesPage";
 import PlantillasActaWordPage from "../pages/plantillasActa/PlantillasActaWordPage";
 
 import ProtectedRoute from "../components/auth/ProtectedRoute";
@@ -35,7 +34,7 @@ import { dashboardByRole, getActiveRole, getToken } from "../utils/auth";
 // ROL 2
 import CasosEstudioPage from "../pages/casosEstudio/CasosEstudioPage";
 
-// ✅ ADMIN (2) — si lo estabas usando como “vista admin” lo mantengo
+// ✅ Pantalla unificada (ADMIN + DOCENTE con role switch)
 import MisCalificacionesPage from "../pages/misCalificaciones/MisCalificacionesPage";
 
 // ✅ DOCENTE (3): pantalla real para calificar 1 tribunal_estudiante
@@ -218,7 +217,7 @@ export default function AppRoutes() {
             }
           />
 
-          {/* ✅ CALIFICACIONES ADMIN (2) (si lo estabas usando) */}
+          {/* ✅ CALIFICACIONES ADMIN (2) */}
           <Route
             path="/calificaciones"
             element={
@@ -229,12 +228,12 @@ export default function AppRoutes() {
           />
 
           {/* ✅ DOCENTE (3) — LISTADO (AGENDA) */}
-          {/* ESTA es la ruta que debe usar tu menú “Calificación” */}
+          {/* 🔥 IMPORTANTE: ahora usa MisCalificacionesPage (para que tenga botón CALIFICAR) */}
           <Route
             path="/docente/calificaciones"
             element={
               <ProtectedRoute allowRoles={[3]}>
-                <MisTribunalesPage />
+                <MisCalificacionesPage />
               </ProtectedRoute>
             }
           />
@@ -252,11 +251,7 @@ export default function AppRoutes() {
           {/* ✅ COMPATIBILIDAD: si tu menú aún apunta aquí */}
           <Route
             path="/mis-tribunales"
-            element={
-              <ProtectedRoute allowRoles={[3]}>
-                <MisTribunalesPage />
-              </ProtectedRoute>
-            }
+            element={<Navigate to="/docente/calificaciones" replace />}
           />
 
           {/* ACTAS */}

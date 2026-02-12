@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 
 import { misCalificacionesService } from "../../services/misCalificaciones.service";
 import { entregasCasoService } from "../../services/entregasCaso.service";
+import { notaTeoricaService } from "../../services/notaTeorica.service";
 import { carreraPeriodoService } from "../../services/carreraPeriodo.service";
 import { tribunalesDocenteService, type MiTribunalItem } from "../../services/tribunalesDocente.service";
 
@@ -21,6 +22,7 @@ import {
   Filter,
   X,
   Pencil,
+  Save,
 } from "lucide-react";
 
 import escudoESPE from "../../assets/escudo.png";
@@ -53,7 +55,7 @@ function hasEntrega(r: MisCalificacionRow) {
   return !!(r.entrega_archivo_path || r.entrega_archivo_nombre || (r as any).id_entrega);
 }
 function isAsignadoTribunal(r: MisCalificacionRow) {
-  return !!(r as any).id_tribunal_estudiante; // si tu row lo tiene, ok
+  return !!(r as any).id_tribunal_estudiante;
 }
 
 /* =========================
@@ -95,6 +97,55 @@ export default function MisCalificacionesPage() {
   }
 
   // =========================
+  // ADMIN: MODAL NOTA TEÓRICA
+  // =========================
+  const [notaModalOpen, setNotaModalOpen] = useState(false);
+  const [notaTarget, setNotaTarget] = useState<MisCalificacionRow | null>(null);
+  const [notaValor, setNotaValor] = useState<string>("");
+  const [notaObs, setNotaObs] = useState<string>("");
+
+  function openNotaModal(row: MisCalificacionRow) {
+    if (!row?.id_estudiante) {
+      showToast("Fila inválida: falta id_estudiante.", "info");
+      return;
+    }
+    setNotaTarget(row);
+    setNotaValor(row.nota_teorico_20 != null ? String(row.nota_teorico_20) : "");
+    setNotaObs(row.nota_teorico_observacion ?? "");
+    setNotaModalOpen(true);
+  }
+
+  async function saveNotaTeorica() {
+    if (!notaTarget?.id_estudiante) return;
+
+    const n = Number(notaValor);
+    if (Number.isNaN(n) || n < 0 || n > 20) {
+      showToast("La nota debe estar entre 0 y 20.", "info");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      await notaTeoricaService.save({
+        id_estudiante: Number(notaTarget.id_estudiante),
+        nota_teorico_20: n,
+        observacion: notaObs?.trim() ? notaObs.trim() : undefined,
+      });
+
+      showToast("Nota teórica guardada.", "success");
+      setNotaModalOpen(false);
+      setNotaTarget(null);
+
+      await loadAdminList();
+    } catch (err: any) {
+      showToast(extractBackendMsg(err), "error");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // =========================
   // LABEL CP (ADMIN)
   // =========================
   const selectedCPLabel = useMemo(() => {
@@ -114,7 +165,6 @@ export default function MisCalificacionesPage() {
     } else if (role === 3) {
       loadDocenteAgenda();
     } else {
-      // SUPER_ADMIN no debería estar aquí, pero por si acaso
       setRows([]);
       setDocRows([]);
     }
@@ -225,7 +275,11 @@ export default function MisCalificacionesPage() {
   // ADMIN: PDF actions
   // =========================
   async function openEntregaPdf(row: MisCalificacionRow) {
-    if (!row?.id_estudiante || !isAsignadoTribunal(row)) {
+    if (!row?.id_estudiante) {
+      showToast("Fila inválida: falta id_estudiante.", "info");
+      return;
+    }
+    if (!isAsignadoTribunal(row)) {
       showToast("Este estudiante no está asignado a un tribunal.", "info");
       return;
     }
@@ -250,7 +304,11 @@ export default function MisCalificacionesPage() {
   }
 
   async function downloadEntregaPdf(row: MisCalificacionRow) {
-    if (!row?.id_estudiante || !isAsignadoTribunal(row)) {
+    if (!row?.id_estudiante) {
+      showToast("Fila inválida: falta id_estudiante.", "info");
+      return;
+    }
+    if (!isAsignadoTribunal(row)) {
       showToast("Este estudiante no está asignado a un tribunal.", "info");
       return;
     }
@@ -292,7 +350,13 @@ export default function MisCalificacionesPage() {
       return;
     }
 
-    if (!row?.id_estudiante || !isAsignadoTribunal(row)) {
+    if (!row?.id_estudiante) {
+      showToast("Fila inválida: falta id_estudiante.", "info");
+      return;
+    }
+
+    // ✅ PDF SÍ depende de tribunal/caso (según lo que decidiste dejar)
+    if (!isAsignadoTribunal(row)) {
       showToast("No se puede subir: el estudiante no está asignado a un tribunal.", "info");
       return;
     }
@@ -303,7 +367,7 @@ export default function MisCalificacionesPage() {
       await entregasCasoService.subirByEstudiante({
         id_estudiante: Number((row as any).id_estudiante),
         archivo: file,
-        observacion: "Entrega subida desde Mis Evaluaciones (ADMIN)",
+        observacion: "Entrega subida/reemplazada desde Mis Evaluaciones (ADMIN)",
       });
 
       showToast("Entrega subida/reemplazada correctamente.", "success");
@@ -351,7 +415,7 @@ export default function MisCalificacionesPage() {
                   </>
                 ) : (
                   <>
-                    Gestión por <b>Carrera–Período</b>. Aquí aparecen estudiantes asignados a un <b>Tribunal</b>.
+                    Gestión por <b>Carrera–Período</b>. Puedes registrar <b>nota teórica</b> y gestionar <b>PDF</b>.
                   </>
                 )}
               </p>
@@ -369,7 +433,7 @@ export default function MisCalificacionesPage() {
 
                 {role === 2 ? (
                   <span className="chip chipSoft">
-                    <ClipboardList size={16} /> Entregas PDF por estudiante
+                    <ClipboardList size={16} /> Nota teórica + Entrega PDF
                   </span>
                 ) : (
                   <span className="chip chipSoft">
@@ -442,7 +506,7 @@ export default function MisCalificacionesPage() {
               <span>
                 {role === 3
                   ? "Solo verás tus tribunales asignados. Presiona Calificar para ingresar."
-                  : "Solo puedes subir/ver/descargar si el estudiante está asignado a un tribunal."}
+                  : "Nota teórica NO depende de tribunal. El PDF sí requiere que esté asignado a tribunal (según decisión actual)."}
               </span>
             </div>
           </div>
@@ -525,19 +589,20 @@ export default function MisCalificacionesPage() {
                     <th className="thCenter" style={{ width: 170 }}>Fecha</th>
                     <th className="thCenter" style={{ width: 160 }}>Horario</th>
                     <th className="thCenter" style={{ width: 150 }}>Estado</th>
+                    <th className="thCenter" style={{ width: 170 }}>Nota teórica</th>
                     <th className="thCenter">Entrega</th>
-                    <th className="thCenter" style={{ width: 330 }}>Acciones</th>
+                    <th className="thCenter" style={{ width: 420 }}>Acciones</th>
                   </tr>
                 </thead>
 
                 <tbody>
                   {!selectedCP ? (
                     <tr>
-                      <td className="emptyCell" colSpan={8}>Seleccione una Carrera–Período para ver registros.</td>
+                      <td className="emptyCell" colSpan={9}>Seleccione una Carrera–Período para ver registros.</td>
                     </tr>
                   ) : loading ? (
                     <tr>
-                      <td className="emptyCell" colSpan={8}>Cargando...</td>
+                      <td className="emptyCell" colSpan={9}>Cargando...</td>
                     </tr>
                   ) : filteredAdmin.length ? (
                     filteredAdmin.map((r: any) => {
@@ -578,6 +643,16 @@ export default function MisCalificacionesPage() {
                           <td className="tdCenter">{horario}</td>
                           <td className="tdCenter">{estadoTrib}</td>
 
+                          {/* ✅ Nota teórica NO depende de tribunal */}
+                          <td className="tdCenter">
+                            <div className="cellMain">
+                              {r.nota_teorico_20 != null ? `${r.nota_teorico_20}/20` : "—"}
+                            </div>
+                            <div className="cellSub">
+                              {r.nota_teorico_observacion ? String(r.nota_teorico_observacion) : "Sin observación"}
+                            </div>
+                          </td>
+
                           <td className="tdCenter">
                             <div className="cellMain">{entregaName}</div>
                             <div className="cellSub">{entregaFecha || "—"}</div>
@@ -588,6 +663,16 @@ export default function MisCalificacionesPage() {
 
                           <td className="tdCenter">
                             <div className="actions">
+                              {/* ✅ Botón Nota */}
+                              <button
+                                className="btnGhost"
+                                onClick={() => openNotaModal(r)}
+                                disabled={loading}
+                                title="Registrar/Editar nota teórica"
+                              >
+                                <Pencil size={16} /> Nota
+                              </button>
+
                               <button
                                 className="btnGhost"
                                 onClick={() => openEntregaPdf(r)}
@@ -636,8 +721,8 @@ export default function MisCalificacionesPage() {
                     })
                   ) : (
                     <tr>
-                      <td className="emptyCell" colSpan={8}>
-                        No hay estudiantes asignados a tribunales en este Carrera–Período.
+                      <td className="emptyCell" colSpan={9}>
+                        No hay registros para este Carrera–Período.
                       </td>
                     </tr>
                   )}
@@ -646,6 +731,55 @@ export default function MisCalificacionesPage() {
             </div>
           )}
         </div>
+
+        {/* ✅ MODAL NOTA TEÓRICA */}
+        {notaModalOpen && (
+          <div className="modalOverlay" onClick={() => setNotaModalOpen(false)}>
+            <div className="modal" onClick={(e) => e.stopPropagation()}>
+              <div className="modalHeader">
+                <h3>Nota teórica (0–20)</h3>
+                <button className="btnGhost" onClick={() => setNotaModalOpen(false)}>
+                  <X size={16} /> Cerrar
+                </button>
+              </div>
+
+              <div className="modalBody">
+                <div className="formRow">
+                  <label>Nota</label>
+                  <input
+                    className="input"
+                    type="number"
+                    min={0}
+                    max={20}
+                    step={0.01}
+                    value={notaValor}
+                    onChange={(e) => setNotaValor(e.target.value)}
+                    disabled={loading}
+                    placeholder="Ej: 18.5"
+                  />
+                </div>
+
+                <div className="formRow">
+                  <label>Observación (opcional)</label>
+                  <textarea
+                    className="textarea"
+                    value={notaObs}
+                    onChange={(e) => setNotaObs(e.target.value)}
+                    disabled={loading}
+                    placeholder="Observaciones..."
+                    rows={4}
+                  />
+                </div>
+              </div>
+
+              <div className="modalFooter">
+                <button className="btnPrimary" onClick={saveNotaTeorica} disabled={loading}>
+                  <Save size={16} /> Guardar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {toast && <div className={`toast toast-${toast.type}`}>{toast.msg}</div>}
       </div>

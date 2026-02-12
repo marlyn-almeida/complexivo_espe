@@ -1,36 +1,38 @@
-// src/types/entregaCaso.ts
-export type Estado01 = 0 | 1;
+// ✅ src/services/entregasCaso.service.ts
+import axiosClient from "../api/axiosClient";
 
-export type EntregaCaso = {
-  // (si tu DB devuelve id interno)
-  id_estudiante_caso_entrega?: number;
+const BASE = "/entregas-caso";
 
+export type EntregaByEstudianteCreateDTO = {
   id_estudiante: number;
-  id_caso_estudio: number;
-
-  archivo_nombre: string;
-  archivo_path: string;
-
-  fecha_entrega?: string | null;
-  observacion?: string | null;
-
-  estado: Estado01;
-
-  created_at?: string;
-  updated_at?: string | null;
-
-  // joins opcionales
-  numero_caso?: number | string | null;
-  titulo_caso?: string | null;
-
-  nombres_estudiante?: string;
-  apellidos_estudiante?: string;
-  id_institucional_estudiante?: string;
-};
-
-export type EntregaCasoCreateDTO = {
-  id_estudiante: number;
-  id_caso_estudio: number;
   archivo: File;
   observacion?: string;
+};
+
+export const entregasCasoService = {
+  // ✅ Subir/Reemplazar por estudiante
+  subirByEstudiante: async (payload: EntregaByEstudianteCreateDTO) => {
+    const formData = new FormData();
+    formData.append("id_estudiante", String(payload.id_estudiante));
+    formData.append("archivo", payload.archivo);
+    if (payload.observacion) formData.append("observacion", payload.observacion);
+
+    return axiosClient.post(`${BASE}/by-estudiante`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  },
+
+  // ✅ Descargar PDF por estudiante
+  downloadByEstudiante: async (id_estudiante: number) => {
+    return axiosClient.get(`${BASE}/${id_estudiante}/download`, {
+      responseType: "blob",
+      transformResponse: (r) => r,
+    });
+  },
+
+  // ✅ (opcional) obtener metadata JSON de entrega
+  getByEstudiante: async (id_estudiante: number) => {
+    const res = await axiosClient.get(`${BASE}/${id_estudiante}`);
+    return res?.data?.data ?? res?.data;
+  },
 };

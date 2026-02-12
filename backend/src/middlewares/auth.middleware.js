@@ -1,3 +1,4 @@
+// ✅ src/middlewares/auth.middleware.js
 const jwt = require("jsonwebtoken");
 
 const ROLE_ID_TO_NAME = {
@@ -37,7 +38,7 @@ function auth(req, res, next) {
     }
 
     req.user = {
-      id: decoded.id,
+      id: decoded.id, // en tu caso: id_docente
       roles,
       activeRole: effectiveRole,
       rol: effectiveRole,

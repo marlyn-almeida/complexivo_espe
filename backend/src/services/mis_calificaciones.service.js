@@ -10,29 +10,29 @@ async function listByCP(cp) {
 
 /**
  * ✅ DOCENTE
- * user = req.user (trae id del usuario logeado)
+ * user = req.user (trae id_docente del token)
  */
-async function getForDocente(cp, idTribunalEstudiante, user) {
-  const idUsuario = Number(user?.id || 0);
-  if (!idUsuario) {
+async function getForDocente(idTribunalEstudiante, user) {
+  const idDocente = Number(user?.id || 0);
+  if (!idDocente) {
     const err = new Error("Token inválido");
     err.status = 401;
     throw err;
   }
-  return repo.getForDocente(cp, idTribunalEstudiante, idUsuario);
+  return repo.getForDocente(idTribunalEstudiante, idDocente);
 }
 
 /**
  * ✅ DOCENTE
  */
-async function saveForDocente(cp, idTribunalEstudiante, user, payload) {
-  const idUsuario = Number(user?.id || 0);
-  if (!idUsuario) {
+async function saveForDocente(idTribunalEstudiante, user, payload) {
+  const idDocente = Number(user?.id || 0);
+  if (!idDocente) {
     const err = new Error("Token inválido");
     err.status = 401;
     throw err;
   }
-  return repo.saveForDocente(cp, idTribunalEstudiante, idUsuario, payload);
+  return repo.saveForDocente(idTribunalEstudiante, idDocente, payload);
 }
 
 module.exports = {

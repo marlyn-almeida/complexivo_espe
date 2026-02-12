@@ -11,25 +11,21 @@ const ctrl = require("../controllers/mis_calificaciones.controller");
 /**
  * ✅ ADMIN (ROL 2) - listado por CP
  * GET /mis-calificaciones
+ *
+ * Requiere x-carrera-periodo-id (o equivalente) para attachCarreraPeriodoCtx
  */
-router.get(
-  "/",
-  auth,
-  authorize(["ADMIN"]),
-  attachCarreraPeriodoCtx,
-  validate,
-  ctrl.list
-);
+router.get("/", auth, authorize(["ADMIN"]), attachCarreraPeriodoCtx, validate, ctrl.list);
 
 /**
  * ✅ DOCENTE (ROL 3) - cargar estructura para calificar
  * GET /mis-calificaciones/:idTribunalEstudiante
+ *
+ * OJO: NO exigimos CP (porque ctx solo aplica a ADMIN)
  */
 router.get(
   "/:idTribunalEstudiante",
   auth,
   authorize(["DOCENTE"]),
-  attachCarreraPeriodoCtx,
   param("idTribunalEstudiante").isInt({ min: 1 }).toInt(),
   validate,
   ctrl.getForDocente
@@ -38,12 +34,13 @@ router.get(
 /**
  * ✅ DOCENTE (ROL 3) - guardar calificación
  * POST /mis-calificaciones/:idTribunalEstudiante
+ *
+ * OJO: seguimos validando estructura mínima (stub aún en repo)
  */
 router.post(
   "/:idTribunalEstudiante",
   auth,
   authorize(["DOCENTE"]),
-  attachCarreraPeriodoCtx,
   param("idTribunalEstudiante").isInt({ min: 1 }).toInt(),
 
   body("calificaciones").isArray({ min: 0 }),
