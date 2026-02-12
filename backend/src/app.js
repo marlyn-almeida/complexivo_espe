@@ -1,4 +1,4 @@
-// ✅ server.js — COMPLETO (con carpeta entregas-caso incluida)
+// ✅ server.js — COMPLETO (LIMPIO Y CONSISTENTE)
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
@@ -23,24 +23,21 @@ const UPLOADS_ROOT = path.join(process.cwd(), "uploads");
 
 // carpetas mínimas
 const UPLOADS_CASOS = path.join(UPLOADS_ROOT, "casos-estudio");
+const UPLOADS_ENTREGAS = path.join(UPLOADS_ROOT, "entregas-caso"); // ✅ NUEVO
 const UPLOADS_ACTAS = path.join(UPLOADS_ROOT, "actas");
 const UPLOADS_PLANTILLAS = path.join(UPLOADS_ROOT, "plantillas");
-// ✅ NUEVO: ENTREGAS
-const UPLOADS_ENTREGAS = path.join(UPLOADS_ROOT, "entregas-caso");
 
 try {
   if (!fs.existsSync(UPLOADS_ROOT)) fs.mkdirSync(UPLOADS_ROOT, { recursive: true });
   if (!fs.existsSync(UPLOADS_CASOS)) fs.mkdirSync(UPLOADS_CASOS, { recursive: true });
+  if (!fs.existsSync(UPLOADS_ENTREGAS)) fs.mkdirSync(UPLOADS_ENTREGAS, { recursive: true }); // ✅ NUEVO
   if (!fs.existsSync(UPLOADS_ACTAS)) fs.mkdirSync(UPLOADS_ACTAS, { recursive: true });
   if (!fs.existsSync(UPLOADS_PLANTILLAS)) fs.mkdirSync(UPLOADS_PLANTILLAS, { recursive: true });
-  // ✅ NUEVO
-  if (!fs.existsSync(UPLOADS_ENTREGAS)) fs.mkdirSync(UPLOADS_ENTREGAS, { recursive: true });
 } catch (e) {
   console.error("⚠️ No se pudo crear carpeta uploads:", e);
 }
 
 // ✅ Servir /uploads públicamente
-// Ej: http://localhost:3001/uploads/entregas-caso/xxxx.pdf
 app.use("/uploads", express.static(UPLOADS_ROOT));
 
 // =========================
@@ -57,17 +54,13 @@ app.get("/api/health", (req, res) => {
 // RUTAS PROTEGIDAS (JWT + Scope)
 // =========================
 const protectedApi = express.Router();
-
-// ✅ Global SOLO aquí:
-// 1) auth → carga req.user
-// 2) attachScope → carga req.user.scope (ctx admin carrera_periodo si aplica)
 protectedApi.use(auth, attachScope);
 
 // ---- base
 protectedApi.use("/perfil", require("./routes/perfil.routes"));
 
 // =========================
-// ROLES (solo SUPER_ADMIN dentro de sus routes)
+// ROLES
 // =========================
 protectedApi.use("/roles", require("./routes/rol.routes"));
 
@@ -75,7 +68,7 @@ protectedApi.use("/roles", require("./routes/rol.routes"));
 // DOCENTES
 // =========================
 protectedApi.use("/docentes", require("./routes/docente.routes"));
-protectedApi.use("/", require("./routes/docenteRoles.routes")); // asignación roles docente (si lo usas así)
+protectedApi.use("/", require("./routes/docenteRoles.routes"));
 
 // =========================
 // CATÁLOGOS PRINCIPALES
@@ -107,7 +100,7 @@ protectedApi.use("/actas", require("./routes/acta.routes"));
 protectedApi.use("/plantillas-acta", require("./routes/plantillaActaWord.routes"));
 
 // =========================
-// ✅ NUEVOS MÓDULOS (ROL 2)
+// ✅ MÓDULOS (ROL 2)
 // =========================
 protectedApi.use("/casos-estudio", require("./routes/casos_estudio.routes"));
 protectedApi.use("/entregas-caso", require("./routes/entregas_caso.routes"));
@@ -116,11 +109,11 @@ protectedApi.use("/calificadores-generales", require("./routes/calificadores_gen
 protectedApi.use("/nota-teorico", require("./routes/nota_teorico.routes"));
 protectedApi.use("/ponderaciones-examen", require("./routes/ponderacion.routes"));
 
-// ✅ ✅ ✅ MIS CALIFICACIONES (ROL 2)
+// ✅ MIS CALIFICACIONES (ROL 2)
 protectedApi.use("/mis-calificaciones", require("./routes/mis_calificaciones.routes"));
 
 // =========================
-// RÚBRICAS (1 rubrica por período)
+// RÚBRICAS
 // =========================
 protectedApi.use("/rubricas", require("./routes/rubrica.routes"));
 protectedApi.use("/rubricas/:rubricaId/niveles", require("./routes/rubrica_nivel.routes"));
@@ -128,7 +121,7 @@ protectedApi.use("/rubricas/:rubricaId/componentes", require("./routes/rubrica_c
 protectedApi.use("/componentes/:componenteId/criterios", require("./routes/rubrica_criterio.routes"));
 protectedApi.use("/criterios/:criterioId/niveles", require("./routes/rubrica_criterio_nivel.routes"));
 
-// Catálogos legacy (si aún existen)
+// Catálogos legacy
 protectedApi.use("/componentes", require("./routes/componente.routes"));
 protectedApi.use("/criterios", require("./routes/criterio.routes"));
 protectedApi.use("/niveles", require("./routes/nivel.routes"));
@@ -164,8 +157,7 @@ app.use((err, req, res, next) => {
   res.status(status).json({
     ok: false,
     message: err.message || "Internal Server Error",
-    // en prod puedes comentar esto:
-    stack: err.stack,
+    stack: err.stack, // en prod puedes comentar esto
   });
 });
 

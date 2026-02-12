@@ -15,6 +15,7 @@ function getCpFromReq(req) {
 
 const UPLOAD_DIR = path.join(process.cwd(), "uploads", "entregas-caso");
 
+// ✅ asegura carpeta
 if (!fs.existsSync(UPLOAD_DIR)) {
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 }
@@ -29,7 +30,7 @@ function safeName(name = "") {
 /** ✅ igual que en casos_estudio: resuelve /uploads/... a path real y evita path traversal */
 function resolveUploadsPath(publicPath) {
   const uploadsRoot = path.join(process.cwd(), "uploads");
-  const rel = String(publicPath || "").replace(/^\/+/, ""); // quita "/" inicial
+  const rel = String(publicPath || "").replace(/^\/+/, "");
   const full = path.resolve(process.cwd(), rel);
   const root = path.resolve(uploadsRoot);
 
@@ -68,6 +69,7 @@ async function download(req, res) {
     if (!cp) return res.status(400).json({ ok: false, message: "id_carrera_periodo requerido" });
     if (!id_estudiante) return res.status(400).json({ ok: false, message: "id_estudiante inválido" });
 
+    // ✅ valida permisos y existencia
     const entrega = await service.getForDownload(cp, id_estudiante, req.user);
 
     if (!entrega?.archivo_path) {
@@ -96,7 +98,7 @@ async function download(req, res) {
 
 /**
  * ✅ POST /entregas-caso/by-estudiante
- * Guarda archivo en /uploads/entregas-caso y persiste archivo_path
+ * Guarda archivo en /uploads/entregas-caso y persiste archivo_path en DB
  */
 async function upsert(req, res) {
   try {
@@ -115,7 +117,8 @@ async function upsert(req, res) {
     }
 
     const original = req.file.originalname || "entrega.pdf";
-    const isPdf = req.file.mimetype === "application/pdf" || String(original).toLowerCase().endsWith(".pdf");
+    const isPdf =
+      req.file.mimetype === "application/pdf" || String(original).toLowerCase().endsWith(".pdf");
 
     if (!isPdf) {
       return res.status(422).json({
@@ -129,14 +132,13 @@ async function upsert(req, res) {
     const filename = `${Date.now()}_${safeName(original)}`;
     const filepath = path.join(UPLOAD_DIR, filename);
 
-    // ✅ guarda buffer (memoryStorage)
+    // ✅ guarda buffer (multer.memoryStorage)
     fs.writeFileSync(filepath, req.file.buffer);
 
     const payload = {
       id_estudiante,
       archivo_nombre: original,
-      // ✅ importante: se guarda como path público igual que casos_estudio
-      archivo_path: `/uploads/entregas-caso/${filename}`,
+      archivo_path: `/uploads/entregas-caso/${filename}`, // ✅ path público
       observacion: req.body.observacion ? String(req.body.observacion) : null,
     };
 
