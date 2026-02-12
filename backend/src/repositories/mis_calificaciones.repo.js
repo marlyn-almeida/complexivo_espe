@@ -4,11 +4,10 @@ const pool = require("../config/db");
 /**
  * ✅ ADMIN: lista por Carrera-Periodo (CP)
  *
- * REGLAS CORRECTAS (según tu backend actual):
+ * REGLAS CORRECTAS (según tu BD):
  * - Listar estudiantes del CP aunque NO tengan tribunal
  * - Nota teórica SIEMPRE independiente del tribunal
- * - Entrega PDF depende de ESTUDIANTE (tabla estudiante_entrega)
- * - Solo se permite subir/ver entrega si el estudiante está asignado a un tribunal en ESTE CP
+ * - Entrega PDF depende de CASO (estudiante_caso_asignacion + estudiante_caso_entrega)
  * - Tribunal (si existe) es informativo
  */
 async function listByCP(id_carrera_periodo) {
@@ -32,13 +31,24 @@ async function listByCP(id_carrera_periodo) {
       nt.observacion AS nota_teorico_observacion,
       nt.updated_at AS nota_teorico_updated_at,
 
-      -- ✅ entrega por estudiante (tabla NUEVA)
-      ee.id_entrega AS id_entrega,
-      ee.archivo_nombre AS entrega_archivo_nombre,
-      ee.archivo_path   AS entrega_archivo_path,
-      ee.fecha_entrega  AS entrega_fecha_entrega,
-      ee.observacion    AS entrega_observacion,
-      ee.estado         AS entrega_estado,
+      -- ✅ caso asignado (para subir/traer entrega)
+      eca.id_estudiante_caso_asignacion,
+      eca.id_caso_estudio,
+
+      -- ✅ entrega (depende del caso, NO del tribunal)
+      ece.id_estudiante_caso_entrega AS id_entrega,
+      ece.archivo_nombre AS entrega_archivo_nombre,
+      ece.archivo_path   AS entrega_archivo_path,
+      ece.fecha_entrega  AS entrega_fecha_entrega,
+      ece.observacion    AS entrega_observacion,
+      ece.estado         AS entrega_estado,
+
+      -- ✅ estado calculado para contadores UI
+      CASE
+        WHEN eca.id_caso_estudio IS NULL THEN 'SIN_CASO'
+        WHEN ece.id_estudiante_caso_entrega IS NULL THEN 'PENDIENTE'
+        ELSE 'ENTREGADO'
+      END AS estado_entrega,
 
       -- ✅ tribunal (si existe) SOLO dentro del CP
       te.id_tribunal_estudiante,
@@ -47,7 +57,8 @@ async function listByCP(id_carrera_periodo) {
       t.nombre_tribunal,
       fh.fecha AS fecha_tribunal,
       fh.hora_inicio,
-      fh.hora_fin
+      fh.hora_fin,
+      te.id_caso_estudio AS tribunal_id_caso_estudio
 
     FROM carrera_periodo cp
     JOIN carrera c
@@ -66,10 +77,16 @@ async function listByCP(id_carrera_periodo) {
      AND nt.id_carrera_periodo = cp.id_carrera_periodo
      AND nt.estado = 1
 
-    -- ✅ entrega (0..1 por estudiante)
-    LEFT JOIN estudiante_entrega ee
-      ON ee.id_estudiante = e.id_estudiante
-     AND ee.estado = 1
+    -- ✅ caso asignado (0..1 por estudiante)
+    LEFT JOIN estudiante_caso_asignacion eca
+      ON eca.id_estudiante = e.id_estudiante
+     AND eca.estado = 1
+
+    -- ✅ entrega por estudiante+caso
+    LEFT JOIN estudiante_caso_entrega ece
+      ON ece.id_estudiante = e.id_estudiante
+     AND ece.id_caso_estudio = eca.id_caso_estudio
+     AND ece.estado = 1
 
     -- ✅ tribunal_estudiante MÁS RECIENTE del estudiante PERO SOLO dentro de ESTE CP
     LEFT JOIN tribunal_estudiante te

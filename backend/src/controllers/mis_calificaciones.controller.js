@@ -4,6 +4,8 @@ const service = require("../services/mis_calificaciones.service");
 /** helper: sacar CP sin depender de un nombre exacto */
 function getCP(req) {
   return (
+    Number(req?.query?.id_carrera_periodo) || // ✅ por query (tu error muestra esto)
+    Number(req?.query?.carreraPeriodoId) ||
     Number(req?.carreraPeriodo) ||
     Number(req?.carreraPeriodoId) ||
     Number(req?.ctx?.id_carrera_periodo) ||
@@ -24,16 +26,17 @@ function sendErr(res, err) {
  * ✅ ADMIN (ROL 2)
  * GET /mis-calificaciones
  *
- * Ahora lista ESTUDIANTES del CP aunque NO tengan tribunal.
+ * Lista estudiantes del CP aunque NO tengan tribunal.
  * Trae: nota_teorico, caso_asignado, entrega_pdf y (si existe) info de tribunal.
+ * Devuelve además resumen: total/entregados/pendientes
  */
 async function list(req, res) {
   try {
     const cp = getCP(req);
     if (!cp) return res.status(400).json({ message: "id_carrera_periodo requerido" });
 
-    const data = await service.listByCP(cp);
-    return res.json({ ok: true, data });
+    const { data, resumen } = await service.listByCP(cp);
+    return res.json({ ok: true, data, resumen });
   } catch (err) {
     return sendErr(res, err);
   }
