@@ -39,7 +39,6 @@ async function validarCoherencia(id_tribunal_estudiante, id_rubrica) {
   }
 }
 
-
 // =======================
 // ADMIN (lo que ya tenías)
 // =======================
@@ -74,7 +73,6 @@ async function update(id, d) {
 
   if (!TIPOS_OK.has(d.tipo_rubrica)) throw err("tipo_rubrica inválido", 422);
 
-  // validar contra lo existente
   await validarCoherencia(existing.id_tribunal_estudiante, existing.id_rubrica);
   d.nota_base20 = validarNota(d.nota_base20);
 
@@ -87,24 +85,34 @@ async function changeEstado(id, estado) {
 }
 
 // =======================
-// ✅ DOCENTE (flujo real según TU BD)
+// ✅ DOCENTE (arreglo)
 // =======================
 
 /**
- * Devuelve estructura (items tribunal + componentes + criterios + niveles) filtrada por designación.
- * También devuelve las calificaciones existentes del docente (por criterio).
+ * ✅ CLAVE:
+ * - Si cp viene 0/null (DOCENTE), NO filtramos por CP para encontrar su agenda.
+ * - Luego tomamos cpReal desde la asignación (ctx.id_carrera_periodo) y con eso
+ *   buscamos el plan activo.
  */
 async function misCalificaciones(cp, id_tribunal_estudiante, user) {
   if (!isDocente(user)) throw err("Acceso denegado", 403);
 
+  const cpIn = Number(cp || 0);
+
+  // ✅ repo debe soportar cp=0 como “no filtrar”
   const ctx = await repo.getCtxDocenteTribunalEstudiante({
-    cp,
+    cp: cpIn,
     id_tribunal_estudiante,
     id_docente: Number(user.id),
   });
+
   if (!ctx) throw err("Asignación no encontrada o no pertenece a tu agenda.", 404);
 
-  const plan = await repo.getPlanActivoByCP(cp);
+  // ✅ Tomamos CP REAL desde el ctx (esto evita depender del header/localStorage)
+  const cpReal = Number(ctx.id_carrera_periodo || cpIn || 0);
+  if (!cpReal) throw err("No se pudo determinar el Carrera–Período para calificar.", 422);
+
+  const plan = await repo.getPlanActivoByCP(cpReal);
   if (!plan) throw err("No existe plan de evaluación activo para esta carrera-período.", 404);
 
   const estructura = await repo.getEstructuraParaDocente({
@@ -130,42 +138,29 @@ async function misCalificaciones(cp, id_tribunal_estudiante, user) {
   };
 }
 
-/**
- * payload esperado (ejemplo):
- * {
- *   items: [
- *     {
- *       id_plan_item: 1,
- *       componentes: [
- *         {
- *           id_rubrica_componente: 10,
- *           criterios: [
- *             { id_rubrica_criterio: 100, id_rubrica_nivel: 3, observacion: "..." }
- *           ]
- *         }
- *       ]
- *     }
- *   ]
- * }
- */
 async function guardarMisCalificaciones(cp, id_tribunal_estudiante, user, payload) {
   if (!isDocente(user)) throw err("Acceso denegado", 403);
 
+  const cpIn = Number(cp || 0);
+
   const ctx = await repo.getCtxDocenteTribunalEstudiante({
-    cp,
+    cp: cpIn,
     id_tribunal_estudiante,
     id_docente: Number(user.id),
   });
+
   if (!ctx) throw err("Asignación no encontrada o no pertenece a tu agenda.", 404);
 
   if (Number(ctx.cerrado) === 1) {
     throw err("Esta asignación está cerrada. No se pueden registrar calificaciones.", 409);
   }
 
-  const plan = await repo.getPlanActivoByCP(cp);
+  const cpReal = Number(ctx.id_carrera_periodo || cpIn || 0);
+  if (!cpReal) throw err("No se pudo determinar el Carrera–Período para calificar.", 422);
+
+  const plan = await repo.getPlanActivoByCP(cpReal);
   if (!plan) throw err("No existe plan de evaluación activo para esta carrera-período.", 404);
 
-  // ✅ Seguridad fuerte: solo lo asignado al docente según plan + designación
   const allowed = await repo.getAllowedMap({
     id_plan_evaluacion: plan.id_plan_evaluacion,
     designacion: ctx.mi_designacion,
@@ -197,7 +192,6 @@ async function guardarMisCalificaciones(cp, id_tribunal_estudiante, user, payloa
         if (!Number.isFinite(idCrit) || idCrit <= 0) throw err("id_rubrica_criterio inválido", 422);
         if (!Number.isFinite(idNivel) || idNivel <= 0) throw err("id_rubrica_nivel inválido", 422);
 
-        // clave de seguridad
         const key = `${id_plan_item}:${id_comp}:${idCrit}`;
         if (!allowed.has(key)) {
           throw err("Intentas calificar un criterio/componente que no te corresponde según el Plan.", 403);
@@ -218,7 +212,8 @@ async function guardarMisCalificaciones(cp, id_tribunal_estudiante, user, payloa
 
   await repo.upsertCriteriosCalificacion(toSave);
 
-  return misCalificaciones(cp, id_tribunal_estudiante, user);
+  // ✅ devolvemos vista actualizada usando cpReal (ya no dependemos de header)
+  return misCalificaciones(cpReal, id_tribunal_estudiante, user);
 }
 
 module.exports = {

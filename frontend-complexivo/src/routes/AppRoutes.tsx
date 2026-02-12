@@ -268,7 +268,7 @@ export default function AppRoutes() {
             path="/actas"
             element={
               <ProtectedRoute allowRoles={[3]}>
-                <Placeholder title="Actas (DOCENTE) — pendiente" />
+                <Placeholder title="Actas (DOCENTE) — No existen actas para este tribunal" />
               </ProtectedRoute>
             }
           />

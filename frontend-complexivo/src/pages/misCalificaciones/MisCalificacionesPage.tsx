@@ -188,11 +188,13 @@ export default function MisCalificacionesPage() {
     return `${carrera} — ${periodo}`;
   }, [carreraPeriodos, selectedCP]);
 
-  // LOAD INIT
+  // LOAD INIT (✅ FIX: limpiar CP cuando es DOCENTE)
   useEffect(() => {
     if (role === 2) {
       loadCarreraPeriodos();
     } else if (role === 3) {
+      // ✅ IMPORTANTÍSIMO: evita que axiosClient inyecte id_carrera_periodo viejo (ADMIN)
+      setActiveCP("");
       loadDocenteAgenda();
     } else {
       setRows([]);
@@ -220,6 +222,7 @@ export default function MisCalificacionesPage() {
     }
   }
 
+  // ✅ si no hay CP => no mostramos, y limpiamos ctx
   useEffect(() => {
     if (role !== 2) return;
 
@@ -256,18 +259,37 @@ export default function MisCalificacionesPage() {
   }
 
   // DOCENTE: LOAD AGENDA
-  async function loadDocenteAgenda() {
-    try {
-      setLoading(true);
-      const res = await tribunalesDocenteService.misTribunales();
-      setDocRows(res.data || []);
-    } catch (err: any) {
-      showToast(extractBackendMsg(err), "error");
-      setDocRows([]);
-    } finally {
-      setLoading(false);
+async function loadDocenteAgenda() {
+  try {
+    setLoading(true);
+    const res = await tribunalesDocenteService.misTribunales();
+    const data = res.data || [];
+    setDocRows(data);
+
+    // ✅ IMPORTANTE: setear CP activo para que axiosClient lo mande en /calificaciones/mis/:id
+    // - Si tu backend NO devuelve id_carrera_periodo en cada item, aquí no se puede inferir.
+    // - Pero SI ya tienes guardado el CP de antes, esto no hace nada.
+    const current = localStorage.getItem("active_carrera_periodo_id");
+    if (!current) {
+      // ✅ fallback: si tú SOLO trabajas con un CP fijo (ej: 1) lo puedes setear aquí temporalmente:
+      // localStorage.setItem("active_carrera_periodo_id", "1");
+
+      // ✅ mejor: si en algún lado ya tienes cp seleccionado, úsalo.
+      // Por ahora dejamos un aviso claro:
+      console.warn(
+        "[DOCENTE] No hay active_carrera_periodo_id en localStorage. " +
+          "Sin CP, /calificaciones/mis/:id devuelve 404 por validación de agenda."
+      );
     }
+  } catch (err: any) {
+    showToast(extractBackendMsg(err), "error");
+    setDocRows([]);
+  } finally {
+    setLoading(false);
   }
+}
+
+
 
   // FILTERED
   const filteredAdmin = useMemo(() => {
@@ -527,9 +549,7 @@ export default function MisCalificacionesPage() {
               <div className="boxHeaderText">
                 <div className="boxTitle">{role === 3 ? "Listado de tribunales" : "Listado de evaluaciones"}</div>
                 <div className="boxSubtitle">
-                  {role === 3
-                    ? "Solo verás tus tribunales asignados."
-                    : "Selecciona Carrera–Período para ver y gestionar."}
+                  {role === 3 ? "Solo verás tus tribunales asignados." : "Selecciona Carrera–Período para ver y gestionar."}
                 </div>
               </div>
             </div>
@@ -618,19 +638,33 @@ export default function MisCalificacionesPage() {
               <table className="table">
                 <thead>
                   <tr>
-                    <th className="thCenter" style={{ width: 320 }}>Estudiante</th>
-                    <th className="thCenter" style={{ width: 320 }}>Carrera</th>
-                    <th className="thCenter" style={{ width: 180 }}>Fecha</th>
-                    <th className="thCenter" style={{ width: 160 }}>Horario</th>
-                    <th className="thCenter" style={{ width: 140 }}>Estado</th>
-                    <th className="thCenter" style={{ width: 220 }}>Acciones</th>
+                    <th className="thCenter" style={{ width: 320 }}>
+                      Estudiante
+                    </th>
+                    <th className="thCenter" style={{ width: 320 }}>
+                      Carrera
+                    </th>
+                    <th className="thCenter" style={{ width: 180 }}>
+                      Fecha
+                    </th>
+                    <th className="thCenter" style={{ width: 160 }}>
+                      Horario
+                    </th>
+                    <th className="thCenter" style={{ width: 140 }}>
+                      Estado
+                    </th>
+                    <th className="thCenter" style={{ width: 220 }}>
+                      Acciones
+                    </th>
                   </tr>
                 </thead>
 
                 <tbody>
                   {loading ? (
                     <tr>
-                      <td className="emptyCell" colSpan={6}>Cargando...</td>
+                      <td className="emptyCell" colSpan={6}>
+                        Cargando...
+                      </td>
                     </tr>
                   ) : filteredDocente.length ? (
                     filteredDocente.map((r: any) => {
@@ -668,7 +702,9 @@ export default function MisCalificacionesPage() {
                     })
                   ) : (
                     <tr>
-                      <td className="emptyCell" colSpan={6}>No tienes tribunales asignados.</td>
+                      <td className="emptyCell" colSpan={6}>
+                        No tienes tribunales asignados.
+                      </td>
                     </tr>
                   )}
                 </tbody>
@@ -680,22 +716,36 @@ export default function MisCalificacionesPage() {
               <table className="table tableAdmin">
                 <thead>
                   <tr>
-                    <th className="thCenter" style={{ width: 320 }}>Estudiante</th>
-                    <th className="thCenter" style={{ width: 320 }}>Carrera / Tribunal</th>
-                    <th className="thCenter" style={{ width: 220 }}>Nota teórica</th>
-                    <th className="thCenter" style={{ width: 260 }}>Entrega</th>
-                    <th className="thCenter" style={{ width: 240 }}>Acciones</th>
+                    <th className="thCenter" style={{ width: 320 }}>
+                      Estudiante
+                    </th>
+                    <th className="thCenter" style={{ width: 320 }}>
+                      Carrera / Tribunal
+                    </th>
+                    <th className="thCenter" style={{ width: 220 }}>
+                      Nota teórica
+                    </th>
+                    <th className="thCenter" style={{ width: 260 }}>
+                      Entrega
+                    </th>
+                    <th className="thCenter" style={{ width: 240 }}>
+                      Acciones
+                    </th>
                   </tr>
                 </thead>
 
                 <tbody>
                   {!selectedCP ? (
                     <tr>
-                      <td className="emptyCell" colSpan={5}>Seleccione una Carrera–Período para ver registros.</td>
+                      <td className="emptyCell" colSpan={5}>
+                        Seleccione una Carrera–Período para ver registros.
+                      </td>
                     </tr>
                   ) : loading ? (
                     <tr>
-                      <td className="emptyCell" colSpan={5}>Cargando...</td>
+                      <td className="emptyCell" colSpan={5}>
+                        Cargando...
+                      </td>
                     </tr>
                   ) : filteredAdmin.length ? (
                     filteredAdmin.map((r: any) => {
@@ -731,7 +781,9 @@ export default function MisCalificacionesPage() {
 
                           <td className="tdCenter">
                             <div className="cellMain">{r.nota_teorico_20 != null ? `${r.nota_teorico_20}/20` : "—"}</div>
-                            <div className="cellSub">{r.nota_teorico_observacion ? String(r.nota_teorico_observacion) : "Sin observación"}</div>
+                            <div className="cellSub">
+                              {r.nota_teorico_observacion ? String(r.nota_teorico_observacion) : "Sin observación"}
+                            </div>
                           </td>
 
                           <td className="tdCenter">
@@ -757,7 +809,13 @@ export default function MisCalificacionesPage() {
                                 className="btnAction btnVer"
                                 onClick={() => openEntregaPdf(r)}
                                 disabled={loading || !canOpen}
-                                title={!isAsignadoTribunal(r) ? "No asignado a tribunal" : !hasEntrega(r) ? "Sin PDF (archivo_path vacío)" : "Ver PDF"}
+                                title={
+                                  !isAsignadoTribunal(r)
+                                    ? "No asignado a tribunal"
+                                    : !hasEntrega(r)
+                                    ? "Sin PDF (archivo_path vacío)"
+                                    : "Ver PDF"
+                                }
                               >
                                 <Eye size={16} />
                               </button>
@@ -766,7 +824,13 @@ export default function MisCalificacionesPage() {
                                 className="btnAction btnDesc"
                                 onClick={() => downloadEntregaPdf(r)}
                                 disabled={loading || !canOpen}
-                                title={!isAsignadoTribunal(r) ? "No asignado a tribunal" : !hasEntrega(r) ? "Sin PDF (archivo_path vacío)" : "Descargar PDF"}
+                                title={
+                                  !isAsignadoTribunal(r)
+                                    ? "No asignado a tribunal"
+                                    : !hasEntrega(r)
+                                    ? "Sin PDF (archivo_path vacío)"
+                                    : "Descargar PDF"
+                                }
                               >
                                 <FileDown size={16} />
                               </button>
@@ -801,7 +865,9 @@ export default function MisCalificacionesPage() {
                     })
                   ) : (
                     <tr>
-                      <td className="emptyCell" colSpan={5}>No hay registros para este Carrera–Período.</td>
+                      <td className="emptyCell" colSpan={5}>
+                        No hay registros para este Carrera–Período.
+                      </td>
                     </tr>
                   )}
                 </tbody>

@@ -144,7 +144,7 @@ async function getCtxDocenteTribunalEstudiante({ cp, id_tribunal_estudiante, id_
     JOIN carrera_docente cd ON cd.id_carrera_docente = td.id_carrera_docente AND cd.estado=1
     WHERE te.id_tribunal_estudiante = ?
       AND te.estado = 1
-      AND t.id_carrera_periodo = ?
+      AND ( ? = 0 OR t.id_carrera_periodo = ? )
       AND cd.id_docente = ?
     LIMIT 1
     `,

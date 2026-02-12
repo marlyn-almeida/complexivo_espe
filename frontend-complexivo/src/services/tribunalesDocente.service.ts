@@ -6,7 +6,7 @@ export type MiTribunalItem = {
   id_tribunal: number;
   id_estudiante: number;
 
-  estudiante: string; // "Nombres Apellidos"
+  estudiante: string;
   carrera?: string | null;
   fecha?: string | null;
   hora_inicio?: string | null;
@@ -19,7 +19,7 @@ function pickArray(x: any): any[] | null {
   return Array.isArray(x) ? x : null;
 }
 
-function unwrapArray<T = any>(res: any): T[] {
+function unwrapArray(res: any): MiTribunalItem[] {
   const data = res?.data ?? res;
   return (
     pickArray(data) ||
@@ -29,20 +29,17 @@ function unwrapArray<T = any>(res: any): T[] {
     pickArray(data?.data?.rows) ||
     pickArray(data?.data?.data) ||
     []
-  ) as T[];
+  ) as MiTribunalItem[];
 }
 
 export const tribunalesDocenteService = {
-  // ✅ agenda del docente (ROL 3)
-  misTribunales: async (includeInactive = false): Promise<{ ok: true; data: MiTribunalItem[] }> => {
+  // ✅ Backend real: GET /tribunales-estudiantes/mis-asignaciones (ROL 3)
+  misTribunales: async (params?: { includeInactive?: boolean }): Promise<{ ok: true; data: MiTribunalItem[] }> => {
     const res = await axiosClient.get("/tribunales-estudiantes/mis-asignaciones", {
-      params: { includeInactive: includeInactive ? "true" : "false" },
+      params: { includeInactive: params?.includeInactive ? "true" : "false" },
     });
 
-    // tu backend devuelve array directo o {ok,data}
-    const data = res?.data;
-    if (data?.ok && Array.isArray(data?.data)) return data;
-
-    return { ok: true, data: unwrapArray<MiTribunalItem>(res) };
+    // devolvemos {ok:true, data:[...]} para que tu MisCalificacionesPage siga igual
+    return { ok: true, data: unwrapArray(res) };
   },
 };
