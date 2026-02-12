@@ -16,8 +16,6 @@ import {
   Search,
   FileUp,
   FileDown,
-  Users,
-  ClipboardList,
   AlertTriangle,
   Filter,
   X,
@@ -88,7 +86,7 @@ function hasEntrega(r: any) {
 }
 
 function isAsignadoTribunal(r: any) {
-  // ✅ clave: solo si existe tribunal_estudiante en ESTE CP (ya viene correcto del repo)
+  // ✅ clave: solo si existe tribunal_estudiante en ESTE CP
   return Boolean(r?.id_tribunal_estudiante);
 }
 
@@ -101,10 +99,7 @@ function isCerradoDocente(r: MiTribunalItem) {
 
 /* =========================
    CP ACTIVO (para ctx.middleware)
-   =========================
-   ⚠️ Asegúrate de que esta KEY coincida con la usada en axiosClient.ts.
-   Si en tu axiosClient guardaste otra, reemplaza aquí también.
-*/
+   ========================= */
 const CP_STORAGE_KEY = "active_carrera_periodo_id";
 function setActiveCP(id: number | "") {
   if (!id) localStorage.removeItem(CP_STORAGE_KEY);
@@ -238,7 +233,7 @@ export default function MisCalificacionesPage() {
     }
   }
 
-  // ✅ CLAVE: si no hay CP seleccionado => NO mostramos datos, y limpiamos ctx
+  // ✅ si no hay CP => no mostramos, y limpiamos ctx
   useEffect(() => {
     if (role !== 2) return;
 
@@ -323,7 +318,7 @@ export default function MisCalificacionesPage() {
   }, [docRows, search]);
 
   // =========================
-  // MÉTRICAS (como Docentes)
+  // MÉTRICAS
   // =========================
   const metrics = useMemo(() => {
     if (role === 3) {
@@ -340,7 +335,7 @@ export default function MisCalificacionesPage() {
   }, [filteredAdmin, filteredDocente, role]);
 
   // =========================
-  // ADMIN: PDF actions
+  // ADMIN: PDF actions (✅ FIX)
   // =========================
   async function openEntregaPdf(row: any) {
     if (!row?.id_estudiante) {
@@ -358,10 +353,23 @@ export default function MisCalificacionesPage() {
 
     try {
       setLoading(true);
-      const res = await entregasCasoService.downloadByEstudiante(Number(row.id_estudiante));
+
+      const meta = entregaMeta(row);
+
+      const res = meta.idEntrega
+        ? await entregasCasoService.downloadByEntrega(Number(meta.idEntrega))
+        : await entregasCasoService.downloadByEstudiante(Number(row.id_estudiante));
+
+      const ct = String(res.headers?.["content-type"] ?? "");
+      if (!ct.includes("pdf")) {
+        const txt = await new Response(res.data).text();
+        console.error("Download no-PDF:", txt);
+        showToast("El backend no devolvió un PDF (revisa endpoint/permisos).", "error");
+        return;
+      }
+
       const blob = new Blob([res.data], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
-
       window.open(url, "_blank", "noopener,noreferrer");
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (err: any) {
@@ -387,11 +395,24 @@ export default function MisCalificacionesPage() {
 
     try {
       setLoading(true);
-      const res = await entregasCasoService.downloadByEstudiante(Number(row.id_estudiante));
+
+      const meta = entregaMeta(row);
+
+      const res = meta.idEntrega
+        ? await entregasCasoService.downloadByEntrega(Number(meta.idEntrega))
+        : await entregasCasoService.downloadByEstudiante(Number(row.id_estudiante));
+
+      const ct = String(res.headers?.["content-type"] ?? "");
+      if (!ct.includes("pdf")) {
+        const txt = await new Response(res.data).text();
+        console.error("Download no-PDF:", txt);
+        showToast("El backend no devolvió un PDF (revisa endpoint/permisos).", "error");
+        return;
+      }
+
       const blob = new Blob([res.data], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
 
-      const meta = entregaMeta(row);
       const a = document.createElement("a");
       a.href = url;
       a.download = meta.nombre || `entrega_${row.id_estudiante}.pdf`;
@@ -473,8 +494,7 @@ export default function MisCalificacionesPage() {
   return (
     <div className="mcPage">
       <div className="wrap">
-
-        {/* HERO (igual que tus pantallas ESPE) */}
+        {/* HERO */}
         <div className="hero">
           <div className="heroLeft">
             <img className="heroLogo" src={escudoESPE} alt="ESPE" />
@@ -483,9 +503,13 @@ export default function MisCalificacionesPage() {
 
               <p className="heroSubtitle">
                 {role === 3 ? (
-                  <>Agenda del docente. Entra a <b>Calificar</b> según tu rol y el Plan de Evaluación.</>
+                  <>
+                    Agenda del docente. Entra a <b>Calificar</b> según tu rol y el Plan de Evaluación.
+                  </>
                 ) : (
-                  <>Gestión por <b>Carrera–Período</b>. Registra <b>nota teórica</b> y gestiona <b>PDF</b>.</>
+                  <>
+                    Gestión por <b>Carrera–Período</b>. Registra <b>nota teórica</b> y gestiona <b>PDF</b>.
+                  </>
                 )}
               </p>
 
@@ -511,8 +535,6 @@ export default function MisCalificacionesPage() {
 
         {/* BOX */}
         <div className="box">
-
-          {/* ✅ Header estilo “Docentes”: título + 3 métricas */}
           <div className="boxHeader">
             <div className="boxHeaderLeft">
               <span className="boxIcon">
@@ -521,7 +543,9 @@ export default function MisCalificacionesPage() {
               <div className="boxHeaderText">
                 <div className="boxTitle">{role === 3 ? "Listado de tribunales" : "Listado de evaluaciones"}</div>
                 <div className="boxSubtitle">
-                  {role === 3 ? "Solo verás tus tribunales asignados." : "Selecciona Carrera–Período para ver y gestionar."}
+                  {role === 3
+                    ? "Solo verás tus tribunales asignados."
+                    : "Selecciona Carrera–Período para ver y gestionar."}
                 </div>
               </div>
             </div>
@@ -562,7 +586,6 @@ export default function MisCalificacionesPage() {
               />
             </div>
 
-            {/* Selector CP SOLO ADMIN */}
             {role === 2 && (
               <div className="filterWrap">
                 <Filter className="filterIcon" />
@@ -605,27 +628,39 @@ export default function MisCalificacionesPage() {
             </div>
           </div>
 
-          {/* =========================
-              TABLA DOCENTE (ROL 3)
-             ========================= */}
+          {/* TABLA DOCENTE */}
           {role === 3 ? (
             <div className="tableWrap">
               <table className="table">
                 <thead>
                   <tr>
-                    <th className="thCenter" style={{ width: 320 }}>Estudiante</th>
-                    <th className="thCenter" style={{ width: 320 }}>Carrera</th>
-                    <th className="thCenter" style={{ width: 180 }}>Fecha</th>
-                    <th className="thCenter" style={{ width: 160 }}>Horario</th>
-                    <th className="thCenter" style={{ width: 140 }}>Estado</th>
-                    <th className="thCenter" style={{ width: 220 }}>Acciones</th>
+                    <th className="thCenter" style={{ width: 320 }}>
+                      Estudiante
+                    </th>
+                    <th className="thCenter" style={{ width: 320 }}>
+                      Carrera
+                    </th>
+                    <th className="thCenter" style={{ width: 180 }}>
+                      Fecha
+                    </th>
+                    <th className="thCenter" style={{ width: 160 }}>
+                      Horario
+                    </th>
+                    <th className="thCenter" style={{ width: 140 }}>
+                      Estado
+                    </th>
+                    <th className="thCenter" style={{ width: 220 }}>
+                      Acciones
+                    </th>
                   </tr>
                 </thead>
 
                 <tbody>
                   {loading ? (
                     <tr>
-                      <td className="emptyCell" colSpan={6}>Cargando...</td>
+                      <td className="emptyCell" colSpan={6}>
+                        Cargando...
+                      </td>
                     </tr>
                   ) : filteredDocente.length ? (
                     filteredDocente.map((r: any) => {
@@ -642,9 +677,7 @@ export default function MisCalificacionesPage() {
                           <td className="tdCenter">{r.fecha ?? "—"}</td>
                           <td className="tdCenter">{hora}</td>
                           <td className="tdCenter">
-                            <span className={`badge ${cerrado ? "badge-off" : "badge-ok"}`}>
-                              {cerrado ? "CERRADO" : "ABIERTO"}
-                            </span>
+                            <span className={`badge ${cerrado ? "badge-off" : "badge-ok"}`}>{cerrado ? "CERRADO" : "ABIERTO"}</span>
                           </td>
                           <td className="tdCenter">
                             <div className="actions">
@@ -663,36 +696,50 @@ export default function MisCalificacionesPage() {
                     })
                   ) : (
                     <tr>
-                      <td className="emptyCell" colSpan={6}>No tienes tribunales asignados.</td>
+                      <td className="emptyCell" colSpan={6}>
+                        No tienes tribunales asignados.
+                      </td>
                     </tr>
                   )}
                 </tbody>
               </table>
             </div>
           ) : (
-            /* =========================
-               TABLA ADMIN (ROL 2)
-               ========================= */
+            /* TABLA ADMIN */
             <div className="tableWrap">
               <table className="table tableAdmin">
                 <thead>
                   <tr>
-                    <th className="thCenter" style={{ width: 320 }}>Estudiante</th>
-                    <th className="thCenter" style={{ width: 320 }}>Carrera / Tribunal</th>
-                    <th className="thCenter" style={{ width: 220 }}>Nota teórica</th>
-                    <th className="thCenter" style={{ width: 260 }}>Entrega</th>
-                    <th className="thCenter" style={{ width: 360 }}>Acciones</th>
+                    <th className="thCenter" style={{ width: 320 }}>
+                      Estudiante
+                    </th>
+                    <th className="thCenter" style={{ width: 320 }}>
+                      Carrera / Tribunal
+                    </th>
+                    <th className="thCenter" style={{ width: 220 }}>
+                      Nota teórica
+                    </th>
+                    <th className="thCenter" style={{ width: 260 }}>
+                      Entrega
+                    </th>
+                    <th className="thCenter" style={{ width: 240 }}>
+                      Acciones
+                    </th>
                   </tr>
                 </thead>
 
                 <tbody>
                   {!selectedCP ? (
                     <tr>
-                      <td className="emptyCell" colSpan={5}>Seleccione una Carrera–Período para ver registros.</td>
+                      <td className="emptyCell" colSpan={5}>
+                        Seleccione una Carrera–Período para ver registros.
+                      </td>
                     </tr>
                   ) : loading ? (
                     <tr>
-                      <td className="emptyCell" colSpan={5}>Cargando...</td>
+                      <td className="emptyCell" colSpan={5}>
+                        Cargando...
+                      </td>
                     </tr>
                   ) : filteredAdmin.length ? (
                     filteredAdmin.map((r: any) => {
@@ -728,9 +775,7 @@ export default function MisCalificacionesPage() {
 
                           <td className="tdCenter">
                             <div className="cellMain">{r.nota_teorico_20 != null ? `${r.nota_teorico_20}/20` : "—"}</div>
-                            <div className="cellSub">
-                              {r.nota_teorico_observacion ? String(r.nota_teorico_observacion) : "Sin observación"}
-                            </div>
+                            <div className="cellSub">{r.nota_teorico_observacion ? String(r.nota_teorico_observacion) : "Sin observación"}</div>
                           </td>
 
                           <td className="tdCenter">
@@ -743,13 +788,14 @@ export default function MisCalificacionesPage() {
 
                           <td className="tdCenter">
                             <div className="actionsRow">
+                              {/* ✅ SOLO ICONOS */}
                               <button
                                 className="btnAction btnNota"
                                 onClick={() => openNotaModal(r)}
                                 disabled={loading}
                                 title="Registrar/Editar nota teórica"
                               >
-                                <Pencil size={16} /> Nota
+                                <Pencil size={16} />
                               </button>
 
                               <button
@@ -758,7 +804,7 @@ export default function MisCalificacionesPage() {
                                 disabled={loading || !canOpen}
                                 title={!isAsignadoTribunal(r) ? "No asignado a tribunal" : !hasEntrega(r) ? "Sin entrega" : "Ver PDF"}
                               >
-                                <Eye size={16} /> Ver
+                                <Eye size={16} />
                               </button>
 
                               <button
@@ -767,7 +813,7 @@ export default function MisCalificacionesPage() {
                                 disabled={loading || !canOpen}
                                 title={!isAsignadoTribunal(r) ? "No asignado a tribunal" : !hasEntrega(r) ? "Sin entrega" : "Descargar PDF"}
                               >
-                                <FileDown size={16} /> Descargar
+                                <FileDown size={16} />
                               </button>
 
                               <input
@@ -791,7 +837,7 @@ export default function MisCalificacionesPage() {
                                 disabled={loading || !canUpload}
                                 title={!isAsignadoTribunal(r) ? "No asignado a tribunal" : "Subir/Reemplazar PDF"}
                               >
-                                <FileUp size={16} /> Subir
+                                <FileUp size={16} />
                               </button>
                             </div>
                           </td>
@@ -800,7 +846,9 @@ export default function MisCalificacionesPage() {
                     })
                   ) : (
                     <tr>
-                      <td className="emptyCell" colSpan={5}>No hay registros para este Carrera–Período.</td>
+                      <td className="emptyCell" colSpan={5}>
+                        No hay registros para este Carrera–Período.
+                      </td>
                     </tr>
                   )}
                 </tbody>
@@ -809,7 +857,7 @@ export default function MisCalificacionesPage() {
           )}
         </div>
 
-        {/* ✅ MODAL NOTA TEÓRICA */}
+        {/* MODAL NOTA */}
         {notaModalOpen && (
           <div className="modalOverlay" onClick={() => setNotaModalOpen(false)}>
             <div className="modal" onClick={(e) => e.stopPropagation()}>

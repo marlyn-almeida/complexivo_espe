@@ -488,25 +488,26 @@
   white-space: nowrap;
 }
 
+/* ✅ BOTONES SOLO ICONO (estilo Casos) */
 .mcPage .btnAction {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  height: 40px;
-  padding: 0 12px;
+  width: 42px;
+  height: 38px;
+  padding: 0;
   border-radius: 12px;
-  font-weight: 900;
   cursor: pointer;
   border: 1px solid rgba(0, 0, 0, 0.12);
   transition: transform 0.08s ease, box-shadow 0.15s ease, filter 0.15s ease;
-  color: #fff;
+  color: #111; /* ícono oscuro */
+  background: #fff;
 }
 
 .mcPage .btnAction:hover {
   transform: translateY(-1px);
   box-shadow: 0 10px 18px rgba(0, 0, 0, 0.1);
-  filter: brightness(1.03);
+  filter: brightness(1.02);
 }
 
 .mcPage .btnAction:disabled {
@@ -517,10 +518,11 @@
   filter: none;
 }
 
-.mcPage .btnNota { background: rgba(59, 130, 246, 0.95); border-color: rgba(59, 130, 246, 0.35); }
-.mcPage .btnVer  { background: rgba(16, 185, 129, 0.95); border-color: rgba(16, 185, 129, 0.35); }
-.mcPage .btnDesc { background: rgba(245, 158, 11, 0.95); border-color: rgba(245, 158, 11, 0.35); }
-.mcPage .btnSubir{ background: rgba(10, 79, 40, 0.95);  border-color: rgba(10, 79, 40, 0.35); }
+/* ✅ fondos suaves por acción (similar Casos) */
+.mcPage .btnNota { background: rgba(59, 130, 246, 0.14); border-color: rgba(59, 130, 246, 0.25); }
+.mcPage .btnVer  { background: rgba(16, 185, 129, 0.14); border-color: rgba(16, 185, 129, 0.25); }
+.mcPage .btnDesc { background: rgba(245, 158, 11, 0.18); border-color: rgba(245, 158, 11, 0.28); }
+.mcPage .btnSubir{ background: rgba(10, 79, 40, 0.14);  border-color: rgba(10, 79, 40, 0.25); }
 
 /* empty */
 .mcPage .emptyCell {

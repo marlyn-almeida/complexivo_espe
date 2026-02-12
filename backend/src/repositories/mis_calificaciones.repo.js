@@ -1,19 +1,17 @@
-// ✅ src/repositories/mis_calificaciones.repo.js
+// ✅ backend/src/repositories/mis_calificaciones.repo.js
 const pool = require("../config/db");
 
 /**
  * ✅ ADMIN: lista por Carrera-Periodo (CP)
  *
- * REGLA CORRECTA (la tuya):
+ * REGLAS CORRECTAS (según tu backend actual):
  * - Listar estudiantes del CP aunque NO tengan tribunal
  * - Nota teórica SIEMPRE independiente del tribunal
- * - PDF depende de CASO (estudiante_caso_asignacion + estudiante_caso_entrega) y NO de tribunal
- * - Tribunal (si existe) es solo informativo (no bloquea)
- * - Tribunal más reciente SOLO dentro de ESTE CP (para no mezclar periodos)
+ * - Entrega PDF depende de ESTUDIANTE (tabla estudiante_entrega)
+ * - Solo se permite subir/ver entrega si el estudiante está asignado a un tribunal en ESTE CP
+ * - Tribunal (si existe) es informativo
  */
 async function listByCP(id_carrera_periodo) {
-  const cpId = Number(id_carrera_periodo || 0);
-
   const [rows] = await pool.query(
     `
     SELECT
@@ -34,17 +32,13 @@ async function listByCP(id_carrera_periodo) {
       nt.observacion AS nota_teorico_observacion,
       nt.updated_at AS nota_teorico_updated_at,
 
-      -- ✅ caso asignado (para poder subir/traer entrega)
-      eca.id_estudiante_caso_asignacion,
-      eca.id_caso_estudio,
-
-      -- ✅ entrega (depende del caso, NO del tribunal)
-      ece.id_estudiante_caso_entrega AS id_entrega,
-      ece.archivo_nombre AS entrega_archivo_nombre,
-      ece.archivo_path  AS entrega_archivo_path,
-      ece.fecha_entrega AS entrega_fecha_entrega,
-      ece.observacion   AS entrega_observacion,
-      ece.estado        AS entrega_estado,
+      -- ✅ entrega por estudiante (tabla estudiante_entrega)
+      ee.id_estudiante_entrega AS id_entrega,
+      ee.archivo_nombre        AS entrega_archivo_nombre,
+      ee.archivo_path          AS entrega_archivo_path,
+      ee.fecha_entrega         AS entrega_fecha_entrega,
+      ee.observacion           AS entrega_observacion,
+      ee.estado                AS entrega_estado,
 
       -- ✅ tribunal (si existe) SOLO dentro del CP
       te.id_tribunal_estudiante,
@@ -72,16 +66,10 @@ async function listByCP(id_carrera_periodo) {
      AND nt.id_carrera_periodo = cp.id_carrera_periodo
      AND nt.estado = 1
 
-    -- ✅ caso asignado (0..1 por estudiante)
-    LEFT JOIN estudiante_caso_asignacion eca
-      ON eca.id_estudiante = e.id_estudiante
-     AND eca.estado = 1
-
-    -- ✅ entrega (0..1 por estudiante+caso)
-    LEFT JOIN estudiante_caso_entrega ece
-      ON ece.id_estudiante = e.id_estudiante
-     AND ece.id_caso_estudio = eca.id_caso_estudio
-     AND ece.estado = 1
+    -- ✅ entrega (0..1 por estudiante)
+    LEFT JOIN estudiante_entrega ee
+      ON ee.id_estudiante = e.id_estudiante
+     AND ee.estado = 1
 
     -- ✅ tribunal_estudiante MÁS RECIENTE del estudiante PERO SOLO dentro de ESTE CP
     LEFT JOIN tribunal_estudiante te
@@ -112,7 +100,7 @@ async function listByCP(id_carrera_periodo) {
 
     ORDER BY e.apellidos_estudiante ASC, e.nombres_estudiante ASC
     `,
-    [cpId]
+    [Number(id_carrera_periodo)]
   );
 
   return rows;
@@ -120,6 +108,11 @@ async function listByCP(id_carrera_periodo) {
 
 /**
  * ✅ DOCENTE: valida que el docente pertenece al tribunal del tribunal_estudiante
+ *
+ * IMPORTANTE:
+ * - NO dependemos de CP en header
+ * - Derivamos CP desde el tribunal (t.id_carrera_periodo)
+ * - Validamos pertenencia con tribunal_docente -> carrera_docente -> id_docente
  */
 async function getDocenteMembership(idTribunalEstudiante, idDocente) {
   const [rows] = await pool.query(
@@ -179,7 +172,7 @@ async function getDocenteMembership(idTribunalEstudiante, idDocente) {
 
 /**
  * ✅ DOCENTE: GET /mis-calificaciones/:idTribunalEstudiante
- * (STUB por ahora)
+ * (AÚN STUB de plan/items, pero la validación ya es real)
  */
 async function getForDocente(idTribunalEstudiante, idDocente) {
   const head = await getDocenteMembership(idTribunalEstudiante, idDocente);
@@ -228,6 +221,7 @@ async function saveForDocente(idTribunalEstudiante, idDocente, payload) {
     throw err;
   }
 
+  // TODO: implementar plan_evaluacion + items + persistencia
   return true;
 }
 
