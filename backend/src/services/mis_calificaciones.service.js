@@ -3,20 +3,9 @@ const repo = require("../repositories/mis_calificaciones.repo");
 
 /**
  * ✅ ADMIN
- * Devuelve data + resumen (para los cuadros)
  */
 async function listByCP(cp) {
-  const rows = await repo.listByCP(cp);
-
-  // ✅ contadores para UI
-  const total = rows.length;
-  const entregados = rows.filter((r) => r.estado_entrega === "ENTREGADO").length;
-  const pendientes = rows.filter((r) => r.estado_entrega === "PENDIENTE").length;
-
-  return {
-    data: rows,
-    resumen: { total, entregados, pendientes },
-  };
+  return repo.listByCP(cp);
 }
 
 /**

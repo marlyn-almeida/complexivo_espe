@@ -4,11 +4,11 @@ const service = require("../services/mis_calificaciones.service");
 /** helper: sacar CP sin depender de un nombre exacto */
 function getCP(req) {
   return (
-    Number(req?.query?.id_carrera_periodo) || // ✅ por query (tu error muestra esto)
-    Number(req?.query?.carreraPeriodoId) ||
     Number(req?.carreraPeriodo) ||
     Number(req?.carreraPeriodoId) ||
     Number(req?.ctx?.id_carrera_periodo) ||
+    Number(req?.query?.id_carrera_periodo) ||   // ✅ por si viene por query
+    Number(req?.query?.carreraPeriodoId) ||     // ✅ por si viene por query
     Number(req?.user?.scope?.id_carrera_periodo) ||
     0
   );
@@ -19,7 +19,7 @@ function sendErr(res, err) {
   const msg =
     err?.message ||
     (status === 403 ? "Acceso denegado" : status === 409 ? "Conflicto" : "Error interno");
-  return res.status(status).json({ message: msg });
+  return res.status(status).json({ ok: false, message: msg });
 }
 
 /**
@@ -27,16 +27,17 @@ function sendErr(res, err) {
  * GET /mis-calificaciones
  *
  * Lista estudiantes del CP aunque NO tengan tribunal.
- * Trae: nota_teorico, caso_asignado, entrega_pdf y (si existe) info de tribunal.
- * Devuelve además resumen: total/entregados/pendientes
+ * - Nota teórica independiente del tribunal
+ * - PDF depende de CASO (estudiante_caso_asignacion + estudiante_caso_entrega)
+ * - Tribunal (si existe) es informativo (no bloquea)
  */
 async function list(req, res) {
   try {
     const cp = getCP(req);
-    if (!cp) return res.status(400).json({ message: "id_carrera_periodo requerido" });
+    if (!cp) return res.status(400).json({ ok: false, message: "id_carrera_periodo requerido" });
 
-    const { data, resumen } = await service.listByCP(cp);
-    return res.json({ ok: true, data, resumen });
+    const data = await service.listByCP(cp);
+    return res.json({ ok: true, data });
   } catch (err) {
     return sendErr(res, err);
   }
@@ -45,22 +46,18 @@ async function list(req, res) {
 /**
  * ✅ DOCENTE (ROL 3)
  * GET /mis-calificaciones/:idTribunalEstudiante
- *
- * IMPORTANTE:
- * - NO exigimos CP en header, porque el DOCENTE no usa attachCarreraPeriodoCtx
- * - La validación real se hace contra tribunal_docente/carrera_docente en repo
  */
 async function getForDocente(req, res) {
   try {
     const idTribunalEstudiante = Number(req.params.idTribunalEstudiante || 0);
     if (!idTribunalEstudiante) {
-      return res.status(400).json({ message: "idTribunalEstudiante inválido" });
+      return res.status(400).json({ ok: false, message: "idTribunalEstudiante inválido" });
     }
 
     const user = req.user;
     const data = await service.getForDocente(idTribunalEstudiante, user);
 
-    if (!data) return res.status(404).json({ message: "No encontrado" });
+    if (!data) return res.status(404).json({ ok: false, message: "No encontrado" });
     return res.json({ ok: true, data });
   } catch (err) {
     return sendErr(res, err);
@@ -75,7 +72,7 @@ async function saveForDocente(req, res) {
   try {
     const idTribunalEstudiante = Number(req.params.idTribunalEstudiante || 0);
     if (!idTribunalEstudiante) {
-      return res.status(400).json({ message: "idTribunalEstudiante inválido" });
+      return res.status(400).json({ ok: false, message: "idTribunalEstudiante inválido" });
     }
 
     const user = req.user;

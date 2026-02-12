@@ -4,13 +4,16 @@ const pool = require("../config/db");
 /**
  * ✅ ADMIN: lista por Carrera-Periodo (CP)
  *
- * REGLAS CORRECTAS (según tu BD):
+ * REGLA CORRECTA (la tuya):
  * - Listar estudiantes del CP aunque NO tengan tribunal
  * - Nota teórica SIEMPRE independiente del tribunal
- * - Entrega PDF depende de CASO (estudiante_caso_asignacion + estudiante_caso_entrega)
- * - Tribunal (si existe) es informativo
+ * - PDF depende de CASO (estudiante_caso_asignacion + estudiante_caso_entrega) y NO de tribunal
+ * - Tribunal (si existe) es solo informativo (no bloquea)
+ * - Tribunal más reciente SOLO dentro de ESTE CP (para no mezclar periodos)
  */
 async function listByCP(id_carrera_periodo) {
+  const cpId = Number(id_carrera_periodo || 0);
+
   const [rows] = await pool.query(
     `
     SELECT
@@ -31,24 +34,17 @@ async function listByCP(id_carrera_periodo) {
       nt.observacion AS nota_teorico_observacion,
       nt.updated_at AS nota_teorico_updated_at,
 
-      -- ✅ caso asignado (para subir/traer entrega)
+      -- ✅ caso asignado (para poder subir/traer entrega)
       eca.id_estudiante_caso_asignacion,
       eca.id_caso_estudio,
 
       -- ✅ entrega (depende del caso, NO del tribunal)
       ece.id_estudiante_caso_entrega AS id_entrega,
       ece.archivo_nombre AS entrega_archivo_nombre,
-      ece.archivo_path   AS entrega_archivo_path,
-      ece.fecha_entrega  AS entrega_fecha_entrega,
-      ece.observacion    AS entrega_observacion,
-      ece.estado         AS entrega_estado,
-
-      -- ✅ estado calculado para contadores UI
-      CASE
-        WHEN eca.id_caso_estudio IS NULL THEN 'SIN_CASO'
-        WHEN ece.id_estudiante_caso_entrega IS NULL THEN 'PENDIENTE'
-        ELSE 'ENTREGADO'
-      END AS estado_entrega,
+      ece.archivo_path  AS entrega_archivo_path,
+      ece.fecha_entrega AS entrega_fecha_entrega,
+      ece.observacion   AS entrega_observacion,
+      ece.estado        AS entrega_estado,
 
       -- ✅ tribunal (si existe) SOLO dentro del CP
       te.id_tribunal_estudiante,
@@ -57,8 +53,7 @@ async function listByCP(id_carrera_periodo) {
       t.nombre_tribunal,
       fh.fecha AS fecha_tribunal,
       fh.hora_inicio,
-      fh.hora_fin,
-      te.id_caso_estudio AS tribunal_id_caso_estudio
+      fh.hora_fin
 
     FROM carrera_periodo cp
     JOIN carrera c
@@ -82,7 +77,7 @@ async function listByCP(id_carrera_periodo) {
       ON eca.id_estudiante = e.id_estudiante
      AND eca.estado = 1
 
-    -- ✅ entrega por estudiante+caso
+    -- ✅ entrega (0..1 por estudiante+caso)
     LEFT JOIN estudiante_caso_entrega ece
       ON ece.id_estudiante = e.id_estudiante
      AND ece.id_caso_estudio = eca.id_caso_estudio
@@ -117,7 +112,7 @@ async function listByCP(id_carrera_periodo) {
 
     ORDER BY e.apellidos_estudiante ASC, e.nombres_estudiante ASC
     `,
-    [Number(id_carrera_periodo)]
+    [cpId]
   );
 
   return rows;
@@ -125,11 +120,6 @@ async function listByCP(id_carrera_periodo) {
 
 /**
  * ✅ DOCENTE: valida que el docente pertenece al tribunal del tribunal_estudiante
- *
- * IMPORTANTE:
- * - NO dependemos de CP en header
- * - Derivamos CP desde el tribunal (t.id_carrera_periodo)
- * - Validamos pertenencia con tribunal_docente -> carrera_docente -> id_docente
  */
 async function getDocenteMembership(idTribunalEstudiante, idDocente) {
   const [rows] = await pool.query(
@@ -189,7 +179,7 @@ async function getDocenteMembership(idTribunalEstudiante, idDocente) {
 
 /**
  * ✅ DOCENTE: GET /mis-calificaciones/:idTribunalEstudiante
- * (AÚN STUB de plan/items, pero la validación ya es real)
+ * (STUB por ahora)
  */
 async function getForDocente(idTribunalEstudiante, idDocente) {
   const head = await getDocenteMembership(idTribunalEstudiante, idDocente);
@@ -238,7 +228,6 @@ async function saveForDocente(idTribunalEstudiante, idDocente, payload) {
     throw err;
   }
 
-  // TODO: implementar plan_evaluacion + items + persistencia
   return true;
 }
 
