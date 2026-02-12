@@ -1,5 +1,7 @@
+/* ✅ src/pages/carreraPeriodoAdmins/CarreraPeriodoAdminsPage.css */
+
 /* =========================================================
-   VARIABLES (si ya las tienes en global, no pasa nada)
+   VARIABLES
 ========================================================= */
 :root{
   --espe-green: #1b5e20;
@@ -127,62 +129,7 @@
   background: transparent;
 }
 
-/* =========================================================
-   TABLA ESTILO ESPE
-========================================================= */
-.tableWrap{ padding:0; overflow-x:auto; }
-
-.table{
-  width:100%;
-  border-collapse: collapse;
-  font-size: .92rem;
-  min-width: 980px; /* ✅ evita que se rompa la tabla */
-}
-
-.table thead th{
-  background: linear-gradient(135deg, var(--espe-green), #0b5a3a);
-  color:#fff;
-  font-weight:900;
-  text-align:left;
-  padding: 12px;
-  font-size: .85rem;
-  letter-spacing: .2px;
-  border-bottom: 1px solid rgba(0,0,0,.08);
-}
-
-.table tbody td{
-  padding: 10px 12px;
-  border-bottom: 1px solid rgba(0,0,0,.08);
-  vertical-align: middle;
-}
-
-.table tbody tr:nth-child(even){
-  background: rgba(27, 94, 32, 0.04);
-}
-
-.table tbody tr:hover{ background: rgba(27, 94, 32, 0.08); }
-
-.tdStrong{ font-weight: 900; }
-.tdCode{
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  font-size:.85rem;
-  font-weight: 900;
-  color: #0f766e;
-}
-
-.thActions{ width: 120px; text-align:center; }
-.actions{
-  text-align:center;
-  white-space: nowrap;
-}
-
-/* ✅ Acciones como fila (no se rompe) */
-.actionsRow{
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  gap: 10px;
-}
+.muted{ color: var(--text-muted); font-weight: 800; }
 
 /* =========================================================
    BADGES
@@ -241,54 +188,132 @@
 .btnGhost:hover{ background: rgba(0,0,0,.08); }
 .btnGhost:disabled{ opacity:.55; cursor:not-allowed; }
 
-.muted{ color: var(--text-muted); font-weight: 800; }
-
 /* =========================================================
-   BOTONES ÍCONOS (como tu estándar)
+   LISTA EN CARDS (estilo profesional tipo foto 2)
 ========================================================= */
-.btnIcon{
-  width: 40px;
-  height: 40px;
-  border-radius: 14px;
-  border: 1px solid rgba(15, 23, 42, 0.14);
-  background: #ffffff;
-  cursor: pointer;
-  display: grid;
-  place-items: center;
-  padding: 0;
-  transition: transform .15s ease, box-shadow .15s ease;
-}
-
-.btnIcon:hover{
-  transform: translateY(-1px);
-  box-shadow: 0 6px 14px rgba(0,0,0,0.14);
-}
-
-/* asegurar iconos lucide visibles */
-.btnIcon svg{
-  width: 18px;
-  height: 18px;
-  stroke: currentColor;
-  color: inherit;
-  opacity: 1;
-}
-
-/* Variante: Asignar (verde) */
-.btnIcon.btnEdit{
-  background: rgba(34, 197, 94, 0.18);
-  border-color: rgba(34, 197, 94, 0.40);
-  color: #15803d;
-}
-
-/* =========================================================
-   PAGINACIÓN
-========================================================= */
-.paginationCard{ text-align:center; }
-.paginationCenter{
+.cardsHeader{
   display:flex;
-  justify-content:center;
   align-items:center;
+  justify-content:space-between;
+  padding: 4px 0 12px;
+}
+
+.cardsTitle{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  font-weight: 900;
+  color: #0f3d2b;
+}
+
+.pill{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width: 28px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: rgba(27, 94, 32, 0.10);
+  border: 1px solid rgba(27, 94, 32, 0.18);
+  font-size: .78rem;
+  font-weight: 900;
+  color: var(--espe-green-2);
+}
+
+.cardsGrid{
+  display:grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+@media (max-width: 980px){
+  .cardsGrid{ grid-template-columns: 1fr; }
+}
+
+.cpCard{
+  background:#fff;
+  border:1px solid rgba(0,0,0,.10);
+  border-radius: 16px;
+  box-shadow: var(--shadow-soft);
+  padding: 14px;
+  position: relative;
+  overflow:hidden;
+}
+
+.cpCard::before{
+  content:"";
+  position:absolute;
+  left:0; top:0; bottom:0;
+  width: 6px;
+  background: linear-gradient(180deg, var(--espe-green-2), #0b5a3a);
+  opacity: .9;
+}
+
+.cpCardTop{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
   gap: 12px;
+  padding-left: 8px;
+}
+
+.cpCardTopLeft{ display:grid; gap: 6px; }
+
+.cpTitleRow{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.cpTitle{
+  font-weight: 900;
+  font-size: 1.02rem;
+}
+
+.cpMeta{
+  color: var(--text-muted);
+  font-weight: 800;
+  font-size: .88rem;
+}
+
+.cpPeriodo{
+  color: rgba(0,0,0,.70);
+  font-weight: 800;
+  font-size: .88rem;
+}
+
+.cpDivider{
+  height: 1px;
+  background: rgba(0,0,0,.08);
+  margin: 12px 0;
+}
+
+.cpInfo{
+  display:grid;
+  gap: 10px;
+  padding-left: 8px;
+}
+
+.infoRow{
+  background: rgba(0,0,0,.02);
+  border: 1px solid rgba(0,0,0,.06);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display:grid;
+  gap: 4px;
+}
+
+.infoLabel{
+  font-size: .78rem;
+  font-weight: 900;
+  color: rgba(0,0,0,.55);
+}
+
+.infoValue{
+  font-weight: 900;
+  color: #0f172a;
 }
 
 /* =========================================================
@@ -335,9 +360,8 @@
 }
 .modalClose:hover{ background: rgba(0,0,0,.06); }
 
-.modalBody{
-  padding: 16px;
-}
+.modalBody{ padding: 16px; }
+
 .formStack{ display:grid; gap: 12px; }
 
 .formField{ display:grid; gap: 6px; }
@@ -355,7 +379,6 @@
   box-shadow: 0 0 0 3px rgba(46,125,50,.14);
 }
 
-/* ✅ NUEVO: input de búsqueda dentro del modal (estilo ESPE) */
 .fieldInput{
   width: 100%;
   padding: 10px 10px;
@@ -397,25 +420,12 @@
 .toast-info{ background: #2563eb; }
 
 /* =========================================================
-   RESPONSIVE
+   PAGINACIÓN
 ========================================================= */
-@media (max-width: 900px){
-  .searchInline{ max-width: 100%; }
-  .table thead th, .table tbody td{ padding: 10px; }
-}
-
-.fieldInput{
-  border: 1px solid rgba(0,0,0,.14);
-  border-radius: 12px;
-  padding: 10px 10px;
-  outline: none;
-  background: #fff;
-  width: 100%;
-  margin-bottom: 10px;
-  font-size: .92rem;
-}
-
-.fieldInput:focus{
-  border-color: rgba(46,125,50,.6);
-  box-shadow: 0 0 0 3px rgba(46,125,50,.14);
+.paginationCard{ text-align:center; }
+.paginationCenter{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap: 12px;
 }

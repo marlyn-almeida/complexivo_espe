@@ -598,3 +598,344 @@
 @media (max-width: 700px){
   .authCurrent{ grid-template-columns: 1fr; }
 }
+/* =========================================================
+   VIEW (Carreras asignadas) - estilo pro tipo foto 2
+========================================================= */
+
+.cpv-empty{
+  margin-top: 12px;
+  padding: 14px;
+  border: 1px dashed rgba(0,0,0,.18);
+  border-radius: 14px;
+  text-align: center;
+  font-weight: 900;
+  color: rgba(0,0,0,.62);
+  background: rgba(0,0,0,.02);
+}
+
+.cpv-grid{
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+@media (max-width: 980px){
+  .cpv-grid{ grid-template-columns: 1fr; }
+}
+
+.cpv-card{
+  background: #fff;
+  border: 1px solid rgba(0,0,0,.10);
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(0,0,0,.06);
+  padding: 14px;
+  position: relative;
+  overflow: hidden;
+}
+
+.cpv-card::before{
+  content:"";
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 6px;
+  background: linear-gradient(180deg, #2e7d32, #0b5a3a);
+  opacity: .92;
+}
+
+.cpv-top{
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-left: 8px;
+}
+
+.cpv-left{
+  display: grid;
+  gap: 8px;
+  min-width: 240px;
+}
+
+.cpv-titleRow{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.cpv-title{
+  font-weight: 900;
+  font-size: 1.02rem;
+  line-height: 1.15;
+}
+
+.cpv-meta{
+  font-weight: 900;
+  font-size: .88rem;
+  color: rgba(0,0,0,.62);
+}
+
+.cpv-badge{
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: .75rem;
+  font-weight: 900;
+  border: 1px solid transparent;
+}
+
+.cpv-badge.ok{
+  background: rgba(27,94,32,.10);
+  color: #2e7d32;
+  border-color: rgba(46,125,50,.22);
+}
+
+.cpv-badge.bad{
+  background:#fdecec;
+  color:#a22;
+  border-color: rgba(220,38,38,.25);
+}
+
+.cpv-actions{
+  display: grid;
+  gap: 10px;
+  min-width: 170px;
+}
+
+.cpv-btn{
+  height: 40px;
+  border-radius: 12px;
+  font-weight: 900;
+  cursor: pointer;
+  border: 1px solid rgba(0,0,0,.10);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: #fff;
+}
+
+.cpv-btn:disabled{
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+.cpv-btnGreen{
+  background: rgba(34, 197, 94, 0.12);
+  border-color: rgba(34, 197, 94, 0.30);
+  color: #15803d;
+}
+
+.cpv-btnBlue{
+  background: rgba(59, 130, 246, 0.10);
+  border-color: rgba(59, 130, 246, 0.30);
+  color: #1d4ed8;
+}
+
+.cpv-btn:hover{ filter: brightness(.98); }
+
+.cpv-divider{
+  height: 1px;
+  background: rgba(0,0,0,.08);
+  margin: 12px 0;
+}
+
+.cpv-admins{
+  display: grid;
+  gap: 10px;
+  padding-left: 8px;
+}
+
+.cpv-adminBox{
+  border: 1px solid rgba(0,0,0,.06);
+  background: rgba(0,0,0,.02);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: grid;
+  gap: 4px;
+}
+
+.cpv-k{
+  font-size: .78rem;
+  font-weight: 900;
+  color: rgba(0,0,0,.55);
+}
+
+.cpv-v{
+  font-weight: 900;
+  color: #0f172a;
+}
+/* =========================================================
+   ✅ VIEW BONITO (tipo foto 2) - Carreras asignadas del período
+   Clases: cpv-*
+========================================================= */
+
+.cpv-empty{
+  padding: 14px;
+  font-weight: 900;
+  color: rgba(0,0,0,.60);
+}
+
+.cpv-grid{
+  display:grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 12px;
+}
+
+@media (max-width: 980px){
+  .cpv-grid{ grid-template-columns: 1fr; }
+}
+
+.cpv-card{
+  background:#fff;
+  border:1px solid rgba(0,0,0,.10);
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(0,0,0,.06);
+  padding: 14px;
+  position: relative;
+  overflow:hidden;
+}
+
+/* barrita verde izquierda */
+.cpv-card::before{
+  content:"";
+  position:absolute;
+  left:0; top:0; bottom:0;
+  width: 6px;
+  background: linear-gradient(180deg, #2e7d32, #0b5a3a);
+  opacity: .95;
+}
+
+.cpv-top{
+  display:flex;
+  justify-content: space-between;
+  align-items:flex-start;
+  gap: 12px;
+  padding-left: 8px; /* separa del borde verde */
+}
+
+.cpv-left{
+  display:grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.cpv-titleRow{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.cpv-title{
+  font-weight: 900;
+  font-size: 1.02rem;
+  color: rgba(0,0,0,.85);
+}
+
+.cpv-meta{
+  color: rgba(0,0,0,.60);
+  font-weight: 800;
+  font-size: .88rem;
+}
+
+.cpv-actions{
+  display:flex;
+  gap: 10px;
+  align-items:center;
+  flex-wrap: wrap;
+}
+
+/* botones dentro del card */
+.cpv-btn{
+  border:none;
+  cursor:pointer;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-weight: 900;
+  display:inline-flex;
+  align-items:center;
+  gap: 8px;
+  justify-content:center;
+  transition: transform .12s ease, filter .12s ease, opacity .12s ease;
+}
+
+.cpv-btn:disabled{
+  opacity: .55;
+  cursor:not-allowed;
+}
+
+.cpv-btn:hover{
+  transform: translateY(-1px);
+  filter: brightness(0.98);
+}
+
+/* verde */
+.cpv-btnGreen{
+  background: rgba(34,197,94,.18);
+  border: 1px solid rgba(34,197,94,.38);
+  color: #15803d;
+}
+
+/* azul */
+.cpv-btnBlue{
+  background: rgba(37,99,235,.14);
+  border: 1px solid rgba(37,99,235,.30);
+  color: #1d4ed8;
+}
+
+.cpv-divider{
+  height: 1px;
+  background: rgba(0,0,0,.08);
+  margin: 12px 0;
+}
+
+.cpv-admins{
+  display:grid;
+  gap: 10px;
+  padding-left: 8px;
+}
+
+.cpv-adminBox{
+  background: rgba(0,0,0,.02);
+  border: 1px solid rgba(0,0,0,.06);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display:grid;
+  gap: 4px;
+}
+
+.cpv-k{
+  font-size: .78rem;
+  font-weight: 900;
+  color: rgba(0,0,0,.55);
+}
+
+.cpv-v{
+  font-weight: 900;
+  color: #0f172a;
+  word-break: break-word;
+}
+
+/* badge ACTIVO / INACTIVO */
+.cpv-badge{
+  display:inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: .75rem;
+  font-weight: 900;
+  border: 1px solid transparent;
+}
+
+.cpv-badge.ok{
+  background: rgba(46,125,50,.12);
+  border-color: rgba(46,125,50,.22);
+  color: #2e7d32;
+}
+
+.cpv-badge.bad{
+  background:#fdecec;
+  border-color:#f1a9a9;
+  color:#a22;
+}
