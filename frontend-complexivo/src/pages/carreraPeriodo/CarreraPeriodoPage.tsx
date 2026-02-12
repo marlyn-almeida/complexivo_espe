@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { Users } from "lucide-react";
+import { Users, Search, RefreshCw } from "lucide-react";
+
 import "./CarreraPeriodoPage.css";
 
 import type { Carrera } from "../../types/carrera";
 import type { CarreraPeriodo, PeriodoResumen } from "../../types/carreraPeriodo";
+
 import { carrerasService } from "../../services/carreras.service";
 import {
   carreraPeriodoService,
@@ -178,9 +180,7 @@ export default function CarreraPeriodoPage() {
   // =========================
   const carrerasSorted = useMemo(() => {
     const arr = [...carreras];
-    arr.sort((a: any, b: any) =>
-      String(a.nombre_carrera || "").localeCompare(String(b.nombre_carrera || ""))
-    );
+    arr.sort((a: any, b: any) => String(a.nombre_carrera || "").localeCompare(String(b.nombre_carrera || "")));
     return arr;
   }, [carreras]);
 
@@ -206,10 +206,7 @@ export default function CarreraPeriodoPage() {
     });
   }, [periodos, qPeriodos]);
 
-  const pageCount = useMemo(
-    () => Math.max(1, Math.ceil(filteredPeriodos.length / PAGE_SIZE)),
-    [filteredPeriodos.length]
-  );
+  const pageCount = useMemo(() => Math.max(1, Math.ceil(filteredPeriodos.length / PAGE_SIZE)), [filteredPeriodos.length]);
 
   const pagedPeriodos = useMemo(() => {
     const start = (page - 1) * PAGE_SIZE;
@@ -248,10 +245,7 @@ export default function CarreraPeriodoPage() {
     }
   };
 
-  const fetchPeriodoItems = async (
-    periodoId: number,
-    opts?: { includeInactive?: boolean; q?: string }
-  ) => {
+  const fetchPeriodoItems = async (periodoId: number, opts?: { includeInactive?: boolean; q?: string }) => {
     setLoading(true);
     try {
       const data = await carreraPeriodoService.listByPeriodo(periodoId, {
@@ -315,10 +309,7 @@ export default function CarreraPeriodoPage() {
 
     if (mode === "edit") {
       const activeIds = new Set<number>();
-      const items = await carreraPeriodoService.listByPeriodo(p.id_periodo, {
-        includeInactive: true,
-        q: "",
-      });
+      const items = await carreraPeriodoService.listByPeriodo(p.id_periodo, { includeInactive: true, q: "" });
       setPeriodoItems(items ?? []);
       (items ?? []).forEach((x) => {
         if (isActive(x.estado)) activeIds.add(Number(x.id_carrera));
@@ -410,124 +401,124 @@ export default function CarreraPeriodoPage() {
   };
 
   const modalTitle =
-    modalMode === "assign"
-      ? "Asignar carreras"
-      : modalMode === "edit"
-      ? "Editar carreras del período"
-      : "Ver carreras asignadas";
+    modalMode === "assign" ? "Asignar carreras" : modalMode === "edit" ? "Editar carreras del período" : "Ver carreras asignadas";
 
   // =========================
   // Render
   // =========================
   return (
-    <div className="cp3-page">
-      <div className="cp3-panel">
-        <div className="cp3-panel-top">
-          <div>
-            <h1 className="cp3-title">Carrera – Período</h1>
-            <p className="cp3-subtitle">Listado de períodos con acciones para asignar, ver y editar carreras.</p>
+    <div className="adminPage">
+      <div className="adminCard">
+        <div className="adminHeader">
+          <div className="adminTitle">
+            <Users size={20} />
+            <div>
+              <div className="h1">Carrera – Período</div>
+              <div className="h2">Listado de períodos con acciones para asignar, ver y editar carreras</div>
+              <div className="h3">ESPE ITIV</div>
+            </div>
+          </div>
+
+          <div />
+
+          <button className="btnPrimary" onClick={fetchResumen} disabled={loading} title="Actualizar">
+            <RefreshCw size={18} />
+            Actualizar
+          </button>
+        </div>
+
+        <div className="adminInfo">
+          <div className="infoItem">
+            <span className="k">Períodos listados</span>
+            <span className="v">{filteredPeriodos.length}</span>
+          </div>
+
+          <div className="infoItem">
+            <span className="k">Carreras cargadas</span>
+            <span className="v">{carreras.length}</span>
           </div>
         </div>
 
-        <div className="cp3-filters">
-          <input
-            className="input-base"
-            value={qPeriodos}
-            onChange={(e) => setQPeriodos(e.target.value)}
-            placeholder="Buscar por código o descripción del período…"
-          />
+        <div className="panel">
+          <div className="panelHeader">
+            <div className="panelTitle">Períodos</div>
 
-          <button className="btn-secondary" onClick={fetchResumen} disabled={loading}>
-            Buscar
-          </button>
+            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+              <div className="searchBox">
+                <Search size={18} />
+                <input
+                  value={qPeriodos}
+                  onChange={(e) => setQPeriodos(e.target.value)}
+                  placeholder="Buscar período…"
+                />
+              </div>
 
-          <label className="switch">
-            <input
-              type="checkbox"
-              checked={includeInactiveCount}
-              onChange={(e) => setIncludeInactiveCount(e.target.checked)}
-            />
-            <span className="slider" />
-            <span className="switch-text">Contar inactivas</span>
-          </label>
-        </div>
+              <label className="switch">
+                <input
+                  type="checkbox"
+                  checked={includeInactiveCount}
+                  onChange={(e) => setIncludeInactiveCount(e.target.checked)}
+                />
+                <span className="slider" />
+                <span className="switch-text">Contar inactivas</span>
+              </label>
 
-        {errorMsg && <div className="cp3-error">{errorMsg}</div>}
-      </div>
+              <button className="btnSmall" onClick={fetchResumen} disabled={loading}>
+                Buscar
+              </button>
+            </div>
+          </div>
 
-      <div className="cp3-card">
-        <div className="cp3-table-scroll">
-          <table className="cp3-table">
-            <thead>
-              <tr>
-                <th>Período</th>
-                <th>Rango</th>
-                <th># Carreras</th>
-                <th className="cp3-actions-col">Acciones</th>
-              </tr>
-            </thead>
+          {errorMsg && <div style={{ padding: 12, color: "#b91c1c", fontWeight: 900 }}>{errorMsg}</div>}
 
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={4} className="td-center">
-                    Cargando…
-                  </td>
-                </tr>
-              ) : pagedPeriodos.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="td-center">
-                    Sin períodos
-                  </td>
-                </tr>
-              ) : (
-                pagedPeriodos.map((p) => {
-                  const rango = `${toYMD(p.fecha_inicio)} → ${toYMD(p.fecha_fin)}`;
-                  return (
-                    <tr key={p.id_periodo}>
-                      <td className="td-strong">
-                        {(p.codigo_periodo || "—") as any}
-                        <div className="td-mini">{p.descripcion_periodo || ""}</div>
-                      </td>
-                      <td className="td-muted">{rango}</td>
-                      <td>
-                        <span className="count-pill">{Number(p.total_asignadas ?? 0)}</span>
-                      </td>
-                      <td>
-                        <div className="row-actions">
-                          <button className="btn-action assign" onClick={() => openModal("assign", p)}>
-                            Asignar
-                          </button>
-                          <button className="btn-action view" onClick={() => openModal("view", p)}>
-                            Ver
-                          </button>
-                          <button className="btn-action edit" onClick={() => openModal("edit", p)}>
-                            Editar
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+          <div className="list">
+            {loading ? (
+              <div style={{ padding: 12, fontWeight: 900, color: "rgba(0,0,0,.6)" }}>Cargando…</div>
+            ) : pagedPeriodos.length === 0 ? (
+              <div style={{ padding: 12, fontWeight: 900, color: "rgba(0,0,0,.6)" }}>Sin períodos</div>
+            ) : (
+              pagedPeriodos.map((p) => {
+                const rango = `${toYMD(p.fecha_inicio)} → ${toYMD(p.fecha_fin)}`;
+                return (
+                  <div key={p.id_periodo} className="listItem" style={{ cursor: "default" }}>
+                    <div className="liMain">{(p.codigo_periodo || "—") as any}</div>
+                    <div className="liSub">{p.descripcion_periodo || ""}</div>
+                    <div className="liSub">{rango}</div>
 
-        <div className="cp3-pagination">
-          <button className="btn-page" onClick={() => setPage((x) => Math.max(1, x - 1))} disabled={page <= 1}>
-            ◀
-          </button>
-          <span className="page-info">
-            Página <b>{page}</b> de <b>{pageCount}</b>
-          </span>
-          <button
-            className="btn-page"
-            onClick={() => setPage((x) => Math.min(pageCount, x + 1))}
-            disabled={page >= pageCount}
-          >
-            ▶
-          </button>
+                    <div style={{ marginTop: 10, display: "flex", gap: 8, alignItems: "center", justifyContent: "space-between" }}>
+                      <div className="liSub">
+                        Carreras asignadas: <b>{Number(p.total_asignadas ?? 0)}</b>
+                      </div>
+
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button className="btnSmall" onClick={() => openModal("assign", p)}>
+                          Asignar
+                        </button>
+                        <button className="btnSmall" onClick={() => openModal("view", p)}>
+                          Ver
+                        </button>
+                        <button className="btnSmall" onClick={() => openModal("edit", p)}>
+                          Editar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          <div style={{ padding: 12, display: "flex", justifyContent: "center", gap: 10, alignItems: "center" }}>
+            <button className="btnGhost" onClick={() => setPage((x) => Math.max(1, x - 1))} disabled={page <= 1}>
+              ◀
+            </button>
+            <span style={{ fontWeight: 900, color: "rgba(0,0,0,.65)" }}>
+              Página <b>{page}</b> de <b>{pageCount}</b>
+            </span>
+            <button className="btnGhost" onClick={() => setPage((x) => Math.min(pageCount, x + 1))} disabled={page >= pageCount}>
+              ▶
+            </button>
+          </div>
         </div>
       </div>
 
@@ -545,7 +536,7 @@ export default function CarreraPeriodoPage() {
               </button>
             </div>
 
-            {/* VIEW */}
+            {/* ✅ VIEW (bonito tipo foto 2) */}
             {modalMode === "view" && (
               <div className="modal-body">
                 <div className="assign-tools">
@@ -567,68 +558,77 @@ export default function CarreraPeriodoPage() {
                 </div>
 
                 {loading ? (
-                  <div className="td-center" style={{ marginTop: 12 }}>
-                    Cargando…
-                  </div>
+                  <div className="cpv-empty">Cargando…</div>
                 ) : periodoItems.length === 0 ? (
-                  <div className="td-center" style={{ marginTop: 12 }}>
-                    No hay carreras asignadas.
-                  </div>
+                  <div className="cpv-empty">No hay carreras asignadas.</div>
                 ) : (
-                  <div className="view-list">
+                  <div className="cpv-grid">
                     {periodoItems.map((x) => {
                       const activo = isActive(x.estado);
 
-                      return (
-                        <div className="view-item" key={x.id_carrera_periodo}>
-                          <div className="view-left">
-                            <div className="view-name">{x.nombre_carrera || "—"}</div>
-                            <div className="view-meta">{carreraMeta(x) || "—"}</div>
+                      // vienen “inyectados” cuando abres autoridades (y también pueden venir del backend si ya los incluyes)
+                      const director = (x as any).director ?? null;
+                      const apoyo = (x as any).apoyo ?? null;
 
-                            {/* ✅ director/apoyo en la misma tarjeta */}
-                            <div className="view-admins">
-                              <div className="va-row">
-                                <span className="va-k">Director:</span>
-                                <span className="va-v">
-                                  {formatAdminLite((x as any).director || null)}
+                      return (
+                        <div className="cpv-card" key={x.id_carrera_periodo}>
+                          <div className="cpv-top">
+                            <div className="cpv-left">
+                              <div className="cpv-titleRow">
+                                <div className="cpv-title">{x.nombre_carrera || "—"}</div>
+
+                                <span className={`cpv-badge ${activo ? "ok" : "bad"}`}>
+                                  {activo ? "ACTIVO" : "INACTIVO"}
                                 </span>
                               </div>
-                              <div className="va-row">
-                                <span className="va-k">Apoyo:</span>
-                                <span className="va-v">
-                                  {formatAdminLite((x as any).apoyo || null)}
-                                </span>
-                              </div>
+
+                              <div className="cpv-meta">{carreraMeta(x) || "—"}</div>
+                            </div>
+
+                            <div className="cpv-actions">
+                              <button
+                                className="cpv-btn cpv-btnGreen"
+                                title="Autoridades (Director / Apoyo)"
+                                onClick={async () => {
+                                  if (!activo) return;
+
+                                  try {
+                                    const a = await carreraPeriodoService.getAdmins(x.id_carrera_periodo);
+                                    (x as any).director = a.director;
+                                    (x as any).apoyo = a.apoyo;
+                                  } catch {}
+
+                                  openAutoridadesModal(x);
+                                }}
+                                disabled={!activo}
+                              >
+                                <Users size={18} />
+                                Autoridades
+                              </button>
+
+                              <button
+                                className="cpv-btn cpv-btnBlue"
+                                title="Franjas"
+                                onClick={() => showToast("Conecta aquí Franjas ✅", "info")}
+                                disabled={!activo}
+                              >
+                                Franjas
+                              </button>
                             </div>
                           </div>
 
-                          <div className="view-right">
-                            <span className={`badge ${activo ? "active" : "inactive"}`}>
-                              {activo ? "ACTIVO" : "INACTIVO"}
-                            </span>
+                          <div className="cpv-divider" />
 
-                            {/* ✅ Botón REAL: abre modal autoridades */}
-                            <button
-                              className="btnIcon btnAssign"
-                              title="Autoridades (Director / Apoyo)"
-                              onClick={async () => {
-                                if (!activo) return;
+                          <div className="cpv-admins">
+                            <div className="cpv-adminBox">
+                              <div className="cpv-k">Director:</div>
+                              <div className="cpv-v">{formatAdminLite(director)}</div>
+                            </div>
 
-                                setAuthLoading(true);
-                                try {
-                                  // cargar admins y “inyectar” en el item (para mostrar sin refrescar)
-                                  const a = await carreraPeriodoService.getAdmins(x.id_carrera_periodo);
-                                  (x as any).director = a.director;
-                                  (x as any).apoyo = a.apoyo;
-                                } catch {}
-                                setAuthLoading(false);
-
-                                openAutoridadesModal(x);
-                              }}
-                              disabled={!activo}
-                            >
-                              <Users size={18} />
-                            </button>
+                            <div className="cpv-adminBox">
+                              <div className="cpv-k">Docente Apoyo:</div>
+                              <div className="cpv-v">{formatAdminLite(apoyo)}</div>
+                            </div>
                           </div>
                         </div>
                       );
@@ -678,12 +678,7 @@ export default function CarreraPeriodoPage() {
 
                     return (
                       <label key={id} className={`assign-item ${disabledAssign ? "disabled" : ""}`}>
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          disabled={disabledAssign}
-                          onChange={() => toggleSelect(id)}
-                        />
+                        <input type="checkbox" checked={checked} disabled={disabledAssign} onChange={() => toggleSelect(id)} />
 
                         <div className="assign-text">
                           <div className="assign-name">
@@ -703,9 +698,7 @@ export default function CarreraPeriodoPage() {
                   </button>
 
                   <button type="submit" className="btn-primary" disabled={loading}>
-                    {modalMode === "assign"
-                      ? `Asignar (${selectedCarreraIds.size})`
-                      : `Guardar (${selectedCarreraIds.size})`}
+                    {modalMode === "assign" ? `Asignar (${selectedCarreraIds.size})` : `Guardar (${selectedCarreraIds.size})`}
                   </button>
                 </div>
               </form>

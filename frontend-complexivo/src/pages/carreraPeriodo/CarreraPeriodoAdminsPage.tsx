@@ -1,3 +1,4 @@
+// ✅ src/pages/carreraPeriodoAdmins/CarreraPeriodoAdminsPage.tsx
 import { useEffect, useMemo, useState } from "react";
 import { Search, Users, RefreshCw } from "lucide-react";
 
@@ -42,7 +43,7 @@ export default function CarreraPeriodoAdminsPage() {
   const [dirId, setDirId] = useState<string>("");
   const [apoId, setApoId] = useState<string>("");
 
-  // ✅ NUEVO: buscadores para filtrar docentes en el modal
+  // ✅ buscadores para filtrar docentes en el modal
   const [dirQuery, setDirQuery] = useState<string>("");
   const [apoQuery, setApoQuery] = useState<string>("");
 
@@ -62,7 +63,6 @@ export default function CarreraPeriodoAdminsPage() {
     return `${d.nombres_docente} ${d.apellidos_docente}`;
   }
 
-  // ✅ helper para buscar por varios campos
   function docenteSearchText(d: Docente) {
     return `${d.apellidos_docente ?? ""} ${d.nombres_docente ?? ""} ${d.nombre_usuario ?? ""} ${(
       d as any
@@ -188,10 +188,11 @@ export default function CarreraPeriodoAdminsPage() {
   async function openAssign(cp: CarreraPeriodo) {
     setSelectedCP(cp);
 
-    // ✅ limpiar buscadores cada vez que abres
+    // limpiar buscadores
     setDirQuery("");
     setApoQuery("");
 
+    // cargar docentes si no hay
     if (!docentes.length) {
       try {
         setLoadingDocentes(true);
@@ -282,6 +283,7 @@ export default function CarreraPeriodoAdminsPage() {
 
   return (
     <div className="page">
+      {/* CABECERA */}
       <div className="card">
         <div className="headerRow">
           <div>
@@ -338,91 +340,83 @@ export default function CarreraPeriodoAdminsPage() {
         </div>
       </div>
 
-      <div className="card tableWrap">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Carrera</th>
-              <th>Período</th>
-              <th>Sede</th>
-              <th>Modalidad</th>
-              <th>Director</th>
-              <th>Apoyo</th>
-              <th>Estado</th>
-              <th className="thActions">Acciones</th>
-            </tr>
-          </thead>
+      {/* LISTA EN TARJETAS */}
+      <div className="card">
+        <div className="cardsHeader">
+          <div className="cardsTitle">
+            <Users size={18} />
+            <span>Carreras Asignadas</span>
+            <span className="pill">{filtered.length}</span>
+          </div>
+        </div>
 
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={8} className="muted" style={{ padding: 16 }}>
-                  Cargando...
-                </td>
-              </tr>
-            ) : pageData.length ? (
-              pageData.map((cp) => {
-                const st = adminsMap[cp.id_carrera_periodo];
-                const loadingAdmins = st?.loading;
+        {loading ? (
+          <div className="muted" style={{ padding: 16 }}>
+            Cargando...
+          </div>
+        ) : pageData.length ? (
+          <div className="cardsGrid">
+            {pageData.map((cp) => {
+              const st = adminsMap[cp.id_carrera_periodo];
+              const loadingAdmins = st?.loading;
 
-                return (
-                  <tr key={cp.id_carrera_periodo}>
-                    <td className="tdStrong">{cp.nombre_carrera || "-"}</td>
-                    <td className="tdCode">{cp.codigo_periodo || "-"}</td>
-                    <td>{cp.sede || "-"}</td>
-                    <td>{cp.modalidad || "-"}</td>
+              const carrera = cp.nombre_carrera || "-";
+              const meta = `${cp.codigo_carrera || "-"} · ${cp.modalidad || "-"} · ${cp.sede || "-"}`;
+              const periodo = cp.codigo_periodo || "-";
 
-                    <td>
-                      {loadingAdmins ? (
-                        <span className="muted">...</span>
-                      ) : st?.error ? (
-                        <span className="badge badge-danger">Error</span>
-                      ) : (
-                        <span>{formatDocenteLite(st?.director)}</span>
-                      )}
-                    </td>
+              return (
+                <div key={cp.id_carrera_periodo} className="cpCard">
+                  <div className="cpCardTop">
+                    <div className="cpCardTopLeft">
+                      <div className="cpTitleRow">
+                        <div className="cpTitle">{carrera}</div>
 
-                    <td>
-                      {loadingAdmins ? (
-                        <span className="muted">...</span>
-                      ) : st?.error ? (
-                        <span className="badge badge-danger">Error</span>
-                      ) : (
-                        <span>{formatDocenteLite(st?.apoyo)}</span>
-                      )}
-                    </td>
-
-                    <td>
-                      <span className={`badge ${Number(cp.estado) ? "badge-success" : "badge-danger"}`}>
-                        {Number(cp.estado) ? "Activo" : "Inactivo"}
-                      </span>
-                    </td>
-
-                    <td className="actions">
-                      <div className="actionsRow">
-                        <button
-                          className="btnIcon btnEdit"
-                          title="Asignar Director/Apoyo"
-                          onClick={() => openAssign(cp)}
-                        >
-                          <Users size={16} />
-                        </button>
+                        <span className={`badge ${Number(cp.estado) ? "badge-success" : "badge-danger"}`}>
+                          {Number(cp.estado) ? "ACTIVO" : "INACTIVO"}
+                        </span>
                       </div>
-                    </td>
-                  </tr>
-                );
-              })
-            ) : (
-              <tr>
-                <td colSpan={8} className="muted" style={{ padding: 16 }}>
-                  No existen carreras asignadas a períodos.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+
+                      <div className="cpMeta">{meta}</div>
+                      <div className="cpPeriodo">
+                        Período: <b>{periodo}</b>
+                      </div>
+                    </div>
+
+                    <button className="btnSecondary" onClick={() => openAssign(cp)} title="Asignar Director/Apoyo">
+                      <Users size={18} />
+                      Autoridades
+                    </button>
+                  </div>
+
+                  <div className="cpDivider" />
+
+                  <div className="cpInfo">
+                    <div className="infoRow">
+                      <span className="infoLabel">Director:</span>
+                      <span className="infoValue">
+                        {loadingAdmins ? "Cargando..." : st?.error ? "Error al cargar" : formatDocenteLite(st?.director)}
+                      </span>
+                    </div>
+
+                    <div className="infoRow">
+                      <span className="infoLabel">Docente Apoyo:</span>
+                      <span className="infoValue">
+                        {loadingAdmins ? "Cargando..." : st?.error ? "Error al cargar" : formatDocenteLite(st?.apoyo)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="muted" style={{ padding: 16 }}>
+            No existen carreras asignadas a períodos.
+          </div>
+        )}
       </div>
 
+      {/* PAGINACIÓN */}
       <div className="card paginationCard">
         <div className="paginationCenter">
           <button className="btnGhost" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>
@@ -439,6 +433,7 @@ export default function CarreraPeriodoAdminsPage() {
         </div>
       </div>
 
+      {/* MODAL ASIGNACIÓN */}
       {showModal && selectedCP && (
         <div className="modalOverlay">
           <div className="modal">
@@ -458,7 +453,6 @@ export default function CarreraPeriodoAdminsPage() {
                 <div className="formField">
                   <label className="label">Director de carrera</label>
 
-                  {/* ✅ NUEVO: buscador director */}
                   <input
                     className="fieldInput"
                     type="text"
@@ -468,12 +462,7 @@ export default function CarreraPeriodoAdminsPage() {
                     disabled={loadingDocentes}
                   />
 
-                  <select
-                    className="fieldSelect"
-                    value={dirId}
-                    onChange={(e) => setDirId(e.target.value)}
-                    disabled={loadingDocentes}
-                  >
+                  <select className="fieldSelect" value={dirId} onChange={(e) => setDirId(e.target.value)} disabled={loadingDocentes}>
                     <option value="">(Sin asignar)</option>
                     {docentesFiltradosDirector.map((d) => (
                       <option key={d.id_docente} value={d.id_docente}>
@@ -492,7 +481,6 @@ export default function CarreraPeriodoAdminsPage() {
                 <div className="formField">
                   <label className="label">Docente de apoyo</label>
 
-                  {/* ✅ NUEVO: buscador apoyo */}
                   <input
                     className="fieldInput"
                     type="text"
@@ -502,12 +490,7 @@ export default function CarreraPeriodoAdminsPage() {
                     disabled={loadingDocentes}
                   />
 
-                  <select
-                    className="fieldSelect"
-                    value={apoId}
-                    onChange={(e) => setApoId(e.target.value)}
-                    disabled={loadingDocentes}
-                  >
+                  <select className="fieldSelect" value={apoId} onChange={(e) => setApoId(e.target.value)} disabled={loadingDocentes}>
                     <option value="">(Sin asignar)</option>
                     {docentesFiltradosApoyo.map((d) => (
                       <option key={d.id_docente} value={d.id_docente}>
