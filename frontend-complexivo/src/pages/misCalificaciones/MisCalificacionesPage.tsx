@@ -24,6 +24,7 @@ import {
   Pencil,
   Save,
   Eye,
+  List,
 } from "lucide-react";
 
 import escudoESPE from "../../assets/escudo.png";
@@ -76,7 +77,7 @@ function entregaMeta(r: any) {
     r?.created_at ??
     null;
 
-  const idEntrega = r?.id_entrega ?? r?.id_estudiante_entrega ?? r?.id_estudiante_caso_entrega ?? null;
+  const idEntrega = r?.id_entrega ?? r?.id_estudiante_entrega ?? null;
 
   return { nombre, path, fecha, idEntrega };
 }
@@ -87,6 +88,7 @@ function hasEntrega(r: any) {
 }
 
 function isAsignadoTribunal(r: any) {
+  // ✅ clave: solo si existe tribunal_estudiante en ESTE CP (ya viene correcto del repo)
   return Boolean(r?.id_tribunal_estudiante);
 }
 
@@ -95,6 +97,18 @@ function isAsignadoTribunal(r: any) {
    ========================= */
 function isCerradoDocente(r: MiTribunalItem) {
   return Number((r as any).cerrado ?? 0) === 1;
+}
+
+/* =========================
+   CP ACTIVO (para ctx.middleware)
+   =========================
+   ⚠️ Asegúrate de que esta KEY coincida con la usada en axiosClient.ts.
+   Si en tu axiosClient guardaste otra, reemplaza aquí también.
+*/
+const CP_STORAGE_KEY = "active_carrera_periodo_id";
+function setActiveCP(id: number | "") {
+  if (!id) localStorage.removeItem(CP_STORAGE_KEY);
+  else localStorage.setItem(CP_STORAGE_KEY, String(id));
 }
 
 export default function MisCalificacionesPage() {
@@ -224,10 +238,18 @@ export default function MisCalificacionesPage() {
     }
   }
 
+  // ✅ CLAVE: si no hay CP seleccionado => NO mostramos datos, y limpiamos ctx
   useEffect(() => {
     if (role !== 2) return;
-    if (selectedCP) loadAdminList();
-    else setRows([]);
+
+    setActiveCP(selectedCP);
+
+    if (!selectedCP) {
+      setRows([]);
+      return;
+    }
+
+    loadAdminList();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCP, role]);
 
@@ -301,7 +323,7 @@ export default function MisCalificacionesPage() {
   }, [docRows, search]);
 
   // =========================
-  // MÉTRICAS (HERO)
+  // MÉTRICAS (como Docentes)
   // =========================
   const metrics = useMemo(() => {
     if (role === 3) {
@@ -310,6 +332,7 @@ export default function MisCalificacionesPage() {
       const cerrados = total - abiertos;
       return { total, ok: abiertos, warn: cerrados, okLabel: "Abiertos", warnLabel: "Cerrados" };
     }
+
     const total = filteredAdmin.length;
     const entregados = filteredAdmin.filter((x: any) => hasEntrega(x)).length;
     const pendientes = total - entregados;
@@ -450,24 +473,19 @@ export default function MisCalificacionesPage() {
   return (
     <div className="mcPage">
       <div className="wrap">
-        {/* HERO */}
+
+        {/* HERO (igual que tus pantallas ESPE) */}
         <div className="hero">
           <div className="heroLeft">
             <img className="heroLogo" src={escudoESPE} alt="ESPE" />
             <div className="heroText">
-              <h1 className="heroTitle">
-                {role === 3 ? "Mis Tribunales (DOCENTE)" : "Mis Evaluaciones (ADMIN)"}
-              </h1>
+              <h1 className="heroTitle">{role === 3 ? "Mis Tribunales (DOCENTE)" : "Mis Evaluaciones (ADMIN)"}</h1>
 
               <p className="heroSubtitle">
                 {role === 3 ? (
-                  <>
-                    Agenda del docente. Entra a <b>Calificar</b> según tu rol y el Plan de Evaluación.
-                  </>
+                  <>Agenda del docente. Entra a <b>Calificar</b> según tu rol y el Plan de Evaluación.</>
                 ) : (
-                  <>
-                    Gestión por <b>Carrera–Período</b>. Registra <b>nota teórica</b> y gestiona <b>PDF</b>.
-                  </>
+                  <>Gestión por <b>Carrera–Período</b>. Registra <b>nota teórica</b> y gestiona <b>PDF</b>.</>
                 )}
               </p>
 
@@ -476,20 +494,6 @@ export default function MisCalificacionesPage() {
                   Trabajando en: <b>{selectedCPLabel}</b>
                 </div>
               ) : null}
-
-              <div className="heroChips">
-                <span className="chip">
-                  <Users size={16} /> {metrics.total} registros
-                </span>
-
-                <span className="chip chipSoft">
-                  <ClipboardList size={16} /> {metrics.ok} {metrics.okLabel}
-                </span>
-
-                <span className="chip chipSoft">
-                  <ClipboardList size={16} /> {metrics.warn} {metrics.warnLabel}
-                </span>
-              </div>
             </div>
           </div>
 
@@ -507,6 +511,45 @@ export default function MisCalificacionesPage() {
 
         {/* BOX */}
         <div className="box">
+
+          {/* ✅ Header estilo “Docentes”: título + 3 métricas */}
+          <div className="boxHeader">
+            <div className="boxHeaderLeft">
+              <span className="boxIcon">
+                <List size={18} />
+              </span>
+              <div className="boxHeaderText">
+                <div className="boxTitle">{role === 3 ? "Listado de tribunales" : "Listado de evaluaciones"}</div>
+                <div className="boxSubtitle">
+                  {role === 3 ? "Solo verás tus tribunales asignados." : "Selecciona Carrera–Período para ver y gestionar."}
+                </div>
+              </div>
+            </div>
+
+            <div className="boxHeaderRight">
+              <div className="statsRow">
+                <div className="miniStat">
+                  <div className="miniStatLabel">Total</div>
+                  <div className="miniStatValue">{metrics.total}</div>
+                </div>
+
+                {role !== 3 && (
+                  <>
+                    <div className="miniStat miniStatOk">
+                      <div className="miniStatLabel">Entregados</div>
+                      <div className="miniStatValue">{metrics.ok}</div>
+                    </div>
+
+                    <div className="miniStat miniStatWarn">
+                      <div className="miniStatLabel">Pendientes</div>
+                      <div className="miniStatValue">{metrics.warn}</div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+
           <div className="filtersRow">
             <div className="searchWrap">
               <Search className="searchIcon" />
@@ -554,8 +597,10 @@ export default function MisCalificacionesPage() {
               <AlertTriangle size={16} />
               <span>
                 {role === 3
-                  ? "Solo verás tus tribunales asignados. Presiona Calificar para ingresar."
-                  : "Selecciona Carrera–Período para gestionar notas y entregas."}
+                  ? "Presiona Calificar para ingresar."
+                  : !selectedCP
+                  ? "Selecciona Carrera–Período para gestionar notas y entregas."
+                  : "Gestión activa por Carrera–Período."}
               </span>
             </div>
           </div>
@@ -626,7 +671,7 @@ export default function MisCalificacionesPage() {
             </div>
           ) : (
             /* =========================
-               TABLA ADMIN (ROL 2) ✅ SIN PERÍODO/FECHA/HORARIO/ESTADO
+               TABLA ADMIN (ROL 2)
                ========================= */
             <div className="tableWrap">
               <table className="table tableAdmin">
@@ -656,7 +701,8 @@ export default function MisCalificacionesPage() {
                       const meta = entregaMeta(r);
 
                       const estudianteLabel =
-                        `${r.apellidos_estudiante ?? ""} ${r.nombres_estudiante ?? ""}`.trim() || `Estudiante ${r.id_estudiante}`;
+                        `${r.apellidos_estudiante ?? ""} ${r.nombres_estudiante ?? ""}`.trim() ||
+                        `Estudiante ${r.id_estudiante}`;
 
                       const inst = (r.id_institucional_estudiante ?? "").trim();
                       const carrera = r.nombre_carrera ?? "—";
@@ -682,7 +728,9 @@ export default function MisCalificacionesPage() {
 
                           <td className="tdCenter">
                             <div className="cellMain">{r.nota_teorico_20 != null ? `${r.nota_teorico_20}/20` : "—"}</div>
-                            <div className="cellSub">{r.nota_teorico_observacion ? String(r.nota_teorico_observacion) : "Sin observación"}</div>
+                            <div className="cellSub">
+                              {r.nota_teorico_observacion ? String(r.nota_teorico_observacion) : "Sin observación"}
+                            </div>
                           </td>
 
                           <td className="tdCenter">
@@ -694,7 +742,6 @@ export default function MisCalificacionesPage() {
                           </td>
 
                           <td className="tdCenter">
-                            {/* ✅ UNA SOLA FILA */}
                             <div className="actionsRow">
                               <button
                                 className="btnAction btnNota"
