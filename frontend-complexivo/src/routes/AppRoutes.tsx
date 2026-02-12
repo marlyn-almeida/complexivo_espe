@@ -40,6 +40,9 @@ import MisCalificacionesPage from "../pages/misCalificaciones/MisCalificacionesP
 // ✅ DOCENTE (3): pantalla real para calificar 1 tribunal_estudiante
 import CalificarTribunalPage from "../pages/misCalificaciones/CalificarTribunalPage";
 
+// ✅ NUEVO: PLAN DE EVALUACIÓN (ADMIN)
+import PlanEvaluacionPage from "../pages/planEvaluacion/PlanEvaluacionPage";
+
 function HomeRedirect() {
   const token = getToken();
   const role = getActiveRole();
@@ -208,6 +211,17 @@ export default function AppRoutes() {
               </ProtectedRoute>
             }
           />
+
+          {/* ✅ AQUÍ ESTABA EL PROBLEMA: NO EXISTÍA ESTA RUTA */}
+          <Route
+            path="/plan-evaluacion"
+            element={
+              <ProtectedRoute allowRoles={[2]}>
+                <PlanEvaluacionPage />
+              </ProtectedRoute>
+            }
+          />
+
           <Route
             path="/tribunales"
             element={
@@ -228,7 +242,6 @@ export default function AppRoutes() {
           />
 
           {/* ✅ DOCENTE (3) — LISTADO (AGENDA) */}
-          {/* 🔥 IMPORTANTE: ahora usa MisCalificacionesPage (para que tenga botón CALIFICAR) */}
           <Route
             path="/docente/calificaciones"
             element={
@@ -248,11 +261,8 @@ export default function AppRoutes() {
             }
           />
 
-          {/* ✅ COMPATIBILIDAD: si tu menú aún apunta aquí */}
-          <Route
-            path="/mis-tribunales"
-            element={<Navigate to="/docente/calificaciones" replace />}
-          />
+          {/* ✅ COMPATIBILIDAD */}
+          <Route path="/mis-tribunales" element={<Navigate to="/docente/calificaciones" replace />} />
 
           {/* ACTAS */}
           <Route
@@ -263,7 +273,6 @@ export default function AppRoutes() {
               </ProtectedRoute>
             }
           />
-
           <Route
             path="/actas"
             element={

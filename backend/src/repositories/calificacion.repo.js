@@ -132,12 +132,19 @@ async function getPlanActivoByCP(id_carrera_periodo) {
  * Contexto docente: confirma que el docente pertenece al tribunal del tribunal_estudiante
  * y trae designación + cerrado.
  */
+/**
+ * Contexto docente: confirma que el docente pertenece al tribunal del tribunal_estudiante
+ * y trae designación + cerrado.
+ */
 async function getCtxDocenteTribunalEstudiante({ cp, id_tribunal_estudiante, id_docente }) {
+  const cpNum = Number(cp || 0);
+
   const [rows] = await pool.query(
     `
     SELECT
       td.designacion AS mi_designacion,
-      te.cerrado
+      te.cerrado,
+      t.id_carrera_periodo
     FROM tribunal_estudiante te
     JOIN tribunal t ON t.id_tribunal = te.id_tribunal
     JOIN tribunal_docente td ON td.id_tribunal = t.id_tribunal AND td.estado=1
@@ -148,11 +155,17 @@ async function getCtxDocenteTribunalEstudiante({ cp, id_tribunal_estudiante, id_
       AND cd.id_docente = ?
     LIMIT 1
     `,
-    [Number(id_tribunal_estudiante), Number(cp), Number(id_docente)]
+    [
+      Number(id_tribunal_estudiante),
+      cpNum,
+      cpNum,
+      Number(id_docente),
+    ]
   );
 
   return rows[0] || null;
 }
+
 
 /**
  * Estructura filtrada por plan + designación:
