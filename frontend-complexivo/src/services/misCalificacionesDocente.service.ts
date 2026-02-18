@@ -2,96 +2,91 @@
 import axiosClient from "../api/axiosClient";
 
 // =========================
-// TYPES (los que usa tu page)
+// TYPES (según tu BACKEND real)
 // =========================
 export type Nivel = {
-  id_nivel: number;
+  id_rubrica_nivel: number;
   nombre_nivel: string;
-  puntaje: number;
-  descripcion?: string | null;
+  valor_nivel: number; // puntaje/valor
+  orden_nivel?: number;
 };
 
 export type CriterioPlan = {
-  id_criterio: number;
+  id_rubrica_criterio: number;
   nombre_criterio: string;
-  descripcion_criterio?: string | null;
-
-  niveles: Nivel[];
-
-  // si backend devuelve ya seleccionado
-  id_nivel_seleccionado?: number | null;
-  observacion?: string | null;
 };
 
 export type ComponentePlan = {
-  id_componente: number;
+  id_rubrica_componente: number;
   nombre_componente: string;
-  ponderacion?: number | null;
+  tipo_componente?: string | null;
   criterios: CriterioPlan[];
 };
 
 export type ItemPlan = {
-  id_item_plan: number;
+  id_plan_item: number;
   nombre_item: string;
-  ponderacion?: number | null;
+  tipo_item?: string | null;
+  ponderacion_global_pct?: number | null;
+  calificado_por?: string | null;
+  id_rubrica?: number | null;
 
-  rubrica_nombre?: string | null;
+  // viene armado por repo.getEstructuraParaDocente()
   componentes: ComponentePlan[];
+  niveles: Nivel[];
+};
+
+export type Existente = {
+  id_plan_item: number;
+  id_rubrica_componente: number;
+  id_rubrica_criterio: number;
+  id_rubrica_nivel: number;
+  puntaje?: number;
+  observacion?: string | null;
 };
 
 export type SavePayload = {
-  calificaciones: Array<{
-    id_criterio: number;
-    id_nivel: number;
-    observacion?: string | null;
+  items: Array<{
+    id_plan_item: number;
+    componentes: Array<{
+      id_rubrica_componente: number;
+      criterios: Array<{
+        id_rubrica_criterio: number;
+        id_rubrica_nivel: number;
+        observacion?: string | null;
+      }>;
+    }>;
   }>;
-  observacion_general?: string | null;
 };
 
 // =========================
-// RESPONSE SHAPE (lo que tu page lee)
+// RESPONSE SHAPE (backend real)
 // =========================
 export type MisCalificacionesDocenteResponse = {
   ok: boolean;
   data: {
-    tribunal_estudiante: {
-      id_tribunal_estudiante: number;
-      estudiante: string;
-      carrera?: string | null;
-      mi_rol?: string | null;
-      cerrado?: 0 | 1;
-      // opcional
-      id_estudiante?: number;
-      id_tribunal?: number;
-      fecha?: string | null;
-      hora_inicio?: string | null;
-      hora_fin?: string | null;
-    };
-
     plan?: {
-      id_plan?: number;
+      id_plan_evaluacion: number;
       nombre_plan?: string | null;
     } | null;
 
-    items: ItemPlan[];
+    id_tribunal_estudiante: number;
+    mi_designacion: string;
+    cerrado: boolean | 0 | 1;
 
-    observacion_general?: string | null;
+    estructura: ItemPlan[];
+    existentes: Existente[];
   };
 };
 
 function unwrapResponse(res: any): MisCalificacionesDocenteResponse {
-  // axios => {data: ...}
   const data = res?.data ?? res;
-
-  // si ya viene {ok,data}
   if (data?.ok !== undefined) return data as MisCalificacionesDocenteResponse;
-
-  // si viene {data:{...}} sin ok
   return { ok: true, data: (data?.data ?? data) as any };
 }
 
 export const misCalificacionesDocenteService = {
-  // ✅ Backend real (según tu calificacion.service.ts):
+  // ✅ Backend real:
   // GET /calificaciones/mis/:id_tribunal_estudiante
   get: async (id_tribunal_estudiante: number): Promise<MisCalificacionesDocenteResponse> => {
     const res = await axiosClient.get(`/calificaciones/mis/${id_tribunal_estudiante}`);
