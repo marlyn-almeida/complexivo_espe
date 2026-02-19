@@ -7,6 +7,7 @@ require("dotenv").config();
 
 const { auth } = require("./middlewares/auth.middleware");
 const { attachScope } = require("./middlewares/scope.middleware");
+const { attachCarreraPeriodoCtx } = require("./middlewares/ctx.middleware"); // ✅ NUEVO
 
 const app = express();
 
@@ -56,7 +57,9 @@ app.get("/api/health", (req, res) => {
 // RUTAS PROTEGIDAS (JWT + Scope)
 // =========================
 const protectedApi = express.Router();
-protectedApi.use(auth, attachScope);
+
+// ✅ CAMBIO ÚNICO IMPORTANTE: agregar attachCarreraPeriodoCtx aquí
+protectedApi.use(auth, attachScope, attachCarreraPeriodoCtx);
 
 // ---- base
 protectedApi.use("/perfil", require("./routes/perfil.routes"));
