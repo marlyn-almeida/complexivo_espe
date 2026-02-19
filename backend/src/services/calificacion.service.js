@@ -99,7 +99,6 @@ async function misCalificaciones(cp, id_tribunal_estudiante, user) {
 
   const cpIn = Number(cp || 0);
 
-  // ✅ repo debe soportar cp=0 como “no filtrar”
   const ctx = await repo.getCtxDocenteTribunalEstudiante({
     cp: cpIn,
     id_tribunal_estudiante,
@@ -108,8 +107,8 @@ async function misCalificaciones(cp, id_tribunal_estudiante, user) {
 
   if (!ctx) throw err("Asignación no encontrada o no pertenece a tu agenda.", 404);
 
-  // ✅ Tomamos CP REAL desde el ctx (esto evita depender del header/localStorage)
-  const cpReal = Number(ctx.id_carrera_periodo || cpIn || 0);
+  // ✅ CP REAL SIEMPRE desde DB (no del header)
+  const cpReal = Number(ctx.id_carrera_periodo || 0);
   if (!cpReal) throw err("No se pudo determinar el Carrera–Período para calificar.", 422);
 
   const plan = await repo.getPlanActivoByCP(cpReal);
@@ -155,7 +154,7 @@ async function guardarMisCalificaciones(cp, id_tribunal_estudiante, user, payloa
     throw err("Esta asignación está cerrada. No se pueden registrar calificaciones.", 409);
   }
 
-  const cpReal = Number(ctx.id_carrera_periodo || cpIn || 0);
+  const cpReal = Number(ctx.id_carrera_periodo || 0);
   if (!cpReal) throw err("No se pudo determinar el Carrera–Período para calificar.", 422);
 
   const plan = await repo.getPlanActivoByCP(cpReal);
@@ -177,7 +176,12 @@ async function guardarMisCalificaciones(cp, id_tribunal_estudiante, user, payloa
       throw err("Cada item debe incluir id_plan_item válido", 422);
     }
 
+    // ✅ antes esto podía venir vacío y no te enterabas
     const comps = Array.isArray(it.componentes) ? it.componentes : [];
+    if (!comps.length) {
+      throw err("Cada item debe incluir componentes[] (no puede venir vacío)", 422);
+    }
+
     for (const comp of comps) {
       const id_comp = Number(comp.id_rubrica_componente);
       if (!Number.isFinite(id_comp) || id_comp <= 0) {
@@ -185,6 +189,10 @@ async function guardarMisCalificaciones(cp, id_tribunal_estudiante, user, payloa
       }
 
       const criterios = Array.isArray(comp.criterios) ? comp.criterios : [];
+      if (!criterios.length) {
+        throw err("Cada componente debe incluir criterios[] (no puede venir vacío)", 422);
+      }
+
       for (const c of criterios) {
         const idCrit = Number(c.id_rubrica_criterio);
         const idNivel = Number(c.id_rubrica_nivel);
@@ -212,7 +220,7 @@ async function guardarMisCalificaciones(cp, id_tribunal_estudiante, user, payloa
 
   await repo.upsertCriteriosCalificacion(toSave);
 
-  // ✅ devolvemos vista actualizada usando cpReal (ya no dependemos de header)
+  // ✅ devolvemos vista actualizada usando cpReal
   return misCalificaciones(cpReal, id_tribunal_estudiante, user);
 }
 

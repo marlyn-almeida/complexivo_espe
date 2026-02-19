@@ -81,14 +81,20 @@ router.post(
   authorize(["DOCENTE"]),
   param("id_tribunal_estudiante").isInt({ min: 1 }).toInt(),
 
-  // Array de items:
-  // [{ id_plan_item, criterios:[{id_rubrica_criterio, id_rubrica_criterio_nivel, observacion?}] }]
+  // ✅ Payload REAL que usa tu service:
+  // { items:[{ id_plan_item, componentes:[{id_rubrica_componente, criterios:[{id_rubrica_criterio, id_rubrica_nivel, observacion?}]}]}] }
+
   body("items").isArray({ min: 1 }),
   body("items.*.id_plan_item").isInt({ min: 1 }).toInt(),
-  body("items.*.criterios").isArray({ min: 1 }),
-  body("items.*.criterios.*.id_rubrica_criterio").isInt({ min: 1 }).toInt(),
-  body("items.*.criterios.*.id_rubrica_criterio_nivel").isInt({ min: 1 }).toInt(),
-  body("items.*.criterios.*.observacion").optional().isString().isLength({ max: 400 }),
+
+  body("items.*.componentes").isArray({ min: 1 }),
+  body("items.*.componentes.*.id_rubrica_componente").isInt({ min: 1 }).toInt(),
+
+  body("items.*.componentes.*.criterios").isArray({ min: 1 }),
+  body("items.*.componentes.*.criterios.*.id_rubrica_criterio").isInt({ min: 1 }).toInt(),
+  body("items.*.componentes.*.criterios.*.id_rubrica_nivel").isInt({ min: 1 }).toInt(),
+  body("items.*.componentes.*.criterios.*.observacion").optional().isString().isLength({ max: 400 }),
+
   validate,
   ctrl.guardarMisCalificaciones
 );

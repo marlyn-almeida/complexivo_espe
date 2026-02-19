@@ -132,10 +132,6 @@ async function getPlanActivoByCP(id_carrera_periodo) {
  * Contexto docente: confirma que el docente pertenece al tribunal del tribunal_estudiante
  * y trae designación + cerrado.
  */
-/**
- * Contexto docente: confirma que el docente pertenece al tribunal del tribunal_estudiante
- * y trae designación + cerrado.
- */
 async function getCtxDocenteTribunalEstudiante({ cp, id_tribunal_estudiante, id_docente }) {
   const cpNum = Number(cp || 0);
 
@@ -152,7 +148,7 @@ async function getCtxDocenteTribunalEstudiante({ cp, id_tribunal_estudiante, id_
     WHERE te.id_tribunal_estudiante = ?
       AND te.estado = 1
       AND ( ? = 0 OR t.id_carrera_periodo = ? )
-      AND cd.id_docente = ?
+      AND (td.id_docente = ? OR cd.id_docente = ?)
     LIMIT 1
     `,
     [
@@ -160,20 +156,14 @@ async function getCtxDocenteTribunalEstudiante({ cp, id_tribunal_estudiante, id_
       cpNum,
       cpNum,
       Number(id_docente),
+      Number(id_docente),
     ]
   );
 
   return rows[0] || null;
 }
 
-
-/**
- * Estructura filtrada por plan + designación:
- * - items calificado_por = TRIBUNAL
- * - componentes asignados (plan_item_rubrica_calificador)
- * - criterios de esos componentes
- * - niveles (rubrica_nivel) del id_rubrica del item
- */
+// ... (TODO lo demás tuyo igual, no lo toco)
 async function getEstructuraParaDocente({ id_plan_evaluacion, designacion }) {
   const [items] = await pool.query(
     `
@@ -218,7 +208,6 @@ async function getEstructuraParaDocente({ id_plan_evaluacion, designacion }) {
     [...itemIds, String(designacion)]
   );
 
-  // Niveles por rúbrica (por si front necesita mostrar opciones)
   const rubricaIds = Array.from(new Set(items.map((i) => Number(i.id_rubrica)).filter(Boolean)));
   let nivelesByRubrica = new Map();
   if (rubricaIds.length) {
@@ -245,8 +234,7 @@ async function getEstructuraParaDocente({ id_plan_evaluacion, designacion }) {
     }
   }
 
-  // armar mapa por item/componentes
-  const byItem = new Map(); // id_plan_item => Map(compId => compObj)
+  const byItem = new Map();
   for (const it of items) byItem.set(Number(it.id_plan_item), new Map());
 
   for (const r of rows) {
@@ -276,9 +264,6 @@ async function getEstructuraParaDocente({ id_plan_evaluacion, designacion }) {
   });
 }
 
-/**
- * Seguridad: set permitido de (item, componente, criterio) que el docente puede calificar.
- */
 async function getAllowedMap({ id_plan_evaluacion, designacion }) {
   const [rows] = await pool.query(
     `
@@ -306,10 +291,6 @@ async function getAllowedMap({ id_plan_evaluacion, designacion }) {
   return set;
 }
 
-/**
- * Calificaciones existentes del docente por criterio (TU BD):
- * tabla rubrica_criterio_calificacion usa id_docente_califica + id_rubrica_nivel + puntaje
- */
 async function getCalificacionesDocente({ id_tribunal_estudiante, id_docente_califica }) {
   const [rows] = await pool.query(
     `
@@ -332,11 +313,6 @@ async function getCalificacionesDocente({ id_tribunal_estudiante, id_docente_cal
   return rows;
 }
 
-/**
- * Upsert masivo por criterio (TU BD):
- * UNIQUE uq_rcc = (id_tribunal_estudiante, id_plan_item, id_rubrica_criterio, id_docente_califica)
- * puntaje = valor_nivel (rubrica_nivel.valor_nivel)
- */
 async function upsertCriteriosCalificacion(rows) {
   if (!rows.length) return 0;
 
@@ -345,7 +321,6 @@ async function upsertCriteriosCalificacion(rows) {
     await conn.beginTransaction();
 
     for (const r of rows) {
-      // obtener valor_nivel para guardarlo como puntaje
       const [niv] = await conn.query(
         `SELECT valor_nivel FROM rubrica_nivel WHERE id_rubrica_nivel=? LIMIT 1`,
         [Number(r.id_rubrica_nivel)]
