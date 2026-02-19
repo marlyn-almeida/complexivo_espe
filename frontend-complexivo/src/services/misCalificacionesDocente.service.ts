@@ -70,6 +70,11 @@ export type MisCalificacionesDocenteResponse = {
     mi_designacion: string;
     cerrado: boolean | 0 | 1;
 
+    // ✅ EXTRA (para los 2 PDFs)
+    id_estudiante?: number | null;     // entrega
+    id_caso_estudio?: number | null;   // caso estudio
+    estudiante?: string | null;        // label opcional
+
     estructura: ItemPlan[];
     existentes: Existente[];
   };
@@ -78,7 +83,7 @@ export type MisCalificacionesDocenteResponse = {
 function unwrapResponse(res: any): MisCalificacionesDocenteResponse {
   const data = res?.data ?? res;
 
-  // ya viene {ok,data}
+  // forma normal: {ok, data}
   if (data && typeof data === "object" && "ok" in data && "data" in data) {
     return data as MisCalificacionesDocenteResponse;
   }

@@ -1,4 +1,4 @@
-// src/repositories/calificacion.repo.js
+// backend/src/repositories/calificacion.repo.js
 const pool = require("../config/db");
 
 // =======================
@@ -107,9 +107,7 @@ async function setEstado(id, estado) {
   return findById(id);
 }
 
-/**
- * ✅ Necesario para ACTA: crear/actualizar calificación FINAL por llave UNIQUE
- */
+// ✅ ACTA
 async function upsertByKey(d) {
   const existing = await findOneByKey(d.id_tribunal_estudiante, d.id_rubrica, d.tipo_rubrica);
   if (!existing) return create(d);
@@ -117,9 +115,8 @@ async function upsertByKey(d) {
 }
 
 // =======================
-// ✅ NUEVO (DOCENTE) ajustado a TU BD
+// ✅ DOCENTE
 // =======================
-
 async function getPlanActivoByCP(id_carrera_periodo) {
   const [rows] = await pool.query(
     `SELECT * FROM plan_evaluacion WHERE id_carrera_periodo=? AND estado=1 LIMIT 1`,
@@ -129,8 +126,10 @@ async function getPlanActivoByCP(id_carrera_periodo) {
 }
 
 /**
- * Contexto docente: confirma que el docente pertenece al tribunal del tribunal_estudiante
- * y trae designación + cerrado.
+ * ✅ Contexto docente:
+ * - confirma tribunal_estudiante pertenece al docente en tribunal_docente/carrera_docente
+ * - trae designación + cerrado + CP REAL
+ * - ✅ trae id_estudiante + id_caso_estudio (para los 2 PDFs)
  */
 async function getCtxDocenteTribunalEstudiante({ cp, id_tribunal_estudiante, id_docente }) {
   const cpNum = Number(cp || 0);
@@ -140,15 +139,20 @@ async function getCtxDocenteTribunalEstudiante({ cp, id_tribunal_estudiante, id_
     SELECT
       td.designacion AS mi_designacion,
       te.cerrado,
-      t.id_carrera_periodo
+      t.id_carrera_periodo,
+
+      te.id_estudiante,
+      te.id_caso_estudio
+
     FROM tribunal_estudiante te
     JOIN tribunal t ON t.id_tribunal = te.id_tribunal
     JOIN tribunal_docente td ON td.id_tribunal = t.id_tribunal AND td.estado=1
     JOIN carrera_docente cd ON cd.id_carrera_docente = td.id_carrera_docente AND cd.estado=1
+
     WHERE te.id_tribunal_estudiante = ?
       AND te.estado = 1
       AND ( ? = 0 OR t.id_carrera_periodo = ? )
-      AND (td.id_docente = ? OR cd.id_docente = ?)
+      AND cd.id_docente = ?
     LIMIT 1
     `,
     [
@@ -156,14 +160,16 @@ async function getCtxDocenteTribunalEstudiante({ cp, id_tribunal_estudiante, id_
       cpNum,
       cpNum,
       Number(id_docente),
-      Number(id_docente),
     ]
   );
 
   return rows[0] || null;
 }
 
-// ... (TODO lo demás tuyo igual, no lo toco)
+// =======================
+// TODO lo demás igual
+// =======================
+
 async function getEstructuraParaDocente({ id_plan_evaluacion, designacion }) {
   const [items] = await pool.query(
     `
@@ -209,7 +215,8 @@ async function getEstructuraParaDocente({ id_plan_evaluacion, designacion }) {
   );
 
   const rubricaIds = Array.from(new Set(items.map((i) => Number(i.id_rubrica)).filter(Boolean)));
-  let nivelesByRubrica = new Map();
+  const nivelesByRubrica = new Map();
+
   if (rubricaIds.length) {
     const [nivRows] = await pool.query(
       `

@@ -68,14 +68,16 @@ export const casosEstudioService = {
     return unwrapObject(res);
   },
 
+  // ✅ download por id_caso_estudio (ENDPOINT REAL)
   async download(id_caso_estudio: number) {
     return axiosClient.get(`/casos-estudio/${id_caso_estudio}/download`, {
       responseType: "blob",
       transformResponse: (r) => r,
+      headers: { Accept: "application/pdf" },
     });
   },
 
-  // ✅ ✅ ✅ DELETE real
+  // ✅ DELETE real
   async remove(id: number) {
     const res = await axiosClient.delete(`/casos-estudio/${id}`);
     return unwrapObject(res);

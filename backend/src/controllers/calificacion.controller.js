@@ -1,10 +1,10 @@
-// src/controllers/calificacion.controller.js
+// backend/src/controllers/calificacion.controller.js
 const s = require("../services/calificacion.service");
 
 /**
  * Para DOCENTE:
  * - cp puede venir 0 (y está bien) para que el repo NO filtre por CP y pueda encontrar la asignación.
- * - luego el service toma cpReal desde ctx (t.id_carrera_periodo) y con eso carga el plan.
+ * - luego el service toma cpReal desde DB (t.id_carrera_periodo) y con eso carga el plan.
  */
 function getCp(req) {
   const cpQuery = Number(req.query?.cp || 0);
@@ -65,13 +65,10 @@ module.exports = {
   // ✅ DOCENTE: ver lo que me toca
   misCalificaciones: async (req, res, n) => {
     try {
-      const cp = getCp(req); // ✅ YA NO dependemos de req.ctx
+      const cp = getCp(req); // ✅ NO dependemos de req.ctx
       const id_te = Number(req.params.id_tribunal_estudiante);
 
       const out = await s.misCalificaciones(cp, id_te, req.user);
-
-      // tu service devuelve { ok:true, data:{...} }
-      // lo devolvemos tal cual
       res.json(out);
     } catch (e) {
       n(e);
@@ -81,11 +78,10 @@ module.exports = {
   // ✅ DOCENTE: guardar
   guardarMisCalificaciones: async (req, res, n) => {
     try {
-      const cp = getCp(req); // ✅ YA NO dependemos de req.ctx
+      const cp = getCp(req); // ✅ NO dependemos de req.ctx
       const id_te = Number(req.params.id_tribunal_estudiante);
 
       const out = await s.guardarMisCalificaciones(cp, id_te, req.user, req.body);
-
       res.json(out);
     } catch (e) {
       n(e);

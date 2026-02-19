@@ -40,7 +40,7 @@ router.post(
   body("nota_base20").isDecimal(),
   body("observacion")
     .optional({ nullable: true })
-    .customSanitizer((v) => (v == null ? "" : String(v)))
+    .customSanitizer((v) => (v == null ? null : String(v)))
     .isString()
     .isLength({ max: 400 }),
   validate,
@@ -56,7 +56,7 @@ router.put(
   body("nota_base20").isDecimal(),
   body("observacion")
     .optional({ nullable: true })
-    .customSanitizer((v) => (v == null ? "" : String(v)))
+    .customSanitizer((v) => (v == null ? null : String(v)))
     .isString()
     .isLength({ max: 400 }),
   validate,
@@ -77,10 +77,15 @@ router.patch(
 // ✅ DOCENTE (ROL 3) - Panel de notas tribunal
 // =======================
 
+// ✅ (opcional) cp por query si lo mandas, pero NO es obligatorio
+// (el controller ya hace fallback a 0 si no hay)
+const docenteCpOptional = query("cp").optional().isInt({ min: 1 }).toInt();
+
 // Ver lo que me toca calificar
 router.get(
   "/mis/:id_tribunal_estudiante",
   authorize(["DOCENTE"]),
+  docenteCpOptional,
   param("id_tribunal_estudiante").isInt({ min: 1 }).toInt(),
   validate,
   ctrl.misCalificaciones
@@ -90,6 +95,7 @@ router.get(
 router.post(
   "/mis/:id_tribunal_estudiante",
   authorize(["DOCENTE"]),
+  docenteCpOptional,
   param("id_tribunal_estudiante").isInt({ min: 1 }).toInt(),
 
   body("items").isArray({ min: 1 }),
@@ -102,10 +108,10 @@ router.post(
   body("items.*.componentes.*.criterios.*.id_rubrica_criterio").isInt({ min: 1 }).toInt(),
   body("items.*.componentes.*.criterios.*.id_rubrica_nivel").isInt({ min: 1 }).toInt(),
 
-  // ✅ FIX: permitir null y convertirlo a string
+  // ✅ permitir null; si viene null se queda null
   body("items.*.componentes.*.criterios.*.observacion")
     .optional({ nullable: true })
-    .customSanitizer((v) => (v == null ? "" : String(v)))
+    .customSanitizer((v) => (v == null ? null : String(v)))
     .isString()
     .isLength({ max: 400 }),
 

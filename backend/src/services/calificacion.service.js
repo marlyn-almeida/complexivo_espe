@@ -1,4 +1,4 @@
-// src/services/calificacion.service.js
+// backend/src/services/calificacion.service.js
 const repo = require("../repositories/calificacion.repo");
 
 const TIPOS_OK = new Set(["TEORICO", "PRACTICO_ESCRITA", "PRACTICO_ORAL", "FINAL"]);
@@ -21,12 +21,6 @@ function validarNota(n) {
   return Number(num.toFixed(2));
 }
 
-/**
- * ✅ COHERENCIA REAL CON TU BD:
- * - rubrica pertenece a un PERIODO (rubrica.id_periodo)
- * - tribunal_estudiante pertenece a un CP, y CP pertenece a un PERIODO (carrera_periodo.id_periodo)
- * => deben coincidir por id_periodo
- */
 async function validarCoherencia(id_tribunal_estudiante, id_rubrica) {
   const te = await repo.getTribunalEstudianteBase(id_tribunal_estudiante);
   if (!te) throw err("tribunal_estudiante no existe", 422);
@@ -40,7 +34,7 @@ async function validarCoherencia(id_tribunal_estudiante, id_rubrica) {
 }
 
 // =======================
-// ADMIN (lo que ya tenías)
+// ADMIN
 // =======================
 async function list(q) {
   return repo.findAll({
@@ -85,15 +79,9 @@ async function changeEstado(id, estado) {
 }
 
 // =======================
-// ✅ DOCENTE (arreglo)
+// ✅ DOCENTE
 // =======================
 
-/**
- * ✅ CLAVE:
- * - Si cp viene 0/null (DOCENTE), NO filtramos por CP para encontrar su agenda.
- * - Luego tomamos cpReal desde la asignación (ctx.id_carrera_periodo) y con eso
- *   buscamos el plan activo.
- */
 async function misCalificaciones(cp, id_tribunal_estudiante, user) {
   if (!isDocente(user)) throw err("Acceso denegado", 403);
 
@@ -107,7 +95,6 @@ async function misCalificaciones(cp, id_tribunal_estudiante, user) {
 
   if (!ctx) throw err("Asignación no encontrada o no pertenece a tu agenda.", 404);
 
-  // ✅ CP REAL SIEMPRE desde DB (no del header)
   const cpReal = Number(ctx.id_carrera_periodo || 0);
   if (!cpReal) throw err("No se pudo determinar el Carrera–Período para calificar.", 422);
 
@@ -129,8 +116,15 @@ async function misCalificaciones(cp, id_tribunal_estudiante, user) {
     data: {
       plan,
       id_tribunal_estudiante,
+
+      // ✅ para UI
       mi_designacion: ctx.mi_designacion,
       cerrado: !!ctx.cerrado,
+
+      // ✅ ✅ para PDFs
+      id_estudiante: Number(ctx.id_estudiante || 0) || null,
+      id_caso_estudio: Number(ctx.id_caso_estudio || 0) || null,
+
       estructura,
       existentes,
     },
@@ -176,7 +170,6 @@ async function guardarMisCalificaciones(cp, id_tribunal_estudiante, user, payloa
       throw err("Cada item debe incluir id_plan_item válido", 422);
     }
 
-    // ✅ antes esto podía venir vacío y no te enterabas
     const comps = Array.isArray(it.componentes) ? it.componentes : [];
     if (!comps.length) {
       throw err("Cada item debe incluir componentes[] (no puede venir vacío)", 422);
@@ -220,7 +213,6 @@ async function guardarMisCalificaciones(cp, id_tribunal_estudiante, user, payloa
 
   await repo.upsertCriteriosCalificacion(toSave);
 
-  // ✅ devolvemos vista actualizada usando cpReal
   return misCalificaciones(cpReal, id_tribunal_estudiante, user);
 }
 
@@ -233,7 +225,6 @@ module.exports = {
   validarNota,
   validarCoherencia,
   TIPOS_OK,
-
   misCalificaciones,
   guardarMisCalificaciones,
 };

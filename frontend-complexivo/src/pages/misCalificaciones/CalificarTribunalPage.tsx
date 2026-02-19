@@ -1,7 +1,16 @@
 // ✅ src/pages/misCalificaciones/CalificarTribunalPage.tsx
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, RefreshCcw, Save, ClipboardCheck, BadgeCheck } from "lucide-react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
+import {
+  ArrowLeft,
+  RefreshCcw,
+  Save,
+  ClipboardCheck,
+  BadgeCheck,
+  FileText,
+  Eye,
+  Download,
+} from "lucide-react";
 
 import escudoESPE from "../../assets/escudo.png";
 import "./CalificarTribunalPage.css";
@@ -14,8 +23,15 @@ import {
   type MisCalificacionesDocenteResponse,
 } from "../../services/misCalificacionesDocente.service";
 
+// ✅ PDFs
+import { casosEstudioService } from "../../services/casosEstudio.service";
+import { entregasCasoService } from "../../services/entregasCaso.service";
+
 type ToastType = "success" | "error" | "info";
 type SelectedMap = Record<number, { id_nivel: number; observacion?: string | null }>;
+
+// ✅ si navegas desde otra pantalla puedes mandar estos por state
+type NavState = { id_estudiante?: number; id_caso_estudio?: number };
 
 function extractMsg(e: any) {
   const msg = e?.response?.data?.message;
@@ -25,10 +41,39 @@ function extractMsg(e: any) {
   return e?.message || "Ocurrió un error.";
 }
 
+function isPdfResponse(res: any) {
+  const ct = String(res?.headers?.["content-type"] ?? "");
+  return ct.includes("pdf");
+}
+
+function openPdfFromAxios(res: any) {
+  const blob = new Blob([res.data], { type: "application/pdf" });
+  const url = URL.createObjectURL(blob);
+  window.open(url, "_blank", "noopener,noreferrer");
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
+function downloadPdfFromAxios(res: any, filename: string) {
+  const blob = new Blob([res.data], { type: "application/pdf" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
 export default function CalificarTribunalPage() {
   const nav = useNavigate();
   const { idTribunalEstudiante } = useParams();
-  const id = Number(idTribunalEstudiante || 0);
+  const id_te = Number(idTribunalEstudiante || 0);
+
+  const location = useLocation();
+  const navState = (location.state || {}) as NavState;
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -39,6 +84,12 @@ export default function CalificarTribunalPage() {
     mi_designacion?: string | null;
     plan_nombre?: string | null;
     cerrado?: 0 | 1 | boolean;
+
+    // ✅ PDFs:
+    id_estudiante?: number | null;     // para entrega
+    id_caso_estudio?: number | null;   // para caso estudio
+
+    estudiante_label?: string | null;
   } | null>(null);
 
   const [items, setItems] = useState<ItemPlan[]>([]);
@@ -61,8 +112,8 @@ export default function CalificarTribunalPage() {
   }
 
   async function load() {
-    if (!id) {
-      setToast({ type: "error", msg: "ID inválido del tribunal." });
+    if (!id_te) {
+      setToast({ type: "error", msg: "ID inválido del tribunal-estudiante." });
       return;
     }
 
@@ -70,21 +121,36 @@ export default function CalificarTribunalPage() {
     setToast(null);
 
     try {
-      const resp = await misCalificacionesDocenteService.get(id);
+      const resp = await misCalificacionesDocenteService.get(id_te);
 
       const planNombre = resp.data?.plan?.nombre_plan ?? null;
       const mi = resp.data?.mi_designacion ?? null;
+
+      // ✅ Traer IDs desde backend (preferido), o desde state como respaldo
+      const idEstBackend = Number((resp as any)?.data?.id_estudiante ?? 0) || 0;
+      const idCasoBackend = Number((resp as any)?.data?.id_caso_estudio ?? 0) || 0;
+
+      const idEstState = Number(navState?.id_estudiante ?? 0) || 0;
+      const idCasoState = Number(navState?.id_caso_estudio ?? 0) || 0;
+
+      const idEst = idEstBackend || idEstState || 0;
+      const idCaso = idCasoBackend || idCasoState || 0;
+
+      const estudianteLabel = (resp as any)?.data?.estudiante ?? null;
 
       setHeader({
         mi_designacion: mi,
         plan_nombre: planNombre,
         cerrado: resp.data?.cerrado ?? 0,
+
+        id_estudiante: idEst ? Number(idEst) : null,
+        id_caso_estudio: idCaso ? Number(idCaso) : null,
+
+        estudiante_label: estudianteLabel ? String(estudianteLabel) : null,
       });
 
       setItems(resp.data?.estructura ?? []);
       setSelected(buildInitialSelected(resp));
-
-      // (si luego agregas observación_general en backend, aquí la cargas)
       setObsGeneral("");
     } catch (e: any) {
       setItems([]);
@@ -98,7 +164,7 @@ export default function CalificarTribunalPage() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [id_te]);
 
   function nivelesOf(item: ItemPlan): Nivel[] {
     return Array.isArray((item as any).niveles) ? (item as any).niveles : [];
@@ -118,14 +184,141 @@ export default function CalificarTribunalPage() {
     }));
   }
 
+  // =========================
+  // ✅ PDFs (2 documentos)
+  // =========================
+
+  // 1) ✅ CASO DE ESTUDIO (PDF) → por id_caso_estudio
+  async function verCasoEstudio() {
+    const idCaso = Number(header?.id_caso_estudio ?? 0);
+    if (!idCaso) {
+      setToast({
+        type: "info",
+        msg: "No se pudo determinar el caso de estudio (falta id_caso_estudio). Devuélvelo en el backend.",
+      });
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const res = await casosEstudioService.download(idCaso);
+
+      if (!isPdfResponse(res)) {
+        const txt = await new Response(res.data).text();
+        console.error("CasoEstudio no-PDF:", txt);
+        setToast({ type: "error", msg: "El backend no devolvió un PDF del caso de estudio." });
+        return;
+      }
+
+      openPdfFromAxios(res);
+    } catch (e: any) {
+      setToast({ type: "error", msg: extractMsg(e) });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function descargarCasoEstudio() {
+    const idCaso = Number(header?.id_caso_estudio ?? 0);
+    if (!idCaso) {
+      setToast({
+        type: "info",
+        msg: "No se pudo determinar el caso de estudio (falta id_caso_estudio). Devuélvelo en el backend.",
+      });
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const res = await casosEstudioService.download(idCaso);
+
+      if (!isPdfResponse(res)) {
+        const txt = await new Response(res.data).text();
+        console.error("CasoEstudio no-PDF:", txt);
+        setToast({ type: "error", msg: "El backend no devolvió un PDF del caso de estudio." });
+        return;
+      }
+
+      downloadPdfFromAxios(res, `caso_estudio_${idCaso}.pdf`);
+    } catch (e: any) {
+      setToast({ type: "error", msg: extractMsg(e) });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // 2) ✅ ENTREGA DEL ESTUDIANTE (PDF) → por id_estudiante
+  async function verEntregaEstudiante() {
+    const idEst = Number(header?.id_estudiante ?? 0);
+    if (!idEst) {
+      setToast({
+        type: "info",
+        msg: "No se pudo determinar el estudiante (falta id_estudiante). Devuélvelo en el backend.",
+      });
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const res = await entregasCasoService.downloadByEstudiante(idEst);
+
+      if (!isPdfResponse(res)) {
+        const txt = await new Response(res.data).text();
+        console.error("Entrega no-PDF:", txt);
+        setToast({ type: "error", msg: "El backend no devolvió un PDF de la entrega." });
+        return;
+      }
+
+      openPdfFromAxios(res);
+    } catch (e: any) {
+      setToast({ type: "error", msg: extractMsg(e) });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function descargarEntregaEstudiante() {
+    const idEst = Number(header?.id_estudiante ?? 0);
+    if (!idEst) {
+      setToast({
+        type: "info",
+        msg: "No se pudo determinar el estudiante (falta id_estudiante). Devuélvelo en el backend.",
+      });
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const res = await entregasCasoService.downloadByEstudiante(idEst);
+
+      if (!isPdfResponse(res)) {
+        const txt = await new Response(res.data).text();
+        console.error("Entrega no-PDF:", txt);
+        setToast({ type: "error", msg: "El backend no devolvió un PDF de la entrega." });
+        return;
+      }
+
+      downloadPdfFromAxios(res, `entrega_estudiante_${idEst}.pdf`);
+    } catch (e: any) {
+      setToast({ type: "error", msg: extractMsg(e) });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // =========================
+  // ✅ SAVE
+  // =========================
   async function onSave() {
     if (cerrado) {
       setToast({ type: "info", msg: "Este tribunal está cerrado. No se pueden guardar cambios." });
       return;
     }
 
-    // ✅ Payload exacto backend:
-    // { items: [{id_plan_item, componentes:[{id_rubrica_componente, criterios:[{id_rubrica_criterio,id_rubrica_nivel,observacion?}]}]}] }
     const payload: SavePayload = { items: [] };
 
     for (const it of items) {
@@ -154,7 +347,6 @@ export default function CalificarTribunalPage() {
           criteriosOut.push({
             id_rubrica_criterio: Number(crit.id_rubrica_criterio),
             id_rubrica_nivel: Number(pick.id_nivel),
-            // ✅ FIX: NO mandar null (rompe express-validator). Si no hay texto, omitimos el campo.
             ...(obs ? { observacion: obs } : {}),
           });
         }
@@ -184,7 +376,7 @@ export default function CalificarTribunalPage() {
     setToast(null);
 
     try {
-      await misCalificacionesDocenteService.save(id, payload);
+      await misCalificacionesDocenteService.save(id_te, payload);
       setToast({ type: "success", msg: "Calificaciones guardadas correctamente." });
       await load();
     } catch (e: any) {
@@ -261,7 +453,58 @@ export default function CalificarTribunalPage() {
         </div>
       </div>
 
-      {/* Box */}
+      {/* ✅ DOCUMENTOS: 2 PDFs */}
+      <div className="box" style={{ marginBottom: 16 }}>
+        <div className="boxHead">
+          <div className="sectionTitle">
+            <span className="sectionTitleIcon">
+              <FileText />
+            </span>
+            <span>Documentos del Tribunal</span>
+          </div>
+
+          <div className="boxRight">
+            {header?.estudiante_label ? (
+              <div className="roleBadge">
+                <span>Estudiante:</span>
+                <b>{header.estudiante_label}</b>
+              </div>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="docRow">
+          {/* ✅ PDF 1 */}
+          <div className="docCard">
+            <div className="docTitle">Caso de Estudio (PDF)</div>
+            <div className="docSub">Documento asignado a la asignación tribunal-estudiante.</div>
+            <div className="docActions">
+              <button className="btnGhost" onClick={verCasoEstudio} disabled={loading}>
+                <Eye size={16} /> Ver
+              </button>
+              <button className="btnPrimary" onClick={descargarCasoEstudio} disabled={loading}>
+                <Download size={16} /> Descargar
+              </button>
+            </div>
+          </div>
+
+          {/* ✅ PDF 2 */}
+          <div className="docCard">
+            <div className="docTitle">Entrega del Estudiante (PDF)</div>
+            <div className="docSub">Archivo subido por el estudiante/administración.</div>
+            <div className="docActions">
+              <button className="btnGhost" onClick={verEntregaEstudiante} disabled={loading}>
+                <Eye size={16} /> Ver
+              </button>
+              <button className="btnPrimary" onClick={descargarEntregaEstudiante} disabled={loading}>
+                <Download size={16} /> Descargar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Box principal */}
       <div className="box">
         <div className="boxHead">
           <div className="sectionTitle">
@@ -282,7 +525,7 @@ export default function CalificarTribunalPage() {
 
         <div className="meta">
           <div>
-            <b>Tribunal-Estudiante:</b> {id}
+            <b>Tribunal-Estudiante:</b> {id_te}
           </div>
           <div>
             <b>Items a calificar:</b> {totalItems}
@@ -398,7 +641,6 @@ export default function CalificarTribunalPage() {
             className="obsGeneral"
             placeholder="Observación general..."
             value={obsGeneral}
-            // ✅ FIX: ahora sí deja escribir (solo bloquea si está cerrado)
             disabled={cerrado}
             onChange={(e) => setObsGeneral(e.target.value)}
           />

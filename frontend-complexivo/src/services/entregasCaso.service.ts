@@ -10,7 +10,7 @@ export type EntregaByEstudianteCreateDTO = {
 };
 
 export const entregasCasoService = {
-  // ✅ Subir/Reemplazar por estudiante
+  // ✅ Subir/Reemplazar por estudiante (ADMIN)
   subirByEstudiante: async (payload: EntregaByEstudianteCreateDTO) => {
     const formData = new FormData();
     formData.append("id_estudiante", String(payload.id_estudiante));
@@ -22,7 +22,7 @@ export const entregasCasoService = {
     });
   },
 
-  // ✅ Ver/Descargar PDF por ESTUDIANTE (ES TU ENDPOINT REAL)
+  // ✅ PDF inline por estudiante (ADMIN/DOCENTE) -> endpoint real
   downloadByEstudiante: async (id_estudiante: number) => {
     return axiosClient.get(`${BASE}/${id_estudiante}/download`, {
       responseType: "blob",
@@ -31,7 +31,7 @@ export const entregasCasoService = {
     });
   },
 
-  // ✅ (opcional) metadata JSON
+  // ✅ metadata JSON
   getByEstudiante: async (id_estudiante: number) => {
     const res = await axiosClient.get(`${BASE}/${id_estudiante}`);
     return (res as any)?.data?.data ?? (res as any)?.data;
