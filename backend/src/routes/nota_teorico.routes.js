@@ -17,7 +17,10 @@ router.post(
   authorize(["ADMIN"]),
   body("id_estudiante").isInt({ min: 1 }).toInt(),
   body("nota_teorico_20").isFloat({ min: 0, max: 20 }).toFloat(),
-  body("observacion").optional().isString().isLength({ max: 400 }),
+  body("observacion")
+    .optional({ nullable: true, checkFalsy: true }) // ✅ ACEPTA null y vacío
+    .isString()
+    .isLength({ max: 400 }),
   validate,
   ctrl.upsert
 );
