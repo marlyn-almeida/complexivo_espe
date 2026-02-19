@@ -1,4 +1,4 @@
-// ✅ src/routes/calificacion.routes.js
+// ✅ backend/src/routes/calificacion.routes.js
 const router = require("express").Router();
 const { body, param, query } = require("express-validator");
 const validate = require("../middlewares/validate.middleware");
@@ -38,7 +38,11 @@ router.post(
   body("id_rubrica").isInt({ min: 1 }).toInt(),
   body("tipo_rubrica").isString().trim().notEmpty(),
   body("nota_base20").isDecimal(),
-  body("observacion").optional().isString(),
+  body("observacion")
+    .optional({ nullable: true })
+    .customSanitizer((v) => (v == null ? "" : String(v)))
+    .isString()
+    .isLength({ max: 400 }),
   validate,
   ctrl.create
 );
@@ -50,7 +54,11 @@ router.put(
   param("id").isInt({ min: 1 }).toInt(),
   body("tipo_rubrica").isString().trim().notEmpty(),
   body("nota_base20").isDecimal(),
-  body("observacion").optional().isString(),
+  body("observacion")
+    .optional({ nullable: true })
+    .customSanitizer((v) => (v == null ? "" : String(v)))
+    .isString()
+    .isLength({ max: 400 }),
   validate,
   ctrl.update
 );
@@ -69,7 +77,7 @@ router.patch(
 // ✅ DOCENTE (ROL 3) - Panel de notas tribunal
 // =======================
 
-// Ver lo que me toca calificar (según Plan + designación)
+// Ver lo que me toca calificar
 router.get(
   "/mis/:id_tribunal_estudiante",
   authorize(["DOCENTE"]),
@@ -84,9 +92,6 @@ router.post(
   authorize(["DOCENTE"]),
   param("id_tribunal_estudiante").isInt({ min: 1 }).toInt(),
 
-  // ✅ Payload REAL:
-  // { items:[{ id_plan_item, componentes:[{id_rubrica_componente, criterios:[{id_rubrica_criterio, id_rubrica_nivel, observacion?}]}]}] }
-
   body("items").isArray({ min: 1 }),
   body("items.*.id_plan_item").isInt({ min: 1 }).toInt(),
 
@@ -95,11 +100,14 @@ router.post(
 
   body("items.*.componentes.*.criterios").isArray({ min: 1 }),
   body("items.*.componentes.*.criterios.*.id_rubrica_criterio").isInt({ min: 1 }).toInt(),
-
-  // ✅ FIX CLAVE: antes estaba mal (id_rubrica_criterio_nivel). Tu backend/front usan id_rubrica_nivel.
   body("items.*.componentes.*.criterios.*.id_rubrica_nivel").isInt({ min: 1 }).toInt(),
 
-  body("items.*.componentes.*.criterios.*.observacion").optional().isString().isLength({ max: 400 }),
+  // ✅ FIX: permitir null y convertirlo a string
+  body("items.*.componentes.*.criterios.*.observacion")
+    .optional({ nullable: true })
+    .customSanitizer((v) => (v == null ? "" : String(v)))
+    .isString()
+    .isLength({ max: 400 }),
 
   validate,
   ctrl.guardarMisCalificaciones

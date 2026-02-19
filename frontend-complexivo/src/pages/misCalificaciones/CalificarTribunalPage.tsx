@@ -18,7 +18,11 @@ type ToastType = "success" | "error" | "info";
 type SelectedMap = Record<number, { id_nivel: number; observacion?: string | null }>;
 
 function extractMsg(e: any) {
-  return e?.response?.data?.message || e?.message || "Ocurrió un error.";
+  const msg = e?.response?.data?.message;
+  const errs = e?.response?.data?.errors;
+  if (Array.isArray(errs) && errs.length && errs[0]?.msg) return String(errs[0].msg);
+  if (typeof msg === "string" && msg.trim()) return msg;
+  return e?.message || "Ocurrió un error.";
 }
 
 export default function CalificarTribunalPage() {
@@ -39,7 +43,7 @@ export default function CalificarTribunalPage() {
 
   const [items, setItems] = useState<ItemPlan[]>([]);
   const [selected, setSelected] = useState<SelectedMap>({});
-  const [obsGeneral, setObsGeneral] = useState(""); // (si luego lo guardas en otra tabla)
+  const [obsGeneral, setObsGeneral] = useState("");
 
   const cerrado = Number(header?.cerrado ?? 0) === 1;
 
@@ -64,6 +68,7 @@ export default function CalificarTribunalPage() {
 
     setLoading(true);
     setToast(null);
+
     try {
       const resp = await misCalificacionesDocenteService.get(id);
 
@@ -95,7 +100,6 @@ export default function CalificarTribunalPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  // ✅ headers de niveles por item (cada item trae su “niveles”)
   function nivelesOf(item: ItemPlan): Nivel[] {
     return Array.isArray((item as any).niveles) ? (item as any).niveles : [];
   }
@@ -120,24 +124,38 @@ export default function CalificarTribunalPage() {
       return;
     }
 
-    // ✅ construimos payload exactamente como tu backend espera:
-    // { items: [{id_plan_item, componentes:[{id_rubrica_componente, criterios:[{id_rubrica_criterio,id_rubrica_nivel,observacion}]}]}] }
+    // ✅ Payload exacto backend:
+    // { items: [{id_plan_item, componentes:[{id_rubrica_componente, criterios:[{id_rubrica_criterio,id_rubrica_nivel,observacion?}]}]}] }
     const payload: SavePayload = { items: [] };
 
     for (const it of items) {
-      const compsOut: any[] = [];
+      const compsOut: Array<{
+        id_rubrica_componente: number;
+        criterios: Array<{
+          id_rubrica_criterio: number;
+          id_rubrica_nivel: number;
+          observacion?: string;
+        }>;
+      }> = [];
 
       for (const comp of it.componentes || []) {
-        const criteriosOut: any[] = [];
+        const criteriosOut: Array<{
+          id_rubrica_criterio: number;
+          id_rubrica_nivel: number;
+          observacion?: string;
+        }> = [];
 
         for (const crit of comp.criterios || []) {
           const pick = selected[crit.id_rubrica_criterio];
           if (!pick?.id_nivel) continue;
 
+          const obs = String(pick.observacion ?? "").trim();
+
           criteriosOut.push({
             id_rubrica_criterio: Number(crit.id_rubrica_criterio),
             id_rubrica_nivel: Number(pick.id_nivel),
-            observacion: pick.observacion?.trim() ? pick.observacion.trim() : null,
+            // ✅ FIX: NO mandar null (rompe express-validator). Si no hay texto, omitimos el campo.
+            ...(obs ? { observacion: obs } : {}),
           });
         }
 
@@ -164,6 +182,7 @@ export default function CalificarTribunalPage() {
 
     setSaving(true);
     setToast(null);
+
     try {
       await misCalificacionesDocenteService.save(id, payload);
       setToast({ type: "success", msg: "Calificaciones guardadas correctamente." });
@@ -176,6 +195,10 @@ export default function CalificarTribunalPage() {
   }
 
   const totalItems = items.length;
+
+  const totalSeleccionados = useMemo(() => {
+    return Object.values(selected || {}).filter((x) => Number(x?.id_nivel || 0) > 0).length;
+  }, [selected]);
 
   return (
     <div className="califPage wrap containerFull">
@@ -264,12 +287,17 @@ export default function CalificarTribunalPage() {
           <div>
             <b>Items a calificar:</b> {totalItems}
           </div>
+          <div>
+            <b>Criterios seleccionados:</b> {totalSeleccionados}
+          </div>
         </div>
 
         {loading ? (
           <div className="emptyBox">Cargando estructura...</div>
         ) : !items.length ? (
-          <div className="emptyBox">No hay estructura para calificar (plan/rúbrica no disponibles o no asignados a tu rol).</div>
+          <div className="emptyBox">
+            No hay estructura para calificar (plan/rúbrica no disponibles o no asignados a tu rol).
+          </div>
         ) : (
           items.map((item) => {
             const niveles = nivelesOf(item);
@@ -363,16 +391,20 @@ export default function CalificarTribunalPage() {
           })
         )}
 
-        {/* Observación general (visual) */}
+        {/* Observación general */}
         <div className="obsGeneralWrap">
           <div className="obsGeneralLabel">Observación General (Opcional)</div>
           <textarea
             className="obsGeneral"
             placeholder="Observación general..."
             value={obsGeneral}
-            disabled={true /* por ahora solo UI; cuando implementes en backend lo habilitas */}
+            // ✅ FIX: ahora sí deja escribir (solo bloquea si está cerrado)
+            disabled={cerrado}
             onChange={(e) => setObsGeneral(e.target.value)}
           />
+          <div className="muted" style={{ marginTop: 6 }}>
+            * Por ahora es solo visual. Si luego guardas esta observación en backend, se envía/recupera aquí.
+          </div>
         </div>
 
         {/* Footer */}
