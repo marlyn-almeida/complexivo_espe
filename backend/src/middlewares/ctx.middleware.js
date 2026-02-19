@@ -79,7 +79,14 @@ function pickRequestedCp(req) {
   const h4 = Number(req.headers["x-cp-id"] || 0);
   if (h4 > 0) return h4;
 
-  // 2) query params
+  // 2) query params (incluye ?cp=0 para docente)
+  const q0 = req.query?.cp;
+  if (q0 !== undefined && q0 !== null && String(q0).trim() !== "") {
+    const n0 = Number(q0);
+    // aquí dejamos que cp=0 sea válido como "no filtrar"
+    if (Number.isFinite(n0) && n0 >= 0) return n0;
+  }
+
   const q1 = Number(req.query?.carreraPeriodoId || 0);
   if (q1 > 0) return q1;
 
@@ -94,19 +101,38 @@ function pickRequestedCp(req) {
 }
 
 /**
+ * Normaliza roles:
+ * - Puede venir como string ("ADMIN","DOCENTE","SUPER_ADMIN")
+ * - o como número (1/2/3)
+ */
+function normalizeRole(raw) {
+  if (raw === 1 || raw === "1") return "SUPER_ADMIN";
+  if (raw === 2 || raw === "2") return "ADMIN";
+  if (raw === 3 || raw === "3") return "DOCENTE";
+
+  if (typeof raw === "string") {
+    const r = raw.toUpperCase().trim();
+    if (r === "ROL1") return "SUPER_ADMIN";
+    if (r === "ROL2") return "ADMIN";
+    if (r === "ROL3") return "DOCENTE";
+    return r;
+  }
+  return null;
+}
+
+/**
  * ctx:
- * - Rol 2 (ADMIN): requiere CP válido y autorizado
- * - Otros roles: no forzamos ctx
+ * - ADMIN: requiere CP válido (>0) y autorizado
+ * - SUPER_ADMIN: puede pasar sin validar (si hay CP lo seteamos)
+ * - DOCENTE: NO requiere CP (cp puede ser 0); si llega CP lo seteamos pero no validamos
  */
 async function attachCarreraPeriodoCtx(req, res, next) {
   try {
-    const role = req.user?.activeRole ?? req.user?.rol ?? null;
+    const roleRaw = req.user?.activeRole ?? req.user?.rol ?? null;
+    const role = normalizeRole(roleRaw);
 
-    // ✅ Solo ADMIN necesita ctx
-    if (role !== "ADMIN") {
-      req.ctx = { id_carrera_periodo: null };
-      return next();
-    }
+    // default ctx
+    req.ctx = { id_carrera_periodo: null };
 
     // ✅ Login basado en docente => JWT trae id_docente
     const id_docente = Number(req.user?.id || 0);
@@ -114,22 +140,51 @@ async function attachCarreraPeriodoCtx(req, res, next) {
       return res.status(401).json({ ok: false, message: "Token inválido (sin id_docente)" });
     }
 
+    // CP solicitado (puede ser 0 por query en docente)
     const requestedCpId = pickRequestedCp(req);
-    if (!requestedCpId) {
-      return res.status(400).json({ ok: false, message: "id_carrera_periodo requerido" });
+
+    // ✅ DOCENTE: nunca bloqueamos por CP
+    if (role === "DOCENTE") {
+      if (requestedCpId !== null && Number.isFinite(Number(requestedCpId))) {
+        // puede ser 0 o >0
+        req.ctx = { id_carrera_periodo: Number(requestedCpId) };
+        req.carreraPeriodo = Number(requestedCpId);
+        req.carreraPeriodoId = Number(requestedCpId);
+      }
+      return next();
     }
 
-    const ok = await validateCpForRol2ByCpId(id_docente, requestedCpId);
-    if (!ok) {
-      return res.status(403).json({
-        ok: false,
-        message: "Carrera-Período no autorizado para tu perfil",
-      });
+    // ✅ SUPER_ADMIN: no validamos, pero si pide CP lo seteamos (si tu API lo necesita)
+    if (role === "SUPER_ADMIN") {
+      if (requestedCpId !== null && Number(requestedCpId) > 0) {
+        req.ctx = { id_carrera_periodo: Number(requestedCpId) };
+        req.carreraPeriodo = Number(requestedCpId);
+        req.carreraPeriodoId = Number(requestedCpId);
+      }
+      return next();
     }
 
-    req.ctx = { id_carrera_periodo: requestedCpId };
-    req.carreraPeriodo = requestedCpId; // compat
-    req.carreraPeriodoId = requestedCpId; // compat
+    // ✅ ADMIN: sí exige CP > 0 y validación
+    if (role === "ADMIN") {
+      if (!requestedCpId || Number(requestedCpId) <= 0) {
+        return res.status(400).json({ ok: false, message: "id_carrera_periodo requerido" });
+      }
+
+      const ok = await validateCpForRol2ByCpId(id_docente, Number(requestedCpId));
+      if (!ok) {
+        return res.status(403).json({
+          ok: false,
+          message: "Carrera-Período no autorizado para tu perfil",
+        });
+      }
+
+      req.ctx = { id_carrera_periodo: Number(requestedCpId) };
+      req.carreraPeriodo = Number(requestedCpId); // compat
+      req.carreraPeriodoId = Number(requestedCpId); // compat
+      return next();
+    }
+
+    // ✅ Otros roles: no forzamos ctx
     return next();
   } catch (e) {
     next(e);

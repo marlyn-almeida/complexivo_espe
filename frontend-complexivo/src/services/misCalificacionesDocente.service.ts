@@ -85,18 +85,30 @@ function unwrapResponse(res: any): MisCalificacionesDocenteResponse {
   return { ok: true, data: (data?.data ?? data) as any };
 }
 
+/**
+ * ✅ FIX CLAVE:
+ * Para DOCENTE ya NO dependemos de localStorage/header.
+ * Mandamos cp=0 por query => controller getCp(req) toma 0
+ * => repo.getCtxDocenteTribunalEstudiante NO filtra por CP.
+ */
+const DOCENTE_CP_PARAM = { cp: 0 };
+
 export const misCalificacionesDocenteService = {
   // ✅ Backend real:
-  // GET /calificaciones/mis/:id_tribunal_estudiante
+  // GET /calificaciones/mis/:id_tribunal_estudiante?cp=0
   get: async (id_tribunal_estudiante: number): Promise<MisCalificacionesDocenteResponse> => {
-    const res = await axiosClient.get(`/calificaciones/mis/${id_tribunal_estudiante}`);
+    const res = await axiosClient.get(`/calificaciones/mis/${id_tribunal_estudiante}`, {
+      params: DOCENTE_CP_PARAM,
+    });
     return unwrapResponse(res);
   },
 
   // ✅ Backend real:
-  // POST /calificaciones/mis/:id_tribunal_estudiante
+  // POST /calificaciones/mis/:id_tribunal_estudiante?cp=0
   save: async (id_tribunal_estudiante: number, payload: SavePayload): Promise<MisCalificacionesDocenteResponse> => {
-    const res = await axiosClient.post(`/calificaciones/mis/${id_tribunal_estudiante}`, payload);
+    const res = await axiosClient.post(`/calificaciones/mis/${id_tribunal_estudiante}`, payload, {
+      params: DOCENTE_CP_PARAM,
+    });
     return unwrapResponse(res);
   },
 };
