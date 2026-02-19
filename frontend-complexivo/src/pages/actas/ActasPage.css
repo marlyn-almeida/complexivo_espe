@@ -1,0 +1,88 @@
+/* src/pages/actas/ActasPage.css */
+
+.actasPage.containerFull { padding: 18px; }
+
+.hero{
+  display:flex; justify-content:space-between; align-items:center;
+  background:#fff; border:1px solid #e7eee7; border-radius:14px;
+  padding:16px 18px; box-shadow:0 10px 24px rgba(0,0,0,.04);
+  margin-bottom:14px;
+}
+.heroLeft{ display:flex; gap:14px; align-items:center; }
+.heroLogo{ width:54px; height:54px; object-fit:contain; }
+.heroTitle{ margin:0; font-size:18px; letter-spacing:.4px; color:#0f2f1e; }
+.heroSubtitle{ margin:4px 0 0; color:#4e5a53; font-size:13px; }
+.heroActions{ display:flex; gap:10px; }
+
+.heroBtn{
+  display:inline-flex; align-items:center; gap:8px;
+  border-radius:10px; padding:10px 12px; font-weight:600;
+  border:1px solid transparent; cursor:pointer;
+}
+.heroBtnIcon{ width:18px; height:18px; }
+.heroBtn.ghost{ background:#f5faf6; border-color:#d7eadb; color:#0f2f1e; }
+.heroBtn.ghost:disabled{ opacity:.6; cursor:not-allowed; }
+
+.toast{ margin:10px 0; padding:10px 12px; border-radius:10px; display:flex; justify-content:space-between; gap:10px; }
+.toast-success{ background:#eaf8ee; border:1px solid #bfe8c8; }
+.toast-error{ background:#fdecec; border:1px solid #f2b8b8; }
+.toast-info{ background:#eef5ff; border:1px solid #c7dcff; }
+.toastClose{ background:transparent; border:none; font-size:18px; cursor:pointer; }
+
+.crumbRow{ display:flex; justify-content:flex-end; margin:10px 0 14px; }
+.rolePill{
+  display:inline-flex; align-items:center; gap:8px;
+  background:#f4faf5; border:1px solid #d7eadb; border-radius:999px;
+  padding:8px 12px; color:#0f2f1e; font-size:13px; font-weight:600;
+}
+
+.box{
+  background:#fff; border:1px solid #e7eee7; border-radius:14px;
+  padding:14px; box-shadow:0 10px 24px rgba(0,0,0,.04);
+}
+.boxHead{ display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+.sectionTitle{ display:flex; align-items:center; gap:10px; font-weight:800; color:#0f2f1e; }
+.sectionTitleIcon{ display:inline-flex; }
+
+.actasGrid{
+  display:grid;
+  grid-template-columns: repeat(3, minmax(220px, 1fr));
+  gap:12px;
+}
+@media (max-width: 980px){
+  .actasGrid{ grid-template-columns: 1fr; }
+}
+
+.actaCard{
+  border:1px solid #e7eee7; border-radius:14px; padding:14px;
+  background:linear-gradient(180deg, #ffffff 0%, #fbfdfb 100%);
+}
+.actaTitle{ font-size:14px; font-weight:900; color:#0f2f1e; margin-bottom:6px; }
+.actaSub{ font-size:13px; color:#516059; margin-bottom:10px; line-height:1.35; }
+
+.actaBtns{ display:flex; gap:10px; flex-wrap:wrap; }
+
+.btnPrimary, .btnGhost{
+  display:inline-flex; align-items:center; gap:8px;
+  padding:10px 12px; border-radius:12px; border:1px solid transparent;
+  cursor:pointer; font-weight:800;
+}
+.btnPrimary{
+  background:#0f7a3a; color:#fff;
+  box-shadow:0 10px 22px rgba(15, 122, 58, .18);
+}
+.btnPrimary:disabled{ opacity:.6; cursor:not-allowed; }
+.btnGhost{
+  background:#f5faf6; border-color:#d7eadb; color:#0f2f1e;
+}
+.btnGhost:disabled{ opacity:.6; cursor:not-allowed; }
+
+.uploadBox{
+  display:block;
+  border:2px dashed #cfe4d2; border-radius:14px;
+  padding:14px; background:#f8fcf9; cursor:pointer;
+}
+.uploadBox input{ display:none; }
+.uploadInner{ display:flex; align-items:center; gap:10px; font-weight:800; color:#0f2f1e; }
+.uploadBox.disabled{ opacity:.55; cursor:not-allowed; }
+.muted{ color:#6b786f; font-size:12px; }

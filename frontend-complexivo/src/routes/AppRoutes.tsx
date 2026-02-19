@@ -34,14 +34,21 @@ import { dashboardByRole, getActiveRole, getToken } from "../utils/auth";
 // ROL 2
 import CasosEstudioPage from "../pages/casosEstudio/CasosEstudioPage";
 
-// ✅ Pantalla unificada (ADMIN + DOCENTE con role switch)
+// ✅ Pantalla unificada (ADMIN + DOCENTE)
 import MisCalificacionesPage from "../pages/misCalificaciones/MisCalificacionesPage";
 
-// ✅ DOCENTE (3): pantalla real para calificar 1 tribunal_estudiante
+// ✅ DOCENTE (3) — Calificar
 import CalificarTribunalPage from "../pages/misCalificaciones/CalificarTribunalPage";
 
-// ✅ NUEVO: PLAN DE EVALUACIÓN (ADMIN)
+// ✅ PLAN DE EVALUACIÓN (ADMIN)
 import PlanEvaluacionPage from "../pages/planEvaluacion/PlanEvaluacionPage";
+
+// ✅ ACTAS (detalle)
+import ActasPage from "../pages/actas/ActasPage";
+
+// ✅ ACTAS (listado docente + repositorio admin)
+import ActasListDocentePage from "../pages/actas/ActasListDocentePage";
+import ActasFirmadasPage from "../pages/actas/ActasFirmadasPage";
 
 function HomeRedirect() {
   const token = getToken();
@@ -50,23 +57,19 @@ function HomeRedirect() {
   return <Navigate to={dashboardByRole(role)} replace />;
 }
 
-const Placeholder = ({ title }: { title: string }) => (
-  <div className="rounded-lg bg-white p-4 shadow-espeSoft">{title}</div>
-);
-
 export default function AppRoutes() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* PÚBLICO */}
+        {/* ================= PÚBLICO ================= */}
         <Route path="/login" element={<Login />} />
         <Route path="/change-password" element={<ChangePasswordPage />} />
 
-        {/* PRIVADO (Layout) */}
+        {/* ================= PRIVADO (Layout) ================= */}
         <Route element={<Layout />}>
           <Route path="/" element={<HomeRedirect />} />
 
-          {/* Dashboards */}
+          {/* ===== DASHBOARDS ===== */}
           <Route
             path="/superadmin/dashboard"
             element={
@@ -92,7 +95,7 @@ export default function AppRoutes() {
             }
           />
 
-          {/* Perfil */}
+          {/* ===== PERFIL ===== */}
           <Route
             path="/perfil"
             element={
@@ -102,7 +105,7 @@ export default function AppRoutes() {
             }
           />
 
-          {/* SUPER_ADMIN (1) */}
+          {/* ===== SUPER_ADMIN (1) ===== */}
           <Route
             path="/carreras"
             element={
@@ -168,7 +171,7 @@ export default function AppRoutes() {
             }
           />
 
-          {/* DOCENTES (1 y 2) */}
+          {/* ===== DOCENTES (1 y 2) ===== */}
           <Route
             path="/docentes"
             element={
@@ -178,7 +181,7 @@ export default function AppRoutes() {
             }
           />
 
-          {/* ADMIN (2) */}
+          {/* ===== ADMIN (2) ===== */}
           <Route
             path="/estudiantes"
             element={
@@ -211,8 +214,6 @@ export default function AppRoutes() {
               </ProtectedRoute>
             }
           />
-
-          {/* ✅ AQUÍ ESTABA EL PROBLEMA: NO EXISTÍA ESTA RUTA */}
           <Route
             path="/plan-evaluacion"
             element={
@@ -221,7 +222,6 @@ export default function AppRoutes() {
               </ProtectedRoute>
             }
           />
-
           <Route
             path="/tribunales"
             element={
@@ -231,7 +231,7 @@ export default function AppRoutes() {
             }
           />
 
-          {/* ✅ CALIFICACIONES ADMIN (2) */}
+          {/* ===== CALIFICACIONES ADMIN (2) ===== */}
           <Route
             path="/calificaciones"
             element={
@@ -241,7 +241,7 @@ export default function AppRoutes() {
             }
           />
 
-          {/* ✅ DOCENTE (3) — LISTADO (AGENDA) */}
+          {/* ===== DOCENTE (3) — LISTADO (AGENDA) ===== */}
           <Route
             path="/docente/calificaciones"
             element={
@@ -251,7 +251,7 @@ export default function AppRoutes() {
             }
           />
 
-          {/* ✅ DOCENTE (3) — CALIFICAR 1 TRIBUNAL_ESTUDIANTE */}
+          {/* ===== DOCENTE (3) — CALIFICAR ===== */}
           <Route
             path="/docente/calificaciones/:idTribunalEstudiante"
             element={
@@ -264,26 +264,48 @@ export default function AppRoutes() {
           {/* ✅ COMPATIBILIDAD */}
           <Route path="/mis-tribunales" element={<Navigate to="/docente/calificaciones" replace />} />
 
-          {/* ACTAS */}
-          <Route
-            path="/admin/actas"
-            element={
-              <ProtectedRoute allowRoles={[2]}>
-                <Placeholder title="Actas (ADMIN) — pendiente de pantalla" />
-              </ProtectedRoute>
-            }
-          />
+          {/* =========================================================
+             ✅ ACTAS
+             - /actas                  -> listado DOCENTE (tribunales cerrados)
+             - /actas/:idTE            -> detalle (generar/descargar/subir firmada)
+             - /actas-firmadas         -> listado ADMIN (repo de firmadas)
+             ========================================================= */}
+
+          {/* ✅ DOCENTE (3) — LISTADO ACTAS */}
           <Route
             path="/actas"
             element={
               <ProtectedRoute allowRoles={[3]}>
-                <Placeholder title="Actas (DOCENTE) — No existen actas para este tribunal" />
+                <ActasListDocentePage />
               </ProtectedRoute>
             }
           />
+
+          {/* ✅ DETALLE ACTA (ADMIN 2 + DOCENTE 3) */}
+          <Route
+            path="/actas/:idTribunalEstudiante"
+            element={
+              <ProtectedRoute allowRoles={[2, 3]}>
+                <ActasPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* ✅ ADMIN (2) — ACTAS FIRMADAS (repositorio) */}
+          <Route
+            path="/actas-firmadas"
+            element={
+              <ProtectedRoute allowRoles={[2]}>
+                <ActasFirmadasPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* compatibilidad vieja (si la tenías) */}
+          <Route path="/admin/actas" element={<Navigate to="/tribunales" replace />} />
         </Route>
 
-        {/* cualquier otra */}
+        {/* ===== CUALQUIER OTRA ===== */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

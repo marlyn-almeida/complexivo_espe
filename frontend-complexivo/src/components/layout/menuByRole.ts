@@ -1,4 +1,4 @@
-// src/components/layout/menuByRole.ts
+// ✅ src/components/layout/menuByRole.ts
 import type { RolId } from "../../utils/auth";
 
 export type IconName =
@@ -11,7 +11,6 @@ export type IconName =
   | "acta"
   | "tribunales"
   | "estudiantes"
-  // (siguen existiendo por si luego los reactivas)
   | "casosEstudio"
   | "entregasCaso"
   | "planEvaluacion"
@@ -74,15 +73,13 @@ export const MENU_SECTIONS: MenuSection[] = [
     items: [
       { label: "Docentes", to: "/docentes", roles: [2], icon: "docentes" },
       { label: "Estudiantes", to: "/estudiantes", roles: [2], icon: "estudiantes" },
-
       { label: "Tribunales", to: "/tribunales", roles: [2], icon: "tribunales" },
-
       { label: "Casos de estudio", to: "/casos-estudio", roles: [2], icon: "casosEstudio" },
 
-      // ✅ tu nueva pantalla vive aquí, pero la ruta se llama /calificaciones
+      // ✅ ya existe
       { label: "Calificaciones", to: "/calificaciones", roles: [2], icon: "rubricas" },
 
-      // (si algún día existe)
+      // ✅ NO se quita: aquí ve el Director/Apoyo las actas firmadas
       { label: "Actas firmadas", to: "/actas-firmadas", roles: [2], icon: "acta" },
     ],
   },
@@ -95,6 +92,8 @@ export const MENU_SECTIONS: MenuSection[] = [
     roles: [3],
     items: [
       { label: "Mis tribunales", to: "/mis-tribunales", roles: [3], icon: "tribunales" },
+
+      // ✅ listado (/actas) y desde ahí navegas a /actas/:idTribunalEstudiante
       { label: "Actas", to: "/actas", roles: [3], icon: "acta" },
     ],
   },

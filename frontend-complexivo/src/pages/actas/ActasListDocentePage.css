@@ -1,0 +1,585 @@
+/* ✅ src/pages/actas/ActasListDocentePage.css */
+
+.wrap {
+  padding: 16px 18px 28px;
+}
+
+.actasListPage {
+  width: 100%;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Liberation Sans";
+}
+
+/* HERO */
+.actasListPage .hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
+  background: linear-gradient(90deg, #0b6034 0%, #147a4a 100%);
+  border-radius: 14px;
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.1);
+}
+
+.actasListPage .heroLeft {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.actasListPage .heroLogo {
+  width: 46px;
+  height: 46px;
+  object-fit: contain;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  flex: 0 0 auto;
+}
+
+.actasListPage .heroTitle {
+  margin: 0;
+  color: #fff;
+  font-weight: 900;
+  font-size: 22px;
+  line-height: 1.1;
+}
+
+.actasListPage .heroSubtitle {
+  margin: 6px 0 0;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 13px;
+}
+
+.actasListPage .heroHint {
+  margin-top: 8px;
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  padding: 6px 10px;
+  border-radius: 999px;
+  width: fit-content;
+}
+
+.actasListPage .heroActions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.actasListPage .heroBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font-weight: 900;
+  padding: 10px 14px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.08s ease, border-color 0.15s ease;
+  white-space: nowrap;
+}
+
+.actasListPage .heroBtnIcon {
+  width: 18px;
+  height: 18px;
+}
+
+.actasListPage .heroBtn.ghost {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.actasListPage .heroBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.6);
+  transform: translateY(-1px);
+}
+
+.actasListPage .heroBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* BOX */
+.actasListPage .box {
+  margin-top: 14px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.09);
+  border-radius: 14px;
+  padding: 16px 16px 18px;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.05);
+}
+
+.actasListPage .boxHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-bottom: 10px;
+}
+
+.actasListPage .boxRight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.actasListPage .sectionTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 900;
+  color: rgba(0, 0, 0, 0.82);
+}
+
+.actasListPage .sectionTitleIcon {
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  background: rgba(10, 79, 40, 0.1);
+  border: 1px solid rgba(10, 79, 40, 0.18);
+  display: grid;
+  place-items: center;
+  color: #0a4f28;
+}
+
+/* SUMMARY */
+.actasListPage .summaryRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.actasListPage .summaryBoxes {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.actasListPage .summaryBox {
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: #fbfbfb;
+  border-radius: 14px;
+  padding: 10px 12px;
+  min-width: 120px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.actasListPage .summaryLabel {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.55);
+  font-weight: 700;
+}
+
+.actasListPage .summaryValue {
+  font-size: 16px;
+  font-weight: 900;
+  color: rgba(0, 0, 0, 0.82);
+}
+
+.actasListPage .summaryBox.active {
+  border-color: rgba(10, 79, 40, 0.18);
+  background: rgba(10, 79, 40, 0.06);
+}
+
+.actasListPage .summaryBox.inactive {
+  border-color: rgba(180, 20, 20, 0.18);
+  background: rgba(180, 20, 20, 0.05);
+}
+
+/* Toggle */
+.actasListPage .toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  user-select: none;
+  font-weight: 700;
+  color: rgba(0, 0, 0, 0.72);
+}
+.actasListPage .toggle input {
+  display: none;
+}
+.actasListPage .slider {
+  width: 44px;
+  height: 26px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: #e5e7eb;
+  position: relative;
+  transition: background 0.2s ease;
+}
+.actasListPage .slider::after {
+  content: "";
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: white;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: transform 0.2s ease;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+}
+.actasListPage .toggle input:checked + .slider {
+  background: rgba(10, 79, 40, 0.9);
+}
+.actasListPage .toggle input:checked + .slider::after {
+  transform: translateX(18px);
+}
+.actasListPage .toggleText {
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.55);
+  font-weight: 700;
+}
+
+/* FILTERS */
+.actasListPage .filtersRow {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.actasListPage .searchWrap {
+  position: relative;
+  width: min(520px, 100%);
+  flex: 1 1 420px;
+}
+.actasListPage .searchIcon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  color: rgba(0, 0, 0, 0.45);
+}
+.actasListPage .search {
+  width: 100%;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  padding: 0 12px 0 40px;
+  outline: none;
+  font-size: 14.5px;
+}
+.actasListPage .search:focus {
+  border-color: rgba(10, 79, 40, 0.35);
+  box-shadow: 0 0 0 4px rgba(10, 79, 40, 0.12);
+}
+
+.actasListPage .filterWrap {
+  position: relative;
+  min-width: 320px;
+  flex: 1 1 320px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.actasListPage .filterIcon {
+  width: 18px;
+  height: 18px;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.actasListPage .hintPill {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 12.5px;
+  color: rgba(0, 0, 0, 0.72);
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  padding: 8px 10px;
+  border-radius: 999px;
+  width: fit-content;
+  white-space: nowrap;
+}
+
+.actasListPage .chipClear {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: #fff;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.actasListPage .chipClear:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+/* TABLE */
+.actasListPage .tableWrap {
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  margin-top: 12px;
+  overflow: auto;
+  position: relative;
+  z-index: 1;
+}
+
+.actasListPage .table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  min-width: 980px;
+  table-layout: fixed;
+  position: relative;
+  z-index: 1;
+}
+
+.actasListPage .table thead th {
+  text-align: center;
+  font-size: 13.5px;
+  font-weight: 950;
+  color: rgba(255, 255, 255, 0.96);
+  background: #0b6034;
+  padding: 12px 10px;
+  white-space: nowrap;
+}
+
+.actasListPage .table tbody td {
+  text-align: center;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  padding: 10px 10px;
+  vertical-align: middle;
+  font-size: 14.5px;
+  color: rgba(0, 0, 0, 0.72);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.actasListPage .thName {
+  width: 320px;
+}
+.actasListPage .thTrib {
+  width: 280px;
+}
+.actasListPage .thState {
+  width: 160px;
+}
+.actasListPage .thActions {
+  width: 160px;
+}
+
+.actasListPage .mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+.actasListPage .chipCode {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  background: rgba(59, 130, 246, 0.1);
+  color: rgba(0, 0, 0, 0.78);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.actasListPage .nameMain {
+  font-weight: 850;
+  color: rgba(0, 0, 0, 0.86);
+}
+
+.actasListPage .badgeActive,
+.actasListPage .badgeInactive {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  min-width: 108px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-weight: 900;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  white-space: nowrap;
+}
+
+.actasListPage .badgeActive {
+  background: #dfeee7;
+  color: #0a4f28;
+  border-color: rgba(10, 79, 40, 0.18);
+}
+
+.actasListPage .badgeInactive {
+  background: #f0f0f0;
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.actasListPage .tdActions {
+  overflow: visible !important;
+  position: relative;
+  z-index: 5;
+}
+
+.actasListPage .actions {
+  display: inline-flex;
+  gap: 10px;
+  justify-content: center;
+  overflow: visible;
+}
+
+.actasListPage .iconBtn {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.10);
+  background: #fff;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.08s ease, box-shadow 0.15s ease;
+  overflow: visible;
+  z-index: 10;
+}
+
+.actasListPage .iconBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 14px rgba(0, 0, 0, 0.06);
+  z-index: 9999;
+}
+
+.actasListPage .iconAction {
+  width: 18px;
+  height: 18px;
+}
+
+.actasListPage .iconBtn_neutral {
+  color: #2563eb;
+  background: rgba(37, 99, 235, 0.10);
+  border-color: rgba(37, 99, 235, 0.28);
+}
+.actasListPage .iconBtn_neutral:hover {
+  background: rgba(37, 99, 235, 0.16);
+  border-color: rgba(37, 99, 235, 0.35);
+}
+
+.actasListPage .tooltip {
+  position: absolute;
+  top: -46px;
+  left: 50%;
+  transform: translateX(-50%) translateY(6px);
+  background: rgba(20, 20, 20, 0.94);
+  color: #fff;
+  font-weight: 800;
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease, transform 0.12s ease;
+  z-index: 999999;
+}
+
+.actasListPage .tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 6px 6px 0 6px;
+  border-style: solid;
+  border-color: rgba(20, 20, 20, 0.94) transparent transparent transparent;
+}
+
+.actasListPage .iconBtn:hover .tooltip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* empty */
+.actasListPage .emptyCell {
+  padding: 34px 16px !important;
+}
+.actasListPage .empty {
+  display: grid;
+  place-items: center;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+/* TOAST */
+.actasListPage .toast {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 99999;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-weight: 900;
+  max-width: 420px;
+  color: #111;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+.actasListPage .toast-success {
+  background: #eaf7ee;
+  border-color: rgba(6, 118, 71, 0.35);
+}
+
+.actasListPage .toast-error {
+  background: #fdecec;
+  border-color: rgba(180, 35, 24, 0.35);
+}
+
+.actasListPage .toast-info {
+  background: #eef5ff;
+  border-color: rgba(2, 132, 199, 0.35);
+}
+
+@media (max-width: 820px) {
+  .actasListPage .hero {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .actasListPage .heroTitle {
+    font-size: 19px;
+  }
+  .actasListPage .table {
+    table-layout: auto;
+  }
+}
+
+/* FORZAR TABLA SIN ZEBRA */
+.actasListPage .table tbody tr,
+.actasListPage .table tbody tr:nth-child(odd),
+.actasListPage .table tbody tr:nth-child(even) {
+  background: #fff !important;
+}
+
+.actasListPage .table tbody tr:hover,
+.actasListPage .table tbody tr:nth-child(odd):hover,
+.actasListPage .table tbody tr:nth-child(even):hover {
+  background: rgba(0, 0, 0, 0.03) !important;
+}
