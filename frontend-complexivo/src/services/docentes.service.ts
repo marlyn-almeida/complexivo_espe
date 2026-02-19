@@ -85,7 +85,7 @@ export const docentesService = {
     const paramsObj: DocenteListParams =
       typeof arg === "boolean" ? { includeInactive: arg } : (arg ?? {});
 
-    const limit = Math.min(paramsObj.limit ?? 100, 100);
+    const limit = Math.min(Math.max(paramsObj.limit ?? 100, 1), 100);
 
     const idCarrera =
       paramsObj.id_carrera != null && Number(paramsObj.id_carrera) > 0

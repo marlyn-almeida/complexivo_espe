@@ -23,15 +23,17 @@ const UPLOADS_ROOT = path.join(process.cwd(), "uploads");
 
 // carpetas mínimas
 const UPLOADS_CASOS = path.join(UPLOADS_ROOT, "casos-estudio");
-const UPLOADS_ENTREGAS = path.join(UPLOADS_ROOT, "entregas-caso"); // ✅ NUEVO
+const UPLOADS_ENTREGAS = path.join(UPLOADS_ROOT, "entregas-caso");
 const UPLOADS_ACTAS = path.join(UPLOADS_ROOT, "actas");
+const UPLOADS_ACTAS_FIRMADAS = path.join(UPLOADS_ROOT, "actas-firmadas"); // ✅ NUEVO
 const UPLOADS_PLANTILLAS = path.join(UPLOADS_ROOT, "plantillas");
 
 try {
   if (!fs.existsSync(UPLOADS_ROOT)) fs.mkdirSync(UPLOADS_ROOT, { recursive: true });
   if (!fs.existsSync(UPLOADS_CASOS)) fs.mkdirSync(UPLOADS_CASOS, { recursive: true });
-  if (!fs.existsSync(UPLOADS_ENTREGAS)) fs.mkdirSync(UPLOADS_ENTREGAS, { recursive: true }); // ✅ NUEVO
+  if (!fs.existsSync(UPLOADS_ENTREGAS)) fs.mkdirSync(UPLOADS_ENTREGAS, { recursive: true });
   if (!fs.existsSync(UPLOADS_ACTAS)) fs.mkdirSync(UPLOADS_ACTAS, { recursive: true });
+  if (!fs.existsSync(UPLOADS_ACTAS_FIRMADAS)) fs.mkdirSync(UPLOADS_ACTAS_FIRMADAS, { recursive: true }); // ✅ NUEVO
   if (!fs.existsSync(UPLOADS_PLANTILLAS)) fs.mkdirSync(UPLOADS_PLANTILLAS, { recursive: true });
 } catch (e) {
   console.error("⚠️ No se pudo crear carpeta uploads:", e);
@@ -169,4 +171,6 @@ app.listen(PORT, "0.0.0.0", () => {
   console.log(`Servidor activo en puerto ${PORT}`);
   console.log("📁 Uploads root:", UPLOADS_ROOT);
   console.log("📁 Uploads entregas:", UPLOADS_ENTREGAS);
+  console.log("📁 Uploads actas:", UPLOADS_ACTAS);
+  console.log("📁 Uploads actas firmadas:", UPLOADS_ACTAS_FIRMADAS);
 });

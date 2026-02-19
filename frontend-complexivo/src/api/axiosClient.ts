@@ -35,20 +35,15 @@ axiosClient.interceptors.request.use(
     if (cpId) {
       config.headers = config.headers ?? {};
 
-      // ✅ HEADERS (mandamos varios por compatibilidad)
+      // ✅ HEADERS (compatibilidad)
       (config.headers as any)["x-id-carrera-periodo"] = String(cpId);
       (config.headers as any)["x-carrera-periodo-id"] = String(cpId);
       (config.headers as any)["x-carrera-periodo"] = String(cpId);
       (config.headers as any)["x-cp-id"] = String(cpId);
 
-      // ✅ QUERY PARAM (por si el middleware lee req.query)
-      config.params = config.params ?? {};
-      if ((config.params as any).id_carrera_periodo == null) {
-        (config.params as any).id_carrera_periodo = cpId;
-      }
-      if ((config.params as any).carreraPeriodoId == null) {
-        (config.params as any).carreraPeriodoId = cpId;
-      }
+      // ❌ IMPORTANTE:
+      // NO agregues CP como query param global, porque contamina endpoints como /docentes
+      // y te filtra resultados sin querer.
     }
 
     return config;

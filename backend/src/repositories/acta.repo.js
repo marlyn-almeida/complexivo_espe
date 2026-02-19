@@ -115,6 +115,7 @@ async function getContextTribunal(id_tribunal_estudiante) {
       te.id_estudiante,
       te.id_franja_horario,
       te.id_caso_estudio,
+      te.cerrado,
 
       e.id_institucional_estudiante,
       e.nombres_estudiante,
@@ -217,19 +218,99 @@ async function getPlantillaActiva() {
   return rows[0] || null;
 }
 
+// =====================================================
+// ✅ guardar rutas docx/pdf generadas + estado_acta
+// =====================================================
+async function setArchivosGenerados(
+  id_acta,
+  archivo_docx_path,
+  archivo_pdf_path,
+  archivo_docx_nombre = null,
+  archivo_pdf_nombre = null
+) {
+  await pool.query(
+    `
+    UPDATE acta SET
+      archivo_docx_path=?,
+      archivo_pdf_path=?,
+      archivo_docx_nombre=?,
+      archivo_pdf_nombre=?,
+      estado_acta='GENERADA'
+    WHERE id_acta=?
+    `,
+    [
+      archivo_docx_path ?? null,
+      archivo_pdf_path ?? null,
+      archivo_docx_nombre ?? null,
+      archivo_pdf_nombre ?? null,
+      Number(id_acta),
+    ]
+  );
+  return findById(id_acta);
+}
+
+// =====================================================
+// ✅ validar que el docente sea PRESIDENTE del acta
+// =====================================================
+async function isPresidenteDeActa(id_acta, id_docente) {
+  const [rows] = await pool.query(
+    `
+    SELECT 1
+    FROM acta a
+    JOIN calificacion c ON c.id_calificacion = a.id_calificacion
+    JOIN tribunal_estudiante te ON te.id_tribunal_estudiante = c.id_tribunal_estudiante
+    JOIN tribunal_docente td ON td.id_tribunal = te.id_tribunal AND td.estado=1
+    JOIN carrera_docente cd ON cd.id_carrera_docente = td.id_carrera_docente AND cd.estado=1
+    WHERE a.id_acta = ?
+      AND cd.id_docente = ?
+      AND td.designacion = 'PRESIDENTE'
+    LIMIT 1
+    `,
+    [Number(id_acta), Number(id_docente)]
+  );
+  return rows.length > 0;
+}
+
+// =====================================================
+// ✅ guardar acta firmada
+// =====================================================
+async function setActaFirmada(id_acta, archivo_firmada_path, archivo_firmada_nombre, id_docente_firma) {
+  await pool.query(
+    `
+    UPDATE acta SET
+      archivo_firmada_path=?,
+      archivo_firmada_nombre=?,
+      fecha_firmada=NOW(),
+      id_docente_firma=?,
+      estado_acta='FIRMADA'
+    WHERE id_acta=?
+    `,
+    [
+      archivo_firmada_path ?? null,
+      archivo_firmada_nombre ?? null,
+      Number(id_docente_firma),
+      Number(id_acta),
+    ]
+  );
+
+  return findById(id_acta);
+}
+
 module.exports = {
-  // CRUD acta
   findByCalificacion,
   findById,
   create,
   updateById,
   setEstado,
 
-  // helpers generación
   getConfigPonderacion,
   getNotaTeorico,
   getContextTribunal,
   getDocentesTribunal,
   getDirectorCP,
   getPlantillaActiva,
+
+  setArchivosGenerados,
+  isPresidenteDeActa,
+  setActaFirmada,
 };

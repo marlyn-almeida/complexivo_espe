@@ -329,82 +329,97 @@ export default function TribunalesPage() {
     }
   }
 
-  async function loadDocentesByCP() {
-    if (!selectedCP) return;
+async function loadDocentesByCP() {
+  if (!selectedCP) return;
 
-    try {
-      const cp: any = carreraPeriodos.find((x: any) => Number(x.id_carrera_periodo) === Number(selectedCP)) ?? null;
+  try {
+    const cp: any =
+      carreraPeriodos.find((x: any) => Number(x.id_carrera_periodo) === Number(selectedCP)) ?? null;
 
-      const carreraId =
-        Number(cp?.id_carrera) ||
-        Number(cp?.carreraId) ||
-        Number(cp?.carrera_id) ||
-        Number(cp?.carrera?.id_carrera) ||
-        0;
+    const carreraId =
+      Number(cp?.id_carrera) ||
+      Number(cp?.carreraId) ||
+      Number(cp?.carrera_id) ||
+      Number(cp?.carrera?.id_carrera) ||
+      0;
 
-      if (!carreraId) {
-        setDocentes([]);
-        showToast("No se pudo obtener id_carrera del Carrera–Período.", "error");
-        return;
-      }
-
-      // 1) intentamos carrera_docente
-      let cds = await carreraDocenteService.list({ includeInactive: false, carreraId });
-      if ((cds ?? []).length > 0) {
-        setDocentes(cds ?? []);
-        return;
-      }
-
-      // 2) fallback: docentes por departamento y crear carrera_docente
-      const carreras = await carrerasService.list(false);
-      const carrera = (carreras ?? []).find((c: any) => Number(c.id_carrera) === Number(carreraId)) ?? null;
-
-      const deptId =
-        Number((carrera as any)?.id_departamento) ||
-        Number((carrera as any)?.departamento_id) ||
-        Number((carrera as any)?.departamento?.id_departamento) ||
-        0;
-
-      if (!deptId) {
-        setDocentes([]);
-        showToast("No hay carrera_docente y no pude obtener el departamento de la carrera.", "error");
-        return;
-      }
-
-      const depDocentes = await docentesService.list({
-        includeInactive: false,
-        id_departamento: deptId,
-        page: 1,
-        limit: 300,
-      });
-
-      const activos = (depDocentes ?? []).filter((d: any) => Number(d.estado) === 1);
-      if (!activos.length) {
-        setDocentes([]);
-        showToast("No hay docentes activos en el departamento de esta carrera.", "error");
-        return;
-      }
-
-      for (const d of activos) {
-        try {
-          await carreraDocenteService.create({
-            id_docente: Number((d as any).id_docente),
-            id_carrera: Number(carreraId),
-            tipo_admin: "DOCENTE",
-          });
-        } catch {
-          // ignore
-        }
-      }
-
-      cds = await carreraDocenteService.list({ includeInactive: false, carreraId });
-      setDocentes(cds ?? []);
-      if ((cds ?? []).length) showToast("Docentes listos para Calificadores/Tribunales.", "success");
-    } catch {
+    if (!carreraId) {
       setDocentes([]);
-      showToast("No se pudieron cargar docentes para Calificadores/Tribunales.", "error");
+      showToast("No se pudo obtener id_carrera del Carrera–Período.", "error");
+      return;
     }
+
+    // 1) Traer carrera_docente (puede venir con pocos, ej: 4)
+    let cds = await carreraDocenteService.list({ includeInactive: false, carreraId });
+    const current = cds ?? [];
+
+    // Armamos set de id_docente ya vinculados (para no duplicar)
+    const already = new Set<number>(
+      current
+        .map((x: any) => Number(x.id_docente))
+        .filter((n: any) => Number.isFinite(n) && n > 0)
+    );
+
+    // 2) Obtener departamento de la carrera
+    const carreras = await carrerasService.list(false);
+    const carrera = (carreras ?? []).find((c: any) => Number(c.id_carrera) === Number(carreraId)) ?? null;
+
+    const deptId =
+      Number((carrera as any)?.id_departamento) ||
+      Number((carrera as any)?.departamento_id) ||
+      Number((carrera as any)?.departamento?.id_departamento) ||
+      0;
+
+    if (!deptId) {
+      // si no hay dept, al menos mostramos lo que haya en carrera_docente
+      setDocentes(current);
+      return;
+    }
+
+    // 3) Traer TODOS los docentes del departamento
+    const depDocentes = await docentesService.list({
+      includeInactive: false,
+      id_departamento: deptId,
+      page: 1,
+      limit: 100,
+    });
+
+    const activos = (depDocentes ?? []).filter((d: any) => Number(d.estado) === 1);
+
+    if (!activos.length) {
+      setDocentes(current);
+      showToast("No hay docentes activos en el departamento de esta carrera.", "error");
+      return;
+    }
+
+    // 4) Vincular SOLO los que faltan
+    const faltan = activos.filter((d: any) => !already.has(Number(d.id_docente)));
+
+    for (const d of faltan) {
+      try {
+        await carreraDocenteService.create({
+          id_docente: Number(d.id_docente),
+          id_carrera: Number(carreraId),
+          tipo_admin: "DOCENTE",
+        });
+      } catch {
+        // ignore (por duplicados o restricciones)
+      }
+    }
+
+    // 5) Recargar carrera_docente ya completo
+    cds = await carreraDocenteService.list({ includeInactive: false, carreraId });
+    setDocentes(cds ?? []);
+
+    if (faltan.length > 0) {
+      showToast(`Se vincularon ${faltan.length} docentes faltantes.`, "success");
+    }
+  } catch {
+    setDocentes([]);
+    showToast("No se pudieron cargar docentes para Calificadores/Tribunales.", "error");
   }
+}
+
 
   async function loadAll() {
     if (!selectedCP) return;

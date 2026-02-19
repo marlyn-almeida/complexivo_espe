@@ -41,11 +41,22 @@ function ensureDir(dir) {
 function resolveUploadsPath(publicPath) {
   // publicPath: "/uploads/plantillas/xxx.docx" o "uploads/..."
   const uploadsRoot = path.join(process.cwd(), "uploads");
-  const rel = String(publicPath || "").replace(/^\/+/, ""); // "uploads/..."
+  const rel = String(publicPath || "").replace(/^\/+/, "");
   const full = path.resolve(process.cwd(), rel);
   const root = path.resolve(uploadsRoot);
   if (!full.startsWith(root)) return null;
   return full;
+}
+
+// ✅ helper: tomar id docente de forma robusta
+function pickDocenteId(user) {
+  const v =
+    user?.id_docente ??
+    user?.idDocente ??
+    user?.docente_id ??
+    user?.id; // fallback
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
 }
 
 /**
@@ -95,7 +106,7 @@ async function generarWordDesdePlantilla({ actaVars, outputBaseName }) {
   const outDocx = path.join(outDir, `${outputBaseName}.docx`);
   fs.writeFileSync(outDocx, buf);
 
-  // PDF opcional (sin libreoffice)
+  // PDF opcional
   const outPdf = path.join(outDir, `${outputBaseName}.pdf`);
   const cssPath = path.join(process.cwd(), "src", "templates", "acta-pdf.css");
 
@@ -116,33 +127,29 @@ async function generarWordDesdePlantilla({ actaVars, outputBaseName }) {
 
 /**
  * ✅ Genera Acta desde tribunal_estudiante:
- * - Nota teórica: nota_teorico_estudiante
- * - Prácticas: calificacion (PRACTICO_ESCRITA / PRACTICO_ORAL)
- * - Ponderaciones: config_ponderacion_examen
- * - Guarda acta amarrada a calificación FINAL
- * - Genera Word usando plantilla_acta_word (y PDF opcional)
  */
 async function generarDesdeTribunalEstudiante(
   { id_tribunal_estudiante, id_rubrica, fecha_acta = null, umbral_aprobacion = 14 },
   user
 ) {
-  // ✅ coherencia: ahora debe validar por PERIODO (id_periodo), no por carrera_periodo
   await calService.validarCoherencia(id_tribunal_estudiante, id_rubrica);
 
-  // contexto base del tribunal_estudiante (incluye CP y fecha)
   const ctx = await actaRepo.getContextTribunal(id_tribunal_estudiante);
   if (!ctx) throw err("tribunal_estudiante no encontrado", 404);
+
+  // ✅ REGLA: SOLO si está cerrado
+  if (Number(ctx.cerrado) !== 1) {
+    throw err("No se puede generar el acta: el caso/asignación aún no está cerrada.", 409);
+  }
 
   const cp = Number(ctx.id_carrera_periodo);
   const id_estudiante = Number(ctx.id_estudiante);
 
-  // nota teórica (por estudiante + CP)
   const notaTeo = await actaRepo.getNotaTeorico(cp, id_estudiante);
   if (!notaTeo) throw err("No existe nota teórica registrada para este estudiante en este carrera-período.", 422);
 
   const nota_teorico_20 = round2(notaTeo.nota_teorico_20);
 
-  // calificaciones prácticas
   const escrita = await calRepo.findOneByKey(id_tribunal_estudiante, id_rubrica, "PRACTICO_ESCRITA");
   const oral = await calRepo.findOneByKey(id_tribunal_estudiante, id_rubrica, "PRACTICO_ORAL");
 
@@ -153,7 +160,6 @@ async function generarDesdeTribunalEstudiante(
     throw err("No existen calificaciones prácticas (ESCRITA/ORAL) para generar el acta.", 422);
   }
 
-  // config ponderación examen (por CP)
   const cfg = await actaRepo.getConfigPonderacion(cp);
 
   const peso_teorico_final_pct = round2(cfg.peso_teorico_final_pct);
@@ -161,7 +167,6 @@ async function generarDesdeTribunalEstudiante(
   const peso_practico_escrito_pct = round2(cfg.peso_practico_escrito_pct);
   const peso_practico_oral_pct = round2(cfg.peso_practico_oral_pct);
 
-  // nota práctica ponderada
   let practico_20 = null;
   if (nota_practico_escrita_20 !== null && nota_practico_oral_20 !== null) {
     practico_20 = round2(
@@ -174,14 +179,12 @@ async function generarDesdeTribunalEstudiante(
     practico_20 = round2(nota_practico_oral_20);
   }
 
-  // final
   const calificacion_teorico_ponderada = round2(nota_teorico_20 * (peso_teorico_final_pct / 100));
   const calificacion_practico_ponderada = round2(practico_20 * (peso_practico_final_pct / 100));
   const final_20 = round2((calificacion_teorico_ponderada ?? 0) + (calificacion_practico_ponderada ?? 0));
 
   const aprobacion = final_20 >= Number(umbral_aprobacion) ? 1 : 0;
 
-  // upsert calificación FINAL (en tu repo ya existe)
   const calFinal = await calRepo.upsertByKey({
     id_tribunal_estudiante,
     id_rubrica,
@@ -190,7 +193,6 @@ async function generarDesdeTribunalEstudiante(
     observacion: "Generada automáticamente para acta",
   });
 
-  // guardar acta
   const payloadActa = {
     id_calificacion: calFinal.id_calificacion,
     nota_teorico_20,
@@ -208,16 +210,13 @@ async function generarDesdeTribunalEstudiante(
     ? await actaRepo.updateById(existente.id_acta, payloadActa)
     : await actaRepo.create(payloadActa);
 
-  // variables para la plantilla (deben existir en tu ACTA.docx)
   const tribunalDocentes = await actaRepo.getDocentesTribunal(Number(ctx.id_tribunal));
   const director = await actaRepo.getDirectorCP(cp);
 
   const actaVars = {
-    // checks
     aprobado_si: aprobacion ? "X" : "",
     aprobado_no: aprobacion ? "" : "X",
 
-    // notas
     nota_teorico_sobre_20: nota_teorico_20 ?? "",
     ponderacion_teorico: peso_teorico_final_pct ?? "",
     ponderacion_practico: peso_practico_final_pct ?? "",
@@ -238,18 +237,14 @@ async function generarDesdeTribunalEstudiante(
     nota_final: final_20 ?? "",
     nota_final_letras: letrasSimple(final_20),
 
-    // estudiante
     estudiante_id: ctx.id_institucional_estudiante ?? "",
     estudiante_nombre_completo: `${ctx.nombres_estudiante} ${ctx.apellidos_estudiante}`.trim(),
 
-    // carrera
     carrera_nombre_procesado: ctx.carrera_nombre ?? "",
     carrera_modalidad: ctx.carrera_modalidad ?? "",
 
-    // fecha
     fecha_formato_barra: formatFechaBarra(payloadActa.fecha_acta || ctx.fecha_examen),
 
-    // tribunal
     presidente_nombre: tribunalDocentes.PRESIDENTE?.nombre ?? "",
     presidente_cedula: tribunalDocentes.PRESIDENTE?.cedula ?? "",
     integrante1_nombre: tribunalDocentes.INTEGRANTE_1?.nombre ?? "",
@@ -257,19 +252,32 @@ async function generarDesdeTribunalEstudiante(
     integrante2_nombre: tribunalDocentes.INTEGRANTE_2?.nombre ?? "",
     integrante2_cedula: tribunalDocentes.INTEGRANTE_2?.cedula ?? "",
 
-    // director
     director_nombre: director?.nombre ?? "",
     director_cedula: director?.cedula ?? "",
   };
 
-  // generar archivos
+  const base = `acta_${acta.id_acta}_${ctx.id_institucional_estudiante}`;
+
   const files = await generarWordDesdePlantilla({
     actaVars,
-    outputBaseName: `acta_${acta.id_acta}_${ctx.id_institucional_estudiante}`,
+    outputBaseName: base,
   });
 
+  // ✅ persistir docx/pdf en BD
+  try {
+    await actaRepo.setArchivosGenerados(
+      acta.id_acta,
+      files?.docx ?? null,
+      files?.pdf ?? null,
+      `${base}.docx`,
+      files?.pdf ? `${base}.pdf` : null
+    );
+  } catch (e) {
+    console.error("⚠️ No se pudo guardar archivo_docx/pdf_path en acta:", e);
+  }
+
   return {
-    acta,
+    acta: await actaRepo.findById(acta.id_acta),
     calculos: {
       nota_teorico_20,
       nota_practico_escrita_20,
@@ -289,6 +297,30 @@ async function generarDesdeTribunalEstudiante(
   };
 }
 
+// ✅ subir acta firmada (solo presidente)
+async function subirActaFirmada(id_acta, file, user) {
+  const acta = await actaRepo.findById(Number(id_acta));
+  if (!acta) throw err("Acta no encontrada", 404);
+
+  const docenteId = pickDocenteId(user);
+  if (!docenteId) throw err("No se pudo identificar el docente autenticado.", 401);
+
+  const ok = await actaRepo.isPresidenteDeActa(Number(id_acta), Number(docenteId));
+  if (!ok) throw err("Solo el PRESIDENTE del tribunal puede subir el acta firmada.", 403);
+
+  const publicPath = `/uploads/actas-firmadas/${file.filename}`;
+  const originalName = file.originalname || file.filename;
+
+  const updated = await actaRepo.setActaFirmada(
+    Number(id_acta),
+    publicPath,
+    originalName,
+    Number(docenteId)
+  );
+
+  return updated;
+}
+
 async function get(id) {
   const a = await actaRepo.findById(id);
   if (!a) throw err("Acta no encontrada", 404);
@@ -300,4 +332,4 @@ async function changeEstado(id, estado) {
   return actaRepo.setEstado(id, estado);
 }
 
-module.exports = { generarDesdeTribunalEstudiante, get, changeEstado };
+module.exports = { generarDesdeTribunalEstudiante, subirActaFirmada, get, changeEstado };

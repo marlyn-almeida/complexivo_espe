@@ -5,6 +5,9 @@ const validate = require("../middlewares/validate.middleware");
 const ctrl = require("../controllers/acta.controller");
 const { auth, authorize } = require("../middlewares/auth.middleware");
 
+// ✅ upload acta firmada
+const uploadActaFirmada = require("../middlewares/uploadActaFirmada.middleware");
+
 // Generar acta desde tribunal_estudiante (ADMIN / SUPER_ADMIN)
 router.post(
   "/generar",
@@ -35,6 +38,17 @@ router.patch(
   body("estado").isBoolean().toBoolean(),
   validate,
   ctrl.changeEstado
+);
+
+// ✅ subir acta firmada (DOCENTE presidente)
+router.post(
+  "/:id/subir-firmada",
+  auth,
+  authorize(["DOCENTE"]),
+  param("id").isInt({ min: 1 }).toInt(),
+  uploadActaFirmada.single("file"),
+  validate,
+  ctrl.subirFirmada
 );
 
 module.exports = router;
