@@ -244,6 +244,80 @@
   font-weight: 700;
 }
 
+/* =========================
+   📄 DOCUMENTOS TRIBUNAL (PDFs)
+========================= */
+
+.califPage .docRow {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.califPage .docCard {
+  border: 1px solid rgba(10, 79, 40, 0.18);
+  background: linear-gradient(180deg, #ffffff 0%, #f9fbfa 100%);
+  border-radius: 16px;
+  padding: 18px;
+  transition: all 0.18s ease;
+  box-shadow: 0 6px 16px rgba(10, 79, 40, 0.05);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 150px;
+}
+
+.califPage .docCard:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px rgba(10, 79, 40, 0.12);
+  border-color: rgba(10, 79, 40, 0.35);
+}
+
+.califPage .docTitle {
+  font-weight: 900;
+  font-size: 15px;
+  color: #0a4f28;
+  margin-bottom: 6px;
+}
+
+.califPage .docSub {
+  font-size: 13.5px;
+  color: rgba(0,0,0,0.65);
+  line-height: 1.4;
+  margin-bottom: 16px;
+}
+
+.califPage .docActions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.califPage .docActions .btnPrimary {
+  background: #0b6034;
+  border-color: rgba(10, 79, 40, 0.35);
+}
+
+.califPage .docActions .btnPrimary:hover {
+  background: #094d2a;
+}
+
+.califPage .docActions .btnGhost {
+  border: 1px solid rgba(10, 79, 40, 0.25);
+  color: #0a4f28;
+}
+
+.califPage .docActions .btnGhost:hover {
+  background: rgba(10, 79, 40, 0.06);
+}
+
+.califPage .boxRight .roleBadge {
+  background: rgba(10, 79, 40, 0.05);
+  border: 1px solid rgba(10, 79, 40, 0.18);
+  font-weight: 800;
+}
+
 /* Rubrica card */
 .califPage .rubricaCard {
   margin-top: 14px;
@@ -369,7 +443,7 @@
   font-weight: 600;
 }
 
-/* Nivel option (radio custom, similar look to screenshot) */
+/* Nivel option (radio custom) */
 .califPage .tdNivel { text-align: center; }
 .califPage .tdNivel.sel { background: rgba(59, 130, 246, 0.06); }
 
@@ -381,9 +455,7 @@
   user-select: none;
 }
 
-.califPage .nivelOption input {
-  display: none;
-}
+.califPage .nivelOption input { display: none; }
 
 .califPage .nivelRadio {
   width: 16px;
@@ -466,7 +538,7 @@
   box-shadow: 0 0 0 4px rgba(10, 79, 40, 0.12);
 }
 
-/* Footer buttons (como tu foto) */
+/* Footer buttons */
 .califPage .footerBtns {
   margin-top: 14px;
   display: flex;
@@ -507,11 +579,9 @@
   gap: 10px;
 }
 
-.califPage .btnGhost:hover {
-  background: rgba(0,0,0,0.03);
-}
+.califPage .btnGhost:hover { background: rgba(0,0,0,0.03); }
 
-/* Toast compatible con tu estilo */
+/* Toast */
 .califPage .toast {
   position: fixed;
   right: 16px;
