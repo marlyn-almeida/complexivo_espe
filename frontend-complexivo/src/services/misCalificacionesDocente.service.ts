@@ -7,7 +7,7 @@ import axiosClient from "../api/axiosClient";
 export type Nivel = {
   id_rubrica_nivel: number;
   nombre_nivel: string;
-  valor_nivel: number; // puntaje/valor
+  valor_nivel: number;
   orden_nivel?: number;
 };
 
@@ -31,7 +31,6 @@ export type ItemPlan = {
   calificado_por?: string | null;
   id_rubrica?: number | null;
 
-  // viene armado por repo.getEstructuraParaDocente()
   componentes: ComponentePlan[];
   niveles: Nivel[];
 };
@@ -59,9 +58,6 @@ export type SavePayload = {
   }>;
 };
 
-// =========================
-// RESPONSE SHAPE (backend real)
-// =========================
 export type MisCalificacionesDocenteResponse = {
   ok: boolean;
   data: {
@@ -81,34 +77,26 @@ export type MisCalificacionesDocenteResponse = {
 
 function unwrapResponse(res: any): MisCalificacionesDocenteResponse {
   const data = res?.data ?? res;
-  if (data?.ok !== undefined) return data as MisCalificacionesDocenteResponse;
+
+  // ya viene {ok,data}
+  if (data && typeof data === "object" && "ok" in data && "data" in data) {
+    return data as MisCalificacionesDocenteResponse;
+  }
+
+  // fallback
   return { ok: true, data: (data?.data ?? data) as any };
 }
 
-/**
- * ✅ FIX CLAVE:
- * Para DOCENTE ya NO dependemos de localStorage/header.
- * Mandamos cp=0 por query => controller getCp(req) toma 0
- * => repo.getCtxDocenteTribunalEstudiante NO filtra por CP.
- */
-const DOCENTE_CP_PARAM = { cp: 0 };
-
 export const misCalificacionesDocenteService = {
-  // ✅ Backend real:
-  // GET /calificaciones/mis/:id_tribunal_estudiante?cp=0
+  // ✅ GET /calificaciones/mis/:id_tribunal_estudiante
   get: async (id_tribunal_estudiante: number): Promise<MisCalificacionesDocenteResponse> => {
-    const res = await axiosClient.get(`/calificaciones/mis/${id_tribunal_estudiante}`, {
-      params: DOCENTE_CP_PARAM,
-    });
+    const res = await axiosClient.get(`/calificaciones/mis/${id_tribunal_estudiante}`);
     return unwrapResponse(res);
   },
 
-  // ✅ Backend real:
-  // POST /calificaciones/mis/:id_tribunal_estudiante?cp=0
+  // ✅ POST /calificaciones/mis/:id_tribunal_estudiante
   save: async (id_tribunal_estudiante: number, payload: SavePayload): Promise<MisCalificacionesDocenteResponse> => {
-    const res = await axiosClient.post(`/calificaciones/mis/${id_tribunal_estudiante}`, payload, {
-      params: DOCENTE_CP_PARAM,
-    });
+    const res = await axiosClient.post(`/calificaciones/mis/${id_tribunal_estudiante}`, payload);
     return unwrapResponse(res);
   },
 };

@@ -1,4 +1,4 @@
-// src/routes/calificacion.routes.js
+// ✅ src/routes/calificacion.routes.js
 const router = require("express").Router();
 const { body, param, query } = require("express-validator");
 const validate = require("../middlewares/validate.middleware");
@@ -6,15 +6,14 @@ const ctrl = require("../controllers/calificacion.controller");
 const { authorize } = require("../middlewares/auth.middleware");
 const { attachCarreraPeriodoCtx } = require("../middlewares/ctx.middleware");
 
-// ✅ Necesitamos CP por header
-router.use(attachCarreraPeriodoCtx);
+// =======================
+// ADMIN / SUPER_ADMIN
+// =======================
 
-// =======================
-// ADMIN / SUPER_ADMIN (lo que ya tenías)
-// =======================
 router.get(
   "/",
   authorize(["ADMIN", "SUPER_ADMIN"]),
+  attachCarreraPeriodoCtx, // ✅ solo aquí
   query("includeInactive").optional().isBoolean().toBoolean(),
   query("tribunalEstudianteId").optional().isInt({ min: 1 }).toInt(),
   query("rubricaId").optional().isInt({ min: 1 }).toInt(),
@@ -25,6 +24,7 @@ router.get(
 router.get(
   "/:id",
   authorize(["ADMIN", "SUPER_ADMIN"]),
+  attachCarreraPeriodoCtx, // ✅ solo aquí
   param("id").isInt({ min: 1 }).toInt(),
   validate,
   ctrl.get
@@ -33,6 +33,7 @@ router.get(
 router.post(
   "/",
   authorize(["ADMIN", "SUPER_ADMIN"]),
+  attachCarreraPeriodoCtx, // ✅ solo aquí
   body("id_tribunal_estudiante").isInt({ min: 1 }).toInt(),
   body("id_rubrica").isInt({ min: 1 }).toInt(),
   body("tipo_rubrica").isString().trim().notEmpty(),
@@ -45,6 +46,7 @@ router.post(
 router.put(
   "/:id",
   authorize(["ADMIN", "SUPER_ADMIN"]),
+  attachCarreraPeriodoCtx, // ✅ solo aquí
   param("id").isInt({ min: 1 }).toInt(),
   body("tipo_rubrica").isString().trim().notEmpty(),
   body("nota_base20").isDecimal(),
@@ -56,6 +58,7 @@ router.put(
 router.patch(
   "/:id/estado",
   authorize(["ADMIN", "SUPER_ADMIN"]),
+  attachCarreraPeriodoCtx, // ✅ solo aquí
   param("id").isInt({ min: 1 }).toInt(),
   body("estado").isBoolean().toBoolean(),
   validate,
@@ -81,7 +84,7 @@ router.post(
   authorize(["DOCENTE"]),
   param("id_tribunal_estudiante").isInt({ min: 1 }).toInt(),
 
-  // ✅ Payload REAL que usa tu service:
+  // ✅ Payload REAL:
   // { items:[{ id_plan_item, componentes:[{id_rubrica_componente, criterios:[{id_rubrica_criterio, id_rubrica_nivel, observacion?}]}]}] }
 
   body("items").isArray({ min: 1 }),
@@ -92,7 +95,10 @@ router.post(
 
   body("items.*.componentes.*.criterios").isArray({ min: 1 }),
   body("items.*.componentes.*.criterios.*.id_rubrica_criterio").isInt({ min: 1 }).toInt(),
+
+  // ✅ FIX CLAVE: antes estaba mal (id_rubrica_criterio_nivel). Tu backend/front usan id_rubrica_nivel.
   body("items.*.componentes.*.criterios.*.id_rubrica_nivel").isInt({ min: 1 }).toInt(),
+
   body("items.*.componentes.*.criterios.*.observacion").optional().isString().isLength({ max: 400 }),
 
   validate,

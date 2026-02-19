@@ -97,7 +97,7 @@ function isCerradoDocente(r: MiTribunalItem) {
 }
 
 /* =========================
-   CP ACTIVO (para ctx.middleware)
+   CP ACTIVO (solo ADMIN)
    ========================= */
 const CP_STORAGE_KEY = "active_carrera_periodo_id";
 function setActiveCP(id: number | "") {
@@ -188,12 +188,12 @@ export default function MisCalificacionesPage() {
     return `${carrera} — ${periodo}`;
   }, [carreraPeriodos, selectedCP]);
 
-  // LOAD INIT (✅ FIX: DOCENTE NO borra CP)
+  // LOAD INIT
   useEffect(() => {
     if (role === 2) {
       loadCarreraPeriodos();
     } else if (role === 3) {
-      // ✅ NO borrar CP aquí. Si está vacío, igual trabajamos con cp=0 en el endpoint.
+      // ✅ DOCENTE: NO depende de CP, NO borra storage, NO warnings
       loadDocenteAgenda();
     } else {
       setRows([]);
@@ -221,7 +221,7 @@ export default function MisCalificacionesPage() {
     }
   }
 
-  // ✅ si no hay CP => no mostramos, y limpiamos ctx (ADMIN)
+  // ADMIN: si no hay CP => no mostramos, y limpiamos ctx
   useEffect(() => {
     if (role !== 2) return;
 
@@ -264,19 +264,22 @@ export default function MisCalificacionesPage() {
       const res = await tribunalesDocenteService.misTribunales();
       const data = (res as any)?.data || [];
       setDocRows(data);
-
-      const current = localStorage.getItem("active_carrera_periodo_id");
-      if (!current) {
-        console.warn(
-          "[DOCENTE] No hay active_carrera_periodo_id en localStorage. OK: se usará cp=0 en /calificaciones/mis/:id."
-        );
-      }
     } catch (err: any) {
       showToast(extractBackendMsg(err), "error");
       setDocRows([]);
     } finally {
       setLoading(false);
     }
+  }
+
+  // DOCENTE: entrar a calificar
+  function goCalificar(r: any) {
+    // ✅ Si tu agenda trae id_carrera_periodo, lo guardamos (ayuda si otros módulos lo usan)
+    const cp = Number(r?.id_carrera_periodo ?? 0);
+    if (cp > 0) {
+      localStorage.setItem(CP_STORAGE_KEY, String(cp));
+    }
+    nav(`/docente/calificaciones/${r.id_tribunal_estudiante}`);
   }
 
   // FILTERED
@@ -325,7 +328,7 @@ export default function MisCalificacionesPage() {
   }, [filteredAdmin, filteredDocente, role]);
 
   // =========================
-  // ADMIN: PDF actions (✅ FIX)
+  // ADMIN: PDF actions
   // =========================
   async function openEntregaPdf(row: any) {
     if (!row?.id_estudiante) {
@@ -462,7 +465,7 @@ export default function MisCalificacionesPage() {
           return {
             ...x,
             entrega_archivo_nombre: archivo_nombre,
-            entrega_archivo_path: archivo_path, // ✅ REAL
+            entrega_archivo_path: archivo_path,
             entrega_fecha_entrega: fecha_entrega,
           };
         })
@@ -663,7 +666,7 @@ export default function MisCalificacionesPage() {
                             <div className="actions">
                               <button
                                 className="btnPrimary"
-                                onClick={() => nav(`/docente/calificaciones/${r.id_tribunal_estudiante}`)}
+                                onClick={() => goCalificar(r)}
                                 disabled={loading}
                                 title="Ir a calificar"
                               >

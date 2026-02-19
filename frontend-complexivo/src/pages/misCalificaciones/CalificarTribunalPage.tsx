@@ -9,12 +9,17 @@ import "./CalificarTribunalPage.css";
 import {
   misCalificacionesDocenteService,
   type ItemPlan,
-  type SavePayload,
   type Nivel,
+  type SavePayload,
+  type MisCalificacionesDocenteResponse,
 } from "../../services/misCalificacionesDocente.service";
 
 type ToastType = "success" | "error" | "info";
-type SelectedMap = Record<number, { id_nivel: number; observacion?: string }>;
+type SelectedMap = Record<number, { id_nivel: number; observacion?: string | null }>;
+
+function extractMsg(e: any) {
+  return e?.response?.data?.message || e?.message || "Ocurrió un error.";
+}
 
 export default function CalificarTribunalPage() {
   const nav = useNavigate();
@@ -27,19 +32,29 @@ export default function CalificarTribunalPage() {
   const [toast, setToast] = useState<{ type: ToastType; msg: string } | null>(null);
 
   const [header, setHeader] = useState<{
-    estudiante: string;
-    codigo?: string | null;
-    carrera?: string | null;
-    mi_rol?: string | null;
+    mi_designacion?: string | null;
     plan_nombre?: string | null;
-    cerrado?: 0 | 1;
+    cerrado?: 0 | 1 | boolean;
   } | null>(null);
 
   const [items, setItems] = useState<ItemPlan[]>([]);
   const [selected, setSelected] = useState<SelectedMap>({});
-  const [obsGeneral, setObsGeneral] = useState("");
+  const [obsGeneral, setObsGeneral] = useState(""); // (si luego lo guardas en otra tabla)
 
   const cerrado = Number(header?.cerrado ?? 0) === 1;
+
+  function buildInitialSelected(resp: MisCalificacionesDocenteResponse): SelectedMap {
+    const out: SelectedMap = {};
+    const existentes = resp?.data?.existentes ?? [];
+    for (const r of existentes) {
+      const idCrit = Number((r as any).id_rubrica_criterio);
+      const idNivel = Number((r as any).id_rubrica_nivel);
+      if (idCrit > 0 && idNivel > 0) {
+        out[idCrit] = { id_nivel: idNivel, observacion: (r as any).observacion ?? "" };
+      }
+    }
+    return out;
+  }
 
   async function load() {
     if (!id) {
@@ -50,40 +65,26 @@ export default function CalificarTribunalPage() {
     setLoading(true);
     setToast(null);
     try {
-      const res = await misCalificacionesDocenteService.get(id);
+      const resp = await misCalificacionesDocenteService.get(id);
 
-      const te = res.data.tribunal_estudiante;
+      const planNombre = resp.data?.plan?.nombre_plan ?? null;
+      const mi = resp.data?.mi_designacion ?? null;
+
       setHeader({
-        estudiante: te.estudiante,
-        carrera: te.carrera ?? null,
-        mi_rol: te.mi_rol ?? "Miembro",
-        plan_nombre: res.data.plan?.nombre_plan ?? "",
-        cerrado: te.cerrado ?? 0,
+        mi_designacion: mi,
+        plan_nombre: planNombre,
+        cerrado: resp.data?.cerrado ?? 0,
       });
 
-      setItems(res.data.items || []);
-      setObsGeneral(res.data.observacion_general || "");
+      setItems(resp.data?.estructura ?? []);
+      setSelected(buildInitialSelected(resp));
 
-      // ✅ precargar selecciones + observaciones por criterio si vienen
-      const initial: SelectedMap = {};
-      for (const item of res.data.items || []) {
-        for (const comp of item.componentes || []) {
-          for (const crit of comp.criterios || []) {
-            if (crit.id_nivel_seleccionado) {
-              initial[crit.id_criterio] = {
-                id_nivel: crit.id_nivel_seleccionado,
-                observacion: crit.observacion || "",
-              };
-            }
-          }
-        }
-      }
-      setSelected(initial);
+      // (si luego agregas observación_general en backend, aquí la cargas)
+      setObsGeneral("");
     } catch (e: any) {
-      setToast({
-        type: "error",
-        msg: e?.response?.data?.message || "No se pudo cargar la estructura de calificación.",
-      });
+      setItems([]);
+      setSelected({});
+      setToast({ type: "error", msg: extractMsg(e) });
     } finally {
       setLoading(false);
     }
@@ -94,17 +95,10 @@ export default function CalificarTribunalPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  // ✅ headers de niveles desde el primer criterio disponible
-  const nivelHeaders: Nivel[] = useMemo(() => {
-    for (const item of items) {
-      for (const comp of item.componentes || []) {
-        for (const crit of comp.criterios || []) {
-          return crit.niveles || [];
-        }
-      }
-    }
-    return [];
-  }, [items]);
+  // ✅ headers de niveles por item (cada item trae su “niveles”)
+  function nivelesOf(item: ItemPlan): Nivel[] {
+    return Array.isArray((item as any).niveles) ? (item as any).niveles : [];
+  }
 
   function onPick(idCriterio: number, idNivel: number) {
     setSelected((prev) => ({
@@ -126,18 +120,47 @@ export default function CalificarTribunalPage() {
       return;
     }
 
-    const calificaciones = Object.entries(selected)
-      .filter(([, v]) => !!v?.id_nivel)
-      .map(([k, v]) => ({
-        id_criterio: Number(k),
-        id_nivel: v.id_nivel,
-        observacion: v.observacion?.trim() ? v.observacion.trim() : null,
-      }));
+    // ✅ construimos payload exactamente como tu backend espera:
+    // { items: [{id_plan_item, componentes:[{id_rubrica_componente, criterios:[{id_rubrica_criterio,id_rubrica_nivel,observacion}]}]}] }
+    const payload: SavePayload = { items: [] };
 
-    const payload: SavePayload = {
-      calificaciones,
-      observacion_general: obsGeneral?.trim() ? obsGeneral.trim() : null,
-    };
+    for (const it of items) {
+      const compsOut: any[] = [];
+
+      for (const comp of it.componentes || []) {
+        const criteriosOut: any[] = [];
+
+        for (const crit of comp.criterios || []) {
+          const pick = selected[crit.id_rubrica_criterio];
+          if (!pick?.id_nivel) continue;
+
+          criteriosOut.push({
+            id_rubrica_criterio: Number(crit.id_rubrica_criterio),
+            id_rubrica_nivel: Number(pick.id_nivel),
+            observacion: pick.observacion?.trim() ? pick.observacion.trim() : null,
+          });
+        }
+
+        if (criteriosOut.length) {
+          compsOut.push({
+            id_rubrica_componente: Number(comp.id_rubrica_componente),
+            criterios: criteriosOut,
+          });
+        }
+      }
+
+      if (compsOut.length) {
+        payload.items.push({
+          id_plan_item: Number(it.id_plan_item),
+          componentes: compsOut,
+        });
+      }
+    }
+
+    if (!payload.items.length) {
+      setToast({ type: "info", msg: "Selecciona al menos un criterio para guardar." });
+      return;
+    }
 
     setSaving(true);
     setToast(null);
@@ -146,11 +169,13 @@ export default function CalificarTribunalPage() {
       setToast({ type: "success", msg: "Calificaciones guardadas correctamente." });
       await load();
     } catch (e: any) {
-      setToast({ type: "error", msg: e?.response?.data?.message || "No se pudo guardar." });
+      setToast({ type: "error", msg: extractMsg(e) });
     } finally {
       setSaving(false);
     }
   }
+
+  const totalItems = items.length;
 
   return (
     <div className="califPage wrap containerFull">
@@ -161,10 +186,9 @@ export default function CalificarTribunalPage() {
           <div className="heroText">
             <h1 className="heroTitle">CALIFICAR TRIBUNAL</h1>
             <p className="heroSubtitle">
-              {header?.estudiante ? (
+              {header?.plan_nombre ? (
                 <>
-                  {header.estudiante}
-                  {header.carrera ? ` — ${header.carrera}` : ""}
+                  Plan activo: <b>{header.plan_nombre}</b>
                 </>
               ) : (
                 "Cargando información..."
@@ -179,12 +203,7 @@ export default function CalificarTribunalPage() {
             Actualizar
           </button>
 
-          <button
-            className="heroBtn primary"
-            onClick={onSave}
-            disabled={loading || saving || cerrado}
-            title="Guardar"
-          >
+          <button className="heroBtn primary" onClick={onSave} disabled={loading || saving || cerrado} title="Guardar">
             <Save className="heroBtnIcon" />
             {saving ? "Guardando..." : "Guardar Mis Calificaciones"}
           </button>
@@ -208,13 +227,13 @@ export default function CalificarTribunalPage() {
             Mis Evaluaciones
           </button>
           <span className="crumbSep">/</span>
-          <span className="crumbHere">{header?.estudiante ? header.estudiante : "Calificar"}</span>
+          <span className="crumbHere">Calificar</span>
         </div>
 
         <div className="rolePill">
           <BadgeCheck size={16} />
           <span>
-            Tu rol en este tribunal: <b>{header?.mi_rol || "Miembro"}</b>
+            Tu designación: <b>{header?.mi_designacion || "Miembro"}</b>
           </span>
         </div>
       </div>
@@ -232,129 +251,126 @@ export default function CalificarTribunalPage() {
           <div className="boxRight">
             <div className={`statePill ${cerrado ? "off" : "on"}`}>{cerrado ? "CERRADO" : "ABIERTO"}</div>
             <div className="roleBadge">
-              <span>Su Rol de Evaluación:</span>
-              <b>{header?.mi_rol || "Miembro"}</b>
+              <span>Designación:</span>
+              <b>{header?.mi_designacion || "Miembro"}</b>
             </div>
           </div>
         </div>
 
         <div className="meta">
           <div>
-            <b>Estudiante:</b> {header?.estudiante || "—"}
+            <b>Tribunal-Estudiante:</b> {id}
           </div>
           <div>
-            <b>Plan:</b> {header?.plan_nombre || "—"}
+            <b>Items a calificar:</b> {totalItems}
           </div>
         </div>
 
-        {/* Items */}
         {loading ? (
           <div className="emptyBox">Cargando estructura...</div>
         ) : !items.length ? (
-          <div className="emptyBox">
-            No hay estructura para calificar (plan/rúbrica no disponibles o no asignados a tu rol).
-          </div>
+          <div className="emptyBox">No hay estructura para calificar (plan/rúbrica no disponibles o no asignados a tu rol).</div>
         ) : (
-          items.map((item) => (
-            <div className="rubricaCard" key={item.id_item_plan}>
-              <div className="rubricaCardHead">
-                <div className="rubricaCardTitle">
-                  <span className="rubricaIndex">{item.nombre_item}</span>
-                  {item.ponderacion != null && (
-                    <span className="chipPercent">{Number(item.ponderacion).toFixed(2)}%</span>
-                  )}
-                </div>
-                <div className="rubricaCardSub">Usando plantilla: {item.rubrica_nombre || "—"}</div>
-              </div>
+          items.map((item) => {
+            const niveles = nivelesOf(item);
 
-              {item.componentes.map((comp) => (
-                <div className="compBlock" key={comp.id_componente}>
-                  <div className="compTitle">
-                    <span className="compDot" />
-                    <b>{comp.nombre_componente}</b>
-                    {comp.ponderacion != null && (
-                      <span className="compHint">({Number(comp.ponderacion).toFixed(2)}% de esta rúbrica)</span>
+            return (
+              <div className="rubricaCard" key={item.id_plan_item}>
+                <div className="rubricaCardHead">
+                  <div className="rubricaCardTitle">
+                    <span className="rubricaIndex">{item.nombre_item}</span>
+                    {item.ponderacion_global_pct != null && (
+                      <span className="chipPercent">{Number(item.ponderacion_global_pct).toFixed(2)}%</span>
                     )}
                   </div>
-
-                  <div className="tableWrap">
-                    <table className="tableRubrica">
-                      <thead>
-                        <tr>
-                          <th className="thCriterio">Criterio</th>
-                          {nivelHeaders.map((n) => (
-                            <th key={n.id_nivel} className="thNivel">
-                              {n.nombre_nivel}
-                              <div className="muted">({Number(n.puntaje).toFixed(2)})</div>
-                            </th>
-                          ))}
-                          <th className="thObs">Observación (Opcional)</th>
-                        </tr>
-                      </thead>
-
-                      <tbody>
-                        {comp.criterios.map((crit) => {
-                          const picked = selected[crit.id_criterio]?.id_nivel ?? null;
-
-                          return (
-                            <tr key={crit.id_criterio}>
-                              <td className="tdCriterio">
-                                <div className="critMain">{crit.nombre_criterio}</div>
-                                {crit.descripcion_criterio && <div className="critSub">{crit.descripcion_criterio}</div>}
-                              </td>
-
-                              {nivelHeaders.map((n) => {
-                                const checked = picked === n.id_nivel;
-                                const nivelReal = (crit.niveles || []).find((x) => x.id_nivel === n.id_nivel);
-
-                                return (
-                                  <td key={n.id_nivel} className={`tdNivel ${checked ? "sel" : ""}`}>
-                                    <label className="nivelOption">
-                                      <input
-                                        type="radio"
-                                        name={`crit-${crit.id_criterio}`}
-                                        checked={checked}
-                                        disabled={cerrado}
-                                        onChange={() => onPick(crit.id_criterio, n.id_nivel)}
-                                      />
-                                      <span className="nivelRadio" />
-                                      <span className="nivelText">{nivelReal?.descripcion || "—"}</span>
-                                    </label>
-                                  </td>
-                                );
-                              })}
-
-                              <td className="tdObs">
-                                <textarea
-                                  className="obsInput"
-                                  placeholder="Observación específica..."
-                                  value={selected[crit.id_criterio]?.observacion || ""}
-                                  disabled={cerrado}
-                                  onChange={(e) => onObsCriterio(crit.id_criterio, e.target.value)}
-                                />
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
+                  <div className="rubricaCardSub">Rúbrica ID: {item.id_rubrica ?? "—"}</div>
                 </div>
-              ))}
-            </div>
-          ))
+
+                {(item.componentes || []).map((comp) => (
+                  <div className="compBlock" key={comp.id_rubrica_componente}>
+                    <div className="compTitle">
+                      <span className="compDot" />
+                      <b>{comp.nombre_componente}</b>
+                      {comp.tipo_componente ? <span className="compHint">({comp.tipo_componente})</span> : null}
+                    </div>
+
+                    <div className="tableWrap">
+                      <table className="tableRubrica">
+                        <thead>
+                          <tr>
+                            <th className="thCriterio">Criterio</th>
+
+                            {niveles.map((n) => (
+                              <th key={n.id_rubrica_nivel} className="thNivel">
+                                {n.nombre_nivel}
+                                <div className="muted">({Number(n.valor_nivel).toFixed(2)})</div>
+                              </th>
+                            ))}
+
+                            <th className="thObs">Observación (Opcional)</th>
+                          </tr>
+                        </thead>
+
+                        <tbody>
+                          {(comp.criterios || []).map((crit) => {
+                            const picked = selected[crit.id_rubrica_criterio]?.id_nivel ?? null;
+
+                            return (
+                              <tr key={crit.id_rubrica_criterio}>
+                                <td className="tdCriterio">
+                                  <div className="critMain">{crit.nombre_criterio}</div>
+                                </td>
+
+                                {niveles.map((n) => {
+                                  const checked = picked === n.id_rubrica_nivel;
+
+                                  return (
+                                    <td key={n.id_rubrica_nivel} className={`tdNivel ${checked ? "sel" : ""}`}>
+                                      <label className="nivelOption">
+                                        <input
+                                          type="radio"
+                                          name={`crit-${crit.id_rubrica_criterio}`}
+                                          checked={checked}
+                                          disabled={cerrado}
+                                          onChange={() => onPick(crit.id_rubrica_criterio, n.id_rubrica_nivel)}
+                                        />
+                                        <span className="nivelRadio" />
+                                        <span className="nivelText">{n.nombre_nivel}</span>
+                                      </label>
+                                    </td>
+                                  );
+                                })}
+
+                                <td className="tdObs">
+                                  <textarea
+                                    className="obsInput"
+                                    placeholder="Observación específica..."
+                                    value={selected[crit.id_rubrica_criterio]?.observacion || ""}
+                                    disabled={cerrado}
+                                    onChange={(e) => onObsCriterio(crit.id_rubrica_criterio, e.target.value)}
+                                  />
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+          })
         )}
 
-        {/* Observación general */}
+        {/* Observación general (visual) */}
         <div className="obsGeneralWrap">
-          <div className="obsGeneralLabel">
-            Observación General para {header?.mi_rol || "ti"} (Opcional)
-          </div>
+          <div className="obsGeneralLabel">Observación General (Opcional)</div>
           <textarea
             className="obsGeneral"
             placeholder="Observación general..."
             value={obsGeneral}
-            disabled={cerrado}
+            disabled={true /* por ahora solo UI; cuando implementes en backend lo habilitas */}
             onChange={(e) => setObsGeneral(e.target.value)}
           />
         </div>
