@@ -277,9 +277,10 @@ export default function Sidebar({
             </div>
 
             <div className="sidebar-actions">
-              <button className="sidebar-btn danger" onClick={handleLogout}>
+              <button className="sidebar-btn sidebar-logout" onClick={handleLogout}>
                 Cerrar sesión
               </button>
+
             </div>
           </div>
         </div>

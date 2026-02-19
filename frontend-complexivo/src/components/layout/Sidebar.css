@@ -293,3 +293,24 @@
 .sidebar-btn.danger:hover {
   background: rgba(239, 68, 68, 0.36);
 }
+/* =========================
+   BOTÓN CERRAR SESIÓN (MATCH ESPE)
+   ========================= */
+
+.sidebar-logout {
+  background: rgba(255, 255, 255, 0.10);           /* similar a tu estilo */
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.18);
+}
+
+.sidebar-logout:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.26);
+  transform: translateY(-1px);
+}
+
+.sidebar-logout:active {
+  transform: translateY(0px);
+  background: rgba(255, 255, 255, 0.14);
+}

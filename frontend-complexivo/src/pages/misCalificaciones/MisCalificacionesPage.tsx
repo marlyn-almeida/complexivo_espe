@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 
 import { misCalificacionesService } from "../../services/misCalificaciones.service";
 import { entregasCasoService } from "../../services/entregasCaso.service";
-import { notaTeoricaService } from "../../services/notaTeorica.service";
+import { notaTeoricoService } from "../../services/notaTeorico.service";
 import { carreraPeriodoService } from "../../services/carreraPeriodo.service";
 import { tribunalesDocenteService, type MiTribunalItem } from "../../services/tribunalesDocente.service";
 
@@ -161,11 +161,13 @@ export default function MisCalificacionesPage() {
     try {
       setLoading(true);
 
-      await notaTeoricaService.save({
+      // ✅ ahora
+            await notaTeoricoService.upsert({
         id_estudiante: Number((notaTarget as any).id_estudiante),
         nota_teorico_20: n,
-        observacion: notaObs?.trim() ? notaObs.trim() : undefined,
+        observacion: notaObs?.trim() ? notaObs.trim() : undefined, // ✅
       });
+
 
       showToast("Nota teórica guardada.", "success");
       setNotaModalOpen(false);

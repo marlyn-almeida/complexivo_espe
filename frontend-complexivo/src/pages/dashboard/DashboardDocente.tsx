@@ -1,14 +1,13 @@
+// src/pages/dashboard/DashboardDocente.tsx
 import DashboardBase from "./DashboardBase";
 import type { DashItem } from "./DashboardBase";
 
 export default function DashboardDocente() {
   const items: DashItem[] = [
-    { label: "Mis tribunales", to: "/mis-tribunales", icon: "🏛️" },
-    { label: "Mi agenda", to: "/mi-agenda", icon: "📅" },
-    { label: "Calificar", to: "/calificar", icon: "✅" },
-    { label: "Actas", to: "/actas", icon: "📄" },
-    { label: "Mi perfil", to: "/perfil", icon: "👤" },
+    { label: "Mis tribunales", to: "/mis-tribunales", icon: "tribunales" },
+    { label: "Actas", to: "/actas", icon: "acta" },
+    { label: "Mi perfil", to: "/perfil", icon: "perfil" },
   ];
 
-  return <DashboardBase items={items} />;
+  return <DashboardBase items={items} role="DOCENTE" />;
 }

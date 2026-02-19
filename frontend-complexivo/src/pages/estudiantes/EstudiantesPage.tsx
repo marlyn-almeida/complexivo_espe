@@ -112,11 +112,6 @@ export default function EstudiantesPage() {
     return `${carrera} — ${periodo}`;
   }, [carreraPeriodos, selectedCP]);
 
-  // ✅ NUEVO: navegar a pantalla de Asignaciones del estudiante
-  function goAsignaciones(e: Estudiante) {
-    navigate(`/estudiantes/${e.id_estudiante}/asignaciones`);
-  }
-
   // ===========================
   // LOAD
   // ===========================
@@ -428,7 +423,6 @@ export default function EstudiantesPage() {
                     </span>
                   </th>
 
-                  {/* ✅ Username */}
                   <th className="thCenter thUser">
                     <span className="thFlex">
                       <User size={16} /> Usuario
@@ -514,16 +508,6 @@ export default function EstudiantesPage() {
 
                         <td className="tdActions tdCenter">
                           <div className="actions">
-                            {/* ✅ NUEVO: Asignaciones */}
-                            <button
-                              className="iconBtn iconBtn_primary"
-                              title="Asignaciones"
-                              onClick={() => goAsignaciones(e)}
-                            >
-                              <Plus className="iconAction" />
-                              <span className="tooltip">Asignaciones</span>
-                            </button>
-
                             <button className="iconBtn iconBtn_neutral" title="Ver" onClick={() => openView(e)}>
                               <Eye className="iconAction" />
                               <span className="tooltip">Ver</span>

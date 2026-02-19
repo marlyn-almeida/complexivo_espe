@@ -15,23 +15,25 @@ export type NotaTeorico = {
 export type NotaTeoricoUpsertDTO = {
   id_estudiante: number;
   nota_teorico_20: number;
-  observacion?: string | null;
+  observacion?: string; // ✅ solo string, no null
 };
 
 export const notaTeoricoService = {
-  // ✅ GET /api/nota-teorico/:id_estudiante
   get: async (id_estudiante: number): Promise<NotaTeorico | null> => {
     const res = await axiosClient.get<NotaTeorico | null>(`/nota-teorico/${id_estudiante}`);
-    return res.data ?? null;
+    return (res as any).data ?? null;
   },
 
-  // ✅ POST /api/nota-teorico (UPSERT)
   upsert: async (payload: NotaTeoricoUpsertDTO): Promise<NotaTeorico> => {
-    const res = await axiosClient.post<NotaTeorico>(`/nota-teorico`, {
+    const body: any = {
       id_estudiante: payload.id_estudiante,
       nota_teorico_20: payload.nota_teorico_20,
-      observacion: payload.observacion ?? null,
-    });
-    return res.data;
+    };
+
+    const obs = payload.observacion?.trim();
+    if (obs) body.observacion = obs; // ✅ solo si hay texto
+
+    const res = await axiosClient.post<NotaTeorico>(`/nota-teorico`, body);
+    return (res as any).data;
   },
 };

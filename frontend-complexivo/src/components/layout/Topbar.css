@@ -67,7 +67,7 @@
 .topbarRight {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px; /* ✅ un poco más agradable sin RoleSwitcher */
 }
 
 .topbarUser {
@@ -187,9 +187,9 @@
 
 /* Iconos GRANDES y visibles */
 .ddIcon {
-  font-size: 22px;           /*  aquí el tamaño */
+  font-size: 22px;
   line-height: 1;
-  color: var(--espe-green); /* contraste */
+  color: var(--espe-green);
 }
 
 .ddItem.danger {

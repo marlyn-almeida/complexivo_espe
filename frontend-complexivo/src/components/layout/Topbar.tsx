@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import RoleSwitcher from "../auth/RoleSwitcher";
 import { clearSession, getActiveRole } from "../../utils/auth";
 import "./Topbar.css";
 
@@ -51,10 +50,9 @@ export default function Topbar({
   }, []);
 
   const goProfile = () => {
-  setOpen(false);
-  navigate("/perfil"); 
-};
-
+    setOpen(false);
+    navigate("/perfil");
+  };
 
   const logout = () => {
     clearSession();
@@ -84,7 +82,7 @@ export default function Topbar({
       </div>
 
       <div className="topbarRight">
-        <RoleSwitcher />
+        {/* ✅ QUITADO: RoleSwitcher (ya no se muestra "Rol:" ni select) */}
 
         <div className="topbarUser">
           <div className="topbarUserName">Perfil actual</div>
@@ -107,18 +105,24 @@ export default function Topbar({
             <div className="topbarDropdown" role="menu">
               <div className="ddHeader">
                 <div className="ddSmall">Sesión iniciada como</div>
-                <div className="ddUser">Super Admin</div>
+                <div className="ddUser">{roleLabel(activeRole)}</div>
               </div>
 
               <button className="ddItem" onClick={goProfile} role="menuitem">
-                <span className="material-symbols-outlined ddIcon" aria-hidden="true">
+                <span
+                  className="material-symbols-outlined ddIcon"
+                  aria-hidden="true"
+                >
                   person
                 </span>
                 Mi perfil
               </button>
 
               <button className="ddItem danger" onClick={logout} role="menuitem">
-                <span className="material-symbols-outlined ddIcon" aria-hidden="true">
+                <span
+                  className="material-symbols-outlined ddIcon"
+                  aria-hidden="true"
+                >
                   logout
                 </span>
                 Cerrar sesión

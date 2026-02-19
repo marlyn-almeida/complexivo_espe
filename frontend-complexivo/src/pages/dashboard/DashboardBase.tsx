@@ -21,7 +21,9 @@ export type DashIcon =
   | "casosEstudio"
   | "franjas"
   // ✅ opcional
-  | "acta";
+  | "acta"
+  // ✅ NUEVO (para dashboards)
+  | "perfil";
 
 export type DashItem = {
   label: string;
@@ -47,11 +49,7 @@ type DashboardBaseProps = {
    ICONOS
    ========================= */
 
-function Icon({
-  name,
-}: {
-  name: DashIcon | "stats" | "shield" | "close";
-}) {
+function Icon({ name }: { name: DashIcon | "stats" | "shield" | "close" }) {
   switch (name) {
     case "carreras":
       return (
@@ -161,6 +159,17 @@ function Icon({
         </svg>
       );
 
+    /* ✅ NUEVO: PERFIL */
+    case "perfil":
+      return (
+        <svg viewBox="0 0 24 24" className="portalSvg" aria-hidden="true">
+          <path
+            d="M12 12a4.2 4.2 0 1 0-4.2-4.2A4.2 4.2 0 0 0 12 12Zm0 2.2c-4.2 0-7.6 2.2-7.6 4.9V21h15.2v-1.9c0-2.7-3.4-4.9-7.6-4.9Z"
+            fill="currentColor"
+          />
+        </svg>
+      );
+
     /* =========================
        UI: stats / seguridad / cerrar
        ========================= */
@@ -212,18 +221,22 @@ export default function DashboardBase({
   const navigate = useNavigate();
   const [showSecurityTip, setShowSecurityTip] = useState(true);
 
-  // Fallback: si no envías stats desde el dashboard del rol, muestra placeholders.
-  const fallbackStats: StatCard[] = useMemo(
-    () => [
-      { value: "—", label: "Indicador 1", tone: "neutral" },
-      { value: "—", label: "Indicador 2", tone: "success" },
-      { value: "—", label: "Indicador 3", tone: "info" },
-      { value: "—", label: "Indicador 4", tone: "warn" },
-    ],
-    []
-  );
-
-  const finalStats = stats ?? fallbackStats;
+  // ✅ SOLO mostramos estadísticas si:
+  // - SUPER_ADMIN: siempre (si no hay stats, muestra placeholders)
+  // - DIRECTOR / DOCENTE: solo si explícitamente se pasan stats
+  const finalStats: StatCard[] | null = useMemo(() => {
+    if (role === "SUPER_ADMIN") {
+      return (
+        stats ?? [
+          { value: "—", label: "Indicador 1", tone: "neutral" },
+          { value: "—", label: "Indicador 2", tone: "success" },
+          { value: "—", label: "Indicador 3", tone: "info" },
+          { value: "—", label: "Indicador 4", tone: "warn" },
+        ]
+      );
+    }
+    return stats ?? null;
+  }, [role, stats]);
 
   return (
     <div className={`portalWrap portal--${role.toLowerCase()}`}>
@@ -288,26 +301,28 @@ export default function DashboardBase({
         </div>
       </section>
 
-      {/* Estadísticas */}
-      <section className="portalBox" aria-label="Estadísticas del sistema">
-        <div className="portalStatsHead">
-          <div className="portalStatsTitle">
-            <span className="portalStatsTitleIcon" aria-hidden="true">
-              <Icon name="stats" />
-            </span>
-            Estadísticas del Sistema
-          </div>
-        </div>
-
-        <div className="portalStatsGrid">
-          {finalStats.map((s) => (
-            <div key={s.label} className={`portalStat portalStat--${s.tone}`}>
-              <div className="portalStatValue">{s.value}</div>
-              <div className="portalStatLabel">{s.label}</div>
+      {/* ✅ Estadísticas (solo cuando corresponda) */}
+      {finalStats && (
+        <section className="portalBox" aria-label="Estadísticas del sistema">
+          <div className="portalStatsHead">
+            <div className="portalStatsTitle">
+              <span className="portalStatsTitleIcon" aria-hidden="true">
+                <Icon name="stats" />
+              </span>
+              Estadísticas del Sistema
             </div>
-          ))}
-        </div>
-      </section>
+          </div>
+
+          <div className="portalStatsGrid">
+            {finalStats.map((s) => (
+              <div key={s.label} className={`portalStat portalStat--${s.tone}`}>
+                <div className="portalStatValue">{s.value}</div>
+                <div className="portalStatLabel">{s.label}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }
