@@ -76,10 +76,9 @@ export const MENU_SECTIONS: MenuSection[] = [
       { label: "Tribunales", to: "/tribunales", roles: [2], icon: "tribunales" },
       { label: "Casos de estudio", to: "/casos-estudio", roles: [2], icon: "casosEstudio" },
 
-      // ✅ ya existe
       { label: "Calificaciones", to: "/calificaciones", roles: [2], icon: "rubricas" },
 
-      // ✅ NO se quita: aquí ve el Director/Apoyo las actas firmadas
+      // ✅ YA: repositorio para ver PDFs firmados
       { label: "Actas firmadas", to: "/actas-firmadas", roles: [2], icon: "acta" },
     ],
   },
@@ -92,8 +91,6 @@ export const MENU_SECTIONS: MenuSection[] = [
     roles: [3],
     items: [
       { label: "Mis tribunales", to: "/mis-tribunales", roles: [3], icon: "tribunales" },
-
-      // ✅ listado (/actas) y desde ahí navegas a /actas/:idTribunalEstudiante
       { label: "Actas", to: "/actas", roles: [3], icon: "acta" },
     ],
   },

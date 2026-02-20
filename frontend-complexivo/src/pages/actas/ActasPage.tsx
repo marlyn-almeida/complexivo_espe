@@ -6,8 +6,8 @@ import { ArrowLeft, FileText, Download, UploadCloud, RefreshCcw, BadgeCheck } fr
 import escudoESPE from "../../assets/escudo.png";
 import "./ActasPage.css";
 
+// ✅ BIEN
 import { actasService } from "../../services/acta.service";
-
 // ✅ si ya tienes un servicio que devuelve cerrado/mi_designacion/id_rubrica, úsalo.
 // Aquí reaprovechamos el que ya usas en CalificarTribunalPage:
 import { misCalificacionesDocenteService } from "../../services/misCalificacionesDocente.service";

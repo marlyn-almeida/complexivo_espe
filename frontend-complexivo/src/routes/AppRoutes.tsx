@@ -43,10 +43,8 @@ import CalificarTribunalPage from "../pages/misCalificaciones/CalificarTribunalP
 // ✅ PLAN DE EVALUACIÓN (ADMIN)
 import PlanEvaluacionPage from "../pages/planEvaluacion/PlanEvaluacionPage";
 
-// ✅ ACTAS (detalle)
+// ✅ ACTAS
 import ActasPage from "../pages/actas/ActasPage";
-
-// ✅ ACTAS (listado docente + repositorio admin)
 import ActasListDocentePage from "../pages/actas/ActasListDocentePage";
 import ActasFirmadasPage from "../pages/actas/ActasFirmadasPage";
 
@@ -241,7 +239,7 @@ export default function AppRoutes() {
             }
           />
 
-          {/* ===== DOCENTE (3) — LISTADO (AGENDA) ===== */}
+          {/* ===== DOCENTE (3) — LISTADO CALIFICACIONES ===== */}
           <Route
             path="/docente/calificaciones"
             element={
@@ -266,9 +264,9 @@ export default function AppRoutes() {
 
           {/* =========================================================
              ✅ ACTAS
-             - /actas                  -> listado DOCENTE (tribunales cerrados)
-             - /actas/:idTE            -> detalle (generar/descargar/subir firmada)
-             - /actas-firmadas         -> listado ADMIN (repo de firmadas)
+             - DOCENTE: /actas (listado)
+             - DIRECTOR: /actas-firmadas (repositorio)
+             - DETALLE: /actas/:idTribunalEstudiante (2 y 3)
              ========================================================= */}
 
           {/* ✅ DOCENTE (3) — LISTADO ACTAS */}
@@ -277,6 +275,16 @@ export default function AppRoutes() {
             element={
               <ProtectedRoute allowRoles={[3]}>
                 <ActasListDocentePage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* ✅ DIRECTOR / APOYO (2) — ACTAS FIRMADAS */}
+          <Route
+            path="/actas-firmadas"
+            element={
+              <ProtectedRoute allowRoles={[2]}>
+                <ActasFirmadasPage />
               </ProtectedRoute>
             }
           />
@@ -290,19 +298,6 @@ export default function AppRoutes() {
               </ProtectedRoute>
             }
           />
-
-          {/* ✅ ADMIN (2) — ACTAS FIRMADAS (repositorio) */}
-          <Route
-            path="/actas-firmadas"
-            element={
-              <ProtectedRoute allowRoles={[2]}>
-                <ActasFirmadasPage />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* compatibilidad vieja (si la tenías) */}
-          <Route path="/admin/actas" element={<Navigate to="/tribunales" replace />} />
         </Route>
 
         {/* ===== CUALQUIER OTRA ===== */}

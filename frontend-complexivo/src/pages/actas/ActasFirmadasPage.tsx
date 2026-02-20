@@ -4,12 +4,27 @@ import { useEffect, useMemo, useState } from "react";
 import escudoESPE from "../../assets/escudo.png";
 import "./ActasFirmadasPage.css";
 
-import { Search, RefreshCcw, FileText, Filter, X, BadgeCheck } from "lucide-react";
+import { Search, RefreshCcw, FileText, Filter, X, BadgeCheck, Download } from "lucide-react";
 
+import { actasService, type ActaListRow } from "../../services/acta.service";
 type ToastType = "success" | "error" | "info";
+
+function extractMsg(e: any) {
+  const msg = e?.response?.data?.message || e?.userMessage;
+  if (typeof msg === "string" && msg.trim()) return msg;
+  return e?.message || "Ocurrió un error.";
+}
+
+function bool01(v: any): boolean {
+  const n = Number(v);
+  return v === true || n === 1;
+}
 
 export default function ActasFirmadasPage() {
   const [loading, setLoading] = useState(false);
+
+  // DATA
+  const [rows, setRows] = useState<ActaListRow[]>([]);
 
   // UI
   const [search, setSearch] = useState("");
@@ -23,11 +38,11 @@ export default function ActasFirmadasPage() {
   async function load() {
     setLoading(true);
     try {
-      // ✅ Pendiente: conectar endpoint real de actas firmadas
-      // Aquí solo mantenemos el módulo visible y con UI lista.
-      await new Promise((r) => setTimeout(r, 350));
-    } catch {
-      showToast("Error al cargar actas firmadas", "error");
+      const data = await actasService.listFirmadas();
+      setRows((data ?? []) as ActaListRow[]);
+    } catch (e: any) {
+      setRows([]);
+      showToast(extractMsg(e), "error");
     } finally {
       setLoading(false);
     }
@@ -37,12 +52,28 @@ export default function ActasFirmadasPage() {
     load();
   }, []);
 
-  // Cuando tengas endpoint, esto pasará a filtrar un array real
-  const data = useMemo(() => {
+  const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
-    if (!q) return [];
-    return [];
-  }, [search]);
+
+    return (rows ?? [])
+      .filter((r) => {
+        // Si backend manda tiene_firmada, filtramos solo firmadas.
+        // Si NO manda, igual mostramos todo.
+        if (r.tiene_firmada === undefined) return true;
+        return bool01(r.tiene_firmada);
+      })
+      .filter((r) => {
+        if (!q) return true;
+
+        const idTe = String(r.id_tribunal_estudiante ?? "");
+        const est = String(r.estudiante ?? "").toLowerCase();
+        const tri = String(r.tribunal ?? "").toLowerCase();
+        const fecha = String(r.fecha ?? "").toLowerCase();
+
+        return idTe.includes(q) || est.includes(q) || tri.includes(q) || fecha.includes(q);
+      })
+      .sort((a, b) => String(a.estudiante ?? "").localeCompare(String(b.estudiante ?? ""), "es"));
+  }, [rows, search]);
 
   return (
     <div className="actasFirmadasPage">
@@ -53,12 +84,10 @@ export default function ActasFirmadasPage() {
             <img className="heroLogo" src={escudoESPE} alt="ESPE" />
             <div className="heroText">
               <h1 className="heroTitle">Actas firmadas</h1>
-              <p className="heroSubtitle">
-                Repositorio de actas firmadas por tribunal-estudiante. (Módulo del Director/Apoyo)
-              </p>
+              <p className="heroSubtitle">Repositorio de actas firmadas por tribunal-estudiante. (Director/Apoyo)</p>
 
               <div className="heroHint">
-                Este módulo se conectará al endpoint cuando esté listo en backend.
+                Busca por <b>estudiante</b>, <b>tribunal</b> o <b>id tribunal-estudiante</b>.
               </div>
             </div>
           </div>
@@ -95,7 +124,7 @@ export default function ActasFirmadasPage() {
               <Search className="searchIcon" />
               <input
                 className="search"
-                placeholder="Buscar por estudiante, tribunal, período o id..."
+                placeholder="Buscar por estudiante, tribunal, fecha o id..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -104,7 +133,7 @@ export default function ActasFirmadasPage() {
             <div className="filterWrap">
               <Filter className="filterIcon" />
               <div className="hintPill">
-                Estado: <b>PENDIENTE BACKEND</b>
+                Registros: <b>{filtered.length}</b>
               </div>
 
               {search.trim() && (
@@ -123,7 +152,7 @@ export default function ActasFirmadasPage() {
                   <th className="thCenter">Tribunal-Estudiante</th>
                   <th className="thCenter thName">Estudiante</th>
                   <th className="thCenter">Tribunal</th>
-                  <th className="thCenter">Período</th>
+                  <th className="thCenter">Fecha</th>
                   <th className="thCenter thState">Archivo</th>
                 </tr>
               </thead>
@@ -135,22 +164,58 @@ export default function ActasFirmadasPage() {
                       <div className="empty">Cargando...</div>
                     </td>
                   </tr>
-                ) : data.length ? (
-                  data.map((x: any) => (
-                    <tr key={String(x.id)}>
-                      <td className="tdCenter">—</td>
-                      <td className="tdCenter">—</td>
-                      <td className="tdCenter">—</td>
-                      <td className="tdCenter">—</td>
-                      <td className="tdCenter">—</td>
-                    </tr>
-                  ))
+                ) : filtered.length ? (
+                  filtered.map((r, idx) => {
+                    const idTe = Number(r.id_tribunal_estudiante ?? 0);
+                    const idActa = Number(r.id_acta ?? 0) || 0;
+
+                    return (
+                      <tr key={`${idTe}-${idActa}-${idx}`}>
+                        <td className="tdCenter mono">
+                          <span className="chipCode">{idTe || "—"}</span>
+                        </td>
+
+                        <td className="tdCenter tdName">
+                          <div className="nameMain">{r.estudiante ?? "-"}</div>
+                        </td>
+
+                        <td className="tdCenter">{r.tribunal ?? "-"}</td>
+
+                        <td className="tdCenter">{r.fecha ?? "-"}</td>
+
+                        <td className="tdCenter">
+                          <div className="actions">
+                            <button
+                              className="iconBtn iconBtn_neutral"
+                              title="Descargar PDF"
+                              onClick={async () => {
+                                try {
+                                  if (idActa) {
+                                    await actasService.downloadPdf(idActa);
+                                    return;
+                                  }
+                                  if (r.pdf_firmado) {
+                                    window.open(String(r.pdf_firmado), "_blank", "noopener,noreferrer");
+                                    return;
+                                  }
+                                  showToast("No se pudo determinar el archivo para descargar (id_acta/pdf_firmado).", "error");
+                                } catch (e: any) {
+                                  showToast(extractMsg(e), "error");
+                                }
+                              }}
+                            >
+                              <Download className="iconAction" />
+                              <span className="tooltip">PDF</span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
                 ) : (
                   <tr>
                     <td colSpan={5} className="emptyCell">
-                      <div className="empty">
-                        Aún no hay endpoint conectado para actas firmadas. Cuando lo tengas, aquí se listarán.
-                      </div>
+                      <div className="empty">No hay actas firmadas para mostrar.</div>
                     </td>
                   </tr>
                 )}
@@ -160,8 +225,7 @@ export default function ActasFirmadasPage() {
 
           {/* helper */}
           <div className="mutedBlock">
-            Cuando tengas el endpoint, me pasas:
-            <b> ruta, response JSON y nombre de campos</b> y lo conecto en una sola iteración.
+            Si en tu backend no viene <b>id_acta</b>, entonces manda <b>pdf_firmado</b> (URL) para poder descargar.
           </div>
         </div>
       </div>

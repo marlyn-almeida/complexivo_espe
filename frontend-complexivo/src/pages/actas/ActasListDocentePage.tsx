@@ -20,7 +20,7 @@ function extractMsg(e: any) {
 
 function cerrado01(v: any): boolean {
   const n = Number(v);
-  return n === 1 || v === true;
+  return v === true || n === 1;
 }
 
 export default function ActasListDocentePage() {
@@ -42,7 +42,6 @@ export default function ActasListDocentePage() {
   async function load() {
     setLoading(true);
     try {
-      // ✅ endpoint existente: agenda del docente
       const data = await tribunalEstudiantesService.misAsignaciones({ includeInactive: false });
       setRows((data ?? []) as TribunalEstudiante[]);
     } catch (e: any) {
@@ -96,11 +95,11 @@ export default function ActasListDocentePage() {
             <div className="heroText">
               <h1 className="heroTitle">Actas</h1>
               <p className="heroSubtitle">
-                Aquí se muestran tus <b>tribunales cerrados</b> para generar/descargar/subir el acta firmada.
+                Aquí se muestran tus <b>tribunales</b>. Cuando esté <b>CERRADO</b> podrás generar/descargar/subir el acta.
               </p>
 
               <div className="heroHint">
-                Consejo: solo cuando esté <b>CERRADO</b> podrás generar el acta.
+                Consejo: activa <b>Solo cerrados</b> para ver únicamente los que ya permiten acta.
               </div>
             </div>
           </div>
@@ -257,9 +256,7 @@ export default function ActasListDocentePage() {
                   <tr>
                     <td colSpan={5} className="emptyCell">
                       <div className="empty">
-                        {soloCerrados
-                          ? "No tienes tribunales cerrados todavía."
-                          : "No hay registros para mostrar."}
+                        {soloCerrados ? "No tienes tribunales cerrados todavía." : "No hay registros para mostrar."}
                       </div>
                     </td>
                   </tr>
