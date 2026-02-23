@@ -126,14 +126,12 @@ async function getPlanActivoByCP(id_carrera_periodo) {
 }
 
 /**
- * ✅ Contexto docente:
- * - confirma tribunal_estudiante pertenece al docente en tribunal_docente/carrera_docente
- * - trae designación + cerrado + CP REAL
- * - ✅ trae id_estudiante + id_caso_estudio (para los 2 PDFs)
+ * ✅ Contexto docente (FIX DEFINITIVO):
+ * - valida agenda por: id_te + id_docente (joins)
+ * - ❌ NO filtra por cp (eso causaba 404 si el header CP no coincide con el CP real)
+ * - trae designación + cerrado + CP REAL + ids para PDFs
  */
-async function getCtxDocenteTribunalEstudiante({ cp, id_tribunal_estudiante, id_docente }) {
-  const cpNum = Number(cp || 0);
-
+async function getCtxDocenteTribunalEstudiante({ id_tribunal_estudiante, id_docente }) {
   const [rows] = await pool.query(
     `
     SELECT
@@ -151,24 +149,14 @@ async function getCtxDocenteTribunalEstudiante({ cp, id_tribunal_estudiante, id_
 
     WHERE te.id_tribunal_estudiante = ?
       AND te.estado = 1
-      AND ( ? = 0 OR t.id_carrera_periodo = ? )
       AND cd.id_docente = ?
     LIMIT 1
     `,
-    [
-      Number(id_tribunal_estudiante),
-      cpNum,
-      cpNum,
-      Number(id_docente),
-    ]
+    [Number(id_tribunal_estudiante), Number(id_docente)]
   );
 
   return rows[0] || null;
 }
-
-// =======================
-// TODO lo demás igual
-// =======================
 
 async function getEstructuraParaDocente({ id_plan_evaluacion, designacion }) {
   const [items] = await pool.query(

@@ -85,10 +85,8 @@ async function changeEstado(id, estado) {
 async function misCalificaciones(cp, id_tribunal_estudiante, user) {
   if (!isDocente(user)) throw err("Acceso denegado", 403);
 
-  const cpIn = Number(cp || 0);
-
+  // ✅ FIX: agenda SIN filtrar por CP
   const ctx = await repo.getCtxDocenteTribunalEstudiante({
-    cp: cpIn,
     id_tribunal_estudiante,
     id_docente: Number(user.id),
   });
@@ -117,16 +115,20 @@ async function misCalificaciones(cp, id_tribunal_estudiante, user) {
       plan,
       id_tribunal_estudiante,
 
-      // ✅ para UI
+      // ✅ UI
       mi_designacion: ctx.mi_designacion,
       cerrado: !!ctx.cerrado,
 
-      // ✅ ✅ para PDFs
+      // ✅ PDFs
       id_estudiante: Number(ctx.id_estudiante || 0) || null,
       id_caso_estudio: Number(ctx.id_caso_estudio || 0) || null,
 
       estructura,
       existentes,
+
+      // opcional para debug (no afecta front)
+      cp_in: Number(cp || 0) || 0,
+      cp_real: cpReal,
     },
   };
 }
@@ -134,10 +136,8 @@ async function misCalificaciones(cp, id_tribunal_estudiante, user) {
 async function guardarMisCalificaciones(cp, id_tribunal_estudiante, user, payload) {
   if (!isDocente(user)) throw err("Acceso denegado", 403);
 
-  const cpIn = Number(cp || 0);
-
+  // ✅ FIX: agenda SIN filtrar por CP
   const ctx = await repo.getCtxDocenteTribunalEstudiante({
-    cp: cpIn,
     id_tribunal_estudiante,
     id_docente: Number(user.id),
   });
@@ -213,6 +213,7 @@ async function guardarMisCalificaciones(cp, id_tribunal_estudiante, user, payloa
 
   await repo.upsertCriteriosCalificacion(toSave);
 
+  // ✅ recargar estado actualizado
   return misCalificaciones(cpReal, id_tribunal_estudiante, user);
 }
 

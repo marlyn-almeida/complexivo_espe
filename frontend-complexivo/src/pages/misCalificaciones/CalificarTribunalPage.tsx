@@ -1,4 +1,4 @@
-// ✅ src/pages/misCalificaciones/CalificarTribunalPage.tsx
+// ✅ src/pages/misCalificaciones/CalificarTribunalPage.tsx (CORREGIDO)
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
@@ -15,23 +15,26 @@ import {
 import escudoESPE from "../../assets/escudo.png";
 import "./CalificarTribunalPage.css";
 
+// ✅ SERVICE CORRECTO (ALINEADO AL BACKEND /calificaciones/mis/:id)
 import {
   misCalificacionesDocenteService,
-  type ItemPlan,
-  type Nivel,
-  type SavePayload,
-  type MisCalificacionesDocenteResponse,
-} from "../../services/misCalificacionesDocente.service";
+  type MisCalificacionesResponse,
+  type PlanItemEstructura,
+  type RubricaNivel,
+  type GuardarMisCalificacionesPayload,
+} from "../../services/calificacionesDocente.service";
 
 // ✅ PDFs
 import { casosEstudioService } from "../../services/casosEstudio.service";
 import { entregasCasoService } from "../../services/entregasCaso.service";
 
 type ToastType = "success" | "error" | "info";
+
+// ✅ Mapa por criterio: guarda nivel seleccionado + observación
 type SelectedMap = Record<number, { id_nivel: number; observacion?: string | null }>;
 
 // ✅ si navegas desde otra pantalla puedes mandar estos por state
-type NavState = { id_estudiante?: number; id_caso_estudio?: number };
+type NavState = { id_estudiante?: number; id_caso_estudio?: number; estudiante_label?: string };
 
 function extractMsg(e: any) {
   const msg = e?.response?.data?.message;
@@ -83,29 +86,30 @@ export default function CalificarTribunalPage() {
   const [header, setHeader] = useState<{
     mi_designacion?: string | null;
     plan_nombre?: string | null;
-    cerrado?: 0 | 1 | boolean;
+    cerrado?: boolean;
 
     // ✅ PDFs:
-    id_estudiante?: number | null;     // para entrega
-    id_caso_estudio?: number | null;   // para caso estudio
+    id_estudiante?: number | null; // para entrega
+    id_caso_estudio?: number | null; // para caso estudio
 
     estudiante_label?: string | null;
   } | null>(null);
 
-  const [items, setItems] = useState<ItemPlan[]>([]);
+  const [items, setItems] = useState<PlanItemEstructura[]>([]);
   const [selected, setSelected] = useState<SelectedMap>({});
-  const [obsGeneral, setObsGeneral] = useState("");
+  const [obsGeneral, setObsGeneral] = useState(""); // (por ahora solo UI)
 
-  const cerrado = Number(header?.cerrado ?? 0) === 1;
+  const cerrado = !!header?.cerrado;
 
-  function buildInitialSelected(resp: MisCalificacionesDocenteResponse): SelectedMap {
+  function buildInitialSelected(resp: MisCalificacionesResponse): SelectedMap {
     const out: SelectedMap = {};
     const existentes = resp?.data?.existentes ?? [];
+
     for (const r of existentes) {
-      const idCrit = Number((r as any).id_rubrica_criterio);
-      const idNivel = Number((r as any).id_rubrica_nivel);
+      const idCrit = Number(r.id_rubrica_criterio);
+      const idNivel = Number(r.id_rubrica_nivel);
       if (idCrit > 0 && idNivel > 0) {
-        out[idCrit] = { id_nivel: idNivel, observacion: (r as any).observacion ?? "" };
+        out[idCrit] = { id_nivel: idNivel, observacion: r.observacion ?? "" };
       }
     }
     return out;
@@ -127,8 +131,8 @@ export default function CalificarTribunalPage() {
       const mi = resp.data?.mi_designacion ?? null;
 
       // ✅ Traer IDs desde backend (preferido), o desde state como respaldo
-      const idEstBackend = Number((resp as any)?.data?.id_estudiante ?? 0) || 0;
-      const idCasoBackend = Number((resp as any)?.data?.id_caso_estudio ?? 0) || 0;
+      const idEstBackend = Number(resp?.data?.id_estudiante ?? 0) || 0;
+      const idCasoBackend = Number(resp?.data?.id_caso_estudio ?? 0) || 0;
 
       const idEstState = Number(navState?.id_estudiante ?? 0) || 0;
       const idCasoState = Number(navState?.id_caso_estudio ?? 0) || 0;
@@ -136,17 +140,15 @@ export default function CalificarTribunalPage() {
       const idEst = idEstBackend || idEstState || 0;
       const idCaso = idCasoBackend || idCasoState || 0;
 
-      const estudianteLabel = (resp as any)?.data?.estudiante ?? null;
-
       setHeader({
-        mi_designacion: mi,
-        plan_nombre: planNombre,
-        cerrado: resp.data?.cerrado ?? 0,
+        mi_designacion: mi ? String(mi) : null,
+        plan_nombre: planNombre ? String(planNombre) : null,
+        cerrado: !!resp.data?.cerrado,
 
         id_estudiante: idEst ? Number(idEst) : null,
         id_caso_estudio: idCaso ? Number(idCaso) : null,
 
-        estudiante_label: estudianteLabel ? String(estudianteLabel) : null,
+        estudiante_label: navState?.estudiante_label ? String(navState.estudiante_label) : null,
       });
 
       setItems(resp.data?.estructura ?? []);
@@ -166,8 +168,8 @@ export default function CalificarTribunalPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id_te]);
 
-  function nivelesOf(item: ItemPlan): Nivel[] {
-    return Array.isArray((item as any).niveles) ? (item as any).niveles : [];
+  function nivelesOf(item: PlanItemEstructura): RubricaNivel[] {
+    return Array.isArray((item as any).niveles) ? ((item as any).niveles as RubricaNivel[]) : [];
   }
 
   function onPick(idCriterio: number, idNivel: number) {
@@ -194,7 +196,7 @@ export default function CalificarTribunalPage() {
     if (!idCaso) {
       setToast({
         type: "info",
-        msg: "No se pudo determinar el caso de estudio (falta id_caso_estudio). Devuélvelo en el backend.",
+        msg: "No se pudo determinar el caso de estudio (falta id_caso_estudio).",
       });
       return;
     }
@@ -224,7 +226,7 @@ export default function CalificarTribunalPage() {
     if (!idCaso) {
       setToast({
         type: "info",
-        msg: "No se pudo determinar el caso de estudio (falta id_caso_estudio). Devuélvelo en el backend.",
+        msg: "No se pudo determinar el caso de estudio (falta id_caso_estudio).",
       });
       return;
     }
@@ -255,7 +257,7 @@ export default function CalificarTribunalPage() {
     if (!idEst) {
       setToast({
         type: "info",
-        msg: "No se pudo determinar el estudiante (falta id_estudiante). Devuélvelo en el backend.",
+        msg: "No se pudo determinar el estudiante (falta id_estudiante).",
       });
       return;
     }
@@ -285,7 +287,7 @@ export default function CalificarTribunalPage() {
     if (!idEst) {
       setToast({
         type: "info",
-        msg: "No se pudo determinar el estudiante (falta id_estudiante). Devuélvelo en el backend.",
+        msg: "No se pudo determinar el estudiante (falta id_estudiante).",
       });
       return;
     }
@@ -311,7 +313,7 @@ export default function CalificarTribunalPage() {
   }
 
   // =========================
-  // ✅ SAVE
+  // ✅ SAVE (payload correcto para backend)
   // =========================
   async function onSave() {
     if (cerrado) {
@@ -319,7 +321,7 @@ export default function CalificarTribunalPage() {
       return;
     }
 
-    const payload: SavePayload = { items: [] };
+    const payload: GuardarMisCalificacionesPayload = { items: [] };
 
     for (const it of items) {
       const compsOut: Array<{
@@ -327,7 +329,7 @@ export default function CalificarTribunalPage() {
         criterios: Array<{
           id_rubrica_criterio: number;
           id_rubrica_nivel: number;
-          observacion?: string;
+          observacion?: string | null;
         }>;
       }> = [];
 
@@ -335,7 +337,7 @@ export default function CalificarTribunalPage() {
         const criteriosOut: Array<{
           id_rubrica_criterio: number;
           id_rubrica_nivel: number;
-          observacion?: string;
+          observacion?: string | null;
         }> = [];
 
         for (const crit of comp.criterios || []) {
@@ -347,7 +349,7 @@ export default function CalificarTribunalPage() {
           criteriosOut.push({
             id_rubrica_criterio: Number(crit.id_rubrica_criterio),
             id_rubrica_nivel: Number(pick.id_nivel),
-            ...(obs ? { observacion: obs } : {}),
+            observacion: obs ? obs : null,
           });
         }
 
@@ -538,9 +540,7 @@ export default function CalificarTribunalPage() {
         {loading ? (
           <div className="emptyBox">Cargando estructura...</div>
         ) : !items.length ? (
-          <div className="emptyBox">
-            No hay estructura para calificar (plan/rúbrica no disponibles o no asignados a tu rol).
-          </div>
+          <div className="emptyBox">No hay estructura para calificar (plan/rúbrica no disponibles o no asignados).</div>
         ) : (
           items.map((item) => {
             const niveles = nivelesOf(item);

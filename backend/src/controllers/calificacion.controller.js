@@ -3,8 +3,9 @@ const s = require("../services/calificacion.service");
 
 /**
  * Para DOCENTE:
- * - cp puede venir 0 (y está bien) para que el repo NO filtre por CP y pueda encontrar la asignación.
- * - luego el service toma cpReal desde DB (t.id_carrera_periodo) y con eso carga el plan.
+ * - cp puede venir 0 (y está bien)
+ * - pero OJO: ya NO se usa para filtrar agenda (eso causaba 404 si CP no coincide)
+ * - cp solo puede servir para logging o compat, pero el service usa cpReal desde DB.
  */
 function getCp(req) {
   const cpQuery = Number(req.query?.cp || 0);
@@ -62,10 +63,10 @@ module.exports = {
   // ✅ DOCENTE (ROL 3)
   // =======================
 
-  // ✅ DOCENTE: ver lo que me toca
+  // ✅ DOCENTE: ver lo que me toca calificar
   misCalificaciones: async (req, res, n) => {
     try {
-      const cp = getCp(req); // ✅ NO dependemos de req.ctx
+      const cp = getCp(req); // (ya no rompe nada)
       const id_te = Number(req.params.id_tribunal_estudiante);
 
       const out = await s.misCalificaciones(cp, id_te, req.user);
@@ -75,10 +76,10 @@ module.exports = {
     }
   },
 
-  // ✅ DOCENTE: guardar
+  // ✅ DOCENTE: guardar criterios (upsert)
   guardarMisCalificaciones: async (req, res, n) => {
     try {
-      const cp = getCp(req); // ✅ NO dependemos de req.ctx
+      const cp = getCp(req); // (ya no rompe nada)
       const id_te = Number(req.params.id_tribunal_estudiante);
 
       const out = await s.guardarMisCalificaciones(cp, id_te, req.user, req.body);
